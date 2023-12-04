@@ -465,7 +465,7 @@ def _number_to_fixed(args, unused_options):
     x, digits, trim = default_args(args, (None, 2, False))
     if not isinstance(x, (int, float)):
         return None
-    result = f'{x:.{digits}f}'
+    result = f'{x:.{int(digits)}f}'
     if trim:
         return R_NUMBER_CLEANUP.sub('', result)
     return result
