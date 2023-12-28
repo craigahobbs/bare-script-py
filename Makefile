@@ -15,6 +15,9 @@ $(eval $(call WGET, https://raw.githubusercontent.com/craigahobbs/python-build/m
 # Sphinx documentation directory
 SPHINX_DOC := doc
 
+# Loosen coverage requirements for initial porting work
+COVERAGE_REPORT_ARGS ?= --fail-under 87
+
 # Include python-build
 include Makefile.base
 

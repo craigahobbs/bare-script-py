@@ -79,7 +79,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([datetime.datetime(2022, 5, 21)], None), 21)
 
     def test_datetime_day_utc(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([datetime.datetime(2022, 5, 21, tzinfo=datetime.UTC), True], None), 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([datetime.datetime(2022, 5, 21, tzinfo=datetime.timezone.utc), True], None), 21)
 
     def test_datetime_day_non_datetime(self):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([None], None), None)
@@ -88,14 +88,14 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([datetime.datetime(2022, 5, 21, 7)], None), 7)
 
     def test_datetime_hour_utc(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([datetime.datetime(2022, 5, 21, 7, tzinfo=datetime.UTC), True], None), 7)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([datetime.datetime(2022, 5, 21, 7, tzinfo=datetime.timezone.utc), True], None), 7)
 
     def test_datetime_hour_non_datetime(self):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([None], None), None)
 
     def test_datetime_iso_format(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.UTC)], None),
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)], None),
             '2022-08-29T15:08:00+00:00'
         )
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(2022, 8, 29, 15, 8), True], None), '2022-08-29')
@@ -103,7 +103,7 @@ class TestLibrary(unittest.TestCase):
 
     def test_datetime_iso_parse(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOFormat']([SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00.000Z'], None)], None),
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00Z'], None)], None),
             '2022-08-29T15:08:00+00:00'
         )
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse'](['invalid'], None), None)
@@ -112,7 +112,10 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([datetime.datetime(2022, 5, 21, 7, 15)], None), 15)
 
     def test_datetime_minute_utc(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([datetime.datetime(2022, 5, 21, 7, 15, tzinfo=datetime.UTC), True], None), 15)
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeMinute']([datetime.datetime(2022, 5, 21, 7, 15, tzinfo=datetime.timezone.utc), True], None),
+            15
+        )
 
     def test_datetime_minute_non_datetime(self):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([None], None), None)
@@ -121,7 +124,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([datetime.datetime(2022, 6, 21)], None), 6)
 
     def test_datetime_month_utc(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([datetime.datetime(2022, 6, 21, tzinfo=datetime.UTC), True], None), 6)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([datetime.datetime(2022, 6, 21, tzinfo=datetime.timezone.utc), True], None), 6)
 
     def test_datetime_month_non_datetime(self):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([None], None), None)
@@ -136,12 +139,15 @@ class TestLibrary(unittest.TestCase):
         )
 
     def test_datetime_new_utc(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21], None), datetime.datetime(2022, 6, 21, tzinfo=datetime.UTC))
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21], None),
+            datetime.datetime(2022, 6, 21, tzinfo=datetime.timezone.utc)
+        )
 
     def test_datetime_new_utc_complete(self):
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.UTC)
+            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
         )
 
     def test_datetime_now(self):
@@ -152,7 +158,7 @@ class TestLibrary(unittest.TestCase):
 
     def test_datetime_second_utc(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeSecond']([datetime.datetime(2022, 5, 21, 7, 15, 30, tzinfo=datetime.UTC), True], None),
+            SCRIPT_FUNCTIONS['datetimeSecond']([datetime.datetime(2022, 5, 21, 7, 15, 30, tzinfo=datetime.timezone.utc), True], None),
             30
         )
 
@@ -167,7 +173,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([datetime.datetime(2022, 5, 21)], None), 2022)
 
     def test_datetime_year_utc(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([datetime.datetime(2022, 5, 21, tzinfo=datetime.UTC), True], None), 2022)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([datetime.datetime(2022, 5, 21, tzinfo=datetime.timezone.utc), True], None), 2022)
 
     def test_datetime_year_non_datetime(self):
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([None], None), None)

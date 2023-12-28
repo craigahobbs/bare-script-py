@@ -79,7 +79,7 @@ def _datetime_day(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
     if utc:
-        return datetime_.astimezone(datetime.UTC).day
+        return datetime_.astimezone(datetime.timezone.utc).day
     return datetime_.day
 
 
@@ -94,7 +94,7 @@ def _datetime_hour(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
     if utc:
-        return datetime_.astimezone(datetime.UTC).hour
+        return datetime_.astimezone(datetime.timezone.utc).hour
     return datetime_.hour
 
 
@@ -121,9 +121,11 @@ def _datetime_iso_format(args, unused_options):
 def _datetime_iso_parse(args, unused_options):
     string, = args
     try:
-        return datetime.datetime.fromisoformat(string)
+        return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', string))
     except ValueError:
         return None
+
+_R_ZULU = re.compile(r'Z$')
 
 
 # $function: datetimeMinute
@@ -137,7 +139,7 @@ def _datetime_minute(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
     if utc:
-        return datetime_.astimezone(datetime.UTC).minute
+        return datetime_.astimezone(datetime.timezone.utc).minute
     return datetime_.minute
 
 
@@ -152,7 +154,7 @@ def _datetime_month(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
     if utc:
-        return datetime_.astimezone(datetime.UTC).month
+        return datetime_.astimezone(datetime.timezone.utc).month
     return datetime_.month
 
 
@@ -185,7 +187,7 @@ def _datetime_new(args, unused_options):
 # $return: The new UTC datetime
 def _datetime_new_utc(args, unused_options):
     year, month, day, hours, minutes, seconds, milliseconds = default_args(args, (None, None, None, 0, 0, 0, 0))
-    return datetime.datetime(year, month, day, hours, minutes, seconds, milliseconds * 1000, tzinfo=datetime.UTC)
+    return datetime.datetime(year, month, day, hours, minutes, seconds, milliseconds * 1000, tzinfo=datetime.timezone.utc)
 
 
 # $function: datetimeNow
@@ -207,7 +209,7 @@ def _datetime_second(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
     if utc:
-        return datetime_.astimezone(datetime.UTC).second
+        return datetime_.astimezone(datetime.timezone.utc).second
     return datetime_.second
 
 
@@ -231,7 +233,7 @@ def _datetime_year(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
     if utc:
-        return datetime_.astimezone(datetime.UTC).year
+        return datetime_.astimezone(datetime.timezone.utc).year
     return datetime_.year
 
 
@@ -467,10 +469,10 @@ def _number_to_fixed(args, unused_options):
         return None
     result = f'{x:.{int(digits)}f}'
     if trim:
-        return R_NUMBER_CLEANUP.sub('', result)
+        return _R_NUMBER_CLEANUP.sub('', result)
     return result
 
-R_NUMBER_CLEANUP = re.compile(r'\.0*$')
+_R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 
 
 #
@@ -511,7 +513,7 @@ def _regex_new(unused_args, unused_options):
 
 
 # Regex escape regular expression
-R_REGEX_ESCAPE = re.compile(r'[.*+?^${}()|[\]\\]')
+_R_REGEX_ESCAPE = re.compile(r'[.*+?^${}()|[\]\\]')
 
 
 #
@@ -866,13 +868,13 @@ def _system_type(args, unused_options):
         return 'number'
     elif isinstance(value, dict):
         return 'object'
-    elif isinstance(value, RE_TYPE):
+    elif isinstance(value, _R_TYPE):
         return 'regex'
     elif isinstance(value, str):
         return 'string'
     return None
 
-RE_TYPE = type(re.compile(''))
+_R_TYPE = type(re.compile(''))
 
 
 # The built-in script functions
