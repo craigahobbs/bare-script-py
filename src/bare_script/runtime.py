@@ -21,11 +21,14 @@ def execute_script(script, options=None):
     """
     Execute a BareScript model
 
-    :param script: The BareScript model
-    :param options: The script execution options
-    :return: The script result
-    :raises BareScriptRuntimeError: A runtime error
+    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`_
+    :type script: dict
+    :param options: The :class:`script execution options <ExecuteScriptOptions>`
+    :type options: dict, optional
+    :returns: The script result
+    :raises BareScriptRuntimeError: A script runtime error occurred
     """
+
     if options is None:
         options = {}
 
