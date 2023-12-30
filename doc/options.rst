@@ -57,8 +57,8 @@ Options
    :type url: str
    :param options: The `fetch options <https://developer.mozilla.org/en-US/docs/Web/API/fetch#parameters>`_
    :type options: dict or None, optional
-   :returns: The fetched response
-   :rtype: dict or str
+   :returns: The response text
+   :rtype: str
 
 
 .. function:: log_fn(text)

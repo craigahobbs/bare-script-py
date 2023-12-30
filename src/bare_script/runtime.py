@@ -21,10 +21,10 @@ def execute_script(script, options=None):
     """
     Execute a BareScript model
 
-    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`_
+    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`__
     :type script: dict
     :param options: The :class:`script execution options <ExecuteScriptOptions>`
-    :type options: dict, optional
+    :type options: dict or None, optional
     :returns: The script result
     :raises BareScriptRuntimeError: A script runtime error occurred
     """
@@ -190,12 +190,17 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
     """
     Evaluate an expression model
 
-    :param expr: The expression model
-    :param options: The script execution options
+    :param script: The `expression model <https://craigahobbs.github.io/bare-script/model/#var.vName='Expression'>`__
+    :type script: dict
+    :param options: The :class:`script execution options <ExecuteScriptOptions>`
+    :type options: dict or None, optional
     :param locals_: The local variables
-    :param builtins: If true, include the built-in expression functions
-    :return: The expression result
-    :raises BareScriptRuntimeError: A runtime error
+    :type locals_: dict or None, optional
+    :param builtins: If true, include the
+        `built-in expression functions <https://craigahobbs.github.io/bare-script/library/expression.html>`__
+    :type builtins: bool, optional
+    :returns: The expression result
+    :raises BareScriptRuntimeError: A script runtime error occurred
     """
 
     expr_key, = expr.keys()
@@ -316,4 +321,9 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 class BareScriptRuntimeError(Exception):
     """
     A BareScript runtime error
+
+    :param message: The runtime error message
+    :type message: str
     """
+    def __init__(self, message):
+        super().__init__(message)

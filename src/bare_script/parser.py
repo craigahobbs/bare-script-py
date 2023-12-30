@@ -609,10 +609,36 @@ class BareScriptParserError(Exception):
     """
     A BareScript parser exception
 
-    :param str error: The error description
-    :param str line: The line text
-    :param int column_number: The error column number
-    :param int line_number: The error line number
+    .. attribute:: error
+       :type: str
+
+       The error description
+
+    .. attribute:: line
+       :type: str
+
+       The line text
+
+    .. attribute:: column_number
+       :type: int
+
+       The error column number
+
+    .. attribute:: line_number
+       :type: int or None
+
+       The error line number
+
+    :param error: The error description
+    :type error: str
+    :param line: The line text
+    :type line: str
+    :param column_number: The error column number
+    :type column_number: int, optional
+    :param line_number: The error line number
+    :type line_number: int or None, optional
+    :param prefix: The error message prefix line
+    :type prefix: str or None, optional
     """
     def __init__(self, error, line, column_number=1, line_number=None, prefix=None):
         # Parser error constants
