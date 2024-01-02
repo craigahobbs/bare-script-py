@@ -9,9 +9,9 @@ bare-script
    :alt: PyPI
    :target: https://pypi.python.org/pypi/bare-script/
 
-.. |badge-license| image:: https://img.shields.io/github/license/craigahobbs/bare-script
+.. |badge-license| image:: https://img.shields.io/github/license/craigahobbs/bare-script-py
    :alt: GitHub
-   :target: https://github.com/craigahobbs/bare-script/blob/main/LICENSE
+   :target: https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE
 
 .. |badge-python| image:: https://img.shields.io/pypi/pyversions/bare-script
    :alt: PyPI - Python Version
@@ -25,8 +25,8 @@ Coming soon!
 Links
 -----
 
-- `API Documentation <https://craigahobbs.github.io/bare-script/>`__
-- `Source code <https://github.com/craigahobbs/bare-script>`__
+- `API Documentation <https://craigahobbs.github.io/bare-script-py/>`__
+- `Source code <https://github.com/craigahobbs/bare-script-py>`__
 
 
 Development
