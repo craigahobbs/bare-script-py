@@ -63,7 +63,7 @@ Options
 
 .. function:: log_fn(text)
 
-   The fetch function
+   The log function
 
    :param text: The log text
    :type text: str
@@ -71,7 +71,7 @@ Options
 
 .. function:: url_fn(url)
 
-   The fetch function
+   The URL function
 
    :param url: The URL
    :type url: str
