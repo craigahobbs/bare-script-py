@@ -480,6 +480,18 @@ _R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 #
 
 
+# $function: objectGet
+# $group: Object
+# $doc: Get an object key's value
+# $arg object: The object
+# $arg key: The key
+# $arg defaultValue: The default value (optional)
+# $return: The value or null if the key does not exist
+def _object_get(args, unused_options):
+    object_, key, default_value = default_args(args, (None, None, None))
+    return (object_[key] if key in object_ else default_value) if isinstance(object_, dict) else default_value
+
+
 # $function: objectNew
 # $group: Object
 # $doc: Create a new object
@@ -916,6 +928,7 @@ SCRIPT_FUNCTIONS = {
     'numberParseInt': _number_parse_int,
     'numberParseFloat': _number_parse_float,
     'numberToFixed': _number_to_fixed,
+    'objectGet': _object_get,
     'objectNew': _object_new,
     'regexNew': _regex_new,
     'schemaParse': _schema_parse,
