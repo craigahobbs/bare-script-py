@@ -2,9 +2,12 @@ Options
 =======
 
 
+ExecuteScriptOptions
+--------------------
+
 .. class:: ExecuteScriptOptions
 
-   The BareScript runtime options
+   The BareScript runtime options :class:`dict`
 
    .. attribute:: debug
       :type: bool, optional
@@ -49,11 +52,14 @@ Options
       The system include prefix
 
 
+fetch_fn
+--------
+
 .. function:: fetch_fn(url, options)
 
-   The fetch function
+   The fetch function interface
 
-   :param url: The URL to fetch
+   :param url: The URL to fetch interface
    :type url: str
    :param options: The `fetch options <https://developer.mozilla.org/en-US/docs/Web/API/fetch#parameters>`_
    :type options: dict or None, optional
@@ -61,17 +67,23 @@ Options
    :rtype: str
 
 
+log_fn
+------
+
 .. function:: log_fn(text)
 
-   The log function
+   The log function interface
 
    :param text: The log text
    :type text: str
 
 
+url_fn
+------
+
 .. function:: url_fn(url)
 
-   The URL function
+   The URL function interface
 
    :param url: The URL
    :type url: str
