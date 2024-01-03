@@ -254,4 +254,4 @@ def lint_script(script):
     :return: The list of lint warnings
     :rtype: list[str]
     """
-    return []
+    return [] if script else []
