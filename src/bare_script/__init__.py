@@ -10,7 +10,7 @@ from .library import \
     SCRIPT_FUNCTIONS
 
 from .model import \
-    BARESCRIPT_TYPES, \
+    BARE_SCRIPT_TYPES, \
     lint_script, \
     validate_expression, \
     validate_script

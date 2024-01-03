@@ -40,13 +40,15 @@ R_SCRIPT_CONTINUE = re.compile(r'^\s*continue\s*$')
 
 def parse_script(script_text, start_line_number=1):
     """
-    Parse a BareScript script.
+    Parse a BareScript script
 
-    :param script_text: The scripttext
+    :param script_text: The `script text <https://craigahobbs.github.io/bare-script/language/>`__
     :type script_text: str or ~collections.abc.Iterable(str)
-    :param int start_line_number: The script's starting line number
-    :return: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`__
-    :raises BareScriptParserError: If there is a parsing error
+    :param start_line_number: The script's starting line number
+    :type start_line_number: int, optional
+    :return: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :rtype: dict
+    :raises BareScriptParserError: A parsing error occurred
     """
 
     script = {'statements': []}
@@ -472,9 +474,11 @@ def parse_expression(expr_text):
     """
     Parse a BareScript expression
 
-    :param str expr_text: The expression text
-    :return: The `expression model <https://craigahobbs.github.io/bare-script/model/#var.vName='Expression'>`__
-    :raises SchemaMarkdownParserError: A parsing error occurred
+    :param expr_text: The `expression text <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :type expr_text: str or ~collections.abc.Iterable(str)
+    :return: The `expression model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='Expression'>`__
+    :rtype: dict
+    :raises BareScriptParserError: A parsing error occurred
     """
     try:
         expr, next_text = _parse_binary_expression(expr_text)

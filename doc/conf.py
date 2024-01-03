@@ -82,5 +82,6 @@ autosectionlabel_maxdepth = 2
 doctest_global_setup = 'import bare_script'
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None)
+    'python': ('https://docs.python.org/3', None),
+    'schema_markdown': ('https://craigahobbs.github.io/schema-markdown/', None)
 }

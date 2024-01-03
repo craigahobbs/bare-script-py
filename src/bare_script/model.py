@@ -11,7 +11,7 @@ from schema_markdown import parse_schema_markdown, validate_type
 #
 # The BareScript type model
 #
-BARESCRIPT_TYPES = parse_schema_markdown('''\
+BARE_SCRIPT_TYPES = parse_schema_markdown('''\
 # A BareScript script
 struct BareScript
 
@@ -222,19 +222,36 @@ struct FunctionExpression
 def validate_script(script):
     """
     Validate a BareScript script model
+
+    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :type script: dict
+    :return: The validated BareScript model
+    :rtype: dict
+    :raises ~schema_markdown.ValidationError: A validation error occurred
     """
-    return validate_type(BARESCRIPT_TYPES, 'BareScript', script)
+    return validate_type(BARE_SCRIPT_TYPES, 'BareScript', script)
 
 
 def validate_expression(expr):
     """
     Validate an expression model
+
+    :param script: The `expression model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='Expression'>`__
+    :type script: dict
+    :return: The validated expression model
+    :rtype: dict
+    :raises ~schema_markdown.ValidationError: A validation error occurred
     """
-    return validate_type(BARESCRIPT_TYPES, 'Expression', expr)
+    return validate_type(BARE_SCRIPT_TYPES, 'Expression', expr)
 
 
-def lint_script(unused_script):
+def lint_script(script):
     """
     Lint a BareScript script model
+
+    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :type script: dict
+    :return: The list of lint warnings
+    :rtype: list[str]
     """
     return []
