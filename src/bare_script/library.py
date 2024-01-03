@@ -489,7 +489,7 @@ _R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 # $return: The value or null if the key does not exist
 def _object_get(args, unused_options):
     object_, key, default_value = default_args(args, (None, None, None))
-    return (object_[key] if key in object_ else default_value) if isinstance(object_, dict) else default_value
+    return object_.get(key, default_value) if isinstance(object_, dict) else default_value
 
 
 # $function: objectNew
