@@ -8,13 +8,9 @@ The BareScript runtime
 from functools import partial
 import re
 
-from .library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, default_args
+from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, default_args
 from .model import lint_script
 from .parser import BareScriptParserError, parse_script
-
-
-# The default maximum statements for executeScript
-DEFAULT_MAX_STATEMENTS = 1e9
 
 
 def execute_script(script, options=None):
