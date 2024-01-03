@@ -16,10 +16,19 @@ $(eval $(call WGET, https://raw.githubusercontent.com/craigahobbs/python-build/m
 SPHINX_DOC := doc
 
 # Loosen coverage requirements for initial porting work
-COVERAGE_REPORT_ARGS ?= --fail-under 87
+COVERAGE_REPORT_ARGS ?= --fail-under 82
 
 # Include python-build
 include Makefile.base
 
 clean:
 	rm -rf Makefile.base pylintrc
+
+doc:
+    # Copy statics
+	cp -R static/* build/doc/html
+
+    # Generate the library documentation
+	if ! $(DEFAULT_VENV_CMD)/baredoc src/bare_script/library.py > build/doc/html/library/library.json; \
+		then cat build/doc/html/library/library.json; exit 1; \
+	fi
