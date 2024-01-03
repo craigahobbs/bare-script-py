@@ -58,6 +58,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'alabaster'
 html_theme_options = {
     'canonical_url': 'https://craigahobbs.github.io/bare-script-py/',
+    'description': 'A lightweight scripting and expression language',
     'fixed_sidebar': True,
     'github_user': 'craigahobbs',
     'github_repo': 'bare-script-py',
