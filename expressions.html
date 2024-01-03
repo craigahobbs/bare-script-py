@@ -13,13 +13,13 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Errors" href="reference-errors.html" />
-    <link rel="prev" title="Scripts" href="reference-scripts.html" />
+    <link rel="next" title="Errors" href="errors.html" />
+    <link rel="prev" title="Scripts" href="scripts.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
   
-    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/reference-expressions.html"/>
+    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/expressions.html"/>
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -47,20 +47,24 @@
 
 
 <h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="reference-scripts.html">Scripts</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Expressions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference-errors.html">Errors</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference-options.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scripts.html">Scripts</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Expressions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#parse-expression">parse_expression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#evaluate-expression">evaluate_expression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#validate-expression">validate_expression</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="errors.html">Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="options.html">Options</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="reference-scripts.html" title="previous chapter">Scripts</a></li>
-      <li>Next: <a href="reference-errors.html" title="next chapter">Errors</a></li>
+      <li>Previous: <a href="scripts.html" title="previous chapter">Scripts</a></li>
+      <li>Next: <a href="errors.html" title="next chapter">Errors</a></li>
   </ul></li>
 </ul>
 </div>
@@ -109,7 +113,7 @@
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)">dict</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="reference-errors.html#bare_script.BareScriptParserError" title="bare_script.BareScriptParserError"><strong>BareScriptParserError</strong></a> – A parsing error occurred</p>
+<dd class="field-even"><p><a class="reference internal" href="errors.html#bare_script.BareScriptParserError" title="bare_script.BareScriptParserError"><strong>BareScriptParserError</strong></a> – A parsing error occurred</p>
 </dd>
 </dl>
 </dd></dl>
@@ -125,7 +129,7 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>script</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a>) – The <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/model/#var.vName='Expression'">expression model</a></p></li>
-<li><p><strong>options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The <a class="reference internal" href="reference-options.html#ExecuteScriptOptions" title="ExecuteScriptOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">script</span> <span class="pre">execution</span> <span class="pre">options</span></code></a></p></li>
+<li><p><strong>options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The <a class="reference internal" href="options.html#ExecuteScriptOptions" title="ExecuteScriptOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">script</span> <span class="pre">execution</span> <span class="pre">options</span></code></a></p></li>
 <li><p><strong>locals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The local variables</p></li>
 <li><p><strong>builtins</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, include the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/expression.html">built-in expression functions</a></p></li>
@@ -135,7 +139,7 @@
 <dd class="field-even"><p>The expression result</p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="reference-errors.html#bare_script.BareScriptRuntimeError" title="bare_script.BareScriptRuntimeError"><strong>BareScriptRuntimeError</strong></a> – A script runtime error occurred</p>
+<dd class="field-odd"><p><a class="reference internal" href="errors.html#bare_script.BareScriptRuntimeError" title="bare_script.BareScriptRuntimeError"><strong>BareScriptRuntimeError</strong></a> – A script runtime error occurred</p>
 </dd>
 </dl>
 </dd></dl>
