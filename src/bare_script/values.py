@@ -2,7 +2,7 @@
 # https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE
 
 """
-The BareScript operators
+BareScript value type utilities
 """
 
 import datetime
