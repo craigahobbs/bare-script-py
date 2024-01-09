@@ -36,9 +36,9 @@ Executing BareScript
 --------------------
 
 To execute a BareScript script, parse the script using the
-`parse_script <https://craigahobbs.github.io/bare-script-py/reference-scripts.html#parse-script>`__
+`parse_script <https://craigahobbs.github.io/bare-script-py/scripts.html#parse-script>`__
 function. Then execute the script using the
-`execute_script <https://craigahobbs.github.io/bare-script-py/reference-scripts.html#execute-script>`__
+`execute_script <https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script>`__
 function. For example:
 
 >>> from bare_script import execute_script, parse_script
@@ -50,13 +50,13 @@ function. For example:
 ...     return n * 2
 ... endfunction
 ...
-... return stringNew(N) + ' times 2 is ' + stringNew(double(N))
+... return N + ' times 2 is ' + double(N)
 ... ''')
 ...
 >>> # Execute the script
 ... globals = {'N': 10}
 >>> print(execute_script(script, {'globals': globals}))
-10 times 2 is 20.0
+10 times 2 is 20
 
 
 The BareScript Library
@@ -81,7 +81,7 @@ functions.
 ... docs = systemFetch('https://craigahobbs.github.io/bare-script/library/library.json')
 ...
 ... # Return the number of library functions
-... return 'The BareScript Library has ' + stringNew(arrayLength(objectGet(docs, 'functions'))) + ' functions'
+... return 'The BareScript Library has ' + arrayLength(objectGet(docs, 'functions')) + ' functions'
 ... ''')
 ...
 >>> # The fetch function
@@ -102,9 +102,9 @@ Evaluating BareScript Expressions
 To evaluate a
 `BareScript expression <https://craigahobbs.github.io/bare-script/language/#expressions>`__,
 parse the expression using the
-`parse_expression <https://craigahobbs.github.io/bare-script-py/reference-expressions.html#parse-expression>`__
+`parse_expression <https://craigahobbs.github.io/bare-script-py/expressions.html#parse-expression>`__
 function. Then evaluate the expression using the
-`evaluate_expression <https://craigahobbs.github.io/bare-script-py/reference-expressions.html#evaluate-expression>`__
+`evaluate_expression <https://craigahobbs.github.io/bare-script-py/expressions.html#evaluate-expression>`__
 function.
 
 Expression evaluation includes the

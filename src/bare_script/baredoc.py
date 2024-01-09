@@ -47,6 +47,7 @@ def main():
 
                     # Set the function group
                     func['group'] = text_trim
+
                 elif key in ('doc', 'return'):
                     # Add the documentation line - don't add leading blank lines
                     func_doc = func.get('key')
@@ -55,6 +56,7 @@ def main():
                             func_doc = []
                             func[key] = func_doc
                         func_doc.append(text)
+
                 else:
                     # key == 'function'
                     if text_trim == '':

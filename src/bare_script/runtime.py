@@ -11,6 +11,7 @@ import re
 from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, default_args
 from .model import lint_script
 from .parser import BareScriptParserError, parse_script
+from .values import value_boolean, value_compare, value_string
 
 
 def execute_script(script, options=None):
@@ -75,7 +76,7 @@ def _execute_script_helper(statements, options, locals_):
         # Jump?
         elif statement_key == 'jump':
             # Evaluate the expression (if any)
-            if 'expr' not in statement['jump'] or evaluate_expression(statement['jump']['expr'], options, locals_, False):
+            if 'expr' not in statement['jump'] or value_boolean(evaluate_expression(statement['jump']['expr'], options, locals_, False)):
                 # Find the label
                 if label_indexes is not None and statement['jump']['label'] in label_indexes:
                     ix_statement = label_indexes[statement['jump']['label']]
@@ -234,7 +235,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         if func_name == 'if':
             value_expr, true_expr, false_expr = default_args(expr['function'].get('args', ()), (None, None, None))
             value = evaluate_expression(value_expr, options, locals_, builtins) if value_expr else False
-            result_expr = true_expr if value else false_expr
+            result_expr = true_expr if value_boolean(value) else false_expr
             return evaluate_expression(result_expr, options, locals_, builtins) if result_expr else None
 
         # Compute the function arguments
@@ -269,45 +270,69 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
         # Short-circuiting binary operators
         if bin_op == '&&':
-            return left_value and evaluate_expression(expr['binary']['right'], options, locals_, builtins)
-        if bin_op == '||':
-            return left_value or evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            if not value_boolean(left_value):
+                return left_value
+            else:
+                return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+        elif bin_op == '||':
+            if value_boolean(left_value):
+                return left_value
+            else:
+                return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
 
         # Non-short-circuiting binary operators
         right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins)
-        if bin_op == '**':
-            return left_value ** right_value
-        if bin_op == '*':
-            return left_value * right_value
-        if bin_op == '/':
-            return left_value / right_value
-        if bin_op == '%':
-            return left_value % right_value
         if bin_op == '+':
-            return left_value + right_value
-        if bin_op == '-':
-            return left_value - right_value
-        if bin_op == '<=':
-            return left_value <= right_value
-        if bin_op == '<':
-            return left_value < right_value
-        if bin_op == '>=':
-            return left_value >= right_value
-        if bin_op == '>':
-            return left_value > right_value
-        if bin_op == '==':
-            return left_value == right_value
-        # if bin_op == '!='
-        return left_value != right_value
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return left_value + right_value
+            elif isinstance(left_value, str) and isinstance(right_value, str):
+                return left_value + right_value
+            elif isinstance(left_value, str):
+                return left_value + value_string(right_value)
+            elif isinstance(right_value, str):
+                return value_string(left_value) + right_value
+        elif bin_op == '-':
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return left_value - right_value
+        elif bin_op == '*':
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return left_value * right_value
+        elif bin_op == '/':
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return left_value / right_value
+        elif bin_op == '==':
+            return value_compare(left_value, right_value) == 0
+        elif bin_op == '!=':
+            return value_compare(left_value, right_value) != 0
+        elif bin_op == '<=':
+            return value_compare(left_value, right_value) <= 0
+        elif bin_op == '<':
+            return value_compare(left_value, right_value) < 0
+        elif bin_op == '>=':
+            return value_compare(left_value, right_value) >= 0
+        elif bin_op == '>':
+            return value_compare(left_value, right_value) > 0
+        elif bin_op == '%':
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return left_value % right_value
+        else:
+            # bin_op == '**':
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return left_value ** right_value
+
+        # Invalid operation values
+        return None
 
     # Unary expression
     if expr_key == 'unary':
         unary_op = expr['unary']['op']
         value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins)
         if unary_op == '!':
-            return not value
-        # unary_op == '-'
-        return -value
+            return not value_boolean(value)
+        else:
+            # unary_op == '-'
+            if isinstance(value, (int, float)):
+                return -value # pylint: disable=invalid-unary-operand-type
 
     # Expression group
     # expr_key == 'group'

@@ -68,6 +68,79 @@ class TestLibrary(unittest.TestCase):
     # Array functions
     #
 
+    def test_array_copy(self):
+        array = [1, 2, 3]
+        result = SCRIPT_FUNCTIONS['arrayCopy']([array], None)
+        self.assertListEqual(result, [1, 2, 3])
+        self.assertIsNot(result, array)
+
+    def test_array_copy_non_array(self):
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayCopy']([None], None), [])
+
+    def test_array_extend(self):
+        array = [1, 2, 3]
+        array2 = [4, 5, 6]
+        result = SCRIPT_FUNCTIONS['arrayExtend']([array, array2], None)
+        self.assertListEqual(result, [1, 2, 3, 4, 5, 6])
+        self.assertIs(result, array)
+
+    def test_array_extend_non_array(self):
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayExtend']([None, None], None), None)
+
+    def test_array_extend_non_array_second(self):
+        array = [1, 2, 3]
+        result = SCRIPT_FUNCTIONS['arrayExtend']([array, None], None)
+        self.assertListEqual(result, [1, 2, 3])
+        self.assertIs(result, array)
+
+    def test_array_get(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 0], None), 1)
+
+    def test_array_get_invalid_index(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 3], None), None)
+
+    def test_array_get_non_array(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([None, 0], None), None)
+
+    def test_array_index_of(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2], None), 1)
+
+    def test_array_index_of_not_found(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 4], None), -1)
+
+    def test_array_index_of_non_array(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([None, 2], None), -1)
+
+    def test_array_index_of_index(self):
+        array = [1, 2, 3, 2]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2], None), 3)
+
+    def test_array_join(self):
+        array = ['a', 'b', 'c']
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, b, c')
+
+    def test_array_join_non_string(self):
+        array = ['a', 2, None]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, 2, null')
+
+    def test_array_join_non_array(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None), '')
+
+    def test_array_last_index_of(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2], None), 1)
+
+    def test_array_last_index_of_non_array(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([None, 2], None), -1)
+
+    def test_array_last_index_of_index(self):
+        array = [1, 2, 3, 1]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 1, 2], None), 0)
+
     def test_array_new(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNew']([1, 2, 3], None), [1, 2, 3])
 

@@ -7,12 +7,15 @@ The BareScript library
 
 import datetime
 from functools import partial
+import itertools
 import json
 import math
 import random
 import re
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
+
+from .values import R_NUMBER_CLEANUP, value_compare, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -33,6 +36,29 @@ def default_args(args, defaults):
 #
 
 
+# $function: arrayCopy
+# $group: Array
+# $doc: Create a copy of an array
+# $arg array: The array to copy
+# $return: The array copy
+def _array_copy(args, unused_options):
+    array, = args
+    return list(array) if isinstance(array, list) else []
+
+
+# $function: arrayExtend
+# $group: Array
+# $doc: Extend one array with another
+# $arg array: The array to extend
+# $arg array2: The array to extend with
+# $return: The extended array
+def _array_extend(args, unused_options):
+    array, array2 = args
+    if isinstance(array, list) and isinstance(array2, list):
+        array.extend(array2)
+    return array
+
+
 # $function: arrayGet
 # $group: Array
 # $doc: Get an array element
@@ -41,7 +67,65 @@ def default_args(args, defaults):
 # $return: The array element
 def _array_get(args, unused_options):
     array, index = args
-    return array[index] if isinstance(array, list) else None
+    try:
+        return array[index] if isinstance(array, list) else None
+    except IndexError:
+        return None
+
+
+# $function: arrayIndexOf
+# $group: Array
+# $doc: Find the index of a value in an array
+# $arg array: The array
+# $arg value: The value to find in the array
+# $arg index: Optional (default is 0). The index at which to start the search.
+# $return: The first index of the value in the array; -1 if not found.
+def _array_index_of(args, unused_options):
+    array, value, index = default_args(args, (None, None, 0))
+    if isinstance(array, list):
+        start = max(index, 0) if index is not None else 0
+        for ix in range(start, len(array)):
+            if value_compare(array[ix], value) == 0:
+                return ix
+    return -1
+
+
+# $function: arrayJoin
+# $group: Array
+# $doc: Join an array with a separator string
+# $arg array: The array
+# $arg separator: The separator string
+# $return: The joined string
+def _array_join(args, unused_options):
+    array, separator = args
+    return separator.join(value_string(value) for value in array) if isinstance(array, list) else ''
+
+
+# $function: arrayLastIndexOf
+# $group: Array
+# $doc: Find the last index of a value in an array
+# $arg array: The array
+# $arg value: The value to find in the array
+# $arg index: Optional (default is the end of the array). The index at which to start the search.
+# $return: The last index of the value in the array; -1 if not found.
+def _array_last_index_of(args, unused_options):
+    array, value, index = default_args(args, (None, None, None))
+    if isinstance(array, list):
+        start = min(index, len(array) - 1) if index is not None else len(array) - 1
+        for ix in range(start, -1, -1):
+            if value_compare(array[ix], value) == 0:
+                return ix
+    return -1
+
+
+# $function: arrayLength
+# $group: Array
+# $doc: Get the length of an array
+# $arg array: The array
+# $return: The array's length; null if not an array
+def _array_length(args, unused_options):
+    array, = args
+    return len(array) if isinstance(array, list) else None
 
 
 # $function: arrayNew
@@ -53,14 +137,94 @@ def _array_new(args, unused_options):
     return args
 
 
-# $function: arrayLength
+# $function: arrayNewSize
 # $group: Array
-# $doc: Get the length of an array
+# $doc: Create a new array of a specific size
+# $arg size: Optional (default is 0). The new array's size.
+# $arg value: Optional (default is 0). The value with which to fill the new array.
+# $return: The new array
+def _array_new_size(args, unused_options):
+    size, value = default_args(args, (0, 0))
+    return list(itertools.repeat(value, size))
+
+
+# $function: arrayPop
+# $group: Array
+# $doc: Remove the last element of the array and return it
 # $arg array: The array
-# $return: The array's length; null if not an array
-def _array_length(args, unused_options):
+# $return: The last element of the array; null if the array is empty.
+def _array_pop(args, unused_options):
     array, = args
-    return len(array) if isinstance(array, list) else None
+    return array.pop() if isinstance(array, list) and len(array) else None
+
+
+# $function: arrayPush
+# $group: Array
+# $doc: Add one or more values to the end of the array
+# $arg array: The array
+# $arg values...: The values to add to the end of the array
+# $return: The array
+def _array_push(args, unused_options):
+    array, *values = args
+    if isinstance(array, list):
+        array.extend(values)
+    return array
+
+
+# $function: arraySet
+# $group: Array
+# $doc: Set an array element value
+# $arg array: The array
+# $arg index: The index of the element to set
+# $arg value: The value to set
+# $return: The value
+def _array_set(args, unused_options):
+    array, index, value = args
+    if isinstance(array, list) and 0 <= index < len(array):
+        array[index] = value
+    return value
+
+
+# $function: arrayShift
+# $group: Array
+# $doc: Remove the first element of the array and return it
+# $arg array: The array
+# $return: The first element of the array; null if the array is empty.
+def _array_shift(args, unused_options):
+    array, = args
+    if isinstance(array, list) and len(array):
+        result = array[0]
+        del array[0]
+        return result
+    return None
+
+
+# $function: arraySlice
+# $group: Array
+# $doc: Copy a portion of an array
+# $arg array: The array
+# $arg start: Optional (default is 0). The start index of the slice.
+# $arg end: Optional (default is the end of the array). The end index of the slice.
+# $return: The new array slice
+def _array_slice(args, unused_options):
+    array, start, end = default_args(args, (None, 0, None))
+    if isinstance(array, list):
+        end_actual = max(0, min(len(array), end))
+        start_actual = max(0, min(start, end))
+        return array[start_actual:end_actual]
+    return None
+
+
+# $function: arraySort
+# $group: Array
+# $doc: Sort an array
+# $arg array: The array
+# $arg compareFn: Optional (default is null). The comparison function.
+# $return: The sorted array
+def _array_sort(args, unused_options):
+    array, = default_args(args, (None,))
+    array.sort()
+    return array
 
 
 #
@@ -469,10 +633,8 @@ def _number_to_fixed(args, unused_options):
         return None
     result = f'{x:.{int(digits)}f}'
     if trim:
-        return _R_NUMBER_CLEANUP.sub('', result)
+        return R_NUMBER_CLEANUP.sub('', result)
     return result
-
-_R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 
 
 #
@@ -673,7 +835,7 @@ def _string_lower(args, unused_options):
 # $return: The new string
 def _string_new(args, unused_options):
     value, = args
-    return str(value)
+    return value_string(value)
 
 
 # $function: stringRepeat
@@ -866,31 +1028,16 @@ def _system_partial(args, unused_options):
 # $return: Valid values are: 'array', 'boolean', 'datetime', 'function', 'null', 'number', 'object', 'regex', 'string'.
 def _system_type(args, unused_options):
     value, = args
-    if value is None:
-        return 'null'
-    elif isinstance(value, list):
-        return 'array'
-    elif isinstance(value, bool):
-        return 'bool'
-    elif isinstance(value, datetime.datetime):
-        return 'datetime'
-    elif callable(value):
-        return 'function'
-    elif isinstance(value, (int, float)):
-        return 'number'
-    elif isinstance(value, dict):
-        return 'object'
-    elif isinstance(value, _R_TYPE):
-        return 'regex'
-    elif isinstance(value, str):
-        return 'string'
-    return None
-
-_R_TYPE = type(re.compile(''))
+    return value_type(value)
 
 
 # The built-in script functions
 SCRIPT_FUNCTIONS = {
+    'arrayCopy': _array_copy,
+    'arrayExtend': _array_extend,
+    'arrayIndexOf': _array_index_of,
+    'arrayJoin': _array_join,
+    'arrayLastIndexOf': _array_last_index_of,
     'arrayGet': _array_get,
     'arrayLength': _array_length,
     'arrayNew': _array_new,
