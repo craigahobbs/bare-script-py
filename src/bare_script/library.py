@@ -43,7 +43,10 @@ def default_args(args, defaults):
 # $return: The array copy
 def _array_copy(args, unused_options):
     array, = args
-    return list(array) if isinstance(array, list) else []
+    if not isinstance(array, list):
+        return []
+
+    return list(array)
 
 
 # $function: arrayExtend
@@ -54,8 +57,10 @@ def _array_copy(args, unused_options):
 # $return: The extended array
 def _array_extend(args, unused_options):
     array, array2 = args
-    if isinstance(array, list) and isinstance(array2, list):
-        array.extend(array2)
+    if not isinstance(array, list) or not isinstance(array2, list):
+        return array
+
+    array.extend(array2)
     return array
 
 
@@ -67,10 +72,10 @@ def _array_extend(args, unused_options):
 # $return: The array element
 def _array_get(args, unused_options):
     array, index = args
-    try:
-        return array[index] if isinstance(array, list) else None
-    except IndexError:
+    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return None
+
+    return array[index]
 
 
 # $function: arrayIndexOf
@@ -82,11 +87,12 @@ def _array_get(args, unused_options):
 # $return: The first index of the value in the array; -1 if not found.
 def _array_index_of(args, unused_options):
     array, value, index = default_args(args, (None, None, 0))
-    if isinstance(array, list):
-        start = max(index, 0) if index is not None else 0
-        for ix in range(start, len(array)):
-            if value_compare(array[ix], value) == 0:
-                return ix
+    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+        return -1
+
+    for ix in range(index, len(array)):
+        if value_compare(array[ix], value) == 0:
+            return ix
     return -1
 
 
@@ -98,7 +104,10 @@ def _array_index_of(args, unused_options):
 # $return: The joined string
 def _array_join(args, unused_options):
     array, separator = args
-    return separator.join(value_string(value) for value in array) if isinstance(array, list) else ''
+    if not isinstance(array, list):
+        return ''
+
+    return value_string(separator).join(value_string(value) for value in array)
 
 
 # $function: arrayLastIndexOf
@@ -110,11 +119,14 @@ def _array_join(args, unused_options):
 # $return: The last index of the value in the array; -1 if not found.
 def _array_last_index_of(args, unused_options):
     array, value, index = default_args(args, (None, None, None))
-    if isinstance(array, list):
-        start = min(index, len(array) - 1) if index is not None else len(array) - 1
-        for ix in range(start, -1, -1):
-            if value_compare(array[ix], value) == 0:
-                return ix
+    if isinstance(array, list) and index is None:
+        index = len(array) - 1
+    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+        return -1
+
+    for ix in range(index, -1, -1):
+        if value_compare(array[ix], value) == 0:
+            return ix
     return -1
 
 
@@ -125,7 +137,10 @@ def _array_last_index_of(args, unused_options):
 # $return: The array's length; null if not an array
 def _array_length(args, unused_options):
     array, = args
-    return len(array) if isinstance(array, list) else None
+    if not isinstance(array, list):
+        return None
+
+    return len(array)
 
 
 # $function: arrayNew
@@ -145,6 +160,9 @@ def _array_new(args, unused_options):
 # $return: The new array
 def _array_new_size(args, unused_options):
     size, value = default_args(args, (0, 0))
+    if not isinstance(size, (int, float)) or int(size) != size or size < 0:
+        return []
+
     return list(itertools.repeat(value, size))
 
 
@@ -155,7 +173,10 @@ def _array_new_size(args, unused_options):
 # $return: The last element of the array; null if the array is empty.
 def _array_pop(args, unused_options):
     array, = args
-    return array.pop() if isinstance(array, list) and len(array) else None
+    if not isinstance(array, list) or len(array) == 0:
+        return None
+
+    return array.pop()
 
 
 # $function: arrayPush
@@ -166,8 +187,10 @@ def _array_pop(args, unused_options):
 # $return: The array
 def _array_push(args, unused_options):
     array, *values = args
-    if isinstance(array, list):
-        array.extend(values)
+    if not isinstance(array, list):
+        return array
+
+    array.extend(values)
     return array
 
 
@@ -180,8 +203,10 @@ def _array_push(args, unused_options):
 # $return: The value
 def _array_set(args, unused_options):
     array, index, value = args
-    if isinstance(array, list) and 0 <= index < len(array):
-        array[index] = value
+    if not isinstance(array, list) or index < 0 or index >= len(array):
+        return value
+
+    array[index] = value
     return value
 
 
@@ -192,11 +217,12 @@ def _array_set(args, unused_options):
 # $return: The first element of the array; null if the array is empty.
 def _array_shift(args, unused_options):
     array, = args
-    if isinstance(array, list) and len(array):
-        result = array[0]
-        del array[0]
-        return result
-    return None
+    if not isinstance(array, list) or len(array) == 0:
+        return None
+
+    result = array[0]
+    del array[0]
+    return result
 
 
 # $function: arraySlice
@@ -208,11 +234,13 @@ def _array_shift(args, unused_options):
 # $return: The new array slice
 def _array_slice(args, unused_options):
     array, start, end = default_args(args, (None, 0, None))
-    if isinstance(array, list):
-        end_actual = max(0, min(len(array), end))
-        start_actual = max(0, min(start, end))
-        return array[start_actual:end_actual]
-    return None
+    if isinstance(array, list) and end is None:
+        end = len(array) - 1
+    if not isinstance(array, list) or not isinstance(start, (int, float)) or int(start) != start or start < 0 or start >= len(array) or \
+       not isinstance(end, (int, float)) or int(end) != end or end < 0 or end >= len(array):
+        return []
+
+    return array[start:end]
 
 
 # $function: arraySort

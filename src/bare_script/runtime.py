@@ -151,7 +151,6 @@ def _execute_script_helper(statements, options, locals_):
     return None
 
 
-# Include url function
 def _include_url_fn(include_url, url):
     return f'{_get_base_url(include_url)}{url}' if _is_relative_url(url) else url
 
@@ -223,10 +222,9 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
         # Get the local or global variable value or None if undefined
         if locals_ is not None and expr['variable'] in locals_:
-            var_value = locals_[expr['variable']]
+            return locals_[expr['variable']]
         else:
-            var_value = globals_.get(expr['variable']) if globals_ is not None else None
-        return var_value
+            return globals_.get(expr['variable']) if globals_ is not None else None
 
     # Function
     if expr_key == 'function':
