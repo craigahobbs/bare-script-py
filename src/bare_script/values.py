@@ -12,8 +12,11 @@ import re
 
 def value_type(value):
     """
-    Helper to get a value's type
-    Return values: 'array', 'boolean', 'datetime', 'function', 'null', 'number', 'object', 'regex', 'string'
+    Get a value's type string
+
+    :param value: The value
+    :return: The type string ('array', 'boolean', 'datetime', 'function', 'null', 'number', 'object', 'regex', 'string')
+    :rtype: str
     """
 
     if value is None:
@@ -32,18 +35,22 @@ def value_type(value):
         return 'array'
     elif callable(value):
         return 'function'
-    elif isinstance(value, _R_TYPE):
+    elif isinstance(value, _R_REGEX_TYPE):
         return 'regex'
 
     # Unknown value type
     return None
 
-_R_TYPE = type(re.compile(''))
+_R_REGEX_TYPE = type(re.compile(''))
 
 
 def value_string(value):
     """
-    Helper to format a value as a string
+    Get a value's string representation
+
+    :param value: The value
+    :return: The value as a string
+    :rtype: str
     """
 
     if value is None:
@@ -58,11 +65,13 @@ def value_string(value):
         return 'true' if value else 'false'
     elif isinstance(value, datetime.datetime):
         return value.toISOFormat()
-    elif isinstance(value, (list, dict)):
+    elif isinstance(value, (dict)):
+        return json.dumps(value)
+    elif isinstance(value, (list)):
         return json.dumps(value)
     elif callable(value):
         return '<function>'
-    elif isinstance(value, _R_TYPE):
+    elif isinstance(value, _R_REGEX_TYPE):
         return '<regex>'
 
     # Unknown value type
@@ -73,7 +82,11 @@ R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 
 def value_boolean(value):
     """
-    Helper to interpret the value as a boolean
+    Interpret the value as a boolean
+
+    :param value: The value
+    :return: The value as a boolean
+    :rtype: bool
     """
 
     if value is None:
@@ -89,10 +102,10 @@ def value_boolean(value):
     elif isinstance(value, dict):
         return True
     elif isinstance(value, list):
-        return True
+        return len(value) != 0
     elif callable(value):
         return True
-    elif isinstance(value, _R_TYPE):
+    elif isinstance(value, _R_REGEX_TYPE):
         return True
 
     # Unknown value type
@@ -101,7 +114,12 @@ def value_boolean(value):
 
 def value_compare(value1, value2):
     """
-    Helper to compare values
+    Compare two values
+
+    :param value_left: The left value
+    :param value_right: The right value
+    :return: -1 if the left value is less than the right value, 0 if equal, and 1 if greater than
+    :rtype: int
     """
 
     # Null?

@@ -332,7 +332,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         else:
             # unary_op == '-'
             if isinstance(value, (int, float)):
-                return -value # pylint: disable=invalid-unary-operand-type
+                return -value
 
     # Expression group
     # expr_key == 'group'
