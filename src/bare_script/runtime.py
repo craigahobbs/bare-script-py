@@ -334,6 +334,9 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
             if isinstance(value, (int, float)):
                 return -value # pylint: disable=invalid-unary-operand-type
 
+        # Invalid operation value
+        return None
+
     # Expression group
     # expr_key == 'group'
     return evaluate_expression(expr['group'], options, locals_, builtins)
