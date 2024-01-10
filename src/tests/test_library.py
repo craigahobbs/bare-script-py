@@ -195,6 +195,11 @@ class TestLibrary(unittest.TestCase):
     def test_array_new(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNew']([1, 2, 3], None), [1, 2, 3])
 
+    def test_array_push(self):
+        array = [1, 2, 3]
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayPush']([array, 5], None), [1, 2, 3, 5])
+        self.assertListEqual(array, [1, 2, 3, 5])
+
     def test_array_sort(self):
         array = [3, 2, 1]
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySort']([array], None), [1, 2, 3])

@@ -22,13 +22,14 @@ from .values import R_NUMBER_CLEANUP, value_compare, value_string, value_type
 DEFAULT_MAX_STATEMENTS = 1e9
 
 
-# Helper to pad function arguments
-def default_args(args, defaults):
+def default_args(args, defaults, last_arg_array=False):
     """
     Helper function to fill-in default arguments
     """
     len_args = len(args)
-    return ((args[ix] if ix < len_args else default) for ix, default in enumerate(defaults))
+    yield from ((args[ix] if ix < len_args else default) for ix, default in enumerate(defaults))
+    if last_arg_array:
+        yield args[len_args - 1:]
 
 
 #
@@ -42,7 +43,7 @@ def default_args(args, defaults):
 # $arg array: The array to copy
 # $return: The array copy
 def _array_copy(args, unused_options):
-    array, = args
+    array, = default_args(args, (None,))
     if not isinstance(array, list):
         return None
 
@@ -56,7 +57,7 @@ def _array_copy(args, unused_options):
 # $arg array2: The array to extend with
 # $return: The extended array
 def _array_extend(args, unused_options):
-    array, array2 = args
+    array, array2 = default_args(args, (None, None))
     if not isinstance(array, list) or not isinstance(array2, list):
         return None
 
@@ -71,7 +72,7 @@ def _array_extend(args, unused_options):
 # $arg index: The array element's index
 # $return: The array element
 def _array_get(args, unused_options):
-    array, index = args
+    array, index = default_args(args, (None, None))
     if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return None
 
@@ -109,7 +110,7 @@ def _array_index_of(args, options):
 # $arg separator: The separator string
 # $return: The joined string
 def _array_join(args, unused_options):
-    array, separator = args
+    array, separator = default_args(args, (None, None))
     if not isinstance(array, list) or not isinstance(separator, str):
         return None
 
@@ -148,7 +149,7 @@ def _array_last_index_of(args, options):
 # $arg array: The array
 # $return: The array's length; null if not an array
 def _array_length(args, unused_options):
-    array, = args
+    array, = default_args(args, (None,))
     if not isinstance(array, list):
         return None
 
@@ -184,7 +185,7 @@ def _array_new_size(args, unused_options):
 # $arg array: The array
 # $return: The last element of the array; null if the array is empty.
 def _array_pop(args, unused_options):
-    array, = args
+    array, = default_args(args, (None,))
     if not isinstance(array, list) or len(array) == 0:
         return None
 
@@ -198,7 +199,7 @@ def _array_pop(args, unused_options):
 # $arg values...: The values to add to the end of the array
 # $return: The array
 def _array_push(args, unused_options):
-    array, *values = args
+    array, values = default_args(args, (None,), True)
     if not isinstance(array, list):
         return None
 
@@ -214,7 +215,7 @@ def _array_push(args, unused_options):
 # $arg value: The value to set
 # $return: The value
 def _array_set(args, unused_options):
-    array, index, value = args
+    array, index, value = default_args(args, (None, None, None))
     if not isinstance(array, list) or index < 0 or index >= len(array):
         return None
 
@@ -228,7 +229,7 @@ def _array_set(args, unused_options):
 # $arg array: The array
 # $return: The first element of the array; null if the array is empty.
 def _array_shift(args, unused_options):
-    array, = args
+    array, = default_args(args, (None,))
     if not isinstance(array, list) or len(array) == 0:
         return None
 
@@ -1087,6 +1088,7 @@ SCRIPT_FUNCTIONS = {
     'arrayGet': _array_get,
     'arrayLength': _array_length,
     'arrayNew': _array_new,
+    'arrayPush': _array_push,
     'arraySort': _array_sort,
     'datetimeDay': _datetime_day,
     'datetimeHour': _datetime_hour,
