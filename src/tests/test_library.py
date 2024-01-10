@@ -96,9 +96,25 @@ class TestLibrary(unittest.TestCase):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 0], None), 1)
 
+    def test_array_get_negative_index(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, -3], None), 1)
+
     def test_array_get_invalid_index(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 3], None), None)
+
+    def test_array_get_invalid_index2(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, -4], None), None)
+
+    def test_array_get_invalid_index3(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, '1'], None), None)
+
+    def test_array_get_invalid_index4(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 1.5], None), None)
 
     def test_array_get_non_array(self):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([None, 0], None), None)
@@ -194,6 +210,12 @@ class TestLibrary(unittest.TestCase):
 
     def test_array_new(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNew']([1, 2, 3], None), [1, 2, 3])
+
+    def test_array_new_size(self):
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3], None), [0, 0, 0])
+
+    def test_array_new_size_value(self):
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3, 1], None), [1, 1, 1])
 
     def test_array_push(self):
         array = [1, 2, 3]

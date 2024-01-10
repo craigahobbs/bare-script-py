@@ -7,7 +7,6 @@ The BareScript library
 
 import datetime
 import functools
-import itertools
 import json
 import math
 import random
@@ -73,7 +72,8 @@ def _array_extend(args, unused_options):
 # $return: The array element
 def _array_get(args, unused_options):
     array, index = default_args(args, (None, None))
-    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or \
+       index < -len(array) or index >= len(array):
         return None
 
     return array[index]
@@ -176,7 +176,7 @@ def _array_new_size(args, unused_options):
     if not isinstance(size, (int, float)) or int(size) != size or size < 0:
         return None
 
-    return list(itertools.repeat(value, size))
+    return list(value for _ in range(size))
 
 
 # $function: arrayPop
@@ -1082,13 +1082,18 @@ def _system_type(args, unused_options):
 SCRIPT_FUNCTIONS = {
     'arrayCopy': _array_copy,
     'arrayExtend': _array_extend,
+    'arrayGet': _array_get,
     'arrayIndexOf': _array_index_of,
     'arrayJoin': _array_join,
     'arrayLastIndexOf': _array_last_index_of,
-    'arrayGet': _array_get,
     'arrayLength': _array_length,
     'arrayNew': _array_new,
+    'arrayNewSize': _array_new_size,
+    'arrayPop': _array_pop,
     'arrayPush': _array_push,
+    'arraySet': _array_set,
+    'arrayShift': _array_shift,
+    'arraySlice': _array_slice,
     'arraySort': _array_sort,
     'datetimeDay': _datetime_day,
     'datetimeHour': _datetime_hour,
