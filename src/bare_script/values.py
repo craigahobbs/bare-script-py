@@ -122,13 +122,10 @@ def value_compare(value1, value2):
     :rtype: int
     """
 
-    # Null?
     if value1 is None:
         return 0 if value2 is None else -1
     elif value2 is None:
         return 1
-
-    # Compare like types
     if isinstance(value1, str) and isinstance(value2, str):
         return -1 if value1 < value2 else (0 if value1 == value2 else 1)
     elif isinstance(value1, (int, float)) and isinstance(value2, (int, float)):

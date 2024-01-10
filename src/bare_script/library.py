@@ -44,7 +44,7 @@ def default_args(args, defaults):
 def _array_copy(args, unused_options):
     array, = args
     if not isinstance(array, list):
-        return []
+        return None
 
     return list(array)
 
@@ -58,7 +58,7 @@ def _array_copy(args, unused_options):
 def _array_extend(args, unused_options):
     array, array2 = args
     if not isinstance(array, list) or not isinstance(array2, list):
-        return array
+        return None
 
     array.extend(array2)
     return array
@@ -82,17 +82,23 @@ def _array_get(args, unused_options):
 # $group: Array
 # $doc: Find the index of a value in an array
 # $arg array: The array
-# $arg value: The value to find in the array
+# $arg value: The value to find in the array or, the value function, f(value) -> bool
 # $arg index: Optional (default is 0). The index at which to start the search.
 # $return: The first index of the value in the array; -1 if not found.
-def _array_index_of(args, unused_options):
+def _array_index_of(args, options):
     array, value, index = default_args(args, (None, None, 0))
     if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return -1
 
-    for ix in range(index, len(array)):
-        if value_compare(array[ix], value) == 0:
-            return ix
+    if callable(value):
+        for ix in range(index, len(array)):
+            if value([array[ix]], options):
+                return ix
+    else:
+        for ix in range(index, len(array)):
+            if value_compare(array[ix], value) == 0:
+                return ix
+
     return -1
 
 
@@ -105,7 +111,7 @@ def _array_index_of(args, unused_options):
 def _array_join(args, unused_options):
     array, separator = args
     if not isinstance(array, list):
-        return ''
+        return None
 
     return value_string(separator).join(value_string(value) for value in array)
 
@@ -114,19 +120,25 @@ def _array_join(args, unused_options):
 # $group: Array
 # $doc: Find the last index of a value in an array
 # $arg array: The array
-# $arg value: The value to find in the array
+# $arg value: The value to find in the array, or the value function, f(value) -> bool
 # $arg index: Optional (default is the end of the array). The index at which to start the search.
 # $return: The last index of the value in the array; -1 if not found.
-def _array_last_index_of(args, unused_options):
+def _array_last_index_of(args, options):
     array, value, index = default_args(args, (None, None, None))
     if isinstance(array, list) and index is None:
         index = len(array) - 1
     if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return -1
 
-    for ix in range(index, -1, -1):
-        if value_compare(array[ix], value) == 0:
-            return ix
+    if callable(value):
+        for ix in range(index, -1, -1):
+            if value([array[ix]], options):
+                return ix
+    else:
+        for ix in range(index, -1, -1):
+            if value_compare(array[ix], value) == 0:
+                return ix
+
     return -1
 
 
@@ -161,7 +173,7 @@ def _array_new(args, unused_options):
 def _array_new_size(args, unused_options):
     size, value = default_args(args, (0, 0))
     if not isinstance(size, (int, float)) or int(size) != size or size < 0:
-        return []
+        return None
 
     return list(itertools.repeat(value, size))
 
@@ -188,7 +200,7 @@ def _array_pop(args, unused_options):
 def _array_push(args, unused_options):
     array, *values = args
     if not isinstance(array, list):
-        return array
+        return None
 
     array.extend(values)
     return array
@@ -204,7 +216,7 @@ def _array_push(args, unused_options):
 def _array_set(args, unused_options):
     array, index, value = args
     if not isinstance(array, list) or index < 0 or index >= len(array):
-        return value
+        return None
 
     array[index] = value
     return value
@@ -238,7 +250,7 @@ def _array_slice(args, unused_options):
         end = len(array) - 1
     if not isinstance(array, list) or not isinstance(start, (int, float)) or int(start) != start or start < 0 or start >= len(array) or \
        not isinstance(end, (int, float)) or int(end) != end or end < 0 or end >= len(array):
-        return []
+        return None
 
     return array[start:end]
 

@@ -75,7 +75,7 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNot(result, array)
 
     def test_array_copy_non_array(self):
-        self.assertListEqual(SCRIPT_FUNCTIONS['arrayCopy']([None], None), [])
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayCopy']([None], None))
 
     def test_array_extend(self):
         array = [1, 2, 3]
@@ -90,8 +90,7 @@ class TestLibrary(unittest.TestCase):
     def test_array_extend_non_array_second(self):
         array = [1, 2, 3]
         result = SCRIPT_FUNCTIONS['arrayExtend']([array, None], None)
-        self.assertListEqual(result, [1, 2, 3])
-        self.assertIs(result, array)
+        self.assertIsNone(result)
 
     def test_array_get(self):
         array = [1, 2, 3]
@@ -108,9 +107,31 @@ class TestLibrary(unittest.TestCase):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2], None), 1)
 
+    def test_array_index_of_function(self):
+        array = [1, 2, 3]
+
+        def value_fn(args, value_options):
+            self.assertEqual(len(args), 1)
+            self.assertIs(value_options, options)
+            return args[0] == 2
+
+        options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn], options), 1)
+
     def test_array_index_of_not_found(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 4], None), -1)
+
+    def test_array_index_of_not_found_function(self):
+        array = [1, 2, 3]
+
+        def value_fn(args, value_options):
+            self.assertEqual(len(args), 1)
+            self.assertIs(value_options, options)
+            return args[0] == 4
+
+        options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn], options), -1)
 
     def test_array_index_of_non_array(self):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([None, 2], None), -1)
@@ -128,11 +149,37 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, 2, null')
 
     def test_array_join_non_array(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None), '')
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None))
 
     def test_array_last_index_of(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2], None), 1)
+
+    def test_array_last_index_of_function(self):
+        array = [1, 2, 3]
+
+        def value_fn(args, value_options):
+            self.assertEqual(len(args), 1)
+            self.assertIs(value_options, options)
+            return args[0] == 2
+
+        options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), 1)
+
+    def test_array_last_index_of_not_found(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 4], None), -1)
+
+    def test_array_last_index_of_not_found_function(self):
+        array = [1, 2, 3]
+
+        def value_fn(args, value_options):
+            self.assertEqual(len(args), 1)
+            self.assertIs(value_options, options)
+            return args[0] == 4
+
+        options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), -1)
 
     def test_array_last_index_of_non_array(self):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([None, 2], None), -1)
