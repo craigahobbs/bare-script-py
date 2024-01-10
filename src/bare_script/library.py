@@ -247,9 +247,9 @@ def _array_shift(args, unused_options):
 def _array_slice(args, unused_options):
     array, start, end = default_args(args, (None, 0, None))
     if isinstance(array, list) and end is None:
-        end = len(array) - 1
+        end = len(array)
     if not isinstance(array, list) or not isinstance(start, (int, float)) or int(start) != start or start < 0 or start >= len(array) or \
-       not isinstance(end, (int, float)) or int(end) != end or end < 0 or end >= len(array):
+       not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(array):
         return None
 
     return array[start:end]

@@ -254,28 +254,83 @@ class TestLibrary(unittest.TestCase):
         # Non-array
         self.assertIsNone(SCRIPT_FUNCTIONS['arrayPush']([None, 5], None))
 
+    def test_array_set(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arraySet']([array, 1, 5], None), 5)
+        self.assertListEqual(array, [1, 5, 3])
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([None, 1, 5], None))
+
+        # Index outside valid range
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([array, -1, 5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([array, 3, 5], None))
+
+    def test_array_shift(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayShift']([array], None), 1)
+        self.assertListEqual(array, [2, 3])
+
+        # Empty array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayShift']([[]], None))
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayShift']([None], None))
+
+    def test_array_slice(self):
+        array = [1, 2, 3, 4]
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 2], None), [1, 2])
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1, 3], None), [2, 3])
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1, 4], None), [2, 3, 4])
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1], None), [2, 3, 4])
+
+        # Empty slice
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1, 1], None), [])
+
+        # End index less than start index
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 2, 1], None), [])
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 1, 3], None))
+
+        # Start index outside valid range
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, -1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 4], None))
+
+        # Non-number start index
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 'abc'], None))
+
+        # Non-integer start index
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 1.5], None))
+
+        # End index outside valid range
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, -1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, 5], None))
+
+        # Non-number end index
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, 'abc'], None))
+
+        # Non-integer end index
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, 1.5], None))
+
     def test_array_sort(self):
         array = [3, 2, 1]
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySort']([array], None), [1, 2, 3])
         self.assertListEqual(array, [1, 2, 3])
 
-    def test_array_sort_compare_function(self):
-        array = [1, 2, 3]
-
+        # Compare function
         def compare_fn(args, compare_options):
             a, b = args
             self.assertIs(compare_options, options)
             return 1 if a < b else (0 if a == b else -1)
-
         options = {}
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySort']([array, compare_fn], options), [3, 2, 1])
         self.assertListEqual(array, [3, 2, 1])
 
-    def test_array_sort_non_array(self):
+        # Non-array
         self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([None], None))
 
-    def test_array_sort_non_function(self):
-        array = [3, 2, 1]
+        # Non-function cmopare function
         self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 'asdf'], None))
         self.assertListEqual(array, [3, 2, 1])
 
