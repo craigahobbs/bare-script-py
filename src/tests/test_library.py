@@ -74,7 +74,7 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(result, [1, 2, 3])
         self.assertIsNot(result, array)
 
-    def test_array_copy_non_array(self):
+        # Non-array
         self.assertIsNone(SCRIPT_FUNCTIONS['arrayCopy']([None], None))
 
     def test_array_extend(self):
@@ -84,143 +84,175 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(result, [1, 2, 3, 4, 5, 6])
         self.assertIs(result, array)
 
-    def test_array_extend_non_array(self):
+        # Non-array
         self.assertIsNone(SCRIPT_FUNCTIONS['arrayExtend']([None, None], None), None)
 
-    def test_array_extend_non_array_second(self):
-        array = [1, 2, 3]
-        result = SCRIPT_FUNCTIONS['arrayExtend']([array, None], None)
-        self.assertIsNone(result)
+        # Second non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayExtend']([array, None], None))
 
     def test_array_get(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 0], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 1], None), 2)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 2], None), 3)
 
-    def test_array_get_negative_index(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, -3], None), 1)
-
-    def test_array_get_invalid_index(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 3], None), None)
-
-    def test_array_get_invalid_index2(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, -4], None), None)
-
-    def test_array_get_invalid_index3(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, '1'], None), None)
-
-    def test_array_get_invalid_index4(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 1.5], None), None)
-
-    def test_array_get_non_array(self):
+        # Non-array
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([None, 0], None), None)
 
+        # Index outside valid range
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, -1], None), None)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 3], None), None)
+
+        # Non-number index
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, '1'], None), None)
+
+        # Non-integer index
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 1.5], None), None)
+
     def test_array_index_of(self):
-        array = [1, 2, 3]
+        array = [1, 2, 3, 2]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 1], None), 0)
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 3], None), 2)
 
-    def test_array_index_of_function(self):
-        array = [1, 2, 3]
+        # Not found
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 4], None), -1)
 
+        # Index provided
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2], None), 3)
+
+        # Value function
         def value_fn(args, value_options):
             self.assertEqual(len(args), 1)
             self.assertIs(value_options, options)
-            return args[0] == 2
-
+            return args[0] == value_fn_value
+        value_fn_value = 2
         options = {}
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn], options), 1)
 
-    def test_array_index_of_not_found(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 4], None), -1)
-
-    def test_array_index_of_not_found_function(self):
-        array = [1, 2, 3]
-
-        def value_fn(args, value_options):
-            self.assertEqual(len(args), 1)
-            self.assertIs(value_options, options)
-            return args[0] == 4
-
-        options = {}
+        # Value function, not found
+        value_fn_value = 4
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn], options), -1)
 
-    def test_array_index_of_non_array(self):
+        # Value function, index provided
+        value_fn_value = 2
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn, 2], options), 3)
+
+        # Non-array
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([None, 2], None), -1)
 
-    def test_array_index_of_index(self):
-        array = [1, 2, 3, 2]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2], None), 3)
+        # Index outside valid range
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, -1], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 4], None), -1)
+
+        # Non-number index
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 'abc'], None), -1)
+
+        # Non-integer index
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 1.5], None), -1)
 
     def test_array_join(self):
-        array = ['a', 'b', 'c']
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, b, c')
-
-    def test_array_join_non_string_items(self):
         array = ['a', 2, None]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, 2, null')
 
-    def test_array_join_non_array(self):
+        # Non-array
         self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None))
 
-    def test_array_join_non_string_separator(self):
-        array = ['a', 'b', 'c']
+        # Non-string separator
         self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([array, 1], None))
 
     def test_array_last_index_of(self):
-        array = [1, 2, 3]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2], None), 1)
+        array = [1, 2, 3, 2]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 1], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2], None), 3)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 3], None), 2)
 
-    def test_array_last_index_of_function(self):
-        array = [1, 2, 3]
-
-        def value_fn(args, value_options):
-            self.assertEqual(len(args), 1)
-            self.assertIs(value_options, options)
-            return args[0] == 2
-
-        options = {}
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), 1)
-
-    def test_array_last_index_of_not_found(self):
-        array = [1, 2, 3]
+        # Not found
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 4], None), -1)
 
-    def test_array_last_index_of_not_found_function(self):
-        array = [1, 2, 3]
+        # Index provided
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 2], None), 1)
 
+        # Value function
         def value_fn(args, value_options):
             self.assertEqual(len(args), 1)
             self.assertIs(value_options, options)
-            return args[0] == 4
-
+            return args[0] == value_fn_value
+        value_fn_value = 2
         options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), 3)
+
+        # Value function, not found
+        value_fn_value = 4
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), -1)
 
-    def test_array_last_index_of_non_array(self):
+        # Value function, index provided
+        value_fn_value = 2
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn, 2], options), 1)
+
+        # Non-array
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([None, 2], None), -1)
 
-    def test_array_last_index_of_index(self):
-        array = [1, 2, 3, 1]
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 1, 2], None), 0)
+        # Index outside valid range
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, -1], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 4], None), -1)
+
+        # Non-number index
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 'abc'], None), -1)
+
+        # Non-integer index
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 1.5], None), -1)
+
+    def test_array_length(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLength']([array], None), 3)
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayLength']([None], None))
 
     def test_array_new(self):
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayNew']([], None), [])
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNew']([1, 2, 3], None), [1, 2, 3])
 
     def test_array_new_size(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3], None), [0, 0, 0])
 
-    def test_array_new_size_value(self):
+        # Value provided
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3, 1], None), [1, 1, 1])
+
+        # No args
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([], None), [])
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize']([None], None))
+
+        # Negative size
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize']([-1], None))
+
+        # Non-number size
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize'](['abc'], None))
+
+        # Non-integer size
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize']([1.5], None))
+
+    def test_array_pop(self):
+        array = [1, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayPop']([array], None), 3)
+        self.assertListEqual(array, [1, 2])
+
+        # Empty array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayPop']([[]], None))
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayPop']([None], None))
 
     def test_array_push(self):
         array = [1, 2, 3]
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayPush']([array, 5], None), [1, 2, 3, 5])
         self.assertListEqual(array, [1, 2, 3, 5])
+
+        # Non-array
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayPush']([None, 5], None))
 
     def test_array_sort(self):
         array = [3, 2, 1]

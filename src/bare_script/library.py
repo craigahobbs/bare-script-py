@@ -72,8 +72,7 @@ def _array_extend(args, unused_options):
 # $return: The array element
 def _array_get(args, unused_options):
     array, index = default_args(args, (None, None))
-    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or \
-       index < -len(array) or index >= len(array):
+    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return None
 
     return array[index]
@@ -83,7 +82,7 @@ def _array_get(args, unused_options):
 # $group: Array
 # $doc: Find the index of a value in an array
 # $arg array: The array
-# $arg value: The value to find in the array or, the value function, f(value) -> bool
+# $arg value: The value to find in the array, or the value function, f(value) -> bool
 # $arg index: Optional (default is 0). The index at which to start the search.
 # $return: The first index of the value in the array; -1 if not found.
 def _array_index_of(args, options):
