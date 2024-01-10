@@ -6,7 +6,7 @@ The BareScript library
 """
 
 import datetime
-from functools import partial
+import functools
 import itertools
 import json
 import math
@@ -261,9 +261,15 @@ def _array_slice(args, unused_options):
 # $arg array: The array
 # $arg compareFn: Optional (default is null). The comparison function.
 # $return: The sorted array
-def _array_sort(args, unused_options):
-    array, = default_args(args, (None,))
-    array.sort()
+def _array_sort(args, options):
+    array, compare_fn = default_args(args, (None, None))
+    if not isinstance(array, list) or (compare_fn is not None and not callable(compare_fn)):
+        return None
+
+    if compare_fn is None:
+        array.sort(key=functools.cmp_to_key(value_compare))
+    else:
+        array.sort(key=functools.cmp_to_key(lambda v1, v2: compare_fn([v1, v2], options)))
     return array
 
 
@@ -1057,7 +1063,7 @@ def _system_log_debug(args, options):
 # $arg args...: The function arguments
 # $return: The new function called with "args"
 def _system_partial(args, unused_options):
-    return partial(args[0], *args[1:])
+    return functools.partial(args[0], *args[1:])
 
 
 # $function: systemType
@@ -1081,6 +1087,7 @@ SCRIPT_FUNCTIONS = {
     'arrayGet': _array_get,
     'arrayLength': _array_length,
     'arrayNew': _array_new,
+    'arraySort': _array_sort,
     'datetimeDay': _datetime_day,
     'datetimeHour': _datetime_hour,
     'datetimeISOFormat': _datetime_iso_format,

@@ -195,6 +195,31 @@ class TestLibrary(unittest.TestCase):
     def test_array_new(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNew']([1, 2, 3], None), [1, 2, 3])
 
+    def test_array_sort(self):
+        array = [3, 2, 1]
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySort']([array], None), [1, 2, 3])
+        self.assertListEqual(array, [1, 2, 3])
+
+    def test_array_sort_compare_function(self):
+        array = [1, 2, 3]
+
+        def compare_fn(args, compare_options):
+            a, b = args
+            self.assertIs(compare_options, options)
+            return 1 if a < b else (0 if a == b else -1)
+
+        options = {}
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySort']([array, compare_fn], options), [3, 2, 1])
+        self.assertListEqual(array, [3, 2, 1])
+
+    def test_array_sort_non_array(self):
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([None], None))
+
+    def test_array_sort_non_function(self):
+        array = [3, 2, 1]
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 'asdf'], None))
+        self.assertListEqual(array, [3, 2, 1])
+
     #
     # Datetime functions
     #
