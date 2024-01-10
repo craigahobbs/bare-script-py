@@ -110,10 +110,10 @@ def _array_index_of(args, options):
 # $return: The joined string
 def _array_join(args, unused_options):
     array, separator = args
-    if not isinstance(array, list):
+    if not isinstance(array, list) or not isinstance(separator, str):
         return None
 
-    return value_string(separator).join(value_string(value) for value in array)
+    return separator.join(value_string(value) for value in array)
 
 
 # $function: arrayLastIndexOf

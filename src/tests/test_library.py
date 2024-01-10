@@ -144,12 +144,16 @@ class TestLibrary(unittest.TestCase):
         array = ['a', 'b', 'c']
         self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, b, c')
 
-    def test_array_join_non_string(self):
+    def test_array_join_non_string_items(self):
         array = ['a', 2, None]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, 2, null')
 
     def test_array_join_non_array(self):
         self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None))
+
+    def test_array_join_non_string_separator(self):
+        array = ['a', 'b', 'c']
+        self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([array, 1], None))
 
     def test_array_last_index_of(self):
         array = [1, 2, 3]
