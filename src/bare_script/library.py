@@ -345,7 +345,7 @@ def _datetime_iso_format(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
 
-    if is_date:
+    if value_boolean(is_date):
         return datetime.date(datetime_.year, datetime_.month, datetime_.day).isoformat()
     return datetime_.astimezone(datetime.timezone.utc).isoformat()
 
@@ -534,7 +534,6 @@ def _datetime_today(unused_args, unused_options):
 # $group: Datetime
 # $doc: Get the full year of a datetime
 # $arg datetime: The datetime
-# $arg utc: Optional (default is false). If true, return the UTC year.
 # $return: The full year
 def _datetime_year(args, unused_options):
     datetime_, = default_args(args, (None,))
@@ -882,7 +881,7 @@ def _number_to_fixed(args, unused_options):
         return None
 
     result = f'{_math_round_helper(x, digits):.{int(digits)}f}'
-    if trim:
+    if value_boolean(trim):
         return R_NUMBER_CLEANUP.sub('', result)
     return result
 
@@ -1208,7 +1207,7 @@ def _system_fetch(args, options):
         if fetch_fn is not None:
             try:
                 value = fetch_fn(url)
-                if not is_text:
+                if not value_boolean(is_text):
                     value = json.loads(value)
             except: # pylint: disable=bare-except
                 pass
