@@ -1333,3 +1333,56 @@ class TestLibrary(unittest.TestCase):
 
     def test_string_upper_non_string(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringUpper']([None], None), None)
+
+
+    #
+    # URL functions
+    #
+
+
+    def test_url_encode(self):
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this & that'], None),
+            'https://foo.com/this%20&%20that'
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that)'], None),
+            'https://foo.com/this%20(&%20that%29'
+        )
+
+        # No extra
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this & that', False], None),
+            'https://foo.com/this%20&%20that'
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that)', False], None),
+            'https://foo.com/this%20(&%20that)'
+        )
+
+        # Non-string URL
+        self.assertIsNone(SCRIPT_FUNCTIONS['urlEncode']([None], None))
+
+
+    def test_url_encode_component(self):
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this & that'], None),
+            'https%3A%2F%2Ffoo.com%2Fthis%20%26%20that'
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that)'], None),
+            'https%3A%2F%2Ffoo.com%2Fthis%20(%26%20that%29'
+        )
+
+        # No extra
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this & that', False], None),
+            'https%3A%2F%2Ffoo.com%2Fthis%20%26%20that'
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that)', False], None),
+            'https%3A%2F%2Ffoo.com%2Fthis%20(%26%20that)'
+        )
+
+        # Non-string URL
+        self.assertIsNone(SCRIPT_FUNCTIONS['urlEncodeComponent']([None], None))

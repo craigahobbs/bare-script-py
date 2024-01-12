@@ -12,10 +12,11 @@ import json
 import math
 import random
 import re
+import urllib
 
 from schema_markdown import JSONEncoder, TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .value import R_NUMBER_CLEANUP, value_compare, value_string, value_type
+from .value import R_NUMBER_CLEANUP, value_boolean, value_compare, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -1289,6 +1290,41 @@ def _system_type(args, unused_options):
     return value_type(value)
 
 
+#
+# URL functions
+#
+
+
+# $function: urlEncode
+# $group: URL
+# $doc: Encode a URL
+# $arg url: The URL string
+# $arg extra: Optional (default is true). If true, encode extra characters for wider compatibility.
+# $return: The encoded URL string
+def _url_encode(args, unused_options):
+    url, extra = default_args(args, (None, True))
+    if not isinstance(url, str):
+        return None
+
+    safe = ':/&(' if value_boolean(extra) else ':/&()'
+    return urllib.parse.quote(url, safe=safe)
+
+
+# $function: urlEncodeComponent
+# $group: URL
+# $doc: Encode a URL component
+# $arg url: The URL component string
+# $arg extra: Optional (default is true). If true, encode extra characters for wider compatibility.
+# $return: The encoded URL component string
+def _url_encode_component(args, unused_options):
+    url, extra = default_args(args, (None, True))
+    if not isinstance(url, str):
+        return None
+
+    safe = '(' if value_boolean(extra) else '()'
+    return urllib.parse.quote(url, safe=safe)
+
+
 # The built-in script functions
 SCRIPT_FUNCTIONS = {
     'arrayCopy': _array_copy,
@@ -1374,7 +1410,9 @@ SCRIPT_FUNCTIONS = {
     'systemLog': _system_log,
     'systemLogDebug': _system_log_debug,
     'systemPartial': _system_partial,
-    'systemType': _system_type
+    'systemType': _system_type,
+    'urlEncode': _url_encode,
+    'urlEncodeComponent': _url_encode_component
 }
 
 
