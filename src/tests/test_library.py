@@ -227,7 +227,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLength']([array], None), 3)
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayLength']([None], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLength']([None], None), 0)
 
 
     def test_array_new(self):

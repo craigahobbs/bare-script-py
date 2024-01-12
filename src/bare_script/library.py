@@ -152,7 +152,7 @@ def _array_last_index_of(args, options):
 def _array_length(args, unused_options):
     array, = default_args(args, (None,))
     if not isinstance(array, list):
-        return None
+        return 0
 
     return len(array)
 
@@ -891,6 +891,48 @@ def _number_to_fixed(args, unused_options):
 #
 
 
+# $function: objectAssign
+# $group: Object
+# $doc: Assign the keys/values of one object to another
+# $arg object: The object to assign to
+# $arg object2: The object to assign
+# $return: The updated object
+def _object_assign(args, unused_options):
+    object_, object2 = default_args(args, (None, None))
+    if not isinstance(object_, dict) or not isinstance(object2, dict):
+        return None
+
+    object_.update(object2)
+    return object_
+
+
+# $function: objectCopy
+# $group: Object
+# $doc: Create a copy of an object
+# $arg object: The object to copy
+# $return: The object copy
+def _object_copy(args, unused_options):
+    object_, = default_args(args, (None,))
+    if not isinstance(object_, dict):
+        return None
+
+    return dict(object_)
+
+
+# $function: objectDelete
+# $group: Object
+# $doc: Delete an object key
+# $arg object: The object
+# $arg key: The key to delete
+def _object_delete(args, unused_options):
+    object_, key = default_args(args, (None, None))
+    if not isinstance(object_, dict) or not isinstance(key, str):
+        return None
+
+    del object_[key]
+    return None
+
+
 # $function: objectGet
 # $group: Object
 # $doc: Get an object key's value
@@ -900,7 +942,37 @@ def _number_to_fixed(args, unused_options):
 # $return: The value or null if the key does not exist
 def _object_get(args, unused_options):
     object_, key, default_value = default_args(args, (None, None, None))
-    return object_.get(key, default_value) if isinstance(object_, dict) else default_value
+    if not isinstance(object_, dict) or not isinstance(key, str):
+        return default_value
+
+    return object_.get(key, default_value)
+
+
+# $function: objectHas
+# $group: Object
+# $doc: Test if an object contains a key
+# $arg object: The object
+# $arg key: The key
+# $return: true if the object contains the key, false otherwise
+def _object_has(args, unused_options):
+    object_, key = default_args(args, (None, None))
+    if not isinstance(object_, dict) or not isinstance(key, str):
+        return False
+
+    return key in object_
+
+
+# $function: objectKeys
+# $group: Object
+# $doc: Get an object's keys
+# $arg object: The object
+# $return: The array of keys; null if not an object
+def _object_keys(args, unused_options):
+    object_, = default_args(args, (None,))
+    if not isinstance(object_, dict):
+        return []
+
+    return object_.keys()
 
 
 # $function: objectNew
@@ -917,6 +989,22 @@ def _object_new(args, unused_options):
         object_[key_values[ix]] = (key_values[ix + 1] if ix + 1 < key_values.length else None)
         ix += 2
     return object_
+
+
+# $function: objectSet
+# $group: Object
+# $doc: Set an object key's value
+# $arg object: The object
+# $arg key: The key
+# $arg value: The value to set
+# $return: The value to set
+def _object_set(args, unused_options):
+    object_, key, value = default_args(args, (None, None, None))
+    if not isinstance(object_, dict) or not isinstance(key, str):
+        return None
+
+    object_[key] = value
+    return value
 
 
 #
