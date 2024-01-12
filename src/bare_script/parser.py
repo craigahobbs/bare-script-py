@@ -644,6 +644,7 @@ class BareScriptParserError(Exception):
     :param prefix: The error message prefix line
     :type prefix: str or None, optional
     """
+
     def __init__(self, error, line, column_number=1, line_number=None, prefix=None):
         # Parser error constants
         line_length_max = 120

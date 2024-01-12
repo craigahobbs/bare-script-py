@@ -95,6 +95,7 @@ def main(argv=None):
 
 # Custom argparse action for script file arguments
 class _ScriptAction(argparse.Action):
+
     def __call__(self, parser, namespace, values, option_string=None):
         files = getattr(namespace, 'files', [])
         if option_string in ['-c', '--code']:

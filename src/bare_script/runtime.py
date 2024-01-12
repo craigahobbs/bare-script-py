@@ -347,5 +347,6 @@ class BareScriptRuntimeError(Exception):
     :param message: The runtime error message
     :type message: str
     """
+
     def __init__(self, message):
         super().__init__(message)
