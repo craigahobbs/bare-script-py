@@ -83,7 +83,7 @@ def _array_get(args, unused_options):
 # $group: Array
 # $doc: Find the index of a value in an array
 # $arg array: The array
-# $arg value: The value to find in the array, or the value function, f(value) -> bool
+# $arg value: The value to find in the array, or a match function, f(value) -> bool
 # $arg index: Optional (default is 0). The index at which to start the search.
 # $return: The first index of the value in the array; -1 if not found.
 def _array_index_of(args, options):
@@ -121,7 +121,7 @@ def _array_join(args, unused_options):
 # $group: Array
 # $doc: Find the last index of a value in an array
 # $arg array: The array
-# $arg value: The value to find in the array, or the value function, f(value) -> bool
+# $arg value: The value to find in the array, or a match function, f(value) -> bool
 # $arg index: Optional (default is the end of the array). The index at which to start the search.
 # $return: The last index of the value in the array; -1 if not found.
 def _array_last_index_of(args, options):
@@ -279,6 +279,20 @@ def _array_sort(args, options):
 #
 
 
+# $function: datetimeAdd
+# $group: Datetime
+# $doc: Add milliseconds to a datetime value
+# $arg datetime: The datetime
+# $arg millisecond: The number of milliseconds to add
+# $return: The new datetime
+def _datetime_add(args, unused_options):
+    datetime_, millisecond = default_args(args, (None, None))
+    if not isinstance(datetime_, datetime.datetime) or not isinstance(millisecond, (int, float)) or int(millisecond) != millisecond:
+        return None
+
+    return datetime_ + datetime.timedelta(milliseconds=int(millisecond))
+
+
 # $function: datetimeDay
 # $group: Datetime
 # $doc: Get the day of the month of a datetime
@@ -290,6 +304,20 @@ def _datetime_day(args, unused_options):
         return None
 
     return datetime_.day
+
+
+# $function: datetimeDiff
+# $group: Datetime
+# $doc: Compute the difference of two datetime values, in milliseconds
+# $arg left: The left datetime
+# $arg right: The right datetime
+# $return: The difference, in milliseconds
+def _datetime_diff(args, unused_options):
+    left, right = default_args(args, (None, None))
+    if not isinstance(left, datetime.datetime) or not isinstance(right, datetime.datetime):
+        return None
+
+    return int(_math_round_helper((left - right).total_seconds() * 1000, 0))
 
 
 # $function: datetimeHour
@@ -339,6 +367,19 @@ def _datetime_iso_parse(args, unused_options):
 _R_ZULU = re.compile(r'Z$')
 
 
+# $function: datetimeMillisecond
+# $group: Datetime
+# $doc: Get the millisecond of a datetime
+# $arg datetime: The datetime
+# $return: The millisecond
+def _datetime_millisecond(args, unused_options):
+    datetime_, = default_args(args, (None,))
+    if not isinstance(datetime_, datetime.datetime):
+        return None
+
+    return int(_math_round_helper(datetime_.microsecond / 1000, 0))
+
+
 # $function: datetimeMinute
 # $group: Datetime
 # $doc: Get the minute of a datetime
@@ -354,9 +395,9 @@ def _datetime_minute(args, unused_options):
 
 # $function: datetimeMonth
 # $group: Datetime
-# $doc: Get the number of the month (1-12) of a datetime
+# $doc: Get the month (1-12) of a datetime
 # $arg datetime: The datetime
-# $return: The number of the month
+# $return: The month
 def _datetime_month(args, unused_options):
     datetime_, = default_args(args, (None,))
     if not isinstance(datetime_, datetime.datetime):
@@ -651,6 +692,10 @@ def _math_random(unused_args, unused_options):
 # $return: The rounded number
 def _math_round(args, unused_options):
     x, digits = default_args(args, (None, 0))
+    return _math_round_helper(x, digits)
+
+
+def _math_round_helper(x, digits):
     multiplier = 10 ** digits
     return int(x * multiplier + (0.5 if x >= 0 else -0.5)) / multiplier
 
@@ -1149,10 +1194,13 @@ SCRIPT_FUNCTIONS = {
     'arrayShift': _array_shift,
     'arraySlice': _array_slice,
     'arraySort': _array_sort,
+    'datetimeAdd': _datetime_add,
     'datetimeDay': _datetime_day,
+    'datetimeDiff': _datetime_diff,
     'datetimeHour': _datetime_hour,
     'datetimeISOFormat': _datetime_iso_format,
     'datetimeISOParse': _datetime_iso_parse,
+    'datetimeMillisecond': _datetime_millisecond,
     'datetimeMinute': _datetime_minute,
     'datetimeMonth': _datetime_month,
     'datetimeNew': _datetime_new,
@@ -1227,6 +1275,8 @@ EXPRESSION_FUNCTION_MAP = {
     'charCodeAt': 'stringCharCodeAt',
     'cos': 'mathCos',
     'date': 'datetimeNew',
+    'dateAdd': 'datetimeAdd',
+    'dateDiff': 'datetimeDiff',
     'day': 'datetimeDay',
     'endsWith': 'stringEndsWith',
     'indexOf': 'stringIndexOf',
@@ -1241,6 +1291,7 @@ EXPRESSION_FUNCTION_MAP = {
     'log': 'mathLog',
     'max': 'mathMax',
     'min': 'mathMin',
+    'millisecond': 'datetimeMillisecond',
     'minute': 'datetimeMinute',
     'month': 'datetimeMonth',
     'now': 'datetimeNow',

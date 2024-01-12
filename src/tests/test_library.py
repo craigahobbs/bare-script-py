@@ -25,6 +25,8 @@ class TestLibrary(unittest.TestCase):
                 ('charCodeAt', True),
                 ('cos', True),
                 ('date', True),
+                ('dateAdd', True),
+                ('dateDiff', True),
                 ('day', True),
                 ('endsWith', True),
                 ('indexOf', True),
@@ -39,6 +41,7 @@ class TestLibrary(unittest.TestCase):
                 ('log', True),
                 ('max', True),
                 ('min', True),
+                ('millisecond', True),
                 ('minute', True),
                 ('month', True),
                 ('now', True),
@@ -121,7 +124,7 @@ class TestLibrary(unittest.TestCase):
         # Index provided
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2], None), 3)
 
-        # Value function
+        # Match function
         def value_fn(args, value_options):
             self.assertEqual(len(args), 1)
             self.assertIs(value_options, options)
@@ -130,11 +133,11 @@ class TestLibrary(unittest.TestCase):
         options = {}
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn], options), 1)
 
-        # Value function, not found
+        # Match function, not found
         value_fn_value = 4
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn], options), -1)
 
-        # Value function, index provided
+        # Match function, index provided
         value_fn_value = 2
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn, 2], options), 3)
 
@@ -173,7 +176,7 @@ class TestLibrary(unittest.TestCase):
         # Index provided
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 2], None), 1)
 
-        # Value function
+        # Match function
         def value_fn(args, value_options):
             self.assertEqual(len(args), 1)
             self.assertIs(value_options, options)
@@ -182,11 +185,11 @@ class TestLibrary(unittest.TestCase):
         options = {}
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), 3)
 
-        # Value function, not found
+        # Match function, not found
         value_fn_value = 4
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn], options), -1)
 
-        # Value function, index provided
+        # Match function, index provided
         value_fn_value = 2
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn, 2], options), 1)
 
@@ -338,6 +341,29 @@ class TestLibrary(unittest.TestCase):
     # Datetime functions
     #
 
+    def test_datetime_add(self):
+        datetime_ = datetime.datetime(2022, 6, 21, 7, 15, 30, 100000).astimezone()
+        expected = datetime.datetime(2022, 6, 21, 7, 15, 32, 100000).astimezone()
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, 2000], None), expected)
+
+        expected = datetime.datetime(2022, 6, 21, 7, 15, 28, 100000).astimezone()
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, -2000], None), expected)
+
+        expected = datetime.datetime(2022, 6, 21, 9, 15, 30, 100000).astimezone()
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, 2 * 60 * 60 * 1000], None), expected)
+
+        expected = datetime.datetime(2022, 6, 21, 5, 15, 30, 100000).astimezone()
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, -2 * 60 * 60 * 1000], None), expected)
+
+        # Non-datetime
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([None, 2000], None), None)
+
+        # Non-number
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, None], None), None)
+
+        # Non-integer
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, 2000.5], None), None)
+
     def test_datetime_day(self):
         local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
         utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
@@ -346,6 +372,20 @@ class TestLibrary(unittest.TestCase):
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([None], None), None)
+
+    def test_datetime_diff(self):
+        left = datetime.datetime(2022, 6, 21, 7, 15, 30, 100500).astimezone()
+        right = datetime.datetime(2022, 6, 21, 7, 15, 33, 300500).astimezone()
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDiff']([left, right], None), -3200)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDiff']([right, left], None), 3200)
+
+        right = datetime.datetime(2022, 6, 21, 7, 15, 33, 301500).astimezone()
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDiff']([left, right], None), -3201)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDiff']([right, left], None), 3201)
+
+        # Non-datetime
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDiff']([None, right], None), None)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDiff']([left, None], None), None)
 
     def test_datetime_hour(self):
         local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
@@ -388,6 +428,15 @@ class TestLibrary(unittest.TestCase):
 
         # Non-string datetime string
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse']([None], None), None)
+
+    def test_datetime_millisecond(self):
+        local_dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100500).astimezone()
+        utc_dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 101500, tzinfo=datetime.timezone.utc)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([local_dt], None), 101)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([utc_dt], None), 102)
+
+        # Non-datetime
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([None], None), None)
 
     def test_datetime_minute(self):
         local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
