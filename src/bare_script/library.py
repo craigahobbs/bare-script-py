@@ -591,7 +591,7 @@ def _json_stringify(args, unused_options):
 # $arg x: The number
 # $return: The absolute value of the number
 def _math_abs(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -604,7 +604,7 @@ def _math_abs(args, unused_options):
 # $arg x: The number
 # $return: The arccosine, in radians, of the number
 def _math_acos(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -617,7 +617,7 @@ def _math_acos(args, unused_options):
 # $arg x: The number
 # $return: The arcsine, in radians, of the number
 def _math_asin(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -630,7 +630,7 @@ def _math_asin(args, unused_options):
 # $arg x: The number
 # $return: The arctangent, in radians, of the number
 def _math_atan(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -644,7 +644,7 @@ def _math_atan(args, unused_options):
 # $arg x: The X-coordinate of the point
 # $return: The angle, in radians
 def _math_atan2(args, unused_options):
-    y, x = args
+    y, x = default_args(args, (None, None))
     if not isinstance(y, (int, float)) or not isinstance(x, (int, float)):
         return None
 
@@ -657,7 +657,7 @@ def _math_atan2(args, unused_options):
 # $arg x: The number
 # $return: The ceiling of the number
 def _math_ceil(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -670,7 +670,7 @@ def _math_ceil(args, unused_options):
 # $arg x: The angle, in radians
 # $return: The cosine of the angle
 def _math_cos(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -683,7 +683,7 @@ def _math_cos(args, unused_options):
 # $arg x: The number
 # $return: The floor of the number
 def _math_floor(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -696,7 +696,7 @@ def _math_floor(args, unused_options):
 # $arg x: The number
 # $return: The natural logarithm of the number
 def _math_ln(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)) or x <= 0:
         return None
 
@@ -784,7 +784,7 @@ def _math_round_helper(x, digits):
 # $arg x: The number
 # $return: -1 for a negative number, 1 for a positive number, and 0 for zero
 def _math_sign(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -797,7 +797,7 @@ def _math_sign(args, unused_options):
 # $arg x: The angle, in radians
 # $return: The sine of the angle
 def _math_sin(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -810,7 +810,7 @@ def _math_sin(args, unused_options):
 # $arg x: The number
 # $return: The square root of the number
 def _math_sqrt(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)) or x < 0:
         return None
 
@@ -823,7 +823,7 @@ def _math_sqrt(args, unused_options):
 # $arg x: The angle, in radians
 # $return: The tangent of the angle
 def _math_tan(args, unused_options):
-    x, = args
+    x, = default_args(args, (None,))
     if not isinstance(x, (int, float)):
         return None
 
@@ -841,7 +841,7 @@ def _math_tan(args, unused_options):
 # $arg string: The string
 # $return: The number
 def _number_parse_float(args, unused_options):
-    string, = args
+    string, = default_args(args, (None,))
     if not isinstance(string, str):
         return None
 
@@ -909,7 +909,7 @@ def _object_get(args, unused_options):
 # $arg keyValues...: The object's initial key and value pairs
 # $return: The new object
 def _object_new(args, unused_options):
-    key_values, = args
+    key_values, = default_args(args, (None,))
     key_values_length = len(key_values)
     object_ = {}
     ix = 0
@@ -950,8 +950,7 @@ _R_REGEX_ESCAPE = re.compile(r'[.*+?^${}()|[\]\\]')
 # $arg lines...: text lines (may contain nested arrays of un-split lines)
 # $return: The schema's [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_parse(args, unused_options):
-    lines, = args
-    return parse_schema_markdown(lines)
+    return parse_schema_markdown(args)
 
 
 # $function: schemaParseEx
@@ -964,6 +963,9 @@ def _schema_parse(args, unused_options):
 # $return: The schema's [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_parse_ex(args, unused_options):
     lines, types, filename = default_args(args, (None, {}, ''))
+    if not isinstance(lines, (list, str)) or not isinstance(types, dict) or not isinstance(filename, str):
+        return None
+
     return parse_schema_markdown(lines, types, filename)
 
 
@@ -983,7 +985,11 @@ def _schema_type_model(unused_args, unused_options):
 # $arg value: The object to validate
 # $return: The validated object or null if validation fails
 def _schema_validate(args, unused_options):
-    types, type_name, value = args
+    types, type_name, value = default_args(args, (None, None, None))
+    if not isinstance(types, dict) or not isinstance(type_name, str):
+        return None
+
+    validate_type_model(types)
     return validate_type(types, type_name, value)
 
 
@@ -993,7 +999,10 @@ def _schema_validate(args, unused_options):
 # $arg types: The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types') to validate
 # $return: The validated [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_validate_type_model(args, unused_options):
-    types, = args
+    types, = default_args(args, (None,))
+    if not isinstance(types, dict):
+        return None
+
     return validate_type_model(types)
 
 
@@ -1341,7 +1350,7 @@ SCRIPT_FUNCTIONS = {
     'regexNew': _regex_new,
     'schemaParse': _schema_parse,
     'schemaParseEx': _schema_parse_ex,
-    'schemaType_model': _schema_type_model,
+    'schemaTypeModel': _schema_type_model,
     'schemaValidate': _schema_validate,
     'schemaValidateTypeModel': _schema_validate_type_model,
     'stringCharCodeAt': _string_char_code_at,

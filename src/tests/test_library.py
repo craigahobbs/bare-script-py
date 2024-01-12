@@ -8,6 +8,8 @@ import json
 import math
 import unittest
 
+import schema_markdown
+
 from bare_script import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 
 
@@ -1065,6 +1067,113 @@ class TestLibrary(unittest.TestCase):
 
         # Negative digits
         self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, -1], None))
+
+
+    #
+    # Schema functions
+    #
+
+
+    def test_schema_parse(self):
+        types = SCRIPT_FUNCTIONS['schemaParse'](['typedef int MyType', 'typedef MyType MyType2'], None)
+        self.assertDictEqual(types, {
+            'MyType': {'typedef': {'name': 'MyType', 'type': {'builtin': 'int'}}},
+            'MyType2': {'typedef': {'name': 'MyType2','type': {'user': 'MyType'}}}
+        })
+
+        # Syntax error
+        with self.assertRaises(schema_markdown.SchemaMarkdownParserError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaParse'](['asdf'], None)
+        self.assertEqual(str(cm_exc.exception), ':1: error: Syntax error')
+
+
+    def test_schema_parse_ex(self):
+        # List input
+        types = SCRIPT_FUNCTIONS['schemaParseEx']([['typedef int MyType', 'typedef MyType MyType2']], None)
+        self.assertDictEqual(types, {
+            'MyType': {'typedef': {'name': 'MyType', 'type': {'builtin': 'int'}}},
+            'MyType2': {'typedef': {'name': 'MyType2','type': {'user': 'MyType'}}}
+        })
+
+        # String input
+        types = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef int MyType'], None)
+        self.assertDictEqual(types, {
+            'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}}
+        })
+
+        # Types provided
+        types = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef int MyType'], None)
+        types2 = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef MyType MyType2', types], None)
+        self.assertDictEqual(types, {
+            'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}},
+            'MyType2': {'typedef': {'name': 'MyType2','type': {'user': 'MyType'}}}
+        })
+        self.assertIs(types, types2)
+
+        # Filename provided
+        types = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef int MyType', {}, 'test.smd'], None)
+        self.assertDictEqual(types, {
+            'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}}
+        })
+
+        # Syntax error
+        with self.assertRaises(schema_markdown.SchemaMarkdownParserError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaParseEx'](['asdf'], None)
+        self.assertEqual(str(cm_exc.exception), ':1: error: Syntax error')
+
+        # Syntax error with filename
+        with self.assertRaises(schema_markdown.SchemaMarkdownParserError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaParseEx'](['asdf', {}, 'test.smd'], None)
+        self.assertEqual(str(cm_exc.exception), 'test.smd:1: error: Syntax error')
+
+        # Non-list/string input
+        self.assertIsNone(SCRIPT_FUNCTIONS['schemaParseEx']([None], None))
+
+        # Non-doct types
+        self.assertIsNone(SCRIPT_FUNCTIONS['schemaParseEx'](['', None], None))
+
+        # Non-string filename
+        self.assertIsNone(SCRIPT_FUNCTIONS['schemaParseEx'](['', {}, None], None))
+
+
+    def test_schema_type_model(self):
+        type_model = SCRIPT_FUNCTIONS['schemaTypeModel']([], None)
+        self.assertTrue('Types' in type_model)
+        self.assertDictEqual(SCRIPT_FUNCTIONS['schemaValidateTypeModel']([type_model], None), type_model)
+
+
+    def test_schema_validate(self):
+        types = SCRIPT_FUNCTIONS['schemaParse'](['# My struct', 'struct MyStruct', '', '  # An integer\n  int a'], None)
+        self.assertDictEqual(SCRIPT_FUNCTIONS['schemaValidate']([types, 'MyStruct', {'a': 5}], None), {'a': 5})
+
+        # Invalid types
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaValidate']([{}, 'MyStruct', {}], None)
+        self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'dict'), expected type 'Types' [len > 0]")
+
+        # Invalid value
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaValidate']([types, 'MyStruct', {}], None)
+        self.assertEqual(str(cm_exc.exception), "Required member 'a' missing")
+
+        # Non-dict types
+        self.assertIsNone(SCRIPT_FUNCTIONS['schemaValidate']([None, 'MyStruct', None], None))
+
+        # Non-string type
+        self.assertIsNone(SCRIPT_FUNCTIONS['schemaValidate']([{}, None, None], None))
+
+
+    def test_schema_validate_type_model(self):
+        types = {'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}}}
+        self.assertDictEqual(SCRIPT_FUNCTIONS['schemaValidateTypeModel']([types], None), types)
+
+        # Invalid types
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaValidateTypeModel']([{}], None)
+        self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'dict'), expected type 'Types' [len > 0]")
+
+        # Non-dict types
+        self.assertIsNone(SCRIPT_FUNCTIONS['schemaValidateTypeModel']([None], None))
 
 
     #
