@@ -101,6 +101,7 @@ class TestLibrary(unittest.TestCase):
     def test_array_get(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 0], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 0.], None), 1)
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 1], None), 2)
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 2], None), 3)
 
@@ -129,6 +130,7 @@ class TestLibrary(unittest.TestCase):
 
         # Index provided
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2], None), 3)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2.], None), 3)
 
         # Match function
         def value_fn(args, value_options):
@@ -146,6 +148,7 @@ class TestLibrary(unittest.TestCase):
         # Match function, index provided
         value_fn_value = 2
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn, 2], options), 3)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn, 2.], options), 3)
 
         # Non-array
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([None, 2], None), -1)
@@ -183,6 +186,7 @@ class TestLibrary(unittest.TestCase):
 
         # Index provided
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 2], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 2.], None), 1)
 
         # Match function
         def value_fn(args, value_options):
@@ -200,6 +204,7 @@ class TestLibrary(unittest.TestCase):
         # Match function, index provided
         value_fn_value = 2
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn, 2], options), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn, 2.], options), 1)
 
         # Non-array
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([None, 2], None), -1)
@@ -230,6 +235,7 @@ class TestLibrary(unittest.TestCase):
 
     def test_array_new_size(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3], None), [0, 0, 0])
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3.], None), [0, 0, 0])
 
         # Value provided
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([3, 1], None), [1, 1, 1])
@@ -299,6 +305,7 @@ class TestLibrary(unittest.TestCase):
     def test_array_slice(self):
         array = [1, 2, 3, 4]
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 2], None), [1, 2])
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 0., 2.], None), [1, 2])
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1, 3], None), [2, 3])
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1, 4], None), [2, 3, 4])
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1], None), [2, 3, 4])
@@ -364,6 +371,7 @@ class TestLibrary(unittest.TestCase):
         datetime_ = datetime.datetime(2022, 6, 21, 7, 15, 30, 100000).astimezone()
         expected = datetime.datetime(2022, 6, 21, 7, 15, 32, 100000).astimezone()
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, 2000], None), expected)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, 2000.], None), expected)
 
         expected = datetime.datetime(2022, 6, 21, 7, 15, 28, 100000).astimezone()
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeAdd']([datetime_, -2000], None), expected)
@@ -489,6 +497,10 @@ class TestLibrary(unittest.TestCase):
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 100], None),
             datetime.datetime(2022, 6, 21, 12, 30, 15, 100000).astimezone()
         )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 21., 12., 30., 15., 100.], None),
+            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000).astimezone()
+        )
 
         # Float arguments
         self.assertEqual(
@@ -599,6 +611,10 @@ class TestLibrary(unittest.TestCase):
     def test_datetime_new_utc(self):
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100], None),
+            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022., 6., 21., 12., 30., 15., 100.], None),
             datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
         )
 
@@ -778,6 +794,14 @@ class TestLibrary(unittest.TestCase):
     "b": 2
 }'''
         )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 4.], None),
+            '''\
+{
+    "a": 1,
+    "b": 2
+}'''
+        )
 
         # Zero indent
         self.assertEqual(
@@ -926,6 +950,7 @@ class TestLibrary(unittest.TestCase):
 
         # Digits
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.25, 1], None), 5.3)
+        self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.25, 1.], None), 5.3)
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.15, 1], None), 5.2)
 
         # Non-number value
@@ -970,6 +995,76 @@ class TestLibrary(unittest.TestCase):
 
         # Non-number
         self.assertIsNone(SCRIPT_FUNCTIONS['mathTan'](['abc'], None))
+
+
+    #
+    # Number functions
+    #
+
+
+    def test_number_parse_float(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['numberParseFloat'](['123.45'], None), 123.45)
+
+        # Parse failure
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['asdf'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45asdf'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45 asdf'], None))
+
+        # Non-string value
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat']([10], None))
+
+
+    def test_number_parse_int(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['numberParseInt'](['123'], None), 123)
+
+        # Radix
+        self.assertEqual(SCRIPT_FUNCTIONS['numberParseInt'](['10', 2], None), 2)
+        self.assertEqual(SCRIPT_FUNCTIONS['numberParseInt'](['10', 2.], None), 2)
+
+        # Parse failure
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1234.45'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['asdf'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1234asdf'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1234.45 asdf'], None))
+
+        # Non-string value
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt']([10], None))
+
+        # Non-number radix
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 'abc'], None))
+
+        # Non-integer radix
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 2.5], None))
+
+        # Invalid radix
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 37], None))
+
+
+    def test_number_to_fixed(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125], None), '1.13')
+
+        # Digits
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 0], None), '1')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 0.], None), '1')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1], None), '1.1')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1, 1], None), '1.0')
+
+        # Trim
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1, True], None), '1.1')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1, 1, True], None), '1')
+
+        # Non-number value
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([None, 1], None))
+
+        # Non-number digits
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, None], None))
+
+        # Non-integer digits
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1.5], None))
+
+        # Negative digits
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, -1], None))
 
 
     #

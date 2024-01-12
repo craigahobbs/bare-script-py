@@ -76,7 +76,7 @@ def _array_get(args, unused_options):
     if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return None
 
-    return array[index]
+    return array[int(index)]
 
 
 # $function: arrayIndexOf
@@ -92,11 +92,11 @@ def _array_index_of(args, options):
         return -1
 
     if callable(value):
-        for ix in range(index, len(array)):
+        for ix in range(int(index), len(array)):
             if value([array[ix]], options):
                 return ix
     else:
-        for ix in range(index, len(array)):
+        for ix in range(int(index), len(array)):
             if value_compare(array[ix], value) == 0:
                 return ix
 
@@ -132,11 +132,11 @@ def _array_last_index_of(args, options):
         return -1
 
     if callable(value):
-        for ix in range(index, -1, -1):
+        for ix in range(int(index), -1, -1):
             if value([array[ix]], options):
                 return ix
     else:
-        for ix in range(index, -1, -1):
+        for ix in range(int(index), -1, -1):
             if value_compare(array[ix], value) == 0:
                 return ix
 
@@ -176,7 +176,7 @@ def _array_new_size(args, unused_options):
     if not isinstance(size, (int, float)) or int(size) != size or size < 0:
         return None
 
-    return list(value for _ in range(size))
+    return list(value for _ in range(int(size)))
 
 
 # $function: arrayPop
@@ -253,7 +253,7 @@ def _array_slice(args, unused_options):
        not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(array):
         return None
 
-    return array[start:end]
+    return array[int(start):int(end)]
 
 
 # $function: arraySort
@@ -842,7 +842,13 @@ def _math_tan(args, unused_options):
 # $return: The number
 def _number_parse_float(args, unused_options):
     string, = args
-    return float(string)
+    if not isinstance(string, str):
+        return None
+
+    try:
+        return float(string)
+    except ValueError:
+        return None
 
 
 # $function: numberParseInt
@@ -853,7 +859,13 @@ def _number_parse_float(args, unused_options):
 # $return: The integer
 def _number_parse_int(args, unused_options):
     string, radix = default_args(args, (None, 10))
-    return int(string, radix)
+    if not isinstance(string, str) or not isinstance(radix, (int, float)) or int(radix) != radix or radix < 2 or radix > 36:
+        return None
+
+    try:
+        return int(string, int(radix))
+    except ValueError:
+        return None
 
 
 # $function: numberToFixed
@@ -865,9 +877,10 @@ def _number_parse_int(args, unused_options):
 # $return: The fixed-point notation string
 def _number_to_fixed(args, unused_options):
     x, digits, trim = default_args(args, (None, 2, False))
-    if not isinstance(x, (int, float)):
+    if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
         return None
-    result = f'{x:.{int(digits)}f}'
+
+    result = f'{_math_round_helper(x, digits):.{int(digits)}f}'
     if trim:
         return R_NUMBER_CLEANUP.sub('', result)
     return result
