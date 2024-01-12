@@ -23,10 +23,10 @@ def value_type(value):
         return 'null'
     elif isinstance(value, str):
         return 'string'
+    elif isinstance(value, bool):
+        return 'boolean'
     elif isinstance(value, (int, float)):
         return 'number'
-    elif isinstance(value, bool):
-        return 'bool'
     elif isinstance(value, datetime.datetime):
         return 'datetime'
     elif isinstance(value, dict):
@@ -57,14 +57,14 @@ def value_string(value):
         return 'null'
     elif isinstance(value, str):
         return value
+    elif isinstance(value, bool):
+        return 'true' if value else 'false'
     elif isinstance(value, int):
         return str(value)
     elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
-    elif isinstance(value, bool):
-        return 'true' if value else 'false'
     elif isinstance(value, datetime.datetime):
-        return value.toISOFormat()
+        return value.isoformat()
     elif isinstance(value, (dict)):
         return json.dumps(value)
     elif isinstance(value, (list)):
@@ -93,10 +93,10 @@ def value_boolean(value):
         return False
     elif isinstance(value, str):
         return value != ''
-    elif isinstance(value, (int, float)):
-        return value != 0
     elif isinstance(value, bool):
         return value
+    elif isinstance(value, (int, float)):
+        return value != 0
     elif isinstance(value, datetime.datetime):
         return True
     elif isinstance(value, dict):
@@ -128,9 +128,10 @@ def value_compare(value1, value2):
         return 1
     if isinstance(value1, str) and isinstance(value2, str):
         return -1 if value1 < value2 else (0 if value1 == value2 else 1)
-    elif isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
-        return -1 if value1 < value2 else (0 if value1 == value2 else 1)
     elif isinstance(value1, bool) and isinstance(value2, bool):
+        return -1 if value1 < value2 else (0 if value1 == value2 else 1)
+    elif isinstance(value1, (int, float)) and not isinstance(value1, bool) and \
+         isinstance(value2, (int, float)) and not isinstance(value2, bool):
         return -1 if value1 < value2 else (0 if value1 == value2 else 1)
     elif isinstance(value1, datetime.datetime) and isinstance(value2, datetime.datetime):
         return -1 if value1 < value2 else (0 if value1 == value2 else 1)
@@ -142,6 +143,6 @@ def value_compare(value1, value2):
         return -1 if len(value1) < len(value2) else (0 if len(value1) == len(value2) else 1)
 
     # Invalid comparison - compare by type name
-    type1 = value_type(value1)
-    type2 = value_type(value2)
+    type1 = value_type(value1) or 'unknown'
+    type2 = value_type(value2) or 'unknown'
     return -1 if type1 < type2 else (0 if type1 == type2 else 1)

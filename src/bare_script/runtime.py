@@ -11,7 +11,7 @@ import re
 from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, default_args
 from .model import lint_script
 from .parser import BareScriptParserError, parse_script
-from .values import value_boolean, value_compare, value_string
+from .value import value_boolean, value_compare, value_string
 
 
 def execute_script(script, options=None):

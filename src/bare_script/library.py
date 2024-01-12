@@ -15,7 +15,7 @@ import re
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .values import R_NUMBER_CLEANUP, value_compare, value_string, value_type
+from .value import R_NUMBER_CLEANUP, value_compare, value_string, value_type
 
 
 # The default maximum statements for executeScript
