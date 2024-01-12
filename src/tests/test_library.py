@@ -4,6 +4,7 @@
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
 import datetime
+import json
 import math
 import unittest
 
@@ -741,6 +742,61 @@ class TestLibrary(unittest.TestCase):
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([None], None), None)
+
+
+    #
+    # JSON functions
+    #
+
+
+    def test_json_parse(self):
+        self.assertDictEqual(SCRIPT_FUNCTIONS['jsonParse'](['{"a": 1, "b": 2}'], None), {'a': 1, 'b': 2})
+
+        # Invalid JSON
+        with self.assertRaises(json.decoder.JSONDecodeError):
+            SCRIPT_FUNCTIONS['jsonParse'](['asdf'], None)
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonParse']([None], None))
+
+
+    def test_json_stringify(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify']([{'b': 2, 'a': 1}], None), '{"a":1,"b":2}')
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify']([{'b': 2, 'a': {'d': 4, 'c': 3}}], None), '{"a":{"c":3,"d":4},"b":2}')
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify']([[{'b': 2, 'a': 1}]], None), '[{"a":1,"b":2}]')
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify']([[3, 2, 1]], None), '[3,2,1]')
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify']([123], None), '123')
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify'](['abc'], None), '"abc"')
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonStringify']([None], None), 'null')
+
+        # Non-zero indent
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 4], None),
+            '''\
+{
+    "a": 1,
+    "b": 2
+}'''
+        )
+
+        # Zero indent
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 0], None),
+            '''\
+{
+"a": 1,
+"b": 2
+}'''
+        )
+
+        # Non-number space
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, 'abc'], None))
+
+        # Non-integer space
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, 4.5], None))
+
+        # Negative space
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, -4], None))
 
 
     #

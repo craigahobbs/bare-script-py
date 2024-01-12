@@ -13,7 +13,7 @@ import math
 import random
 import re
 
-from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
+from schema_markdown import JSONEncoder, TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .value import R_NUMBER_CLEANUP, value_compare, value_string, value_type
 
@@ -541,6 +541,43 @@ def _datetime_year(args, unused_options):
         return None
 
     return datetime_.year
+
+
+#
+# JSON functions
+#
+
+
+# $function: jsonParse
+# $group: JSON
+# $doc: Convert a JSON string to an object
+# $arg string: The JSON string
+# $return: The object
+def _json_parse(args, unused_options):
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return None
+
+    return json.loads(string)
+
+
+# $function: jsonStringify
+# $group: JSON
+# $doc: Convert an object to a JSON string
+# $arg value: The object
+# $arg space: Optional (default is null). The indentation string or number.
+# $return: The JSON string
+def _json_stringify(args, unused_options):
+    value, space = default_args(args, (None, None))
+    if space is not None and (not isinstance(space, (int, float)) or int(space) != space or space < 0):
+        return None
+
+    if space is not None:
+        separators = (',', ': ')
+        space = int(space)
+    else:
+        separators = (',', ':')
+    return JSONEncoder(allow_nan=False, indent=space, separators=separators, sort_keys=True).encode(value)
 
 
 #
@@ -1209,6 +1246,8 @@ SCRIPT_FUNCTIONS = {
     'datetimeSecond': _datetime_second,
     'datetimeToday': _datetime_today,
     'datetimeYear': _datetime_year,
+    'jsonParse': _json_parse,
+    'jsonStringify': _json_stringify,
     'mathAbs': _math_abs,
     'mathAcos': _math_acos,
     'mathAsin': _math_asin,
