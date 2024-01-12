@@ -592,6 +592,9 @@ def _json_stringify(args, unused_options):
 # $return: The absolute value of the number
 def _math_abs(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return abs(x)
 
 
@@ -602,6 +605,9 @@ def _math_abs(args, unused_options):
 # $return: The arccosine, in radians, of the number
 def _math_acos(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.acos(x)
 
 
@@ -612,6 +618,9 @@ def _math_acos(args, unused_options):
 # $return: The arcsine, in radians, of the number
 def _math_asin(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.asin(x)
 
 
@@ -622,6 +631,9 @@ def _math_asin(args, unused_options):
 # $return: The arctangent, in radians, of the number
 def _math_atan(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.atan(x)
 
 
@@ -633,6 +645,9 @@ def _math_atan(args, unused_options):
 # $return: The angle, in radians
 def _math_atan2(args, unused_options):
     y, x = args
+    if not isinstance(y, (int, float)) or not isinstance(x, (int, float)):
+        return None
+
     return math.atan2(y, x)
 
 
@@ -643,6 +658,9 @@ def _math_atan2(args, unused_options):
 # $return: The ceiling of the number
 def _math_ceil(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.ceil(x)
 
 
@@ -653,6 +671,9 @@ def _math_ceil(args, unused_options):
 # $return: The cosine of the angle
 def _math_cos(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.cos(x)
 
 
@@ -663,6 +684,9 @@ def _math_cos(args, unused_options):
 # $return: The floor of the number
 def _math_floor(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.floor(x)
 
 
@@ -673,6 +697,9 @@ def _math_floor(args, unused_options):
 # $return: The natural logarithm of the number
 def _math_ln(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)) or x <= 0:
+        return None
+
     return math.log(x)
 
 
@@ -684,6 +711,9 @@ def _math_ln(args, unused_options):
 # $return: The logarithm of the number
 def _math_log(args, unused_options):
     x, base = default_args(args, (None, 10))
+    if not isinstance(x, (int, float)) or x <= 0 or not isinstance(base, (int, float)) or base <= 0 or base == 1:
+        return None
+
     return math.log(x, base)
 
 
@@ -693,6 +723,10 @@ def _math_log(args, unused_options):
 # $arg values...: The values
 # $return: The maximum value
 def _math_max(args, unused_options):
+    for x in args:
+        if not isinstance(x, (int, float)):
+            return None
+
     return max(*args)
 
 
@@ -702,6 +736,10 @@ def _math_max(args, unused_options):
 # $arg values...: The values
 # $return: The minimum value
 def _math_min(args, unused_options):
+    for x in args:
+        if not isinstance(x, (int, float)):
+            return None
+
     return min(*args)
 
 
@@ -729,6 +767,9 @@ def _math_random(unused_args, unused_options):
 # $return: The rounded number
 def _math_round(args, unused_options):
     x, digits = default_args(args, (None, 0))
+    if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
+        return None
+
     return _math_round_helper(x, digits)
 
 
@@ -744,6 +785,9 @@ def _math_round_helper(x, digits):
 # $return: -1 for a negative number, 1 for a positive number, and 0 for zero
 def _math_sign(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return -1 if x < 0 else (0 if x == 0 else 1)
 
 
@@ -754,6 +798,9 @@ def _math_sign(args, unused_options):
 # $return: The sine of the angle
 def _math_sin(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.sin(x)
 
 
@@ -764,6 +811,9 @@ def _math_sin(args, unused_options):
 # $return: The square root of the number
 def _math_sqrt(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)) or x < 0:
+        return None
+
     return math.sqrt(x)
 
 
@@ -774,6 +824,9 @@ def _math_sqrt(args, unused_options):
 # $return: The tangent of the angle
 def _math_tan(args, unused_options):
     x, = args
+    if not isinstance(x, (int, float)):
+        return None
+
     return math.tan(x)
 
 

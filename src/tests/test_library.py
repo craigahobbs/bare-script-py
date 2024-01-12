@@ -807,53 +807,110 @@ class TestLibrary(unittest.TestCase):
     def test_math_abs(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAbs']([-3], None), 3)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathAbs'](['abc'], None))
+
 
     def test_math_acos(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAcos']([1], None), 0)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathAcos'](['abc'], None))
 
 
     def test_math_asin(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAsin']([0], None), 0)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathAsin'](['abc'], None))
+
 
     def test_math_atan(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAtan']([0], None), 0)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathAtan'](['abc'], None))
 
 
     def test_math_atan2(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAtan2']([0, 1], None), 0)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathAtan2'](['abc', 1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathAtan2']([0, 'abc'], None))
+
 
     def test_math_ceil(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathCeil']([0.25], None), 1)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathCeil'](['abc'], None))
 
 
     def test_math_cos(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathCos']([0], None), 1)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathCos'](['abc'], None))
+
 
     def test_math_floor(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathFloor']([1.125], None), 1)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathFloor'](['abc'], None))
 
 
     def test_math_ln(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathLn']([math.e], None), 1)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLn'](['abc'], None))
+
+        # Invalid value
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLn']([0], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLn']([-10], None))
+
 
     def test_math_log(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathLog']([10], None), 1)
 
-
-    def test_math_log_base(self):
+        # Base
         self.assertEqual(SCRIPT_FUNCTIONS['mathLog']([8, 2], None), 3)
+        self.assertEqual(SCRIPT_FUNCTIONS['mathLog']([8, 0.5], None), -3)
+
+        # Non-number value
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog'](['abc'], None))
+
+        # Non-number base
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, 'abc'], None))
+
+        # Invalid value
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([0], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([-10], None))
+
+        # Invalid base
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, 1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, 0], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, -10], None))
 
 
     def test_math_max(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathMax']([1, 2, 3], None), 3)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax'](['abc', 2, 3], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax']([1, 'abc', 3], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax']([1, 2, 'abc'], None))
+
 
     def test_math_min(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathMin']([1, 2, 3], None), 1)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin'](['abc', 2, 3], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin']([1, 'abc', 3], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin']([1, 2, 'abc'], None))
 
 
     def test_math_pi(self):
@@ -867,29 +924,52 @@ class TestLibrary(unittest.TestCase):
     def test_math_round(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.125], None), 5)
 
-
-    def test_math_round_digits(self):
+        # Digits
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.25, 1], None), 5.3)
-
-
-    def test_math_round_digits_2(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.15, 1], None), 5.2)
+
+        # Non-number value
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound'](['abc'], None))
+
+        # Non-number base
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([5.125, 'abc'], None))
+
+        # Non-integer base
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([5.125, 1.5], None))
+
+        # Negative base
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([5.125, -1], None))
 
 
     def test_math_sign(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathSign']([5.125], None), 1)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathSign'](['abc'], None))
+
 
     def test_math_sin(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathSin']([0], None), 0)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathSin'](['abc'], None))
 
 
     def test_math_sqrt(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathSqrt']([4], None), 2)
 
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathSqrt'](['abc'], None))
+
+        # Negative value
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathSqrt']([-4], None))
+
 
     def test_math_tan(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathTan']([0], None), 0)
+
+        # Non-number
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathTan'](['abc'], None))
 
 
     #
