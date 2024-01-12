@@ -30,6 +30,7 @@ class TestParseScript(unittest.TestCase):
             ]
         })
 
+
     def test_line_continuation(self):
         script = validate_script(parse_script('''\
 a = arrayNew( \\
@@ -47,6 +48,7 @@ a = arrayNew( \\
                 }
             ]
         })
+
 
     def test_line_continuation_comments(self):
         script = validate_script(parse_script('''\
@@ -69,6 +71,7 @@ a = arrayNew( \\
             ]
         })
 
+
     def test_line_continuation_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -81,6 +84,7 @@ Syntax error, line number 1:
     fn1(arg1, fn2(),
                     ^
 ''')
+
 
     def test_long_line_error_middle(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -105,6 +109,7 @@ Syntax error, line number 1:
                                                                 ^
 ''')
 
+
     def test_long_line_error_left(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -128,6 +133,7 @@ Syntax error, line number 1:
                            ^
 ''')
 
+
     def test_long_line_error_right(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -150,6 +156,7 @@ Syntax error, line number 1:
 ... alue39 + value40, value41 + value42 + value43 + value44 + value45, value46 + value47 + value48 + value49 + value50 @#$ )
                                                                                                                       ^
 ''')
+
 
     def test_jumpif_statement(self):
         script = validate_script(parse_script('''\
@@ -202,6 +209,7 @@ return a
             ]
         })
 
+
     def test_function_statement(self):
         script = validate_script(parse_script('''\
 function addNumbers(a, b):
@@ -226,6 +234,7 @@ endfunction
             ]
         })
 
+
     def test_async_function_statement(self):
         script = validate_script(parse_script('''\
 async function fetchURL(url):
@@ -247,6 +256,7 @@ endfunction
             ]
         })
 
+
     def test_function_statement_empty_return(self):
         script = validate_script(parse_script('''\
 function fetchURL(url):
@@ -266,6 +276,7 @@ endfunction
                 }
             ]
         })
+
 
     def test_function_statement_last_arg_array(self):
         script = validate_script(parse_script('''\
@@ -288,6 +299,7 @@ endfunction
             ]
         })
 
+
     def test_function_statement_last_arg_array_no_args(self):
         script = validate_script(parse_script('''\
 function test(...):
@@ -307,6 +319,7 @@ endfunction
                 }
             ]
         })
+
 
     def test_function_statement_last_arg_array_spaces(self):
         script = validate_script(parse_script('''\
@@ -329,6 +342,7 @@ endfunction
             ]
         })
 
+
     def test_function_statement_missing_colon(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -340,6 +354,7 @@ Syntax error, line number 1:
 function test()
         ^
 ''')
+
 
     def test_if_then_statement(self):
         script = validate_script(parse_script('''\
@@ -372,6 +387,7 @@ endif
             ]
         })
 
+
     def test_if_then_statement_only(self):
         script = validate_script(parse_script('''\
 if i > 0:
@@ -388,6 +404,7 @@ endif
                 {'label': '__bareScriptDone0'}
             ]
         })
+
 
     def test_if_then_statement_if_else_if(self):
         script = validate_script(parse_script('''\
@@ -415,6 +432,7 @@ endif
             ]
         })
 
+
     def test_if_then_statement_if_else(self):
         script = validate_script(parse_script('''\
 if i > 0:
@@ -437,6 +455,7 @@ endif
             ]
         })
 
+
     def test_if_then_statement_error_else_if_outside_if_then(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -449,6 +468,7 @@ No matching if statement, line number 1:
 elif i < 0:
 ^
 ''')
+
 
     def test_if_then_statement_error_else_if_outside_if_then_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -465,6 +485,7 @@ No matching if statement, line number 2:
 ^
 ''')
 
+
     def test_if_then_statement_error_else_then_outside_if_then(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -477,6 +498,7 @@ No matching if statement, line number 1:
 else:
 ^
 ''')
+
 
     def test_if_then_statement_error_else_then_outside_if_then_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -493,6 +515,7 @@ No matching if statement, line number 2:
 ^
 ''')
 
+
     def test_if_then_statement_error_endif_outside_if_then(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -503,6 +526,7 @@ No matching if statement, line number 1:
 endif
 ^
 ''')
+
 
     def test_if_then_statement_error_endif_outside_if_then_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -516,6 +540,7 @@ No matching if statement, line number 2:
     endif
 ^
 ''')
+
 
     def test_if_then_statement_error_else_if_after_else(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -534,6 +559,7 @@ elif i < 0:
 ^
 ''')
 
+
     def test_if_then_statement_error_multiple_else(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -551,6 +577,7 @@ else:
 ^
 ''')
 
+
     def test_if_then_statement_error_no_endif(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -561,6 +588,7 @@ Missing endif statement, line number 1:
 if i > 0:
 ^
 ''')
+
 
     def test_if_then_statement_error_endif_outside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -576,6 +604,7 @@ Missing endif statement, line number 2:
 ^
 ''')
 
+
     def test_if_then_statement_error_endif_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -589,6 +618,7 @@ No matching if statement, line number 3:
     endif
 ^
 ''')
+
 
     def test_if_then_statement_error_elif_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -605,6 +635,7 @@ No matching if statement, line number 3:
 ^
 ''')
 
+
     def test_if_then_statement_error_else_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -619,6 +650,7 @@ No matching if statement, line number 3:
     else:
 ^
 ''')
+
 
     def test_while_do_statement(self):
         script = validate_script(parse_script('''\
@@ -655,6 +687,7 @@ endwhile
             ]
         })
 
+
     def test_while_do_statement_break(self):
         script = validate_script(parse_script('''\
 while true:
@@ -670,6 +703,7 @@ endwhile
                 {'label': '__bareScriptDone0'}
             ]
         })
+
 
     def test_while_do_statement_continue(self):
         script = validate_script(parse_script('''\
@@ -687,6 +721,7 @@ endwhile
             ]
         })
 
+
     def test_while_do_statement_error_endwhile_outside_while_do(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -697,6 +732,7 @@ No matching while statement, line number 1:
 endwhile
 ^
 ''')
+
 
     def test_while_do_statement_error_endwhile_outside_while_do_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -710,6 +746,7 @@ endwhile
 ^
 ''')
 
+
     def test_while_do_statement_error_no_endwhile(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -720,6 +757,7 @@ Missing endwhile statement, line number 1:
 while true:
 ^
 ''')
+
 
     def test_while_do_statement_error_endwhile_outside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -735,6 +773,7 @@ Missing endwhile statement, line number 2:
 ^
 ''')
 
+
     def test_while_do_statement_error_endwhile_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -748,6 +787,7 @@ No matching while statement, line number 3:
     endwhile
 ^
 ''')
+
 
     def test_while_do_statement_error_break_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -764,6 +804,7 @@ Break statement outside of loop, line number 3:
 ^
 ''')
 
+
     def test_while_do_statement_error_continue_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -778,6 +819,7 @@ Continue statement outside of loop, line number 3:
         continue
 ^
 ''')
+
 
     def test_foreach_statement(self):
         script = validate_script(parse_script('''\
@@ -827,6 +869,7 @@ endfor
             ]
         })
 
+
     def test_foreach_statement_with_index(self):
         script = validate_script(parse_script('''\
 for value, ixValue in values:
@@ -860,6 +903,7 @@ endfor
                 {'label': '__bareScriptDone0'}
             ]
         })
+
 
     def test_foreach_statement_break(self):
         script = validate_script(parse_script('''\
@@ -905,6 +949,7 @@ endfor
                 {'label': '__bareScriptDone0'}
             ]
         })
+
 
     def test_foreach_statement_continue(self):
         script = validate_script(parse_script('''\
@@ -952,6 +997,7 @@ endfor
             ]
         })
 
+
     def test_foreach_statement_error_foreach_outside_foreach(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -962,6 +1008,7 @@ No matching for statement, line number 1:
 endfor
 ^
 ''')
+
 
     def test_foreach_statement_error_endfor_outside_foreach_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -975,6 +1022,7 @@ endfor
 ^
 ''')
 
+
     def test_foreach_statement_error_no_endfor(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -985,6 +1033,7 @@ Missing endfor statement, line number 1:
 for value in values:
 ^
 ''')
+
 
     def test_foreach_statement_error_endfor_outside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1000,6 +1049,7 @@ Missing endfor statement, line number 2:
 ^
 ''')
 
+
     def test_foreach_statement_error_endfor_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1013,6 +1063,7 @@ No matching for statement, line number 3:
     endfor
 ^
 ''')
+
 
     def test_foreach_statement_error_break_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1029,6 +1080,7 @@ Break statement outside of loop, line number 3:
 ^
 ''')
 
+
     def test_foreach_statement_error_continue_inside_function(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1044,6 +1096,7 @@ Continue statement outside of loop, line number 3:
 ^
 ''')
 
+
     def test_break_statement_error_break_outside_loop(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1054,6 +1107,7 @@ Break statement outside of loop, line number 1:
 break
 ^
 ''')
+
 
     def test_break_statement_error_break_outside_loop_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1068,6 +1122,7 @@ Break statement outside of loop, line number 2:
 ^
 ''')
 
+
     def test_continue_statement_error_continue_outside_loop(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1078,6 +1133,7 @@ Continue statement outside of loop, line number 1:
 continue
 ^
 ''')
+
 
     def test_continue_statement_error_continue_outside_loop_2(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1092,6 +1148,7 @@ Continue statement outside of loop, line number 2:
 ^
 ''')
 
+
     def test_include_statement(self):
         script = validate_script(parse_script('''\
 include 'fi\\'le.mds'
@@ -1102,6 +1159,7 @@ include 'fi\\'le.mds'
             ]
         })
 
+
     def test_include_statement_system(self):
         script = validate_script(parse_script('''\
 include <file.mds>
@@ -1111,6 +1169,7 @@ include <file.mds>
                 {'include': {'includes': [{'url': 'file.mds', 'system': True}]}}
             ]
         })
+
 
     def test_include_statement_double_quotes(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1125,6 +1184,7 @@ include "file.mds"
         self.assertEqual(cm_exc.exception.column_number, 8)
         self.assertEqual(cm_exc.exception.line_number, 1)
 
+
     def test_include_statement_multiple(self):
         script = validate_script(parse_script('''\
 include 'test.mds'
@@ -1137,6 +1197,7 @@ include 'test3.mds'
             ]
         })
 
+
     def test_expression_statement(self):
         script = validate_script(parse_script('''\
 foo()
@@ -1146,6 +1207,7 @@ foo()
                 {'expr': {'expr': {'function': {'name': 'foo', 'args': []}}}}
             ]
         })
+
 
     def test_expression_statement_syntax_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1166,6 +1228,7 @@ foo bar
         self.assertEqual(cm_exc.exception.column_number, 4)
         self.assertEqual(cm_exc.exception.line_number, 3)
 
+
     def test_assignment_statement_expression_syntax_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1182,6 +1245,7 @@ b = 1 + foo bar
         self.assertEqual(cm_exc.exception.column_number, 12)
         self.assertEqual(cm_exc.exception.line_number, 2)
 
+
     def test_jump_statement_expression_syntax_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1197,6 +1261,7 @@ jumpif (@#$) label
         self.assertEqual(cm_exc.exception.column_number, 9)
         self.assertEqual(cm_exc.exception.line_number, 1)
 
+
     def test_return_statement_expression_syntax_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
@@ -1211,6 +1276,7 @@ return @#$
         self.assertEqual(cm_exc.exception.line, 'return @#$')
         self.assertEqual(cm_exc.exception.column_number, 8)
         self.assertEqual(cm_exc.exception.line_number, 1)
+
 
     def test_nested_function_statement_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1229,6 +1295,7 @@ Nested function definition, line number 2:
         self.assertEqual(cm_exc.exception.line, '    function bar():')
         self.assertEqual(cm_exc.exception.column_number, 1)
         self.assertEqual(cm_exc.exception.line_number, 2)
+
 
     def test_endfunction_statement_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1265,6 +1332,7 @@ class TestParseExpression(unittest.TestCase):
             }
         })
 
+
     def test_unary(self):
         expr = parse_expression('!a')
         self.assertDictEqual(validate_expression(expr), {
@@ -1273,6 +1341,7 @@ class TestParseExpression(unittest.TestCase):
                 'expr': {'variable': 'a'}
             }
         })
+
 
     def test_syntax_error(self):
         expr_text = ' @#$'
@@ -1287,6 +1356,7 @@ Syntax error:
         self.assertEqual(cm_exc.exception.line, expr_text)
         self.assertEqual(cm_exc.exception.column_number, 1)
         self.assertIsNone(cm_exc.exception.line_number)
+
 
     def test_next_text_syntax_error(self):
         expr_text = 'foo bar'
@@ -1303,6 +1373,7 @@ Syntax error:
 )
         self.assertIsNone(cm_exc.exception.line_number)
 
+
     def test_syntax_error_unmatched_parenthesis(self):
         expr_text = '10 * (1 + 2'
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1317,6 +1388,7 @@ Unmatched parenthesis:
         self.assertEqual(cm_exc.exception.column_number, 5)
         self.assertIsNone(cm_exc.exception.line_number)
 
+
     def test_function_argument_syntax_error(self):
         expr_text = 'foo(1, 2 3)'
         with self.assertRaises(BareScriptParserError) as cm_exc:
@@ -1330,6 +1402,7 @@ Syntax error:
         self.assertEqual(cm_exc.exception.line, expr_text)
         self.assertEqual(cm_exc.exception.column_number, 9)
         self.assertIsNone(cm_exc.exception.line_number)
+
 
     def test_operator_precedence(self):
         expr = parse_expression('7 * 3 + 5')
@@ -1346,6 +1419,7 @@ Syntax error:
                 'right': {'number': 5}
             }
         })
+
 
     def test_operator_precedence_2(self):
         expr = parse_expression('2 * 3 + 4 - 1')
@@ -1369,6 +1443,7 @@ Syntax error:
             }
         })
 
+
     def test_operator_precedence_3(self):
         expr = parse_expression('2 + 3 + 4 - 1')
         self.assertDictEqual(validate_expression(expr), {
@@ -1390,6 +1465,7 @@ Syntax error:
                 'right': {'number': 1}
             }
         })
+
 
     def test_operator_precedence_4(self):
         expr = parse_expression('1 - 2 + 3 + 4 + 5 * 6')
@@ -1425,6 +1501,7 @@ Syntax error:
             }
         })
 
+
     def test_operator_precedence_5(self):
         expr = parse_expression('1 + 2 * 5 / 2')
         self.assertDictEqual(validate_expression(expr), {
@@ -1447,6 +1524,7 @@ Syntax error:
             }
         })
 
+
     def test_operator_precedence_6(self):
         expr = parse_expression('1 + 2 / 5 * 2')
         self.assertDictEqual(validate_expression(expr), {
@@ -1468,6 +1546,7 @@ Syntax error:
                 }
             }
         })
+
 
     def test_operator_precedence_7(self):
         expr = parse_expression('1 + 2 / 3 / 4 * 5')
@@ -1497,6 +1576,7 @@ Syntax error:
             }
         })
 
+
     def test_operator_precedence_8(self):
         expr = parse_expression('1 >= 2 && 3 < 4 - 5')
         self.assertDictEqual(validate_expression(expr), {
@@ -1525,6 +1605,7 @@ Syntax error:
             }
         })
 
+
     def test_group(self):
         expr = parse_expression('(7 + 3) * 5')
         self.assertDictEqual(validate_expression(expr), {
@@ -1543,6 +1624,7 @@ Syntax error:
             }
         })
 
+
     def test_group_nested(self):
         expr = parse_expression('(1 + (2))')
         self.assertDictEqual(validate_expression(expr), {
@@ -1555,13 +1637,16 @@ Syntax error:
             }
         })
 
+
     def test_string_literal(self):
         expr = parse_expression("'abc'")
         self.assertDictEqual(validate_expression(expr), {'string': 'abc'})
 
+
     def test_string_literal_escapes(self):
         expr = parse_expression("'ab \\'c\\' d\\\\e \\f'")
         self.assertDictEqual(validate_expression(expr), {'string': "ab 'c' d\\e \\f"})
+
 
     def test_string_literal_backslash_end(self):
         expr = parse_expression("test('abc \\\\', 'def')")
@@ -1572,13 +1657,16 @@ Syntax error:
             }
         })
 
+
     def test_string_literal_double_quote(self):
         expr = parse_expression('"abc"')
         self.assertDictEqual(validate_expression(expr), {'string': 'abc'})
 
+
     def test_string_literal_double_quote_escapes(self):
         expr = parse_expression('"ab \\"c\\" d\\\\e \\f"')
         self.assertDictEqual(validate_expression(expr), {'string': 'ab "c" d\\e \\f'})
+
 
     def test_string_literal_double_quote_backslash_end(self):
         expr = parse_expression('test("abc \\\\", "def")')

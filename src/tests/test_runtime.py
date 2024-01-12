@@ -22,6 +22,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertEqual(execute_script(script), 12)
 
+
     def test_function(self):
         script = validate_script({
             'statements': [
@@ -44,6 +45,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertEqual(execute_script(script), 35)
 
+
     def test_function_missing_arg(self):
         script = validate_script({
             'statements': [
@@ -64,6 +66,7 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         self.assertListEqual(execute_script(script), [5, None])
+
 
     def test_function_last_arg_array(self):
         script = validate_script({
@@ -87,6 +90,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertListEqual(execute_script(script), [1, [2, 3]])
 
+
     def test_function_last_arg_array_missing(self):
         script = validate_script({
             'statements': [
@@ -108,6 +112,7 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         self.assertListEqual(execute_script(script), [1, []])
+
 
     def test_function_async(self):
         script = validate_script({
@@ -132,6 +137,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertEqual(execute_script(script), 35)
 
+
     def test_function_async_missing_arg(self):
         script = validate_script({
             'statements': [
@@ -153,6 +159,7 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         self.assertListEqual(execute_script(script), [5, None])
+
 
     def test_function_async_last_arg_array(self):
         script = validate_script({
@@ -177,6 +184,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertListEqual(execute_script(script), [1, [2, 3]])
 
+
     def test_function_async_last_arg_array_missing(self):
         script = validate_script({
             'statements': [
@@ -200,6 +208,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertListEqual(execute_script(script), [1, []])
 
+
     def test_function_error(self):
         script = validate_script({
             'statements': [
@@ -214,6 +223,7 @@ class TestExecuteScript(unittest.TestCase):
 
         options = {'globals': {'errorFunction': error_function}}
         self.assertIsNone(execute_script(script, options))
+
 
     def test_function_error_log(self):
         script = validate_script({
@@ -235,6 +245,7 @@ class TestExecuteScript(unittest.TestCase):
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, ['BareScript: Function "errorFunction" failed with error: unexpected error'])
 
+
     def test_function_error_log_no_debug(self):
         script = validate_script({
             'statements': [
@@ -255,6 +266,7 @@ class TestExecuteScript(unittest.TestCase):
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [])
 
+
     def test_jump(self):
         script = validate_script({
             'statements': [
@@ -271,6 +283,7 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         self.assertEqual(execute_script(script), 6)
+
 
     def test_jumpif(self):
         script = validate_script({
@@ -298,6 +311,7 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertEqual(execute_script(script), 55)
 
+
     def test_jump_error_unknown_label(self):
         script = validate_script({
             'statements': [
@@ -308,6 +322,7 @@ class TestExecuteScript(unittest.TestCase):
             execute_script(script)
         self.assertEqual(str(cm_exc.exception), 'Unknown jump label "unknownLabel"')
 
+
     def test_return(self):
         script = validate_script({
             'statements': [
@@ -315,6 +330,7 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         self.assertEqual(execute_script(script), 5)
+
 
     def test_return_blank(self):
         script = validate_script({
@@ -324,9 +340,11 @@ class TestExecuteScript(unittest.TestCase):
         })
         self.assertIsNone(execute_script(script))
 
+
     @unittest.skip
     def test_include(self):
         self.fail()
+
 
     def test_error_max_statements(self):
         script = validate_script({
@@ -376,19 +394,23 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'varName': 4}}
         self.assertEqual(evaluate_expression(expr, options), 19)
 
+
     def test_no_globals(self):
         expr = validate_expression({'string': 'abc'})
         options = {}
         self.assertEqual(evaluate_expression(expr, options), 'abc')
 
+
     def test_string(self):
         expr = validate_expression({'string': 'abc'})
         self.assertEqual(evaluate_expression(expr), 'abc')
+
 
     def test_variable(self):
         expr = validate_expression({'variable': 'varName'})
         options = {'globals': {'varName': 4}}
         self.assertEqual(evaluate_expression(expr, options), 4)
+
 
     def test_variable_local(self):
         expr = validate_expression({'variable': 'varName'})
@@ -396,27 +418,33 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, None, locals_), 4)
         self.assertDictEqual(locals_, {'varName': 4})
 
+
     def test_variable_null_local_non_null_global(self):
         expr = validate_expression({'variable': 'varName'})
         options = {'globals': {'varName': 4}}
         locals_ = {'varName': None}
         self.assertEqual(evaluate_expression(expr, options, locals_), None)
 
+
     def test_variable_unknown(self):
         expr = validate_expression({'variable': 'varName'})
         self.assertEqual(evaluate_expression(expr), None)
+
 
     def test_variable_literal_null(self):
         expr = validate_expression({'variable': 'null'})
         self.assertEqual(evaluate_expression(expr), None)
 
+
     def test_variable_literal_true(self):
         expr = validate_expression({'variable': 'true'})
         self.assertEqual(evaluate_expression(expr), True)
 
+
     def test_variable_literal_false(self):
         expr = validate_expression({'variable': 'false'})
         self.assertEqual(evaluate_expression(expr), False)
+
 
     def test_function(self):
         expr = validate_expression({
@@ -431,6 +459,7 @@ class TestEvaluateExpression(unittest.TestCase):
             }
         }
         self.assertEqual(evaluate_expression(expr, options), 3)
+
 
     def test_function_no_return(self):
         expr = validate_expression({
@@ -448,6 +477,7 @@ class TestEvaluateExpression(unittest.TestCase):
             }
         }
         self.assertEqual(evaluate_expression(expr, options), None)
+
 
     def test_function_if(self):
         expr = validate_expression({
@@ -479,6 +509,7 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 'b')
         self.assertListEqual(test_values, ['a', 'b'])
 
+
     def test_function_if_no_value_expression(self):
         expr = validate_expression({
             'function': {
@@ -486,6 +517,7 @@ class TestEvaluateExpression(unittest.TestCase):
             }
         })
         self.assertEqual(evaluate_expression(expr), None)
+
 
     def test_function_if_no_true_expression(self):
         expr = validate_expression({
@@ -497,6 +529,7 @@ class TestEvaluateExpression(unittest.TestCase):
             }
         })
         self.assertEqual(evaluate_expression(expr), None)
+
 
     def test_function_if_no_false_expression(self):
         expr = validate_expression({
@@ -510,6 +543,7 @@ class TestEvaluateExpression(unittest.TestCase):
         })
         self.assertEqual(evaluate_expression(expr), None)
 
+
     def test_function_builtin(self):
         expr = validate_expression({
             'function': {
@@ -520,6 +554,7 @@ class TestEvaluateExpression(unittest.TestCase):
             }
         })
         self.assertEqual(evaluate_expression(expr), 1)
+
 
     def test_function_no_builtins(self):
         expr = validate_expression({
@@ -533,6 +568,7 @@ class TestEvaluateExpression(unittest.TestCase):
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             evaluate_expression(expr, None, None, False)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "abs"')
+
 
     def test_function_global(self):
         expr = validate_expression({
@@ -551,6 +587,7 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'fnName': fn_name}}
         self.assertEqual(evaluate_expression(expr, options), 6)
 
+
     def test_function_local(self):
         expr = validate_expression({
             'function': {
@@ -568,6 +605,7 @@ class TestEvaluateExpression(unittest.TestCase):
         locals_ = {'fnLocal': fn_local}
         self.assertEqual(evaluate_expression(expr, None, locals_), 6)
 
+
     def test_function_local_null(self):
         expr = validate_expression({
             'function': {
@@ -580,6 +618,7 @@ class TestEvaluateExpression(unittest.TestCase):
             evaluate_expression(expr, options, locals_)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "fnLocal"')
 
+
     def test_function_non_function(self):
         expr = validate_expression({
             'function': {
@@ -588,6 +627,7 @@ class TestEvaluateExpression(unittest.TestCase):
         })
         options = {'globals': {'fnLocal': 'abc'}}
         self.assertEqual(evaluate_expression(expr, options), None)
+
 
     def test_function_non_function_log_fn(self):
         expr = validate_expression({
@@ -604,6 +644,7 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), None)
         self.assertListEqual(logs, ['BareScript: Function "fnLocal" failed with error: \'str\' object is not callable'])
 
+
     def test_function_unknown(self):
         expr = validate_expression({
             'function': {
@@ -613,6 +654,7 @@ class TestEvaluateExpression(unittest.TestCase):
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             evaluate_expression(expr)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "fnUnknown"')
+
 
     def test_function_runtime_error(self):
         expr = validate_expression({
@@ -632,6 +674,7 @@ class TestEvaluateExpression(unittest.TestCase):
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             evaluate_expression(expr, options)
         self.assertEqual(str(cm_exc.exception), 'Test error')
+
 
     def test_binary_logical_and(self):
         expr = validate_expression({
@@ -658,6 +701,7 @@ class TestEvaluateExpression(unittest.TestCase):
         options['globals']['leftValue'] = True
         self.assertEqual(evaluate_expression(expr, options), 'abc')
         self.assertListEqual(test_values, ['abc'])
+
 
     def test_binary_logical_or(self):
         expr = validate_expression({
@@ -686,61 +730,76 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 'abc')
         self.assertListEqual(test_values, ['abc'])
 
+
     def test_binary_exponentiation(self):
         expr = validate_expression({'binary': {'op': '**', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 100)
+
 
     def test_binary_multiplication(self):
         expr = validate_expression({'binary': {'op': '*', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 20)
 
+
     def test_binary_division(self):
         expr = validate_expression({'binary': {'op': '/', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 5)
+
 
     def test_binary_modulus(self):
         expr = validate_expression({'binary': {'op': '%', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 0)
 
+
     def test_binary_addition(self):
         expr = validate_expression({'binary': {'op': '+', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 12)
+
 
     def test_binary_subtraction(self):
         expr = validate_expression({'binary': {'op': '-', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 8)
 
+
     def test_binary_less_than_or_equal_to(self):
         expr = validate_expression({'binary': {'op': '<=', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), False)
+
 
     def test_binary_less_than(self):
         expr = validate_expression({'binary': {'op': '<', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), False)
 
+
     def test_binary_greater_than_or_equal_to(self):
         expr = validate_expression({'binary': {'op': '>=', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), True)
+
 
     def test_binary_greater_than(self):
         expr = validate_expression({'binary': {'op': '>', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), True)
 
+
     def test_binary_equality(self):
         expr = validate_expression({'binary': {'op': '==', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), False)
+
 
     def test_binary_inequality(self):
         expr = validate_expression({'binary': {'op': '!=', 'left': {'number': '10'}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), True)
 
+
     def test_unary_not(self):
         expr = validate_expression({'unary': {'op': '!', 'expr': {'variable': 'False'}}})
         self.assertEqual(evaluate_expression(expr), True)
 
+
     def test_unary_negate(self):
         expr = validate_expression({'unary': {'op': '-', 'expr': {'number': 1}}})
         self.assertEqual(evaluate_expression(expr), -1)
+
 
     def test_group(self):
         expr = validate_expression({

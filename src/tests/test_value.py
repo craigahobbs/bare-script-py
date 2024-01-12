@@ -190,18 +190,6 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(re.compile('^test2'), re.compile('^test1')), 0)
 
 
-    #
-    # array
-    # boolean
-    # datetime
-    # function
-    # null
-    # number
-    # object
-    # regex
-    # string
-    # unknown
-    #
     def test_value_compare_invalid(self):
         # array < boolean
         self.assertEqual(value_compare([1, 2, 3], True), -1)
