@@ -929,7 +929,8 @@ def _object_delete(args, unused_options):
     if not isinstance(object_, dict) or not isinstance(key, str):
         return None
 
-    del object_[key]
+    if key in object_:
+        del object_[key]
     return None
 
 
@@ -972,7 +973,7 @@ def _object_keys(args, unused_options):
     if not isinstance(object_, dict):
         return []
 
-    return object_.keys()
+    return list(object_.keys())
 
 
 # $function: objectNew
@@ -981,12 +982,11 @@ def _object_keys(args, unused_options):
 # $arg keyValues...: The object's initial key and value pairs
 # $return: The new object
 def _object_new(args, unused_options):
-    key_values, = default_args(args, (None,))
-    key_values_length = len(key_values)
+    args_length = len(args)
     object_ = {}
     ix = 0
-    while ix < key_values_length:
-        object_[key_values[ix]] = (key_values[ix + 1] if ix + 1 < key_values.length else None)
+    while ix < args_length:
+        object_[args[ix]] = (args[ix + 1] if ix + 1 < len(args) else None)
         ix += 2
     return object_
 
@@ -1468,8 +1468,14 @@ SCRIPT_FUNCTIONS = {
     'numberParseInt': _number_parse_int,
     'numberParseFloat': _number_parse_float,
     'numberToFixed': _number_to_fixed,
+    'objectAssign': _object_assign,
+    'objectCopy': _object_copy,
+    'objectDelete': _object_delete,
     'objectGet': _object_get,
+    'objectHas': _object_has,
+    'objectKeys': _object_keys,
     'objectNew': _object_new,
+    'objectSet': _object_set,
     'regexNew': _regex_new,
     'schemaParse': _schema_parse,
     'schemaParseEx': _schema_parse_ex,
