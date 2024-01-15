@@ -938,7 +938,7 @@ def _object_has(args, unused_options):
 def _object_keys(args, unused_options):
     object_, = default_args(args, (None,))
     if not isinstance(object_, dict):
-        return []
+        return None
 
     return list(object_.keys())
 

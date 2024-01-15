@@ -1038,34 +1038,40 @@ class TestLibrary(unittest.TestCase):
         self.assertDictEqual(SCRIPT_FUNCTIONS['objectAssign']([obj, obj2], None), {'a': 1, 'b': 3, 'c': 4})
         self.assertDictEqual(obj, {'a': 1, 'b': 3, 'c': 4})
 
+        # Null inputs
         obj = {'a': 1, 'b': 2}
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([None, obj], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([obj, None], None))
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([None, obj], None))
-        self.assertDictEqual(obj, {'a': 1, 'b': 2})
 
+        # Number inputs
         obj = {'a': 1, 'b': 2}
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([0, obj], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([obj, 0], None))
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([0, obj], None))
-        self.assertDictEqual(obj, {'a': 1, 'b': 2})
 
+        # Array inputs
         obj = {'a': 1, 'b': 2}
         array = ['c', 'd']
         self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([obj, array], None))
-        self.assertDictEqual(obj, {'a': 1, 'b': 2})
         self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([array, obj], None))
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
+        self.assertListEqual(array, ['c', 'd'])
 
 
     def test_object_copy(self):
         obj = {'a': 1, 'b': 2}
-        self.assertDictEqual(SCRIPT_FUNCTIONS['objectCopy']([obj], None), obj)
+        obj_copy = SCRIPT_FUNCTIONS['objectCopy']([obj], None)
+        self.assertDictEqual(obj_copy, obj)
+        self.assertIsNot(obj_copy, obj)
 
+        # Null input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectCopy']([None], None))
 
+        # Number input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectCopy']([0], None))
 
+        # Array input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectCopy']([['a', 'b']], None))
 
 
@@ -1074,35 +1080,49 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([obj, 'a'], None))
         self.assertDictEqual(obj, {'b': 2})
 
+        # Missing key
         obj = {'b': 2}
         self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([obj, 'a'], None))
         self.assertDictEqual(obj, {'b': 2})
 
+        # Null input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([None, 'a'], None))
 
+        # Number input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([0, 'a'], None))
 
+        # Array input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([['a', 'b'], 'a'], None))
+
+        # Non-string key
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([obj, None], None))
 
 
     def test_object_get(self):
         obj = {'a': 1, 'b': 2}
         self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, 'a'], None), 1)
 
+        # Missing key with/without default
         obj = {}
         self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, 'a'], None))
         self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, 'a', 1], None), 1)
 
-        obj = {'a': 1, 'b': 2}
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, 'c'], None))
-
+        # Null input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([None, 'a'], None))
-
         self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([None, 'a', 1], None), 1)
 
+        # Number input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([0, 'a'], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([0, 'a', 1], None), 1)
 
+        # Array input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([['a', 'b'], 'a'], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([['a', 'b'], 'a', 1], None), 1)
+
+        # Non-string key
+        obj = {'a': 1, 'b': 2}
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, None], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, None, 1], None), 1)
 
 
     def test_object_has(self):
@@ -1112,29 +1132,40 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([obj, 'c'], None), False)
         self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([obj, 'd'], None), False)
 
+        # Null input
         self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([None, 'a'], None), False)
 
+        # Number input
         self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([0, 'a'], None), False)
 
+        # Array input
         self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([['a', 'b'], 'a'], None), False)
+
+        # Non-string key
+        self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([obj, None], None), False)
 
 
     def test_object_keys(self):
         obj = {'a': 1, 'b': 2}
         self.assertListEqual(SCRIPT_FUNCTIONS['objectKeys']([obj], None), ['a', 'b'])
 
-        self.assertListEqual(SCRIPT_FUNCTIONS['objectKeys']([None], None), [])
+        # Null input
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectKeys']([None], None))
 
-        self.assertListEqual(SCRIPT_FUNCTIONS['objectKeys']([0], None), [])
+        # Number input
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectKeys']([0], None))
 
-        self.assertListEqual(SCRIPT_FUNCTIONS['objectKeys']([['a', 'b']], None), [])
+        # Array input
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectKeys']([['a', 'b']], None))
 
 
     def test_object_new(self):
         self.assertDictEqual(SCRIPT_FUNCTIONS['objectNew']([], None), {})
 
+        # Key/values
         self.assertDictEqual(SCRIPT_FUNCTIONS['objectNew'](['a', 1, 'b', 2], None), {'a': 1, 'b': 2})
 
+        # Missing final value
         self.assertDictEqual(SCRIPT_FUNCTIONS['objectNew'](['a', 1, 'b'], None), {'a': 1, 'b': None})
 
 
@@ -1143,13 +1174,21 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['objectSet']([obj, 'c', 3], None), 3)
         self.assertDictEqual(obj, {'a': 1, 'b': 2, 'c': 3})
 
+        # Null input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectSet']([None, 'c', 3], None))
 
+        # Number input
         self.assertIsNone(SCRIPT_FUNCTIONS['objectSet']([0, 'c', 3], None))
 
+        # Array input
         array = ['a', 'b']
         self.assertIsNone(SCRIPT_FUNCTIONS['objectSet']([array, 'c', 3], None))
         self.assertListEqual(array, ['a', 'b'])
+
+        # Non-string key
+        obj = {'a': 1, 'b': 2}
+        self.assertEqual(SCRIPT_FUNCTIONS['objectSet']([obj, None, 3], None), None)
+        self.assertDictEqual(obj, {'a': 1, 'b': 2})
 
 
     #
