@@ -16,7 +16,7 @@ import urllib
 
 from schema_markdown import JSONEncoder, TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .value import R_NUMBER_CLEANUP, value_boolean, value_compare, value_string, value_type
+from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -280,20 +280,6 @@ def _array_sort(args, options):
 #
 
 
-# $function: datetimeAdd
-# $group: Datetime
-# $doc: Add milliseconds to a datetime value
-# $arg datetime: The datetime
-# $arg millisecond: The number of milliseconds to add
-# $return: The new datetime
-def _datetime_add(args, unused_options):
-    datetime_, millisecond = default_args(args, (None, None))
-    if not isinstance(datetime_, datetime.datetime) or not isinstance(millisecond, (int, float)) or int(millisecond) != millisecond:
-        return None
-
-    return datetime_ + datetime.timedelta(milliseconds=int(millisecond))
-
-
 # $function: datetimeDay
 # $group: Datetime
 # $doc: Get the day of the month of a datetime
@@ -305,20 +291,6 @@ def _datetime_day(args, unused_options):
         return None
 
     return datetime_.day
-
-
-# $function: datetimeDiff
-# $group: Datetime
-# $doc: Compute the difference of two datetime values, in milliseconds
-# $arg left: The left datetime
-# $arg right: The right datetime
-# $return: The difference, in milliseconds
-def _datetime_diff(args, unused_options):
-    left, right = default_args(args, (None, None))
-    if not isinstance(left, datetime.datetime) or not isinstance(right, datetime.datetime):
-        return None
-
-    return int(_math_round_helper((left - right).total_seconds() * 1000, 0))
 
 
 # $function: datetimeHour
@@ -378,7 +350,7 @@ def _datetime_millisecond(args, unused_options):
     if not isinstance(datetime_, datetime.datetime):
         return None
 
-    return int(_math_round_helper(datetime_.microsecond / 1000, 0))
+    return int(round_number(datetime_.microsecond / 1000, 0))
 
 
 # $function: datetimeMinute
@@ -770,12 +742,7 @@ def _math_round(args, unused_options):
     if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
         return None
 
-    return _math_round_helper(x, digits)
-
-
-def _math_round_helper(x, digits):
-    multiplier = 10 ** digits
-    return int(x * multiplier + (0.5 if x >= 0 else -0.5)) / multiplier
+    return round_number(x, digits)
 
 
 # $function: mathSign
@@ -880,7 +847,7 @@ def _number_to_fixed(args, unused_options):
     if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
         return None
 
-    result = f'{_math_round_helper(x, digits):.{int(digits)}f}'
+    result = f'{round_number(x, digits):.{int(digits)}f}'
     if value_boolean(trim):
         return R_NUMBER_CLEANUP.sub('', result)
     return result
@@ -1429,9 +1396,7 @@ SCRIPT_FUNCTIONS = {
     'arrayShift': _array_shift,
     'arraySlice': _array_slice,
     'arraySort': _array_sort,
-    'datetimeAdd': _datetime_add,
     'datetimeDay': _datetime_day,
-    'datetimeDiff': _datetime_diff,
     'datetimeHour': _datetime_hour,
     'datetimeISOFormat': _datetime_iso_format,
     'datetimeISOParse': _datetime_iso_parse,
@@ -1520,8 +1485,6 @@ EXPRESSION_FUNCTION_MAP = {
     'charCodeAt': 'stringCharCodeAt',
     'cos': 'mathCos',
     'date': 'datetimeNew',
-    'dateAdd': 'datetimeAdd',
-    'dateDiff': 'datetimeDiff',
     'day': 'datetimeDay',
     'endsWith': 'stringEndsWith',
     'indexOf': 'stringIndexOf',

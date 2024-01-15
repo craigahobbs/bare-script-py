@@ -10,6 +10,22 @@ import json
 import re
 
 
+def round_number(value, digits):
+    """
+    Round a number
+
+    :param value: The number to round
+    :type value: int or float
+    :param digits: The number of digits of precision
+    :type digits: int
+    :return: The rounded number
+    :rtype: float
+    """
+
+    multiplier = 10 ** digits
+    return int(value * multiplier + (0.5 if value >= 0 else -0.5)) / multiplier
+
+
 def value_type(value):
     """
     Get a value's type string
