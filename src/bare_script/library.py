@@ -14,9 +14,9 @@ import random
 import re
 import urllib
 
-from schema_markdown import JSONEncoder, TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
+from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_string, value_type
+from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_json, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -148,7 +148,7 @@ def _array_last_index_of(args, options):
 # $group: Array
 # $doc: Get the length of an array
 # $arg array: The array
-# $return: The array's length; null if not an array
+# $return: The array's length; zero if not an array
 def _array_length(args, unused_options):
     array, = default_args(args, (None,))
     if not isinstance(array, list):
@@ -537,19 +537,14 @@ def _json_parse(args, unused_options):
 # $group: JSON
 # $doc: Convert an object to a JSON string
 # $arg value: The object
-# $arg space: Optional (default is null). The indentation string or number.
+# $arg indent: Optional (default is null). The indentation number.
 # $return: The JSON string
 def _json_stringify(args, unused_options):
-    value, space = default_args(args, (None, None))
-    if space is not None and (not isinstance(space, (int, float)) or int(space) != space or space < 0):
+    value, indent = default_args(args, (None, None))
+    if indent is not None and (not isinstance(indent, (int, float)) or int(indent) != indent or indent < 1):
         return None
 
-    if space is not None:
-        separators = (',', ': ')
-        space = int(space)
-    else:
-        separators = (',', ':')
-    return JSONEncoder(allow_nan=False, indent=space, separators=separators, sort_keys=True).encode(value)
+    return value_json(value, int(indent) if indent is not None else None)
 
 
 #
@@ -934,7 +929,7 @@ def _object_has(args, unused_options):
 # $group: Object
 # $doc: Get an object's keys
 # $arg object: The object
-# $return: The array of keys; null if not an object
+# $return: The array of keys
 def _object_keys(args, unused_options):
     object_, = default_args(args, (None,))
     if not isinstance(object_, dict):
@@ -997,6 +992,7 @@ _R_REGEX_ESCAPE = re.compile(r'[.*+?^${}()|[\]\\]')
 #
 # Schema functions
 #
+
 
 # $function: schemaParse
 # $group: Schema
@@ -1073,19 +1069,25 @@ def _schema_validate_type_model(args, unused_options):
 # $arg index: The character index
 # $return: The character code
 def _string_char_code_at(args, unused_options):
-    string, index = args
-    return ord(string[index]) if isinstance(string, str) else None
+    string, index = default_args(args, (None, None))
+    if not isinstance(string, str) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(string):
+        return None
+
+    return ord(string[int(index)])
 
 
 # $function: stringEndsWith
 # $group: String
 # $doc: Determine if a string ends with a search string
 # $arg string: The string
-# $arg searchString: The search string
+# $arg search: The search string
 # $return: true if the string ends with the search string, false otherwise
 def _string_ends_with(args, unused_options):
-    string, search_string = args
-    return string.endswith(search_string) if isinstance(string, str) else None
+    string, search = default_args(args, (None, None))
+    if not isinstance(string, str) or not isinstance(search, str):
+        return None
+
+    return string.endswith(search)
 
 
 # $function: stringFromCharCode
@@ -1094,41 +1096,57 @@ def _string_ends_with(args, unused_options):
 # $arg charCodes...: The character codes
 # $return: The string of characters
 def _string_from_char_code(args, unused_options):
-    return ''.join(chr(code) for code in args)
+    if any((not isinstance(code, (int, float)) or int(code) != code or code < 0) for code in args):
+        return None
+
+    return ''.join(chr(int(code)) for code in args)
 
 
 # $function: stringIndexOf
 # $group: String
 # $doc: Find the first index of a search string in a string
 # $arg string: The string
-# $arg searchString: The search string
+# $arg search: The search string
 # $arg index: Optional (default is 0). The index at which to start the search.
 # $return: The first index of the search string; -1 if not found.
 def _string_index_of(args, unused_options):
-    string, search_string, index = default_args(args, (None, None, None))
-    return string.find(search_string, index) if isinstance(string, str) else -1
+    string, search, index = default_args(args, (None, None, 0))
+    if not isinstance(string, str) or not isinstance(search, str) or \
+       not isinstance(index, (int, float)) or int(index) != index or index < 0  or index >= len(string):
+        return -1
+
+    return string.find(search, int(index))
 
 
 # $function: stringLastIndexOf
 # $group: String
 # $doc: Find the last index of a search string in a string
 # $arg string: The string
-# $arg searchString: The search string
+# $arg search: The search string
 # $arg index: Optional (default is the end of the string). The index at which to start the search.
 # $return: The last index of the search string; -1 if not found.
 def _string_last_index_of(args, unused_options):
-    string, search_string, index = default_args(args, (None, None, None))
-    return string.rfind(search_string, index) if isinstance(string, str) else -1
+    string, search, index = default_args(args, (None, None, None))
+    if index is None and isinstance(string, str):
+        index = len(string) - 1
+    if not isinstance(string, str) or not isinstance(search, str) or \
+       not isinstance(index, (int, float)) or int(index) != index or index < 0  or index >= len(string):
+        return -1
+
+    return string.rfind(search, 0, int(index) + len(search))
 
 
 # $function: stringLength
 # $group: String
 # $doc: Get the length of a string
 # $arg string: The string
-# $return: The string's length; null if not a string
+# $return: The string's length; zero if not a string
 def _string_length(args, unused_options):
-    string, = args
-    return len(string) if isinstance(string, str) else None
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return 0
+
+    return len(string)
 
 
 # $function: stringLower
@@ -1137,8 +1155,11 @@ def _string_length(args, unused_options):
 # $arg string: The string
 # $return: The lower-case string
 def _string_lower(args, unused_options):
-    string, = args
-    return string.lower() if isinstance(string, str) else None
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return None
+
+    return string.lower()
 
 
 # $function: stringNew
@@ -1147,7 +1168,7 @@ def _string_lower(args, unused_options):
 # $arg value: The value
 # $return: The new string
 def _string_new(args, unused_options):
-    value, = args
+    value, = default_args(args, (None,))
     return value_string(value)
 
 
@@ -1158,8 +1179,11 @@ def _string_new(args, unused_options):
 # $arg count: The number of times to repeat the string
 # $return: The repeated string
 def _string_repeat(args, unused_options):
-    string, count = args
-    return string * count if isinstance(string, str) else None
+    string, count = default_args(args, (None, None))
+    if not isinstance(string, str) or not isinstance(count, (int, float)) or int(count) != count or count < 0:
+        return None
+
+    return string * int(count)
 
 
 # $function: stringReplace
@@ -1170,9 +1194,10 @@ def _string_repeat(args, unused_options):
 # $arg newSubstr: The replacement string
 # $return: The updated string
 def _string_replace(args, unused_options):
-    string, substr, new_substr = args
-    if not isinstance(string, str):
+    string, substr, new_substr = default_args(args, (None, None, None))
+    if not isinstance(string, str) or not isinstance(substr, str) or not isinstance(new_substr, str):
         return None
+
     return string.replace(substr, new_substr)
 
 
@@ -1180,35 +1205,47 @@ def _string_replace(args, unused_options):
 # $group: String
 # $doc: Copy a portion of a string
 # $arg string: The string
-# $arg start: Optional (default is 0). The start index of the slice.
+# $arg start: The start index of the slice
 # $arg end: Optional (default is the end of the string). The end index of the slice.
 # $return: The new string slice
 def _string_slice(args, unused_options):
-    string, begin_index, end_index = args
-    return string[begin_index:end_index] if isinstance(string, str) else None
+    string, begin, end = default_args(args, (None, None, None))
+    if end is None and isinstance(string, str):
+        end = len(string)
+    if not isinstance(string, str) or \
+       not isinstance(begin, (int, float)) or int(begin) != begin or begin < 0 or begin >= len(string) or \
+       not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(string):
+        return None
+
+    return string[begin:end]
 
 
 # $function: stringSplit
 # $group: String
 # $doc: Split a string
 # $arg string: The string to split
-# $arg separator: The separator string or regular expression
-# $arg limit: The maximum number of strings to split into
+# $arg separator: The separator string
 # $return: The array of split-out strings
 def _string_split(args, unused_options):
-    string, separator, limit = default_args(args, (None, None, -1))
-    return string.split(separator, limit) if isinstance(string, str) else None
+    string, separator = default_args(args, (None, None))
+    if not isinstance(string, str) or not isinstance(separator, str):
+        return None
+
+    return string.split(separator)
 
 
 # $function: stringStartsWith
 # $group: String
 # $doc: Determine if a string starts with a search string
 # $arg string: The string
-# $arg searchString: The search string
+# $arg search: The search string
 # $return: true if the string starts with the search string, false otherwise
 def _string_starts_with(args, unused_options):
-    string, search_string = args
-    return string.startswith(search_string) if isinstance(string, str) else None
+    string, search = default_args(args, (None, None))
+    if not isinstance(string, str) or not isinstance(search, str):
+        return None
+
+    return string.startswith(search)
 
 
 # $function: stringTrim
@@ -1217,8 +1254,11 @@ def _string_starts_with(args, unused_options):
 # $arg string: The string
 # $return: The trimmed string
 def _string_trim(args, unused_options):
-    string, = args
-    return string.strip() if isinstance(string, str) else None
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return None
+
+    return string.strip()
 
 
 # $function: stringUpper
@@ -1227,8 +1267,11 @@ def _string_trim(args, unused_options):
 # $arg string: The string
 # $return: The upper-case string
 def _string_upper(args, unused_options):
-    string, = args
-    return string.upper() if isinstance(string, str) else None
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return None
+
+    return string.upper()
 
 
 #

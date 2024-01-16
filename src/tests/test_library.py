@@ -6,6 +6,7 @@
 import datetime
 import json
 import math
+import re
 import unittest
 
 import schema_markdown
@@ -763,23 +764,16 @@ class TestLibrary(unittest.TestCase):
 }'''
         )
 
-        # Zero indent
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 0], None),
-            '''\
-{
-"a": 1,
-"b": 2
-}'''
-        )
-
-        # Non-number space
+        # Non-number indent
         self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, 'abc'], None))
 
-        # Non-integer space
+        # Non-integer indent
         self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, 4.5], None))
 
-        # Negative space
+        # Zero indent
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 0], None))
+
+        # Negative indent
         self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, -4], None))
 
 
@@ -1304,156 +1298,244 @@ class TestLibrary(unittest.TestCase):
 
 
     def test_string_char_code_at(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['A', 0], None), 65)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 0], None), 97)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 0.], None), 97)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 1], None), 98)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 2], None), 99)
 
+        # Invalid index
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', -1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 4], None))
 
-    def test_string_char_code_at_non_string(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt']([None, 0], None), None)
+        # Non-string value
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt']([None, 0], None))
+
+        # Non-number index
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', None], None))
+
+        # Non-integer index
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 1.5], None))
 
 
     def test_string_ends_with(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringEndsWith'](['foo bar', 'bar'], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringEndsWith'](['foo bar', 'foo'], None), False)
+
+        # Non-string value
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringEndsWith']([None, 'bar'], None))
+
+        # Non-string search
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringEndsWith'](['foo bar', None], None))
 
 
-    def test_string_ends_with_non_string(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringEndsWith']([None, 'bar'], None), None)
+    def test_string_from_char_code(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['stringFromCharCode']([97, 98, 99], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringFromCharCode']([97., 98., 99.], None), 'abc')
+
+        # Non-number code
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringFromCharCode']([97, 'b', 99], None))
+
+        # Non-integer code
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringFromCharCode']([97, 98.5, 99], None))
+
+        # Negative code
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringFromCharCode']([97, -98, 99], None))
 
 
     def test_string_index_of(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar'], None), 4)
 
+        # Index provided
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar bar', 'bar', 5], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar bar', 'bar', 5.], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar bar', 'bar', 4], None), 4)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar bar', 'bar', 0], None), 4)
 
-    def test_string_index_of_non_string(self):
+        # Not Found
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bonk'], None), -1)
+
+        # Not Found with index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 5], None), -1)
+
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf']([None, 'bar'], None), -1)
 
+        # Non-string search
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', None], None), -1)
 
-    def test_string_index_of_position(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar bar', 'bar', 5], None), 8)
+        # Non-number index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', None], None), -1)
 
+        # Non-integer index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 1.5], None), -1)
 
-    def test_string_from_char_code(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringFromCharCode']([65, 66, 67], None), 'ABC')
+        # Out-of-range index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', -1], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 7], None), -1)
 
 
     def test_string_last_index_of(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar'], None), 8)
 
+        # Index provided
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 10], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 10.], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 9], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 8], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 7], None), 4)
 
-    def test_string_last_index_of_non_string(self):
+        # Not Found
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bonk'], None), -1)
+
+        # Not Found with index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 3], None), -1)
+
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf']([None, 'bar'], None), -1)
+
+        # Non-string search
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', None], None), -1)
+
+        # Non-number index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 'abc'], None), -1)
+
+        # Non-integer index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 5.5], None), -1)
+
+        # Out-of-range index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', -1], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 7], None), -1)
 
 
     def test_string_length(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringLength'](['foo'], None), 3)
 
-
-    def test_string_length_non_string(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLength']([None], None), None)
+        # Non-string value
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLength']([None], None), 0)
 
 
     def test_string_lower(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringLower'](['Foo'], None), 'foo')
 
-
-    def test_string_lower_non_string(self):
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringLower']([None], None), None)
 
 
     def test_string_new(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([123], None), '123')
 
+        # Non-string value
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([None], None), 'null')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([True], None), 'true')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([False], None), 'false')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0], None), '0')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0.], None), '0')
+        dt = SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100], None)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([dt], None), '2022-06-21T12:30:15.100000+00:00')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([{'b': 2, 'a': 1}], None), '{"a":1,"b":2}')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([[1, 2, 3]], None), '[1,2,3]')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([lambda: 1], None), '<function>')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([re.compile('^test')], None), '<regex>')
+
 
     def test_string_repeat(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['*', 3], None), '***')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 2], None), 'abcabc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 2.], None), 'abcabc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 1], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 0], None), '')
 
-
-    def test_string_repeat_non_string(self):
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat']([None, 3], None), None)
+
+        # Non-number count
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', None], None), None)
+
+        # Non-integer count
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 1.5], None), None)
+
+        # Negative count
+        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', -2], None), None)
 
 
     def test_string_replace(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', 'bar', 'bonk'], None), 'foo bonk')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar bar', 'bar', 'bonk'], None), 'foo bonk bonk')
 
+        # Not found
+        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', 'abc', 'bonk'], None), 'foo bar')
 
-    def test_string_replace_non_string(self):
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringReplace']([None, 'bar', 'bonk'], None), None)
 
+        # Non-string search
+        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', None, 'bonk'], None), None)
 
-    @unittest.skip
-    def test_string_replace_regex(self):
-        # self.assertEqual(SCRIPT_FUNCTIONS.stringReplace(['foo bar', /\s+bar/g, ' bonk'], None), 'foo bonk')
-        self.fail()
-
-
-    @unittest.skip
-    def test_string_replace_regex_replacer_function(self):
-        # const replacerFunction = (args, options) => {
-        #    assert.deepEqual(args, [' bar', 3, 'foo bar']);
-        #    assert.deepEqual(options, {});
-        #    return ' bonk';
-        #assert.equal(SCRIPT_FUNCTIONS.stringReplace(['foo bar', /\s+bar/g, replacerFunction], {}), 'foo bonk');
-        self.fail()
-
-
-    @unittest.skip
-    def test_string_replace_replacer_function(self):
-        # const replacerFunction = (args, options) => {
-        #    assert.deepEqual(args, ['bar', 4, 'foo bar']);
-        #    assert.deepEqual(options, {});
-        #    return 'bonk';
-        #assert.equal(SCRIPT_FUNCTIONS.stringReplace(['foo bar', 'bar', replacerFunction], {}), 'foo bonk');
-        self.fail()
+        # Non-string replacement
+        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', 'bar', None], None), None)
 
 
     def test_string_slice(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 5], None), 'oo b')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 0, 7], None), 'foo bar')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 6], None), 'oo ba')
 
+        # No end index
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1], None), 'oo bar')
 
-    def test_string_slice_non_string(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice']([None, 1, 5], None), None)
+        # Non-string value
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice']([None, 1, 5], None))
+
+        # Non-number begin/end
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', None, 5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 'abc'], None))
+
+        # Non-integer begin/end
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1.5, 5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 5.5], None))
+
+        # Out-of-range begin/end
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', -1, 5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 8], None))
 
 
     def test_string_split(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo, bar', ', '], None), ['foo', 'bar'])
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo, bar, bonk', ', '], None), ['foo', 'bar', 'bonk'])
 
+        # Not found
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo', ', '], None), ['foo'])
 
-    def test_string_split_non_string(self):
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringSplit']([None, ', '], None), None)
 
-
-    @unittest.skip
-    def test_string_split_regex(self):
-        # self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo, bar', /,\s*/], None), ['foo', 'bar'])
-        self.fail()
-
-
-    @unittest.skip
-    def test_string_split_limit(self):
-        # self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo, bar, bonk', /,\s*/, 2], None), ['foo', 'bar'])
-        self.fail()
+        # Non-string separator
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo, bar', None], None), None)
 
 
     def test_string_starts_with(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', 'foo'], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', 'bar'], None), False)
 
+        # Non-string value
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringStartsWith']([None, 'foo'], None))
 
-    def test_string_starts_with_non_string(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringStartsWith']([None, 'foo'], None), None)
+        # Non-string search
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', None], None))
 
 
     def test_string_trim(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['stringTrim']([' abc '], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringTrim']([' abc  '], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringTrim'](['\tabc\n'], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringTrim'](['abc'], None), 'abc')
 
-
-    def test_string_trim_non_string(self):
+        #  Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringTrim']([None], None), None)
 
 
     def test_string_upper(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringUpper'](['Foo'], None), 'FOO')
 
-
-    def test_string_upper_non_string(self):
+        # Non-string value
         self.assertEqual(SCRIPT_FUNCTIONS['stringUpper']([None], None), None)
 
 

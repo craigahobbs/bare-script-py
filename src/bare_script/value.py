@@ -6,8 +6,9 @@ BareScript value utilities
 """
 
 import datetime
-import json
 import re
+
+from schema_markdown import JSONEncoder
 
 
 def round_number(value, digits):
@@ -51,13 +52,13 @@ def value_type(value):
         return 'array'
     elif callable(value):
         return 'function'
-    elif isinstance(value, _R_REGEX_TYPE):
+    elif isinstance(value, REGEX_TYPE):
         return 'regex'
 
     # Unknown value type
     return None
 
-_R_REGEX_TYPE = type(re.compile(''))
+REGEX_TYPE = type(re.compile(''))
 
 
 def value_string(value):
@@ -82,18 +83,35 @@ def value_string(value):
     elif isinstance(value, datetime.datetime):
         return value.isoformat()
     elif isinstance(value, (dict)):
-        return json.dumps(value)
+        return value_json(value)
     elif isinstance(value, (list)):
-        return json.dumps(value)
+        return value_json(value)
     elif callable(value):
         return '<function>'
-    elif isinstance(value, _R_REGEX_TYPE):
+    elif isinstance(value, REGEX_TYPE):
         return '<regex>'
 
     # Unknown value type
     return '<unknown>'
 
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
+
+
+def value_json(value, indent=None):
+    """
+    Get a value's JSON string representation
+
+    :param value: The value
+    :param indent: The JSON indent
+    :type indent: int
+    :return: The value as a JSON string
+    :rtype: str
+    """
+
+    if indent is not None and indent > 0:
+        return JSONEncoder(allow_nan=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
+    else:
+        return JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True).encode(value)
 
 
 def value_boolean(value):
@@ -121,7 +139,7 @@ def value_boolean(value):
         return len(value) != 0
     elif callable(value):
         return True
-    elif isinstance(value, _R_REGEX_TYPE):
+    elif isinstance(value, REGEX_TYPE):
         return True
 
     # Unknown value type

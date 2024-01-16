@@ -7,10 +7,16 @@ import datetime
 import re
 import unittest
 
-from bare_script.value import value_boolean, value_compare, value_string, value_type
+from bare_script.value import round_number, value_boolean, value_compare, value_json, value_string, value_type
 
 
 class TestValue(unittest.TestCase):
+
+    def test_round_number(self):
+        self.assertEqual(round_number(1.5, 0), 2)
+        self.assertEqual(round_number(2.5, 0), 3)
+        self.assertEqual(round_number(1.25, 1), 1.3)
+        self.assertEqual(round_number(1.35, 1), 1.4)
 
     def test_value_type(self):
         # null
@@ -72,11 +78,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '2024-01-12T06:09:00+00:00')
 
         # object
-        self.assertEqual(value_string({'value': 1}), '{"value": 1}')
+        self.assertEqual(value_string({'value': 1}), '{"value":1}')
         self.assertEqual(value_string({}), '{}')
 
         # array
-        self.assertEqual(value_string([1, 2, 3]), '[1, 2, 3]')
+        self.assertEqual(value_string([1, 2, 3]), '[1,2,3]')
         self.assertEqual(value_string([]), '[]')
 
         # function
@@ -88,6 +94,17 @@ class TestValue(unittest.TestCase):
         # unknown
         self.assertEqual(value_string((1, 2, 3)), '<unknown>')
         self.assertEqual(value_string(()), '<unknown>')
+
+
+    def test_value_json(self):
+        self.assertEqual(value_json({'value': 1}), '{"value":1}')
+        self.assertEqual(value_json([1, 2, 3]), '[1,2,3]')
+
+        # Indent
+        self.assertEqual(value_json({'value': 1}, 2), '{\n  "value": 1\n}')
+
+        # Datetime
+        self.assertEqual(value_json(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '"2024-01-12T06:09:00+00:00"')
 
 
     def test_value_boolean(self):
