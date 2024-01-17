@@ -143,40 +143,57 @@ def value_boolean(value):
         return True
 
     # Unknown value type
-    return False
+    return True
 
 
-def value_compare(value1, value2):
+def value_is(value1, value2):
+    """
+    Test if one value is the same object as another
+
+    :param value1: The first value
+    :param value2: The second value
+    :return: True if values are the same object, false otherwise
+    :rtype: bool
+    """
+
+    if isinstance(value1, (int, float)) and not isinstance(value1, bool) and \
+       isinstance(value2, (int, float)) and not isinstance(value2, bool):
+        return value1 == value2
+
+    return value1 is value2
+
+
+def value_compare(left, right):
     """
     Compare two values
 
-    :param value_left: The left value
-    :param value_right: The right value
+    :param left: The left value
+    :param right: The right value
     :return: -1 if the left value is less than the right value, 0 if equal, and 1 if greater than
     :rtype: int
     """
 
-    if value1 is None:
-        return 0 if value2 is None else -1
-    elif value2 is None:
+    if left is None:
+        return 0 if right is None else -1
+    elif right is None:
         return 1
-    if isinstance(value1, str) and isinstance(value2, str):
-        return -1 if value1 < value2 else (0 if value1 == value2 else 1)
-    elif isinstance(value1, bool) and isinstance(value2, bool):
-        return -1 if value1 < value2 else (0 if value1 == value2 else 1)
-    elif isinstance(value1, (int, float)) and not isinstance(value1, bool) and \
-         isinstance(value2, (int, float)) and not isinstance(value2, bool):
-        return -1 if value1 < value2 else (0 if value1 == value2 else 1)
-    elif isinstance(value1, datetime.datetime) and isinstance(value2, datetime.datetime):
-        return -1 if value1 < value2 else (0 if value1 == value2 else 1)
-    elif isinstance(value1, list) and isinstance(value2, list):
-        for ix in range(min(len(value1), len(value2))):
-            item_compare = value_compare(value1[ix], value2[ix])
+    if isinstance(left, str) and isinstance(right, str):
+        return -1 if left < right else (0 if left == right else 1)
+    elif isinstance(left, bool) and isinstance(right, bool):
+        return -1 if left < right else (0 if left == right else 1)
+    elif isinstance(left, (int, float)) and not isinstance(left, bool) and \
+         isinstance(right, (int, float)) and not isinstance(right, bool):
+        return -1 if left < right else (0 if left == right else 1)
+    elif isinstance(left, datetime.datetime) and isinstance(right, datetime.datetime):
+        return -1 if left < right else (0 if left == right else 1)
+    elif isinstance(left, list) and isinstance(right, list):
+        for ix in range(min(len(left), len(right))):
+            item_compare = value_compare(left[ix], right[ix])
             if item_compare != 0:
                 return item_compare
-        return -1 if len(value1) < len(value2) else (0 if len(value1) == len(value2) else 1)
+        return -1 if len(left) < len(right) else (0 if len(left) == len(right) else 1)
 
     # Invalid comparison - compare by type name
-    type1 = value_type(value1) or 'unknown'
-    type2 = value_type(value2) or 'unknown'
+    type1 = value_type(left) or 'unknown'
+    type2 = value_type(right) or 'unknown'
     return -1 if type1 < type2 else (0 if type1 == type2 else 1)

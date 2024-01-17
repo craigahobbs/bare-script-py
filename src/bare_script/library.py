@@ -16,7 +16,7 @@ import urllib
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_json, value_string, value_type
+from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -1279,6 +1279,27 @@ def _string_upper(args, unused_options):
 #
 
 
+# $function: systemBoolean
+# $group: System
+# $doc: Interpret a value as a boolean
+# $arg value: The value
+# $return: true or false
+def _system_boolean(args, unused_options):
+    value, = default_args(args, (None,))
+    return value_boolean(value)
+
+
+# $function: systemCompare
+# $group: System
+# $doc: Compare two values
+# $arg left: The left value
+# $arg right: The right value
+# $return: -1 if the left value is less than the right value, 0 if equal, and 1 if greater than
+def _system_compare(args, unused_options):
+    left, right = default_args(args, (None, None))
+    return value_compare(left, right)
+
+
 # $function: systemFetch
 # $group: System
 # $doc: Retrieve a remote JSON or text resource
@@ -1348,6 +1369,17 @@ def _system_global_set(args, options):
     if globals_ is not None:
         globals_[name] = value
     return value
+
+
+# $function: systemIs
+# $group: System
+# $doc: Test if one value is the same object as another
+# $arg value1: The first value
+# $arg value2: The second value
+# $return: true if values are the same object, false otherwise
+def _system_is(args, unused_options):
+    value1, value2 = default_args(args, (None, None))
+    return value_is(value1, value2)
 
 
 # $function: systemLog
@@ -1524,9 +1556,12 @@ SCRIPT_FUNCTIONS = {
     'stringStartsWith': _string_starts_with,
     'stringTrim': _string_trim,
     'stringUpper': _string_upper,
+    'systemBoolean': _system_boolean,
+    'systemCompare': _system_compare,
     'systemFetch': _system_fetch,
     'systemGlobalGet': _system_global_get,
     'systemGlobalSet': _system_global_set,
+    'systemIs': _system_is,
     'systemLog': _system_log,
     'systemLogDebug': _system_log_debug,
     'systemPartial': _system_partial,

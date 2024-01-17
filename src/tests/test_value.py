@@ -7,7 +7,7 @@ import datetime
 import re
 import unittest
 
-from bare_script.value import round_number, value_boolean, value_compare, value_json, value_string, value_type
+from bare_script.value import round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
 
 
 class TestValue(unittest.TestCase):
@@ -143,8 +143,67 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_boolean(re.compile('^test')), True)
 
         # unknown
-        self.assertEqual(value_boolean((1, 2, 3)), False)
-        self.assertEqual(value_boolean(()), False)
+        self.assertEqual(value_boolean((1, 2, 3)), True)
+        self.assertEqual(value_boolean(()), True)
+
+
+    def test_value_is(self):
+        # null
+        self.assertEqual(value_is(None, None), True)
+        self.assertEqual(value_is(None, 0), False)
+
+        # string
+        self.assertEqual(value_is('a', 'a'), True)
+        self.assertEqual(value_is('a', 'b'), False)
+
+        # boolean
+        self.assertEqual(value_is(True, True), True)
+        self.assertEqual(value_is(False, False), True)
+        self.assertEqual(value_is(False, True), False)
+
+        # number
+        self.assertEqual(value_is(5, 5), True)
+        self.assertEqual(value_is(5., 5.), True)
+        self.assertEqual(value_is(5, 5.), True)
+        self.assertEqual(value_is(5., 5), True)
+        self.assertEqual(value_is(5, 6), False)
+        self.assertEqual(value_is(5., 6.), False)
+
+        # datetime
+        d1 = datetime.datetime(2024, 1, 12)
+        d2 = datetime.datetime(2024, 1, 12)
+        self.assertEqual(value_is(d1, d1), True)
+        self.assertEqual(value_is(d1, d2), False)
+
+        # object
+        o1 = {'value': 1}
+        o2 = {'value': 1}
+        self.assertEqual(value_is(o1, o1), True)
+        self.assertEqual(value_is(o1, o2), False)
+
+        # array
+        a1 = [1, 2, 3]
+        a2 = [1, 2, 3]
+        self.assertEqual(value_is(a1, a1), True)
+        self.assertEqual(value_is(a1, a2), False)
+
+        # function
+        def f1():
+            pass
+        def f2():
+            pass
+        f1()
+        f2()
+        self.assertEqual(value_is(f1, f1), True)
+        self.assertEqual(value_is(f1, f2), False)
+
+        # regex
+        r1 = re.compile('^test')
+        r2 = re.compile('^test')
+        r3 = re.compile('^test2')
+        self.assertEqual(value_is(r1, r1), True)
+        self.assertEqual(value_is(r1, r2), True)
+        self.assertEqual(value_is(r1, r3), False)
 
 
     def test_value_compare(self):

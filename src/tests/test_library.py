@@ -1544,6 +1544,49 @@ class TestLibrary(unittest.TestCase):
     #
 
 
+    def test_system_boolean(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([[1, 2, 3]], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([[]], None), False)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([True], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([False], None), False)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([datetime.datetime.now()], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([lambda: 1], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([None], None), False)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([0], None), False)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([1], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([0.], None), False)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([1.], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([{}], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([re.compile(r'^abc$')], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean'](['abc'], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([''], None), False)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([()], None), True)
+
+
+    def test_system_compare(self):
+        # null
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([None, None], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([None, 0], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([0, None], None), 1)
+
+        # number
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([5, 5], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([5, 5.], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([5., 5.], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([5, 6], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([5, 6.], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([5., 6], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([6, 5], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([6, 5.], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([6., 5], None), 1)
+
+        # object
+        o1 = {'a': 1}
+        o2 = {'a': 1}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([o1, o1], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([o1, o2], None), 0)
+
+
     @unittest.skip
     def test_system_fetch(self):
         self.fail()
@@ -1593,6 +1636,23 @@ class TestLibrary(unittest.TestCase):
         # Non-string name
         options = {'globals': {}}
         self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalSet']([None], options))
+
+
+    def test_system_is(self):
+        # null
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([None, None], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([None, 0], None), False)
+
+        # number
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([5, 5], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([5, 5.], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([5, 6], None), False)
+
+        # object
+        o1 = {'a': 1}
+        o2 = {'a': 1}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([o1, o1], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemIs']([o1, o2], None), False)
 
 
     def test_system_log(self):
