@@ -30,7 +30,7 @@ def default_args(args, defaults, last_arg_array=False):
     len_args = len(args)
     yield from ((args[ix] if ix < len_args else default) for ix, default in enumerate(defaults))
     if last_arg_array:
-        yield args[len_args - 1:]
+        yield args[len(defaults):]
 
 
 #
@@ -1322,11 +1322,15 @@ def _system_fetch(args, options):
 # $group: System
 # $doc: Get a global variable value
 # $arg name: The global variable name
+# $arg defaultValue: The default value (optional)
 # $return: The global variable's value or null if it does not exist
 def _system_global_get(args, options):
-    name, = args
+    name, default_value = default_args(args, (None, None))
+    if not isinstance(name, str):
+        return default_value
+
     globals_ = options.get('globals') if options is not None else None
-    return globals_[name] if globals_ is not None else None
+    return globals_.get(name, default_value) if globals_ is not None else default_value
 
 
 # $function: systemGlobalSet
@@ -1336,7 +1340,10 @@ def _system_global_get(args, options):
 # $arg value: The global variable's value
 # $return: The global variable's value
 def _system_global_set(args, options):
-    name, value = args
+    name, value = default_args(args, (None, None))
+    if not isinstance(name, str):
+        return None
+
     globals_ = options.get('globals') if options is not None else None
     if globals_ is not None:
         globals_[name] = value
@@ -1348,10 +1355,14 @@ def _system_global_set(args, options):
 # $doc: Log a message to the console
 # $arg string: The message
 def _system_log(args, options):
-    string, = args
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return None
+
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None:
         log_fn(string)
+    return None
 
 
 # $function: systemLogDebug
@@ -1359,10 +1370,14 @@ def _system_log(args, options):
 # $doc: Log a message to the console, if in debug mode
 # $arg string: The message
 def _system_log_debug(args, options):
-    string, = args
+    string, = default_args(args, (None,))
+    if not isinstance(string, str):
+        return None
+
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None and options.get('debug'):
         log_fn(string)
+    return None
 
 
 # $function: systemPartial
@@ -1373,7 +1388,11 @@ def _system_log_debug(args, options):
 # $arg args...: The function arguments
 # $return: The new function called with "args"
 def _system_partial(args, unused_options):
-    return functools.partial(args[0], *args[1:])
+    fn, fn_args = default_args(args, (None,), True)
+    if not callable(fn) or len(fn_args) < 1:
+        return None
+
+    return lambda args_extra, options: fn([*fn_args, *args_extra], options)
 
 
 # $function: systemType
@@ -1383,7 +1402,7 @@ def _system_partial(args, unused_options):
 # $return: The type string of the value.
 # $return: Valid values are: 'array', 'boolean', 'datetime', 'function', 'null', 'number', 'object', 'regex', 'string'.
 def _system_type(args, unused_options):
-    value, = args
+    value, = default_args(args, (None,))
     return value_type(value)
 
 

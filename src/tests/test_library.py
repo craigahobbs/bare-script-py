@@ -1540,6 +1540,173 @@ class TestLibrary(unittest.TestCase):
 
 
     #
+    # System functions
+    #
+
+
+    @unittest.skip
+    def test_system_fetch(self):
+        self.fail()
+
+
+    def test_system_global_get(self):
+        options = {'globals': {'a': 1}}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['a'], options), 1)
+
+        # Unknown
+        options = {'globals': {}}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['a'], options))
+
+        # Default value
+        options = {'globals': {'a': 1}}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['a', 2], options), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['b', 2], options), 2)
+
+        # No globals
+        options = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['a'], options))
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['a', 2], options), 2)
+
+        # Null options
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['a'], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['a', 2], None), 2)
+
+        # Non-string name
+        options = {'globals': {'a': 1}}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet']([None], options))
+
+
+    def test_system_global_set(self):
+        options = {'globals': {}}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['a', 1], options), 1)
+        self.assertDictEqual(options['globals'], {'a': 1})
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['a', 2], options), 2)
+        self.assertDictEqual(options['globals'], {'a': 2})
+
+        # No globals
+        options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['a', 1], options), 1)
+
+        # Null options
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['a', 1], None), 1)
+
+        # Non-string name
+        options = {'globals': {}}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalSet']([None], options))
+
+
+    def test_system_log(self):
+        logs = []
+        def log_fn(string):
+            logs.append(string)
+
+        options = {'logFn': log_fn}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLog'](['Hello'], options))
+        self.assertListEqual(logs, ['Hello'])
+
+        # Debug
+        logs = []
+        options = {'logFn': log_fn, 'debug': True}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLog'](['Hello'], options))
+        self.assertListEqual(logs, ['Hello'])
+
+        # No-debug
+        logs = []
+        options = {'logFn': log_fn, 'debug': False}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLog'](['Hello'], options))
+        self.assertListEqual(logs, ['Hello'])
+
+        # Null options
+        logs = []
+        options = None
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLog'](['Hello'], options))
+        self.assertListEqual(logs, [])
+
+        # No log function
+        logs = []
+        options = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLog'](['Hello'], options))
+        self.assertListEqual(logs, [])
+
+        # Non-string message
+        options = {'logFn': log_fn}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLog']([None], options))
+        self.assertListEqual(logs, [])
+
+
+    def test_system_log_debug(self):
+        logs = []
+        def log_fn(string):
+            logs.append(string)
+
+        options = {'logFn': log_fn}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug'](['Hello'], options))
+        self.assertListEqual(logs, [])
+
+        # Debug
+        logs = []
+        options = {'logFn': log_fn, 'debug': True}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug'](['Hello'], options))
+        self.assertListEqual(logs, ['Hello'])
+
+        # No-debug
+        logs = []
+        options = {'logFn': log_fn, 'debug': False}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug'](['Hello'], options))
+        self.assertListEqual(logs, [])
+
+        # Null options
+        logs = []
+        options = None
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug'](['Hello'], options))
+        self.assertListEqual(logs, [])
+
+        # No log function
+        logs = []
+        options = {'debug': True}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug'](['Hello'], options))
+        self.assertListEqual(logs, [])
+
+        # Non-string message
+        options = {'logFn': log_fn, 'debug': True}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug']([None], options))
+        self.assertListEqual(logs, [])
+
+
+    def test_system_partial(self):
+        def test_fn(args, options):
+            name, number = args
+            self.assertEqual(name, 'test')
+            self.assertEqual(number, 1)
+            self.assertDictEqual(options, {'debug': False})
+            return f'{name}-{number}'
+
+        partial_fn = SCRIPT_FUNCTIONS['systemPartial']([test_fn, 'test'], None)
+        self.assertEqual(partial_fn([1], {'debug': False}), 'test-1')
+
+        # Non-function
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemPartial']([None, 'test'], None))
+
+        # No args
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemPartial']([test_fn], None))
+
+
+    def test_system_type(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([[1, 2, 3]], None), 'array')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([True], None), 'boolean')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([False], None), 'boolean')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([datetime.datetime.now()], None), 'datetime')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([lambda: 1], None), 'function')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([None], None), 'null')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([0], None), 'number')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([0.], None), 'number')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([{}], None), 'object')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([re.compile(r'^abc$')], None), 'regex')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType'](['abc'], None), 'string')
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemType']([()], None))
+
+
+    #
     # URL functions
     #
 
