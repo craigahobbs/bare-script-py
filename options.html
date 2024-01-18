@@ -53,9 +53,9 @@
 <li class="toctree-l1"><a class="reference internal" href="errors.html">Errors</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Options</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#executescriptoptions">ExecuteScriptOptions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#fetch-fn">fetch_fn</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#log-fn">log_fn</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#url-fn">url_fn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fetch-functions">Fetch Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#log-functions">Log Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#url-functions">URL Functions</a></li>
 </ul>
 </li>
 </ul>
@@ -153,8 +153,8 @@
 </dd></dl>
 
 </section>
-<section id="fetch-fn">
-<h2>fetch_fn<a class="headerlink" href="#fetch-fn" title="Link to this heading">¶</a></h2>
+<section id="fetch-functions">
+<h2>Fetch Functions<a class="headerlink" href="#fetch-functions" title="Link to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="fetch_fn">
 <span class="sig-name descname"><span class="pre">fetch_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fetch_fn" title="Link to this definition">¶</a></dt>
@@ -178,26 +178,26 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="bare_script.fetch_http">
 <span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_http</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_http" title="Link to this definition">¶</a></dt>
-<dd><p>A fetch function implementation that fetches resources using HTTP GET and POST</p>
+<dd><p>A <a class="reference internal" href="#fetch_fn" title="fetch_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch</span> <span class="pre">function</span></code></a> implementation that fetches resources using HTTP GET and POST</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="bare_script.fetch_read_only">
 <span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_read_only</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_read_only" title="Link to this definition">¶</a></dt>
-<dd><p>A fetch function implementation that fetches resources that uses HTTP GET and POST for URLs,
-otherwise read-only file system access</p>
+<dd><p>A <a class="reference internal" href="#fetch_fn" title="fetch_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch</span> <span class="pre">function</span></code></a> implementation that fetches resources that uses HTTP GET
+and POST for URLs, otherwise read-only file system access</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="bare_script.fetch_read_write">
 <span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_read_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_read_write" title="Link to this definition">¶</a></dt>
-<dd><p>A fetch function implementation that fetches resources that uses HTTP GET and POST for URLs,
-otherwise read-write file system access</p>
+<dd><p>A <a class="reference internal" href="#fetch_fn" title="fetch_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch</span> <span class="pre">function</span></code></a> implementation that fetches resources that uses HTTP GET
+and POST for URLs, otherwise read-write file system access</p>
 </dd></dl>
 
 </section>
-<section id="log-fn">
-<h2>log_fn<a class="headerlink" href="#log-fn" title="Link to this heading">¶</a></h2>
+<section id="log-functions">
+<h2>Log Functions<a class="headerlink" href="#log-functions" title="Link to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="log_fn">
 <span class="sig-name descname"><span class="pre">log_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#log_fn" title="Link to this definition">¶</a></dt>
@@ -212,12 +212,12 @@ otherwise read-write file system access</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="bare_script.log_print">
 <span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">log_print</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.log_print" title="Link to this definition">¶</a></dt>
-<dd><p>A log function implementation that uses print</p>
+<dd><p>A <a class="reference internal" href="#log_fn" title="log_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">log</span> <span class="pre">function</span></code></a> implementation that uses print</p>
 </dd></dl>
 
 </section>
-<section id="url-fn">
-<h2>url_fn<a class="headerlink" href="#url-fn" title="Link to this heading">¶</a></h2>
+<section id="url-functions">
+<h2>URL Functions<a class="headerlink" href="#url-functions" title="Link to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="url_fn">
 <span class="sig-name descname"><span class="pre">url_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#url_fn" title="Link to this definition">¶</a></dt>
@@ -238,7 +238,7 @@ otherwise read-write file system access</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="bare_script.url_file_relative">
 <span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">url_file_relative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.url_file_relative" title="Link to this definition">¶</a></dt>
-<dd><p>A URL function implementation that fixes up file-relative paths</p>
+<dd><p>A <a class="reference internal" href="#url_fn" title="url_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">URL</span> <span class="pre">function</span></code></a> implementation that fixes up file-relative paths</p>
 </dd></dl>
 
 </section>
