@@ -1691,7 +1691,7 @@ class TestLibrary(unittest.TestCase):
         # Non-string message
         options = {'logFn': log_fn}
         self.assertIsNone(SCRIPT_FUNCTIONS['systemLog']([None], options))
-        self.assertListEqual(logs, [])
+        self.assertListEqual(logs, ['null'])
 
 
     def test_system_log_debug(self):

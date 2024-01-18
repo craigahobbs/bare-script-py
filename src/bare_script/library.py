@@ -1426,13 +1426,10 @@ def _system_is(args, unused_options):
 # $arg string: The message
 def _system_log(args, options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
-        return None
 
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None:
-        log_fn(string)
-    return None
+        log_fn(value_string(string))
 
 
 # $function: systemLogDebug
