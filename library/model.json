@@ -1,0 +1,32 @@
+{
+    "SystemFetchRequest": {
+        "struct": {
+            "name": "SystemFetchRequest",
+            "doc": [
+                "A fetch request model"
+            ],
+            "docGroup": "SystemFetch",
+            "members": [
+                {
+                    "name": "url",
+                    "type": {
+                        "builtin": "string"
+                    },
+                    "doc": [
+                        "The resource URL"
+                    ]
+                },
+                {
+                    "name": "body",
+                    "type": {
+                        "builtin": "string"
+                    },
+                    "doc": [
+                        "The request body"
+                    ],
+                    "optional": true
+                }
+            ]
+        }
+    }
+}

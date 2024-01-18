@@ -55,16 +55,25 @@ ExecuteScriptOptions
 fetch_fn
 --------
 
-.. function:: fetch_fn(url, options)
+.. function:: fetch_fn(url, body)
 
    The fetch function interface
 
-   :param url: The URL to fetch interface
+   :param url: The resource URL
    :type url: str
-   :param options: The `fetch options <https://developer.mozilla.org/en-US/docs/Web/API/fetch#parameters>`_
-   :type options: dict or None, optional
+   :param body: The request body
+   :type body: str or None
    :returns: The response text
    :rtype: str
+
+
+.. autofunction:: bare_script.fetch_http
+
+
+.. autofunction:: bare_script.fetch_read_only
+
+
+.. autofunction:: bare_script.fetch_read_write
 
 
 log_fn
@@ -78,6 +87,9 @@ log_fn
    :type text: str
 
 
+.. autofunction:: bare_script.log_print
+
+
 url_fn
 ------
 
@@ -89,3 +101,6 @@ url_fn
    :type url: str
    :returns: The modified URL
    :rtype: str
+
+
+.. autofunction:: bare_script.url_file_relative

@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>bare-script &#8212; bare-script 0.9.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=28c8e701" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=a66d8bb5" />
     <script src="_static/documentation_options.js?v=39bb1c6d"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -17,10 +17,11 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/index.html"/>
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/index.html" />
+  
 
   </head><body>
   <div class="document">
@@ -104,9 +105,9 @@
 <section id="executing-barescript">
 <h2>Executing BareScript<a class="headerlink" href="#executing-barescript" title="Link to this heading">¶</a></h2>
 <p>To execute a BareScript script, parse the script using the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/reference-scripts.html#parse-script">parse_script</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#parse-script">parse_script</a>
 function. Then execute the script using the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/reference-scripts.html#execute-script">execute_script</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script">execute_script</a>
 function. For example:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
 <span class="gp">...</span>
@@ -117,13 +118,13 @@ function. For example:</p>
 <span class="gp">... </span><span class="s1">    return n * 2</span>
 <span class="gp">... </span><span class="s1">endfunction</span>
 <span class="gp">...</span>
-<span class="gp">... </span><span class="s1">return stringNew(N) + &#39; times 2 is &#39; + stringNew(double(N))</span>
+<span class="gp">... </span><span class="s1">return N + &#39; times 2 is &#39; + double(N)</span>
 <span class="gp">... </span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
 <span class="gp">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Execute the script</span>
 <span class="gp">... </span><span class="nb">globals</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;globals&#39;</span><span class="p">:</span> <span class="nb">globals</span><span class="p">}))</span>
-<span class="go">10 times 2 is 20.0</span>
+<span class="go">10 times 2 is 20</span>
 </pre></div>
 </div>
 <section id="the-barescript-library">
@@ -138,27 +139,20 @@ of the
 functions.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">urllib.request</span>
 <span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span><span class="p">,</span> <span class="n">parse_script</span>
 <span class="gp">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Parse the script</span>
 <span class="gp">... </span><span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
 <span class="gp">... </span><span class="s1"># Fetch the BareScript library documentation JSON</span>
-<span class="gp">... </span><span class="s1">docs = systemFetch(&#39;https://craigahobbs.github.io/bare-script/library/library.json&#39;)</span>
+<span class="gp">... </span><span class="s1">docs = jsonParse(systemFetch(&#39;https://craigahobbs.github.io/bare-script-py/library/library.json&#39;))</span>
 <span class="gp">...</span>
 <span class="gp">... </span><span class="s1"># Return the number of library functions</span>
-<span class="gp">... </span><span class="s1">return &#39;The BareScript Library has &#39; + stringNew(arrayLength(objectGet(docs, &#39;functions&#39;))) + &#39; functions&#39;</span>
+<span class="gp">... </span><span class="s1">return &#39;The BareScript Library has &#39; + arrayLength(objectGet(docs, &#39;functions&#39;)) + &#39; functions&#39;</span>
 <span class="gp">... </span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
 <span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># The fetch function</span>
-<span class="gp">... </span><span class="k">def</span> <span class="nf">fetch_fn</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
-<span class="gp">... </span>    <span class="k">with</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
-<span class="gp">... </span>            <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
-<span class="gp">... </span>        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Failed to load &quot;</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
-<span class="gp">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Execute the script</span>
-<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;fetchFn&#39;</span><span class="p">:</span> <span class="n">fetch_fn</span><span class="p">}))</span>
-<span class="go">The BareScript Library has 101 functions</span>
+<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;fetchFn&#39;</span><span class="p">:</span> <span class="n">fetch_http</span><span class="p">}))</span>
+<span class="go">The BareScript Library has 67 functions</span>
 </pre></div>
 </div>
 </section>
@@ -168,9 +162,9 @@ functions.</p>
 <p>To evaluate a
 <a class="reference external" href="https://craigahobbs.github.io/bare-script/language/#expressions">BareScript expression</a>,
 parse the expression using the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/reference-expressions.html#parse-expression">parse_expression</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/expressions.html#parse-expression">parse_expression</a>
 function. Then evaluate the expression using the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/reference-expressions.html#evaluate-expression">evaluate_expression</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/expressions.html#evaluate-expression">evaluate_expression</a>
 function.</p>
 <p>Expression evaluation includes the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/expression.html">BareScript Expression Library</a>,
@@ -238,7 +232,7 @@ It was started using <a class="reference external" href="https://github.com/crai
     <div class="clearer"></div>
   </div>
     <div class="footer">
-      &copy;2021, Craig A. Hobbs.
+      &#169;2021, Craig A. Hobbs.
       
     </div>
 

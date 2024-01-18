@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Options &#8212; bare-script 0.9.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=28c8e701" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=a66d8bb5" />
     <script src="_static/documentation_options.js?v=39bb1c6d"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -17,10 +17,11 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/options.html"/>
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/options.html" />
+  
 
   </head><body>
   <div class="document">
@@ -156,13 +157,13 @@
 <h2>fetch_fn<a class="headerlink" href="#fetch-fn" title="Link to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="fetch_fn">
-<span class="sig-name descname"><span class="pre">fetch_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fetch_fn" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">fetch_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fetch_fn" title="Link to this definition">¶</a></dt>
 <dd><p>The fetch function interface</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a>) – The URL to fetch interface</p></li>
-<li><p><strong>options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The <a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/API/fetch#parameters">fetch options</a></p></li>
+<li><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a>) – The resource URL</p></li>
+<li><p><strong>body</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em> or </em><em>None</em>) – The request body</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -172,6 +173,26 @@
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)">str</a></p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.fetch_http">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_http</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_http" title="Link to this definition">¶</a></dt>
+<dd><p>A fetch function implementation that fetches resources using HTTP GET and POST</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.fetch_read_only">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_read_only</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_read_only" title="Link to this definition">¶</a></dt>
+<dd><p>A fetch function implementation that fetches resources that uses HTTP GET and POST for URLs,
+otherwise read-only file system access</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.fetch_read_write">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_read_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_read_write" title="Link to this definition">¶</a></dt>
+<dd><p>A fetch function implementation that fetches resources that uses HTTP GET and POST for URLs,
+otherwise read-write file system access</p>
 </dd></dl>
 
 </section>
@@ -186,6 +207,12 @@
 <dd class="field-odd"><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a>) – The log text</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.log_print">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">log_print</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.log_print" title="Link to this definition">¶</a></dt>
+<dd><p>A log function implementation that uses print</p>
 </dd></dl>
 
 </section>
@@ -208,6 +235,12 @@
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.url_file_relative">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">url_file_relative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.url_file_relative" title="Link to this definition">¶</a></dt>
+<dd><p>A URL function implementation that fixes up file-relative paths</p>
+</dd></dl>
+
 </section>
 </section>
 
@@ -219,7 +252,7 @@
     <div class="clearer"></div>
   </div>
     <div class="footer">
-      &copy;2021, Craig A. Hobbs.
+      &#169;2021, Craig A. Hobbs.
       
     </div>
 
