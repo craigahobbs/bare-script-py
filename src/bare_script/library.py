@@ -14,7 +14,7 @@ import random
 import re
 import urllib
 
-from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
+from schema_markdown import TYPE_MODEL, ValidationError, parse_schema_markdown, validate_type, validate_type_model
 
 from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
 
@@ -1302,41 +1302,79 @@ def _system_compare(args, unused_options):
 
 # $function: systemFetch
 # $group: System
-# $doc: Retrieve a remote JSON or text resource
-# $arg url: The resource URL or array of URLs
-# $arg options: Optional (default is null). The [fetch options](https://developer.mozilla.org/en-US/docs/Web/API/fetch#parameters).
-# $arg isText: Optional (default is false). If true, retrieve the resource as text.
-# $return: The resource object/string or array of objects/strings; null if an error occurred.
+# $doc: Retrieve a URL resource
+# $arg url: The resource URL, [request model](model.html#var.vName='SystemFetchRequest'), or array of URL and
+# $arg url: [request model](model.html#var.vName='SystemFetchRequest')
+# $return: The response string or array of strings; null if an error occurred
 def _system_fetch(args, options):
-    urls, unused_fetch_options, is_text = default_args(args, (None, None, False))
-    is_array = isinstance(urls, list)
-    if not is_array:
-        urls = [urls]
-    log_fn = options.get('logFn') if options is not None else None
+    url_arg, = default_args(args, (None,))
+
+    # Options
+    log_fn = options.get('logFn') if options is not None and options.get('debug') else None
     url_fn = options.get('urlFn') if options is not None else None
     fetch_fn = options.get('fetchFn') if options is not None else None
-    values = []
-    for url in urls:
+
+    # Validate the URL argument
+    requests = []
+    is_response_array = False
+    if isinstance(url_arg, str):
+        requests.append({'url': url_arg})
+    elif isinstance(url_arg, dict):
+        try:
+            requests.append(validate_type(FETCH_TYPES, 'SystemFetchRequest', url_arg))
+        except ValidationError:
+            requests.append(None)
+    else:
+        is_response_array = True
+        for url_item in url_arg:
+            if isinstance(url_item, str):
+                requests.append({'url': url_item})
+            else:
+                try:
+                    requests.append(validate_type(FETCH_TYPES, 'SystemFetchRequest', url_item))
+                except ValidationError:
+                    requests.append(None)
+
+    # Get each response
+    responses = []
+    for request in requests:
+        request_url = request['url']
+        request_body = request.get('body')
+
         # Update the URL
         if url_fn is not None:
-            url = url_fn(url)
+            request_url = url_fn(request_url)
 
         # Fetch the URL
-        value = None
+        response = None
         if fetch_fn is not None:
             try:
-                value = fetch_fn(url)
-                if not value_boolean(is_text):
-                    value = json.loads(value)
+                response = fetch_fn(request_url, request_body)
             except: # pylint: disable=bare-except
                 pass
-        values.append(value)
+        responses.append(response)
 
         # Log failure
-        if value is None and log_fn is not None and options.get('debug'):
-            log_fn(f'BareScript: Function "systemFetch" failed for {"text" if is_text else "JSON"} resource "{url}"')
+        if response is None and log_fn is not None:
+            log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_url}"')
 
-    return values if is_array else values[0]
+    return responses if is_response_array else responses[0]
+
+
+# The aggregation model
+FETCH_TYPES = parse_schema_markdown('''\
+group "SystemFetch"
+
+
+# A fetch request model
+struct SystemFetchRequest
+
+    # The resource URL
+    string url
+
+    # The request body
+    optional string body
+''')
 
 
 # $function: systemGlobalGet

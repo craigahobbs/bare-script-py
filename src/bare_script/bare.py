@@ -7,12 +7,11 @@ bare-script command-line interface (CLI) main module
 
 import argparse
 from functools import partial
-import re
 import sys
 import time
-import urllib.request
 
 from .model import lint_script
+from .options import fetch_read_write, log_print, url_file_relative
 from .parser import parse_script
 from .runtime import execute_script
 
@@ -41,7 +40,7 @@ def main(argv=None):
             current_file = file_
 
             # Parse the source
-            script = parse_script(source if source is not None else _fetch_fn(file_))
+            script = parse_script(source if source is not None else fetch_read_write(file_, None))
 
             # Run the bare-script linter?
             if args.static or args.debug:
@@ -63,11 +62,11 @@ def main(argv=None):
             time_begin = time.time()
             result = execute_script(script, {
                 'debug': args.debug or False,
-                'fetchFn': _fetch_fn,
+                'fetchFn': fetch_read_write,
                 'globals': globals_,
-                'logFn': _log_fn,
+                'logFn': log_print,
                 'systemPrefix': 'https://craigahobbs.github.io/markdown-up/include/',
-                'urlFn': partial(_url_fn, file_)
+                'urlFn': partial(url_file_relative, file_)
             })
             if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:
                 status_code = int(result)
@@ -108,32 +107,3 @@ class _ScriptAction(argparse.Action):
             for value in values:
                 files.append((value, None))
         setattr(namespace, 'files', files)
-
-
-# The fetch function
-def _fetch_fn(url):
-    # URL?
-    if R_URL.match(url) is not None:
-        with urllib.request.urlopen(url) as response:
-            if response.status == 200:
-                return response.read().decode('utf-8')
-        # pylint: disable=broad-exception-raised
-        raise Exception(f'Failed to load "{url}"')
-
-    # File
-    with open(url, 'r', encoding='utf-8') as fh:
-        return fh.read()
-
-
-# The log function
-def _log_fn(message):
-    print(message)
-
-
-# The URL function
-def _url_fn(file_, url):
-    if re.match(R_URL, url) or url.startswith('/'):
-        return url
-    return f'{file_[:file_.rfind("/") + 1]}{url}'
-
-R_URL = re.compile(r'^[a-z]+:')

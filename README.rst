@@ -73,27 +73,20 @@ functions.
 
 >>> import urllib.request
 ...
->>> from bare_script import execute_script, parse_script
+>>> from bare_script import execute_script, fetch_http, parse_script
 ...
 >>> # Parse the script
 ... script = parse_script('''\
 ... # Fetch the BareScript library documentation JSON
-... docs = systemFetch('https://craigahobbs.github.io/bare-script/library/library.json')
+... docs = jsonParse(systemFetch('https://craigahobbs.github.io/bare-script-py/library/library.json'))
 ...
 ... # Return the number of library functions
 ... return 'The BareScript Library has ' + arrayLength(objectGet(docs, 'functions')) + ' functions'
 ... ''')
 ...
->>> # The fetch function
-... def fetch_fn(url):
-...     with urllib.request.urlopen(url) as response:
-...         if response.status == 200:
-...             return response.read().decode('utf-8')
-...         raise Exception(f'Failed to load "{url}"')
-...
 >>> # Execute the script
-... print(execute_script(script, {'fetchFn': fetch_fn}))
-The BareScript Library has 101 functions
+... print(execute_script(script, {'fetchFn': fetch_http}))
+The BareScript Library has 67 functions
 
 
 Evaluating BareScript Expressions
