@@ -1587,9 +1587,46 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['systemCompare']([o1, o2], None), 0)
 
 
-    @unittest.skip
     def test_system_fetch(self):
-        self.fail()
+        def fetch_fn(request):
+            url = request['url']
+            if url.startswith('fail'):
+                return None
+
+            body = request.get('body')
+            headers = request.get('headers')
+            method = "GET" if body is None else "POST"
+            body_msg = '' if body is None else f' - {body}'
+            headers_msg = '' if headers is None else f' - {headers}'
+            return f'{method} {url}{body_msg}{headers_msg}'
+
+        def log_fn(message):
+            logs.append(message)
+
+        options = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn}
+
+        # URL
+        logs = []
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], options), 'GET test.txt')
+        self.assertListEqual(logs, [])
+
+        # Request model
+        logs = []
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt'}], options), 'GET test.txt')
+        self.assertListEqual(logs, [])
+
+        # Array
+        logs = []
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['systemFetch']([['test.txt', {'url': 'test2.txt', 'body': 'abc'}]], options),
+            ['GET test.txt', 'POST test2.txt - abc']
+        )
+        self.assertListEqual(logs, [])
+
+        # Failure
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['fail.txt'], options))
+        self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "fail.txt"'])
 
 
     def test_system_global_get(self):

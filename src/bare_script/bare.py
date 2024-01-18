@@ -40,7 +40,7 @@ def main(argv=None):
             current_file = file_
 
             # Parse the source
-            script = parse_script(source if source is not None else fetch_read_write(file_, None))
+            script = parse_script(source if source is not None else fetch_read_write({'url': file_}))
 
             # Run the bare-script linter?
             if args.static or args.debug:

@@ -1321,7 +1321,7 @@ def _system_fetch(args, options):
         requests.append({'url': url_arg})
     elif isinstance(url_arg, dict):
         try:
-            requests.append(validate_type(FETCH_TYPES, 'SystemFetchRequest', url_arg))
+            requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_arg))
         except ValidationError:
             requests.append(None)
     else:
@@ -1331,38 +1331,37 @@ def _system_fetch(args, options):
                 requests.append({'url': url_item})
             else:
                 try:
-                    requests.append(validate_type(FETCH_TYPES, 'SystemFetchRequest', url_item))
+                    requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
                 except ValidationError:
                     requests.append(None)
 
     # Get each response
     responses = []
     for request in requests:
-        request_url = request['url']
-        request_body = request.get('body')
+        request_fetch = dict(request)
 
         # Update the URL
         if url_fn is not None:
-            request_url = url_fn(request_url)
+            request_fetch['url'] = url_fn(request_fetch['url'])
 
         # Fetch the URL
         response = None
         if fetch_fn is not None:
             try:
-                response = fetch_fn(request_url, request_body)
+                response = fetch_fn(request_fetch)
             except: # pylint: disable=bare-except
                 pass
         responses.append(response)
 
         # Log failure
         if response is None and log_fn is not None:
-            log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_url}"')
+            log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_fetch["url"]}"')
 
     return responses if is_response_array else responses[0]
 
 
 # The aggregation model
-FETCH_TYPES = parse_schema_markdown('''\
+SYSTEM_FETCH_TYPES = parse_schema_markdown('''\
 group "SystemFetch"
 
 
@@ -1374,6 +1373,9 @@ struct SystemFetchRequest
 
     # The request body
     optional string body
+
+    # The request headers
+    optional string{} headers
 ''')
 
 

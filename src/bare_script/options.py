@@ -10,28 +10,34 @@ import re
 import urllib
 
 
-def fetch_http(url, body):
+def fetch_http(request):
     """
     A :func:`fetch function <fetch_fn>` implementation that fetches resources using HTTP GET and POST
     """
 
-    request = urllib.request.Request(url, body.encode('utf-8') if body is not None else None)
-    with urllib.request.urlopen(request) as response:
+    body = request.get('body')
+    req = urllib.request.Request(
+        request['url'],
+        data=body.encode('utf-8') if body is not None else None,
+        headers=request.get('headers', {})
+    )
+    with urllib.request.urlopen(req) as response:
         return response.read().decode('utf-8')
-    return None
 
 
-def fetch_read_only(url, body):
+def fetch_read_only(request):
     """
     A :func:`fetch function <fetch_fn>` implementation that fetches resources that uses HTTP GET
     and POST for URLs, otherwise read-only file system access
     """
 
     # HTTP GET/POST?
+    url = request['url']
     if _R_URL.match(url):
-        return fetch_http(url, body)
+        return fetch_http(request)
 
     # File write?
+    body = request.get('body')
     if body is not None:
         return None
 
@@ -40,21 +46,23 @@ def fetch_read_only(url, body):
         return fh.read()
 
 
-def fetch_read_write(url, body):
+def fetch_read_write(request):
     """
     A :func:`fetch function <fetch_fn>` implementation that fetches resources that uses HTTP GET
     and POST for URLs, otherwise read-write file system access
     """
 
     # HTTP GET/POST?
+    url = request['url']
     if _R_URL.match(url):
-        return fetch_http(url, body)
+        return fetch_http(request)
 
     # File write?
+    body = request.get('body')
     if body is not None:
         with open(url, 'w', encoding='utf-8') as fh:
             fh.write(url)
-        return '{"result":"ok"}'
+        return '{}'
 
     # File read
     with open(url, 'r', encoding='utf-8') as fh:

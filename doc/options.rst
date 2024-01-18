@@ -55,14 +55,12 @@ ExecuteScriptOptions
 Fetch Functions
 ---------------
 
-.. function:: fetch_fn(url, body)
+.. function:: fetch_fn(request)
 
    The fetch function interface
 
-   :param url: The resource URL
-   :type url: str
-   :param body: The request body
-   :type body: str or None
+   :param request: The `request model <library/model.html#var.vName='SystemFetchRequest'>`__
+   :type url: dict
    :returns: The response text
    :rtype: str
 
