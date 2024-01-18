@@ -12,7 +12,7 @@ import urllib
 
 def fetch_http(url, body):
     """
-    A fetch function implementation that fetches resources using HTTP GET and POST
+    A :func:`fetch function <fetch_fn>` implementation that fetches resources using HTTP GET and POST
     """
 
     request = urllib.request.Request(url, body.encode('utf-8') if body is not None else None)
@@ -23,8 +23,8 @@ def fetch_http(url, body):
 
 def fetch_read_only(url, body):
     """
-    A fetch function implementation that fetches resources that uses HTTP GET and POST for URLs,
-    otherwise read-only file system access
+    A :func:`fetch function <fetch_fn>` implementation that fetches resources that uses HTTP GET
+    and POST for URLs, otherwise read-only file system access
     """
 
     # HTTP GET/POST?
@@ -42,8 +42,8 @@ def fetch_read_only(url, body):
 
 def fetch_read_write(url, body):
     """
-    A fetch function implementation that fetches resources that uses HTTP GET and POST for URLs,
-    otherwise read-write file system access
+    A :func:`fetch function <fetch_fn>` implementation that fetches resources that uses HTTP GET
+    and POST for URLs, otherwise read-write file system access
     """
 
     # HTTP GET/POST?
@@ -63,7 +63,7 @@ def fetch_read_write(url, body):
 
 def log_print(message):
     """
-    A log function implementation that uses print
+    A :func:`log function <log_fn>` implementation that uses print
     """
 
     print(message)
@@ -71,7 +71,7 @@ def log_print(message):
 
 def url_file_relative(file_, url):
     """
-    A URL function implementation that fixes up file-relative paths
+    A :func:`URL function <url_fn>` implementation that fixes up file-relative paths
     """
 
     if re.match(_R_URL, url) or os.path.isabs(url):

@@ -52,8 +52,8 @@ ExecuteScriptOptions
       The system include prefix
 
 
-fetch_fn
---------
+Fetch Functions
+---------------
 
 .. function:: fetch_fn(url, body)
 
@@ -76,8 +76,8 @@ fetch_fn
 .. autofunction:: bare_script.fetch_read_write
 
 
-log_fn
-------
+Log Functions
+-------------
 
 .. function:: log_fn(text)
 
@@ -90,8 +90,8 @@ log_fn
 .. autofunction:: bare_script.log_print
 
 
-url_fn
-------
+URL Functions
+-------------
 
 .. function:: url_fn(url)
 
