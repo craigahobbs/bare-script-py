@@ -1592,6 +1592,8 @@ class TestLibrary(unittest.TestCase):
             url = request['url']
             if url.startswith('fail'):
                 return None
+            if url.startswith('raise'):
+                raise Exception(url) # pylint: disable=broad-exception-raised
 
             body = request.get('body')
             headers = request.get('headers')
@@ -1623,10 +1625,45 @@ class TestLibrary(unittest.TestCase):
         )
         self.assertListEqual(logs, [])
 
+        # URL function
+        logs = []
+        options_url_fn = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn, 'urlFn': lambda url: 'dir/' + url}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], options_url_fn), 'GET dir/test.txt')
+        self.assertListEqual(logs, [])
+
         # Failure
         logs = []
         self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['fail.txt'], options))
         self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "fail.txt"'])
+
+        # Exception failure
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['raise.txt'], options))
+        self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "raise.txt"'])
+
+        # Null fetch function failure
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], {'debug': True, 'logFn': log_fn}))
+        self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "test.txt"'])
+
+        # Failure with debug off
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], {'logFn': log_fn}))
+        self.assertListEqual(logs, [])
+
+        # Invalid request model
+        logs = []
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([{}], options)
+        self.assertEqual(str(cm_exc.exception), "Required member 'url' missing")
+        self.assertListEqual(logs, [])
+
+        # Invalid array of request models
+        logs = []
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([[{}]], options)
+        self.assertEqual(str(cm_exc.exception), "Required member 'url' missing")
+        self.assertListEqual(logs, [])
 
 
     def test_system_global_get(self):

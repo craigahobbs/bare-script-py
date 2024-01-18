@@ -14,7 +14,7 @@ import random
 import re
 import urllib
 
-from schema_markdown import TYPE_MODEL, ValidationError, parse_schema_markdown, validate_type, validate_type_model
+from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
 
@@ -1320,20 +1320,14 @@ def _system_fetch(args, options):
     if isinstance(url_arg, str):
         requests.append({'url': url_arg})
     elif isinstance(url_arg, dict):
-        try:
-            requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_arg))
-        except ValidationError:
-            requests.append(None)
+        requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_arg))
     else:
         is_response_array = True
         for url_item in url_arg:
             if isinstance(url_item, str):
                 requests.append({'url': url_item})
             else:
-                try:
-                    requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
-                except ValidationError:
-                    requests.append(None)
+                requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
 
     # Get each response
     responses = []
