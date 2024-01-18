@@ -98,7 +98,7 @@ perf: $(DEFAULT_VENV_BUILD)
 
 # Performance test constants
 PERF_JSON := build/perf.json
-PERF_RUNS := 1
+PERF_RUNS := 3
 
 
 # Python to report on performance test data
