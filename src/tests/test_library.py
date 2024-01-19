@@ -1699,10 +1699,15 @@ class TestLibrary(unittest.TestCase):
 
         # Array
         logs = []
-        self.assertEqual(
+        self.assertListEqual(
             SCRIPT_FUNCTIONS['systemFetch']([['test.txt', {'url': 'test2.txt', 'body': 'abc'}]], options),
             ['GET test.txt', 'POST test2.txt - abc']
         )
+        self.assertListEqual(logs, [])
+
+        # Empty array
+        logs = []
+        self.assertListEqual(SCRIPT_FUNCTIONS['systemFetch']([[]], options), [])
         self.assertListEqual(logs, [])
 
         # URL function
@@ -1743,6 +1748,11 @@ class TestLibrary(unittest.TestCase):
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['systemFetch']([[{}]], options)
         self.assertEqual(str(cm_exc.exception), "Required member 'url' missing")
+        self.assertListEqual(logs, [])
+
+        # Unexpected input type
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch']([None], {'logFn': log_fn}))
         self.assertListEqual(logs, [])
 
 

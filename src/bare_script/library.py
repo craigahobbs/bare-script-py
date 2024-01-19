@@ -1452,7 +1452,7 @@ def _system_fetch(args, options):
     url_arg, = default_args(args, (None,))
 
     # Options
-    log_fn = options.get('logFn') if options is not None and options.get('debug') else None
+    log_fn = options.get('logFn') if options is not None else None
     url_fn = options.get('urlFn') if options is not None else None
     fetch_fn = options.get('fetchFn') if options is not None else None
 
@@ -1463,13 +1463,15 @@ def _system_fetch(args, options):
         requests.append({'url': url_arg})
     elif isinstance(url_arg, dict):
         requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_arg))
-    else:
+    elif isinstance(url_arg, list):
         is_response_array = True
         for url_item in url_arg:
             if isinstance(url_item, str):
                 requests.append({'url': url_item})
             else:
                 requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
+    else:
+        return None
 
     # Get each response
     responses = []
@@ -1490,7 +1492,7 @@ def _system_fetch(args, options):
         responses.append(response)
 
         # Log failure
-        if response is None and log_fn is not None:
+        if response is None and log_fn is not None and options.get('debug'):
             log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_fetch["url"]}"')
 
     return responses if is_response_array else responses[0]
