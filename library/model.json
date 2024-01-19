@@ -25,6 +25,20 @@
                         "The request body"
                     ],
                     "optional": true
+                },
+                {
+                    "name": "headers",
+                    "type": {
+                        "dict": {
+                            "type": {
+                                "builtin": "string"
+                            }
+                        }
+                    },
+                    "doc": [
+                        "The request headers"
+                    ],
+                    "optional": true
                 }
             ]
         }
