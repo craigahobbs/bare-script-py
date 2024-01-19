@@ -276,6 +276,98 @@ def _array_sort(args, options):
 
 
 #
+# Data functions
+#
+
+
+# $function: dataAggregate
+# $group: Data
+# $doc: Aggregate a data array
+# $arg data: The data array
+# $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='Aggregation')
+# $return: The aggregated data array
+def _data_aggregate(unused_args, unused_options):
+    return None
+
+
+# $function: dataCalculatedField
+# $group: Data
+# $doc: Add a calculated field to a data array
+# $arg data: The data array
+# $arg fieldName: The calculated field name
+# $arg expr: The calculated field expression
+# $arg variables: Optional (default is null). A variables object the expression evaluation.
+# $return: The updated data array
+def _data_calculated_field(unused_args, unused_options):
+    return None
+
+
+# $function: dataFilter
+# $group: Data
+# $doc: Filter a data array
+# $arg data: The data array
+# $arg expr: The filter expression
+# $arg variables: Optional (default is null). A variables object the expression evaluation.
+# $return: The filtered data array
+def _data_filter(unused_args, unused_options):
+    return None
+
+
+# $function: dataJoin
+# $group: Data
+# $doc: Join two data arrays
+# $arg leftData: The left data array
+# $arg rightData: The right data array
+# $arg joinExpr: The [join expression](https://craigahobbs.github.io/bare-script/language/#expressions)
+# $arg rightExpr: Optional (default is null).
+# $arg rightExpr: The right [join expression](https://craigahobbs.github.io/bare-script/language/#expressions)
+# $arg isLeftJoin: Optional (default is false). If true, perform a left join (always include left row).
+# $arg variables: Optional (default is null). A variables object for join expression evaluation.
+# $return: The joined data array
+def _data_join(unused_args, unused_options):
+    return None
+
+
+# $function: dataParseCSV
+# $group: Data
+# $doc: Parse CSV text to a data array
+# $arg text...: The CSV text
+# $return: The data array
+def _data_parse_csv(unused_args, unused_options):
+    return None
+
+
+# $function: dataSort
+# $group: Data
+# $doc: Sort a data array
+# $arg data: The data array
+# $arg sorts: The sort field-name/descending-sort tuples
+# $return: The sorted data array
+def _data_sort(unused_args, unused_options):
+    return None
+
+
+# $function: dataTop
+# $group: Data
+# $doc: Keep the top rows for each category
+# $arg data: The data array
+# $arg count: The number of rows to keep
+# $arg categoryFields: Optional (default is null). The category fields.
+# $return: The top data array
+def _data_top(unused_args, unused_options):
+    return None
+
+
+# $function: dataValidate
+# $group: Data
+# $doc: Validate a data array
+# $arg data: The data array
+# $return: The validated data array
+def _data_validate(unused_args, unused_options):
+    return None
+
+
+#
 # Datetime functions
 #
 
@@ -970,8 +1062,42 @@ def _object_set(args, unused_options):
 
 
 #
-# Regular expression functions
+# Regex functions
 #
+
+
+# $function: regexEscape
+# $group: Regex
+# $doc: Escape a string for use in a regular expression
+# $arg string: The string to escape
+# $return: The escaped string
+def _regex_escape(args, unused_options):
+    string, = default_args(args, (None,))
+    return re.escape(value_string(string))
+
+
+# $function: regexMatch
+# $group: Regex
+# $doc: Find the first match of a regular expression in a string
+# $arg regex: The regular expression
+# $arg string: The string
+# $return: The [match object
+# $return: ](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match#return_value)
+# $return: or null if no matches are found
+def _regex_match(unused_args, unused_options):
+    return None
+
+
+# $function: regexMatchAll
+# $group: Regex
+# $doc: Find all matches of regular expression in a string
+# $arg regex: The regular expression
+# $arg string: The string
+# $return: The [match object
+# $return: ](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match#return_value)
+# $return: array or null if no matches are found
+def _regex_match_all(unused_args, unused_options):
+    return None
 
 
 # $function: regexNew
@@ -985,8 +1111,24 @@ def _regex_new(unused_args, unused_options):
     return None
 
 
-# Regex escape regular expression
-_R_REGEX_ESCAPE = re.compile(r'[.*+?^${}()|[\]\\]')
+# $function: regexSplit
+# $group: Regex
+# $doc: Split a string with a regular expression
+# $arg regex: The regular expression
+# $arg string: The string
+# $return: The array of split parts
+def _regex_split(unused_args, unused_options):
+    return None
+
+
+# $function: regexTest
+# $group: Regex
+# $doc: Test if a regular expression matches a string
+# $arg regex: The regular expression
+# $arg string: The string
+# $return: true if the regular expression matches, false otherwise
+def _regex_test(unused_args, unused_options):
+    return None
 
 
 #
@@ -1521,6 +1663,14 @@ SCRIPT_FUNCTIONS = {
     'arrayShift': _array_shift,
     'arraySlice': _array_slice,
     'arraySort': _array_sort,
+    'dataAggregate': _data_aggregate,
+    'dataCalculatedField': _data_calculated_field,
+    'dataFilter': _data_filter,
+    'dataJoin': _data_join,
+    'dataParseCSV': _data_parse_csv,
+    'dataSort': _data_sort,
+    'dataTop': _data_top,
+    'dataValidate': _data_validate,
     'datetimeDay': _datetime_day,
     'datetimeHour': _datetime_hour,
     'datetimeISOFormat': _datetime_iso_format,
@@ -1566,7 +1716,12 @@ SCRIPT_FUNCTIONS = {
     'objectKeys': _object_keys,
     'objectNew': _object_new,
     'objectSet': _object_set,
+    'regexEscape': _regex_escape,
+    'regexMatch': _regex_match,
+    'regexMatchAll': _regex_match_all,
     'regexNew': _regex_new,
+    'regexSplit': _regex_split,
+    'regexTest': _regex_test,
     'schemaParse': _schema_parse,
     'schemaParseEx': _schema_parse_ex,
     'schemaTypeModel': _schema_type_model,

@@ -364,6 +364,51 @@ class TestLibrary(unittest.TestCase):
 
 
     #
+    # Data functions
+    #
+
+
+    @unittest.skip
+    def test_data_aggregate(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_calculated_field(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_filter(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_join(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_parse_csv(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_sort(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_top(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_data_validate(self):
+        self.fail()
+
+
+    #
     # Datetime functions
     #
 
@@ -1183,6 +1228,41 @@ class TestLibrary(unittest.TestCase):
         obj = {'a': 1, 'b': 2}
         self.assertEqual(SCRIPT_FUNCTIONS['objectSet']([obj, None, 3], None), None)
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
+
+
+    #
+    # Regex functions
+    #
+
+
+    @unittest.skip
+    def test_regex_escape(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_regex_match(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_regex_match_all(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_regex_new(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_regex_split(self):
+        self.fail()
+
+
+    @unittest.skip
+    def test_regex_test(self):
+        self.fail()
 
 
     #
