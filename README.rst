@@ -86,7 +86,7 @@ functions.
 ...
 >>> # Execute the script
 ... print(execute_script(script, {'fetchFn': fetch_http}))
-The BareScript Library has 93 functions
+The BareScript Library has 106 functions
 
 
 Evaluating BareScript Expressions
