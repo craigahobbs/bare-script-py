@@ -5,15 +5,10 @@
 
 import unittest
 
-from bare_script.__main__ import main as main_main
-from bare_script.bare import main
+from bare_script.baredoc import main
 
 
-class TestBare(unittest.TestCase):
-
-    def test_main_submodule(self):
-        self.assertIs(main_main, main)
-
+class TestBaredoc(unittest.TestCase):
 
     def test_main(self):
         self.assertEqual(callable(main), True)
