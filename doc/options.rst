@@ -35,21 +35,21 @@ ExecuteScriptOptions
 
       The maximum number of statements; 0 for no maximum
 
+   .. attribute:: relpath
+      :type: str, optional
+
+      The POSIX path or URL to which include/fetch paths are relative
+
    .. attribute:: statementCount
       :type: int, optional
       :value: 0
 
       The current statement count
 
-   .. attribute:: urlFn
-      :type: callable, optional
-
-      The :func:`URL modifier function <url_fn>`
-
    .. attribute:: systemPrefix
       :type: str, optional
 
-      The system include prefix
+      The system include prefix (POSIX path or URL)
 
 
 Fetch Functions
@@ -88,17 +88,13 @@ Log Functions
 .. autofunction:: bare_script.log_print
 
 
-URL Functions
--------------
+Relpath Functions
+-----------------
 
-.. function:: url_fn(url)
-
-   The URL function interface
-
-   :param url: The URL
-   :type url: str
-   :returns: The modified URL
-   :rtype: str
+.. autofunction:: bare_script.ospath_to_posix
 
 
-.. autofunction:: bare_script.url_file_relative
+.. autofunction:: bare_script.posixpath_to_os
+
+
+.. autofunction:: bare_script.relpath_resolve
