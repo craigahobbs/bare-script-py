@@ -44,13 +44,13 @@ doc:
 
     # Generate the expression library documentation
 	cat build/doc/html/library/library.json | \
-		$(DEFAULT_VENV_CMD)/python3 -c "$$DOC_EXPR_PY" > build/doc/html/library/expression.json
+		$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" > build/doc/html/library/expression.json
 
     # Generate the library model documentation
-	$(DEFAULT_VENV_CMD)/python3 -c "$$DOC_LIBRARY_MODEL_PY" > build/doc/html/library/model.json
+	$(DEFAULT_VENV_PYTHON) -c "$$DOC_LIBRARY_MODEL_PY" > build/doc/html/library/model.json
 
     # Generate the runtime model documentation
-	$(DEFAULT_VENV_CMD)/python3 \
+	$(DEFAULT_VENV_PYTHON) \
 		-c "import json; from bare_script.model import BARE_SCRIPT_TYPES; print(json.dumps(BARE_SCRIPT_TYPES))" \
 		> build/doc/html/model/model.json
 
@@ -90,10 +90,10 @@ perf: $(DEFAULT_VENV_BUILD)
 	mkdir -p $(dir $(PERF_JSON))
 	echo "[" > $(PERF_JSON)
 	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "BareScript", "timeMs": '$$($(DEFAULT_VENV_CMD)/bare perf/test.bare)'},' >> $(PERF_JSON); done
-	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "Python", "timeMs": '$$($(DEFAULT_VENV_CMD)/python3 perf/test.py)'},' >> $(PERF_JSON); done
+	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "Python", "timeMs": '$$($(DEFAULT_VENV_PYTHON) perf/test.py)'},' >> $(PERF_JSON); done
 	echo '{}' >> $(PERF_JSON)
 	echo "]" >> $(PERF_JSON)
-	$(DEFAULT_VENV_CMD)/python3 -c "$$PERF_PY"
+	$(DEFAULT_VENV_PYTHON) -c "$$PERF_PY"
 
 
 # Performance test constants
