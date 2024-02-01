@@ -16,7 +16,6 @@ import urllib
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .options import relpath_resolve
 from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
 
 
@@ -1453,9 +1452,9 @@ def _system_fetch(args, options):
     url_arg, = default_args(args, (None,))
 
     # Options
-    fetch_fn = options.get('fetchFn') if options is not None else None
     log_fn = options.get('logFn') if options is not None else None
-    relpath = options.get('relpath') if options is not None else None
+    url_fn = options.get('urlFn') if options is not None else None
+    fetch_fn = options.get('fetchFn') if options is not None else None
 
     # Validate the URL argument
     requests = []
@@ -1477,21 +1476,24 @@ def _system_fetch(args, options):
     # Get each response
     responses = []
     for request in requests:
-        # Resolve the URL
-        request['url'] = relpath_resolve(relpath, request['url'])
+        request_fetch = dict(request)
+
+        # Update the URL
+        if url_fn is not None:
+            request_fetch['url'] = url_fn(request_fetch['url'])
 
         # Fetch the URL
         response = None
         if fetch_fn is not None:
             try:
-                response = fetch_fn(request)
+                response = fetch_fn(request_fetch)
             except: # pylint: disable=bare-except
                 pass
         responses.append(response)
 
         # Log failure
         if response is None and log_fn is not None and options.get('debug'):
-            log_fn(f'BareScript: Function "systemFetch" failed for resource "{request["url"]}"')
+            log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_fetch["url"]}"')
 
     return responses if is_response_array else responses[0]
 

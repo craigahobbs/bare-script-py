@@ -36,16 +36,13 @@ def fetch_read_only(request):
     if _R_URL.match(url):
         return fetch_http(request)
 
-    # Convert to OS path
-    path = posixpath_to_os(url)
-
     # File write?
     body = request.get('body')
     if body is not None:
         return None
 
     # File read
-    with open(path, 'r', encoding='utf-8') as fh:
+    with open(url, 'r', encoding='utf-8') as fh:
         return fh.read()
 
 
@@ -60,18 +57,15 @@ def fetch_read_write(request):
     if _R_URL.match(url):
         return fetch_http(request)
 
-    # Convert to OS path
-    path = posixpath_to_os(url)
-
     # File write?
     body = request.get('body')
     if body is not None:
-        with open(path, 'w', encoding='utf-8') as fh:
-            fh.write(body)
+        with open(url, 'w', encoding='utf-8') as fh:
+            fh.write(url)
         return '{}'
 
     # File read
-    with open(path, 'r', encoding='utf-8') as fh:
+    with open(url, 'r', encoding='utf-8') as fh:
         return fh.read()
 
 
@@ -83,81 +77,15 @@ def log_print(message):
     print(message)
 
 
-def ospath_to_posix(path):
+def url_file_relative(file_, url):
     """
-    Convert an OS path to a POSIX path
-
-    :param path: The OS path
-    :type path: str
-    :return: The POSIX path
-    :rtype: str
+    A :func:`URL function <url_fn>` implementation that fixes up file-relative paths
     """
 
-    # Don't modify URLs
-    if _R_URL.match(path):
-        return path
+    if re.match(_R_URL, url) or os.path.isabs(url):
+        return url
 
-    # Already POSIX?
-    if os.sep == '/':
-        return path
-
-    prefix = '/' if os.path.isabs(path) and not path.startswith(os.sep) else ''
-    return prefix + path.replace(os.sep, '/')
-
-
-def posixpath_to_os(path):
-    """
-    Convert a POSIX path to an OS path
-
-    :param path: The POSIX path
-    :type path: str
-    :return: The OS path
-    :rtype: str
-    """
-
-    # Don't modify URLs
-    if _R_URL.match(path):
-        return path
-
-    # OS is POSIX?
-    if os.sep == '/':
-        return path
-
-    ospath = path.replace('/', os.sep)
-
-    if path.startswith('/'):
-        ospath_no_prefix = ospath[1:]
-        if os.path.isabs(ospath_no_prefix):
-            return ospath_no_prefix
-
-    return ospath
-
-
-def relpath_resolve(relpath, path):
-    """
-    Resolve a path to a relative-path
-
-    :param relpath: The path to which relative paths are relative
-    :type relpath: str
-    :param path: The path to resolve
-    :type path: str
-    :return: The resolved path
-    :rtype: str
-    """
-
-    # No relpath?
-    if relpath is None:
-        return path
-
-    # URL path?
-    if _R_URL.match(path):
-        return path
-
-    # Absolute path?
-    if path.startswith('/'):
-        return path
-
-    return f'{relpath[:relpath.rfind("/") + 1]}{path}'
+    return os.path.join(os.path.dirname(file_), url)
 
 
 _R_URL = re.compile(r'^[a-z]+:')

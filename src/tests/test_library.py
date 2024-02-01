@@ -1710,9 +1710,9 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(SCRIPT_FUNCTIONS['systemFetch']([[]], options), [])
         self.assertListEqual(logs, [])
 
-        # Relpath
+        # URL function
         logs = []
-        options_url_fn = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn, 'relpath': 'dir/'}
+        options_url_fn = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn, 'urlFn': lambda url: 'dir/' + url}
         self.assertEqual(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], options_url_fn), 'GET dir/test.txt')
         self.assertListEqual(logs, [])
 

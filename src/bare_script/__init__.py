@@ -20,9 +20,7 @@ from .options import \
     fetch_read_only, \
     fetch_read_write, \
     log_print, \
-    ospath_to_posix, \
-    posixpath_to_os, \
-    relpath_resolve
+    url_file_relative
 
 from .parser import \
     BareScriptParserError, \

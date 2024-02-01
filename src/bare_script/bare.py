@@ -6,11 +6,12 @@ bare-script command-line interface (CLI) main module
 """
 
 import argparse
+from functools import partial
 import sys
 import time
 
 from .model import lint_script
-from .options import fetch_read_write, log_print, ospath_to_posix
+from .options import fetch_read_write, log_print, url_file_relative
 from .parser import parse_script
 from .runtime import execute_script
 
@@ -64,8 +65,8 @@ def main(argv=None):
                 'fetchFn': fetch_read_write,
                 'globals': globals_,
                 'logFn': log_print,
-                'relpath': ospath_to_posix(file_),
-                'systemPrefix': 'https://craigahobbs.github.io/markdown-up/include/'
+                'systemPrefix': 'https://craigahobbs.github.io/markdown-up/include/',
+                'urlFn': partial(url_file_relative, file_)
             })
             if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:
                 status_code = int(result)
