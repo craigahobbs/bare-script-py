@@ -7,10 +7,10 @@ The BareScript runtime
 
 import datetime
 import functools
-import re
 
 from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, default_args
 from .model import lint_script
+from .options import url_file_relative
 from .parser import BareScriptParserError, parse_script
 from .value import round_number, value_boolean, value_compare, value_string
 
@@ -113,8 +113,8 @@ def _execute_script_helper(statements, options, locals_):
                 url = include['url']
 
                 # Fixup system include URL
-                if include.get('system') and system_prefix is not None and _is_relative_url(url):
-                    url = f'{system_prefix}{url}'
+                if include.get('system') and system_prefix is not None:
+                    url = url_file_relative(system_prefix, url)
                 elif url_fn is not None:
                     url = url_fn(url)
 
@@ -143,27 +143,13 @@ def _execute_script_helper(statements, options, locals_):
 
                 # Execute the include script
                 include_options = options.copy()
-                include_options['urlFn'] = functools.partial(_include_url_fn, url)
+                include_options['urlFn'] = functools.partial(url_file_relative, url)
                 _execute_script_helper(script['statements'], include_options, None)
 
         # Increment the statement counter
         ix_statement += 1
 
     return None
-
-
-def _include_url_fn(include_url, url):
-    return f'{_get_base_url(include_url)}{url}' if _is_relative_url(url) else url
-
-
-def _is_relative_url(url):
-    return not r_not_relative_url.match(url)
-
-r_not_relative_url = re.compile(r'^(?:[a-z]+:|\/|\?|#)')
-
-
-def _get_base_url(url):
-    return url[:url.rfind('/') + 1]
 
 
 # Runtime script function implementation

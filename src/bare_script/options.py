@@ -6,6 +6,7 @@ BareScript runtime option function implementations
 """
 
 import os
+from pathlib import Path
 import re
 import urllib
 
@@ -80,12 +81,28 @@ def log_print(message):
 def url_file_relative(file_, url):
     """
     A :func:`URL function <url_fn>` implementation that fixes up file-relative paths
+
+    :param file_: The URL or OS path to which relative URLs are relative
+    :param url: The URL or POSIX path to resolve
+    :return: The resolved URL
     """
 
-    if re.match(_R_URL, url) or os.path.isabs(url):
+    # URL?
+    if re.match(_R_URL, url):
         return url
 
-    return os.path.join(os.path.dirname(file_), url)
+    # Absolute POSIX path? If so, convert to OS path
+    if url.startswith('/'):
+        return str(Path(url))
+
+    # URL is relative POSIX path...
+
+    # Is relative-file a URL?
+    if re.match(_R_URL, file_):
+        return f'{file_[file_.rfind("/") + 1:]}{url}'
+
+    # The relative-file is an OS path...
+    return os.path.join(os.path.dirname(file_), str(Path(url)))
 
 
 _R_URL = re.compile(r'^[a-z]+:')
