@@ -341,9 +341,32 @@ class TestExecuteScript(unittest.TestCase):
         self.assertIsNone(execute_script(script))
 
 
-    @unittest.skip
     def test_include(self):
-        self.fail()
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.mds'}]}}
+            ]
+        })
+
+        def fetch_fn(request):
+            url = request['url']
+            self.assertEqual(url in ('test.mds', 'test2.mds'), True)
+            if url == 'test2.mds':
+                return 'b = 2'
+            return '''\
+include 'test2.mds'
+a = 1
+'''
+
+        logs = []
+        def log_fn(message):
+            logs.append(message)
+
+        options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
+        self.assertIsNone(execute_script(script, options))
+        self.assertListEqual(logs, [])
+        self.assertEqual(options['globals']['a'], 1)
+        self.assertEqual(options['globals']['b'], 2)
 
 
     def test_error_max_statements(self):

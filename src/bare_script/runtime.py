@@ -120,7 +120,7 @@ def _execute_script_helper(statements, options, locals_):
 
                 # Fetch the URL
                 try:
-                    script_text = fetch_fn(url) if fetch_fn is not None else None
+                    script_text = fetch_fn({'url': url}) if fetch_fn is not None else None
                 except: # pylint: disable=bare-except
                     script_text = None
                 if script_text is None:
@@ -135,8 +135,8 @@ def _execute_script_helper(statements, options, locals_):
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
                     warnings = lint_script(script)
-                    warning_prefix = f'BareScript: Include "{url}" static analysis...'
                     if warnings:
+                        warning_prefix = f'BareScript: Include "{url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning${"s" if len(warnings) > 1 else ""}:')
                         for warning in warnings:
                             log_fn(f'BareScript:     {warning}')
