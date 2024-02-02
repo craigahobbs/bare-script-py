@@ -8,7 +8,7 @@ BareScript runtime option function implementations
 import os
 from pathlib import Path
 import re
-import urllib
+import urllib.request
 
 
 def fetch_http(request):
@@ -99,7 +99,7 @@ def url_file_relative(file_, url):
 
     # Is relative-file a URL?
     if re.match(_R_URL, file_):
-        return f'{file_[file_.rfind("/") + 1:]}{url}'
+        return f'{file_[:file_.rfind("/") + 1]}{url}'
 
     # The relative-file is an OS path...
     return os.path.join(os.path.dirname(file_), str(Path(url)))
