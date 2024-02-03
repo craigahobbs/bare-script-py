@@ -1255,13 +1255,15 @@ class TestLibrary(unittest.TestCase):
         self.fail()
 
 
+    def test_regex_replace(self):
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$1'], None),
+            'ba'
+        )
+
+
     @unittest.skip
     def test_regex_split(self):
-        self.fail()
-
-
-    @unittest.skip
-    def test_regex_test(self):
         self.fail()
 
 

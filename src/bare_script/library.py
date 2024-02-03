@@ -16,7 +16,7 @@ import urllib
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .value import R_NUMBER_CLEANUP, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
+from .value import R_NUMBER_CLEANUP, REGEX_TYPE, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -1081,11 +1081,49 @@ def _regex_escape(args, unused_options):
 # $doc: Find the first match of a regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The [match object
-# $return: ](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match#return_value)
-# $return: or null if no matches are found
-def _regex_match(unused_args, unused_options):
-    return None
+# $return: The [match object](model.html#var.vName='RegexMatch'), or null if no matches are found
+def _regex_match(args, unused_options):
+    regex, string = default_args(args, (None, None))
+    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+        return None
+
+    # Match?
+    match = regex.search(string)
+    if match is None:
+        return None
+
+    return {
+        'index': match.start(),
+        'input': match.string,
+        'match': match.group(0),
+        'groups': match.groupdict(),
+        'groupArray': list(match.groups())
+    }
+
+
+# The regex match model
+REGEX_MATCH_TYPES = parse_schema_markdown('''\
+group "RegexMatch"
+
+
+# A regex match model
+struct RegexMatch
+
+    # The zero-based index of the match in the input string
+    int(>= 0) index
+
+    # The input string
+    string input
+
+    # The match string
+    string match
+
+    # The named groups
+    string{} groups
+
+    # The ordered groups
+    string[] groupArray
+''')
 
 
 # $function: regexMatchAll
@@ -1104,11 +1142,53 @@ def _regex_match_all(unused_args, unused_options):
 # $group: Regex
 # $doc: Create a regular expression
 # $arg pattern: The regular expression pattern string
-# $arg flags: The [regular expression flags
-# $arg flags: ](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#advanced_searching_with_flags)
+# $arg flags: The [regular expression flags ("i", "m", "s", "u")
 # $return: The regular expression or null if the pattern is invalid
-def _regex_new(unused_args, unused_options):
-    return None
+def _regex_new(args, unused_options):
+    pattern, flags = default_args(args, (None, None))
+    if not isinstance(pattern, str) or (flags is not None and not isinstance(flags, str)):
+        return None
+
+    # Compute the flags mask
+    flags_mask = 0
+    if flags is not None:
+        for flag in flags:
+            if flag == 'i':
+                flag = flag | re.I
+            elif flag == 'm':
+                flag = flag | re.M
+            elif flag == 's':
+                flag = flag | re.S
+            elif flag == 'u':
+                flag = flag | re.U
+            else:
+                return None
+
+    return re.compile(pattern, flags_mask)
+
+
+# $function: regexReplace
+# $group: Regex
+# $doc: Replace regular expression matches with a string
+# $arg regex: The replacement regular expression
+# $arg string: The string
+# $arg substr: The replacement string
+# $return: The updated string
+def _regex_replace(args, unused_options):
+    regex, string, substr = default_args(args, (None, None, None))
+    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str) or not isinstance(substr, str):
+        return None
+
+    # Translate JavaScript replacers to Python replacers
+    substr = substr.replace('\\', '\\\\')
+    substr = R_REGEX_REPLACE_INDEX.sub(r'\\\1', substr)
+    substr = R_REGEX_REPLACE_NAMED.sub(r'\\g<\1>', substr)
+
+    return regex.sub(substr, string)
+
+
+R_REGEX_REPLACE_INDEX = re.compile(r'\$(\d+)')
+R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 
 
 # $function: regexSplit
@@ -1118,16 +1198,6 @@ def _regex_new(unused_args, unused_options):
 # $arg string: The string
 # $return: The array of split parts
 def _regex_split(unused_args, unused_options):
-    return None
-
-
-# $function: regexTest
-# $group: Regex
-# $doc: Test if a regular expression matches a string
-# $arg regex: The regular expression
-# $arg string: The string
-# $return: true if the regular expression matches, false otherwise
-def _regex_test(unused_args, unused_options):
     return None
 
 
@@ -1722,8 +1792,8 @@ SCRIPT_FUNCTIONS = {
     'regexMatch': _regex_match,
     'regexMatchAll': _regex_match_all,
     'regexNew': _regex_new,
+    'regexReplace': _regex_replace,
     'regexSplit': _regex_split,
-    'regexTest': _regex_test,
     'schemaParse': _schema_parse,
     'schemaParseEx': _schema_parse_ex,
     'schemaTypeModel': _schema_type_model,

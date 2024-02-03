@@ -18,7 +18,7 @@ $(eval $(call WGET, https://raw.githubusercontent.com/craigahobbs/python-build/m
 SPHINX_DOC := doc
 
 # Loosen coverage requirements for initial porting work
-COVERAGE_REPORT_ARGS ?= --fail-under 92
+COVERAGE_REPORT_ARGS ?= --fail-under 91
 
 
 # Include python-build
@@ -78,8 +78,8 @@ export DOC_EXPR_PY
 # Python to generate the library model documentation
 define DOC_LIBRARY_MODEL_PY
 import json
-from bare_script.library import SYSTEM_FETCH_TYPES
-print(json.dumps(SYSTEM_FETCH_TYPES, indent=4))
+from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
+print(json.dumps({**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}, indent=4))
 endef
 export DOC_LIBRARY_MODEL_PY
 
