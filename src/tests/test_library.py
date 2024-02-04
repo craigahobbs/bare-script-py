@@ -12,6 +12,7 @@ import unittest
 import schema_markdown
 
 from bare_script import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from bare_script.value import REGEX_TYPE
 
 
 class TestLibrary(unittest.TestCase):
@@ -1235,24 +1236,68 @@ class TestLibrary(unittest.TestCase):
     #
 
 
-    @unittest.skip
     def test_regex_escape(self):
-        self.fail()
+        self.assertEqual(SCRIPT_FUNCTIONS['regexEscape'](['a*b'], None), 'a\\*b')
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexEscape']([None], None))
 
 
-    @unittest.skip
     def test_regex_match(self):
-        self.fail()
+        self.assertDictEqual(
+            SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), 'foo bar'], None),
+            {
+                'index': 0,
+                'input': 'foo bar',
+                'match': 'foo',
+                'groups': {},
+                'groupArray': []
+            }
+        )
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), None], None))
 
 
-    @unittest.skip
     def test_regex_match_all(self):
-        self.fail()
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), 'foo foo bar'], None),
+            [
+                {
+                    'groupArray': [],
+                    'groups': {},
+                    'index': 0,
+                    'input': 'foo foo bar',
+                    'match': 'foo'
+                },
+                {
+                    'groupArray': [],
+                    'groups': {},
+                    'index': 4,
+                    'input': 'foo foo bar',
+                    'match': 'foo'
+                }
+            ]
+        )
+
+        # No matches
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), 'boo boo bar'], None),
+            []
+        )
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), None], None))
 
 
-    @unittest.skip
     def test_regex_new(self):
-        self.fail()
+        regex = SCRIPT_FUNCTIONS['regexNew'](['a*b'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, 'a*b')
+        self.assertEqual(regex.flags, re.U)
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew']([None], None))
 
 
     def test_regex_replace(self):
@@ -1262,9 +1307,11 @@ class TestLibrary(unittest.TestCase):
         )
 
 
-    @unittest.skip
     def test_regex_split(self):
-        self.fail()
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), '1,2, 3 , 4'], None),
+            ['1', '2', '3', '4']
+        )
 
 
     #

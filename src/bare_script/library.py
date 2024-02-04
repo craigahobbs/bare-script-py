@@ -1073,7 +1073,10 @@ def _object_set(args, unused_options):
 # $return: The escaped string
 def _regex_escape(args, unused_options):
     string, = default_args(args, (None,))
-    return re.escape(value_string(string))
+    if not isinstance(string, str):
+        return None
+
+    return re.escape(string)
 
 
 # $function: regexMatch
@@ -1131,12 +1134,22 @@ struct RegexMatch
 # $doc: Find all matches of regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The [match object
-# $return: ](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match#return_value)
-# $return: array or null if no matches are found
-def _regex_match_all(unused_args, unused_options):
-    return None
+# $return: The array of [match objects](model.html#var.vName='RegexMatch')
+def _regex_match_all(args, unused_options):
+    regex, string = default_args(args, (None, None))
+    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+        return None
 
+    return [
+        {
+            'index': match.start(),
+            'input': match.string,
+            'match': match.group(0),
+            'groups': match.groupdict(),
+            'groupArray': list(match.groups())
+        }
+        for match in regex.finditer(string)
+    ]
 
 # $function: regexNew
 # $group: Regex
@@ -1179,8 +1192,13 @@ def _regex_replace(args, unused_options):
     if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str) or not isinstance(substr, str):
         return None
 
-    # Translate JavaScript replacers to Python replacers
+    # Escape Python escapes
     substr = substr.replace('\\', '\\\\')
+
+    # Un-escape Javascript escapes
+    substr = substr.replace('$$', '$')
+
+    # Translate JavaScript replacers to Python replacers
     substr = R_REGEX_REPLACE_INDEX.sub(r'\\\1', substr)
     substr = R_REGEX_REPLACE_NAMED.sub(r'\\g<\1>', substr)
 
@@ -1197,8 +1215,12 @@ R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 # $arg regex: The regular expression
 # $arg string: The string
 # $return: The array of split parts
-def _regex_split(unused_args, unused_options):
-    return None
+def _regex_split(args, unused_options):
+    regex, string = default_args(args, (None, None))
+    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+        return None
+
+    return regex.split(string)
 
 
 #
