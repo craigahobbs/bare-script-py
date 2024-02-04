@@ -1558,6 +1558,7 @@ class TestLibrary(unittest.TestCase):
 
     def test_string_slice(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 5], None), 'oo b')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1., 5.], None), 'oo b')
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 0, 7], None), 'foo bar')
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 6], None), 'oo ba')
 
@@ -1939,8 +1940,8 @@ class TestLibrary(unittest.TestCase):
 
     def test_url_encode(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this & that'], None),
-            'https://foo.com/this%20&%20that'
+            SCRIPT_FUNCTIONS['urlEncode'](["https://foo.com/this & 'that'"], None),
+            "https://foo.com/this%20&%20'that'"
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that)'], None),
@@ -1963,8 +1964,8 @@ class TestLibrary(unittest.TestCase):
 
     def test_url_encode_component(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this & that'], None),
-            'https%3A%2F%2Ffoo.com%2Fthis%20%26%20that'
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](["https://foo.com/this & 'that'"], None),
+            "https%3A%2F%2Ffoo.com%2Fthis%20%26%20'that'"
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that)'], None),

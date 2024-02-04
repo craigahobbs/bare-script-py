@@ -1429,7 +1429,7 @@ def _string_slice(args, unused_options):
        not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(string):
         return None
 
-    return string[begin:end]
+    return string[int(begin):int(end)]
 
 
 # $function: stringSplit
@@ -1699,7 +1699,7 @@ def _url_encode(args, unused_options):
     if not isinstance(url, str):
         return None
 
-    safe = ':/&(' if value_boolean(extra) else ':/&()'
+    safe = "':/&(" if value_boolean(extra) else "':/&()"
     return urllib.parse.quote(url, safe=safe)
 
 
@@ -1714,7 +1714,7 @@ def _url_encode_component(args, unused_options):
     if not isinstance(url, str):
         return None
 
-    safe = '(' if value_boolean(extra) else '()'
+    safe = "'(" if value_boolean(extra) else "'()"
     return urllib.parse.quote(url, safe=safe)
 
 
