@@ -1,4 +1,71 @@
 {
+    "RegexMatch": {
+        "struct": {
+            "name": "RegexMatch",
+            "doc": [
+                "A regex match model"
+            ],
+            "docGroup": "RegexMatch",
+            "members": [
+                {
+                    "name": "index",
+                    "type": {
+                        "builtin": "int"
+                    },
+                    "attr": {
+                        "gte": 0.0
+                    },
+                    "doc": [
+                        "The zero-based index of the match in the input string"
+                    ]
+                },
+                {
+                    "name": "input",
+                    "type": {
+                        "builtin": "string"
+                    },
+                    "doc": [
+                        "The input string"
+                    ]
+                },
+                {
+                    "name": "match",
+                    "type": {
+                        "builtin": "string"
+                    },
+                    "doc": [
+                        "The match string"
+                    ]
+                },
+                {
+                    "name": "groups",
+                    "type": {
+                        "dict": {
+                            "type": {
+                                "builtin": "string"
+                            }
+                        }
+                    },
+                    "doc": [
+                        "The named groups"
+                    ]
+                },
+                {
+                    "name": "groupArray",
+                    "type": {
+                        "array": {
+                            "type": {
+                                "builtin": "string"
+                            }
+                        }
+                    },
+                    "doc": [
+                        "The ordered groups"
+                    ]
+                }
+            ]
+        }
+    },
     "SystemFetchRequest": {
         "struct": {
             "name": "SystemFetchRequest",
