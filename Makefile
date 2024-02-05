@@ -18,7 +18,7 @@ $(eval $(call WGET, https://raw.githubusercontent.com/craigahobbs/python-build/m
 SPHINX_DOC := doc
 
 # Loosen coverage requirements for initial porting work
-COVERAGE_REPORT_ARGS ?= --fail-under 91
+COVERAGE_REPORT_ARGS ?= --fail-under 92
 
 
 # Include python-build

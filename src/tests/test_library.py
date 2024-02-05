@@ -1255,6 +1255,24 @@ class TestLibrary(unittest.TestCase):
             }
         )
 
+        # Named groups
+        self.assertDictEqual(
+            SCRIPT_FUNCTIONS['regexMatch']([re.compile(r'(?P<first>\w+)(\s+)(?P<last>\w+)'), 'foo bar thud'], None),
+            {
+                'index': 0,
+                'input': 'foo bar thud',
+                'match': 'foo bar',
+                'groups': {'first': 'foo', 'last': 'bar'},
+                'groupArray': ['foo', ' ', 'bar']
+            }
+        )
+
+        # No match
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), 'boo bar'], None))
+
+        # Non-regex
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([None, 'foo bar'], None))
+
         # Non-string
         self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), None], None))
 
@@ -1264,18 +1282,18 @@ class TestLibrary(unittest.TestCase):
             SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), 'foo foo bar'], None),
             [
                 {
-                    'groupArray': [],
-                    'groups': {},
                     'index': 0,
                     'input': 'foo foo bar',
-                    'match': 'foo'
+                    'match': 'foo',
+                    'groupArray': [],
+                    'groups': {}
                 },
                 {
-                    'groupArray': [],
-                    'groups': {},
                     'index': 4,
                     'input': 'foo foo bar',
-                    'match': 'foo'
+                    'match': 'foo',
+                    'groupArray': [],
+                    'groups': {}
                 }
             ]
         )
@@ -1285,6 +1303,9 @@ class TestLibrary(unittest.TestCase):
             SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), 'boo boo bar'], None),
             []
         )
+
+        # Non-regex
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatchAll']([None, 'abc'], None))
 
         # Non-string
         self.assertIsNone(SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), None], None))
@@ -1296,22 +1317,76 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(regex.pattern, 'a*b')
         self.assertEqual(regex.flags, re.U)
 
-        # Non-string
+        # Named groups
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<first>\w+)(\s+)(?<last>\w+)'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, r'(?P<first>\w+)(\s+)(?P<last>\w+)')
+        self.assertEqual(regex.flags, re.U)
+
+        # Flag - "i"
+        regex = SCRIPT_FUNCTIONS['regexNew'](['a*b', 'i'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, 'a*b')
+        self.assertEqual(regex.flags, re.I | re.U)
+
+        # Flag - "m"
+        regex = SCRIPT_FUNCTIONS['regexNew'](['a*b', 'm'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, 'a*b')
+        self.assertEqual(regex.flags, re.M | re.U)
+
+        # Flag - "s"
+        regex = SCRIPT_FUNCTIONS['regexNew'](['a*b', 's'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, 'a*b')
+        self.assertEqual(regex.flags, re.S | re.U)
+
+        # Flag - unknown
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew'](['a*b', 'iz'], None))
+
+        # Non-regex
         self.assertIsNone(SCRIPT_FUNCTIONS['regexNew']([None], None))
+
+        # Non-string pattern
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew']([None], None))
+
+        # Non-string flags
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew'](['a*b', 5], None))
 
 
     def test_regex_replace(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$1'], None), 'ba')
+
+        # Named groups
         self.assertEqual(
-            SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$1'], None),
-            'ba'
+            SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(?P<first>\w+)\s+(?P<last>\w+)'), 'foo bar', '$2, $1'], None),
+            'bar, foo'
         )
+
+        # JavaScript escape
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$$$1'], None), 'b$a')
+
+        # Python escape
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2\\$1'], None), 'b\\a')
+
+        # Non-regex
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexReplace']([None, 'ab', '$2$1'], None))
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexReplace']([re.compile('(a*)(b)'), None, '$2$1'], None))
+
+        # Non-string substr
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexReplace']([re.compile('(a*)(b)'), 'ab', None], None))
 
 
     def test_regex_split(self):
-        self.assertListEqual(
-            SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), '1,2, 3 , 4'], None),
-            ['1', '2', '3', '4']
-        )
+        self.assertListEqual(SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), '1,2, 3 , 4'], None), ['1', '2', '3', '4'])
+
+        # Non-regex
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexSplit']([None, '1,2'], None))
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), None], None))
 
 
     #

@@ -1162,22 +1162,26 @@ def _regex_new(args, unused_options):
     if not isinstance(pattern, str) or (flags is not None and not isinstance(flags, str)):
         return None
 
+    # Translate JavaScript named group syntax to Python
+    pattern = R_REGEX_NEW_NAMED.sub(r'(?P<\1>', pattern)
+
     # Compute the flags mask
     flags_mask = 0
     if flags is not None:
         for flag in flags:
             if flag == 'i':
-                flag = flag | re.I
+                flags_mask = flags_mask | re.I
             elif flag == 'm':
-                flag = flag | re.M
+                flags_mask = flags_mask | re.M
             elif flag == 's':
-                flag = flag | re.S
-            elif flag == 'u':
-                flag = flag | re.U
+                flags_mask = flags_mask | re.S
             else:
                 return None
 
     return re.compile(pattern, flags_mask)
+
+
+R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 
 
 # $function: regexReplace
