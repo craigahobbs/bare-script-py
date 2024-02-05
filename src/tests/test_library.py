@@ -1363,6 +1363,18 @@ class TestLibrary(unittest.TestCase):
             'bar, foo'
         )
 
+        # Multiple replacements
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'(fo+)'), 'foo bar fooooo', '$1d'], None),
+            'food bar foooood'
+        )
+
+        # Global flag (shouldn't ever happen)
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'(fo+)'), 'foo bar fooooo', '$1d'], None),
+            'food bar foooood'
+        )
+
         # JavaScript escape
         self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$$$1'], None), 'b$a')
 
