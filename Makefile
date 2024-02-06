@@ -50,9 +50,7 @@ doc:
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_LIBRARY_MODEL_PY" > build/doc/html/library/model.json
 
     # Generate the runtime model documentation
-	$(DEFAULT_VENV_PYTHON) \
-		-c "import json; from bare_script.model import BARE_SCRIPT_TYPES; print(json.dumps(BARE_SCRIPT_TYPES))" \
-		> build/doc/html/model/model.json
+	$(DEFAULT_VENV_PYTHON) -c "$$DOC_RUNTIME_MODEL_PY" > build/doc/html/model/model.json
 
 
 # Python to generate the expression library documentation
@@ -82,6 +80,15 @@ from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
 print(json.dumps({**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}, indent=4))
 endef
 export DOC_LIBRARY_MODEL_PY
+
+
+# Python to generate the runtime model documentation
+define DOC_RUNTIME_MODEL_PY
+import json
+from bare_script.model import BARE_SCRIPT_TYPES
+print(json.dumps(BARE_SCRIPT_TYPES))
+endef
+export DOC_RUNTIME_MODEL_PY
 
 
 # Run performance tests
