@@ -68,7 +68,7 @@ library_expr = {'functions': []}
 for expr_fn_name, script_fn_name in EXPRESSION_FUNCTION_MAP.items():
 	library_expr['functions'].append(dict(library_function_map[script_fn_name], name=expr_fn_name))
 
-print(json.dumps(library_expr, indent=4))
+print(json.dumps(library_expr))
 endef
 export DOC_EXPR_PY
 
@@ -77,7 +77,7 @@ export DOC_EXPR_PY
 define DOC_LIBRARY_MODEL_PY
 import json
 from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
-print(json.dumps({**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}, indent=4))
+print(json.dumps({**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}))
 endef
 export DOC_LIBRARY_MODEL_PY
 
