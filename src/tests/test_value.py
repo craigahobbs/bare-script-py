@@ -18,6 +18,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(round_number(1.25, 1), 1.3)
         self.assertEqual(round_number(1.35, 1), 1.4)
 
+
     def test_value_type(self):
         # null
         self.assertEqual(value_type(None), 'null')
@@ -45,7 +46,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_type([]), 'array')
 
         # function
-        self.assertEqual(value_type(lambda: None), 'function')
+        self.assertEqual(value_type(value_type), 'function')
 
         # regex
         self.assertEqual(value_type(re.compile('^test')), 'regex')
@@ -86,7 +87,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string([]), '[]')
 
         # function
-        self.assertEqual(value_string(lambda: None), '<function>')
+        self.assertEqual(value_string(value_string), '<function>')
 
         # regex
         self.assertEqual(value_string(re.compile('^test')), '<regex>')
@@ -137,7 +138,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_boolean([]), False)
 
         # function
-        self.assertEqual(value_boolean(lambda: None), True)
+        self.assertEqual(value_boolean(value_boolean), True)
 
         # regex
         self.assertEqual(value_boolean(re.compile('^test')), True)
@@ -256,9 +257,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare([1, 2, 3], [1, 2]), 1)
 
         # function
-        self.assertEqual(value_compare(lambda: 1, lambda: 1), 0)
-        self.assertEqual(value_compare(lambda: 1, lambda: 2), 0)
-        self.assertEqual(value_compare(lambda: 2, lambda: 1), 0)
+        self.assertEqual(value_compare(value_compare, value_type), 0)
 
         # regex
         self.assertEqual(value_compare(re.compile('^test1'), re.compile('^test1')), 0)
@@ -290,14 +289,14 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(0, False), 1)
 
         # datetime < function
-        self.assertEqual(value_compare(datetime.datetime.now(), lambda: 1), -1)
-        self.assertEqual(value_compare(lambda: 1, datetime.datetime.now()), 1)
+        self.assertEqual(value_compare(datetime.datetime.now(), value_compare), -1)
+        self.assertEqual(value_compare(value_compare, datetime.datetime.now()), 1)
 
         # function < number
-        self.assertEqual(value_compare(lambda: 1, 1), -1)
-        self.assertEqual(value_compare(lambda: 1, 0), -1)
-        self.assertEqual(value_compare(1, lambda: 1), 1)
-        self.assertEqual(value_compare(0, lambda: 1), 1)
+        self.assertEqual(value_compare(value_compare, 1), -1)
+        self.assertEqual(value_compare(value_compare, 0), -1)
+        self.assertEqual(value_compare(1, value_compare), 1)
+        self.assertEqual(value_compare(0, value_compare), 1)
 
         # number < object
         self.assertEqual(value_compare(1, {}), -1)

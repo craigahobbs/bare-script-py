@@ -280,10 +280,11 @@ class TestExecuteScript(unittest.TestCase):
         logs = []
         def log_fn(message):
             logs.append(message)
+        log_fn('empty')
 
         options = {'globals': {'errorFunction': error_function}, 'logFn': log_fn, 'debug': False}
         self.assertIsNone(execute_script(script, options))
-        self.assertListEqual(logs, [])
+        self.assertListEqual(logs, ['empty'])
 
 
     def test_jump(self):
@@ -485,7 +486,7 @@ a = 1
         options = {}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             self.assertIsNone(execute_script(script, options))
-            self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
+        self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
 
 
     def test_include_lint(self):
@@ -533,10 +534,11 @@ endfunction
         logs = []
         def log_fn(message):
             logs.append(message)
+        log_fn('empty')
 
         options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
         self.assertIsNone(execute_script(script, options))
-        self.assertListEqual(logs, [])
+        self.assertListEqual(logs, ['empty'])
 
 
     def test_include_fetch_fn_error(self):
@@ -554,7 +556,7 @@ endfunction
         options = {'fetchFn': fetch_fn}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             execute_script(script, options)
-            self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
+        self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
 
 
     def test_include_parser_error(self):
@@ -572,7 +574,7 @@ endfunction
         options = {'fetchFn': fetch_fn}
         with self.assertRaises(BareScriptParserError) as cm_exc:
             execute_script(script, options)
-            self.assertEqual(str(cm_exc.exception), '''\
+        self.assertEqual(str(cm_exc.exception), '''\
 Included from "test.mds"
 Syntax error, line number 1:
 foo bar

@@ -62,7 +62,7 @@ def fetch_read_write(request):
     body = request.get('body')
     if body is not None:
         with open(url, 'w', encoding='utf-8') as fh:
-            fh.write(url)
+            fh.write(body)
         return '{}'
 
     # File read

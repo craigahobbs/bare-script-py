@@ -20,7 +20,7 @@ class TestModel(unittest.TestCase):
         script = {}
         with self.assertRaises(ValidationError) as cm_exc:
             validate_script(script)
-            self.assertEqual(str(cm_exc.exception), "Required member 'statements' missing")
+        self.assertEqual(str(cm_exc.exception), "Required member 'statements' missing")
 
 
     def test_validate_expression(self):
@@ -32,7 +32,7 @@ class TestModel(unittest.TestCase):
         expr = {}
         with self.assertRaises(ValidationError) as cm_exc:
             validate_expression(expr)
-            self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'object'), expected type 'Expression'")
+        self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'dict'), expected type 'Expression'")
 
 
     def test_lint_script_empty_script(self):
