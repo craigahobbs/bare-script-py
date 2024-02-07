@@ -373,7 +373,7 @@ def lint_script(script):
             # Label redefinition?
             statement_label = statement['label']
             if statement_label in labels_defined:
-                warnings.append(f'Redefinition of global label "{statement_label}" (index ${ix_statement})')
+                warnings.append(f'Redefinition of global label "{statement_label}" (index {ix_statement})')
             else:
                 labels_defined[statement_label] = ix_statement
 
@@ -438,8 +438,8 @@ def _get_xpression_variable_uses(expr, uses, ix_statement):
     elif expr_key == 'group':
         _get_xpression_variable_uses(expr['group'], uses, ix_statement)
     elif expr_key == 'function':
-        if expr.function.name not in uses:
+        if expr['function']['name'] not in uses:
             uses[expr['function']['name']] = ix_statement
-        if 'args' in expr.function:
+        if 'args' in expr['function']:
             for arg_expr in expr['function']['args']:
                 _get_xpression_variable_uses(arg_expr, uses, ix_statement)

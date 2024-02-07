@@ -44,318 +44,300 @@ class TestModel(unittest.TestCase):
         ])
 
 
-# test('lintScript, function redefined', () => {
-#     const script = {
-#         'statements': [
-#             {'function': {'name': 'testFn', 'statements': []}},
-#             {'function': {'name': 'testFn', 'statements': []}}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Redefinition of function "testFn" (index 1)'
-#     ]);
-# });
+    def test_lint_script_function_redefined(self):
+        script = {
+            'statements': [
+                {'function': {'name': 'testFn', 'statements': []}},
+                {'function': {'name': 'testFn', 'statements': []}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Redefinition of function "testFn" (index 1)'
+        ])
 
 
-# test('lintScript, function duplicate argument', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'args': ['a', 'b', 'a'],
-#                     'statements': [
-#                         {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Duplicate argument "a" of function "testFn" (index 0)'
-#     ]);
-# });
+    def test__lint_script_function_duplicate_argument(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'args': ['a', 'b', 'a'],
+                        'statements': [
+                            {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Duplicate argument "a" of function "testFn" (index 0)'
+        ])
 
 
-# test('lintScript, function unused argument', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'args': ['a', 'b'],
-#                     'statements': [
-#                         {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'number': 1}}}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Unused argument "b" of function "testFn" (index 0)'
-#     ]);
-# });
+    def test_lint_script_function_unused_argument(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'args': ['a', 'b'],
+                        'statements': [
+                            {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'number': 1}}}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Unused argument "b" of function "testFn" (index 0)'
+        ])
 
 
-# test('lintScript, function argument function call ok', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'args': ['a'],
-#                     'statements': [
-#                         {'return': {'expr': {'function': {'name': 'a'}}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), []);
-# });
+    def test_lint_script_function_argument_function_call_ok(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'args': ['a'],
+                        'statements': [
+                            {'return': {'expr': {'function': {'name': 'a'}}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [])
 
 
-# test('lintScript, function unused variable', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'expr': {'name': 'a', 'expr': {'number': 1}}},
-#                         {'expr': {'name': 'b', 'expr': {'number': 2}}},
-#                         {'expr': {'name': 'c', 'expr': {'variable': 'a'}}},
-#                         {'expr': {'name': 'd', 'expr': {'number': 3}}},
-#                         {'jump': {'label': 'testLabel', 'expr': {'variable': 'd'}}},
-#                         {'label': 'testLabel'},
-#                         {'expr': {'name': 'e', 'expr': {'unary': {
-#                             'op': '-',
-#                             'expr': {'group': {'binary': {'op': '+', 'left': {'variable': 'b'}, 'right': {'variable': 'c'}}}}
-#                         }}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Unused variable "e" defined in function "testFn" (index 6)'
-#     ]);
-# });
+    def test_lint_script_function_unused_variable(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'number': 1}}},
+                            {'expr': {'name': 'b', 'expr': {'number': 2}}},
+                            {'expr': {'name': 'c', 'expr': {'variable': 'a'}}},
+                            {'expr': {'name': 'd', 'expr': {'number': 3}}},
+                            {'jump': {'label': 'testLabel', 'expr': {'variable': 'd'}}},
+                            {'label': 'testLabel'},
+                            {'expr': {'name': 'e', 'expr': {'unary': {
+                                'op': '-',
+                                'expr': {'group': {'binary': {'op': '+', 'left': {'variable': 'b'}, 'right': {'variable': 'c'}}}}
+                            }}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Unused variable "e" defined in function "testFn" (index 6)'
+        ])
 
 
-# test('lintScript, function arg used variable ok', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'expr': {'name': 'a', 'expr': {'number': 1}}},
-#                         {'expr': {'expr': {'function': {'name': 'foo', 'args': [{'variable': 'a'}]}}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), []);
-# });
+    def test_lint_script_function_arg_used_variable_ok(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'number': 1}}},
+                            {'expr': {'expr': {'function': {'name': 'foo', 'args': [{'variable': 'a'}]}}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [])
 
 
-# test('lintScript, global unused variable ok', () => {
-#     const script = {
-#         'statements': [
-#             {'expr': {'name': 'a', 'expr': {'number': 1}}}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), []);
-# });
+    def test_lint_script_global_unused_variable_ok(self):
+        script = {
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 1}}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [])
 
 
-# test('lintScript, function variable used before assignment', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
-#                         {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Variable "b" of function "testFn" used (index 0) before assignment (index 1)'
-#     ]);
-# });
+    def test_lint_script_function_variable_used_before_assignment(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
+                            {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Variable "b" of function "testFn" used (index 0) before assignment (index 1)'
+        ])
 
 
-# test('lintScript, function variable used before assignment arg ok', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'args': ['b'],
-#                     'statements': [
-#                         {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
-#                         {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), []);
-# });
+    def test_lint_script_function_variable_used_before_assignment_arg_ok(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'args': ['b'],
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
+                            {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [])
 
 
-# test('lintScript, global variable used before assignment', () => {
-#     const script = {
-#         'statements': [
-#             {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
-#             {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Global variable "b" used (index 0) before assignment (index 1)'
-#     ]);
-# });
+    def test_lint_script_global_variable_used_before_assignment(self):
+        script = {
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
+                {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Global variable "b" used (index 0) before assignment (index 1)'
+        ])
 
 
-# test('lintScript, function unused label', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'label': 'unusedLabel'}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Unused label "unusedLabel" in function "testFn" (index 0)'
-#     ]);
-# });
+    def test_lint_script_function_unused_label(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'label': 'unusedLabel'}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Unused label "unusedLabel" in function "testFn" (index 0)'
+        ])
 
 
-# test('lintScript, global unused label', () => {
-#     const script = {
-#         'statements': [
-#             {'label': 'unusedLabel'}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Unused global label "unusedLabel" (index 0)'
-#     ]);
-# });
+    def test_lint_script_global_unused_label(self):
+        script = {
+            'statements': [
+                {'label': 'unusedLabel'}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Unused global label "unusedLabel" (index 0)'
+        ])
 
 
-# test('lintScript, function unknown label', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'jump': {'label': 'unknownLabel'}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Unknown label "unknownLabel" in function "testFn" (index 0)'
-#     ]);
-# });
+    def test_lint_script_function_unknown_label(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'jump': {'label': 'unknownLabel'}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Unknown label "unknownLabel" in function "testFn" (index 0)'
+        ])
 
 
-# test('lintScript, global unknown label', () => {
-#     const script = {
-#         'statements': [
-#             {'jump': {'label': 'unknownLabel'}}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Unknown global label "unknownLabel" (index 0)'
-#     ]);
-# });
+    def test_lint_script_global_unknown_label(self):
+        script = {
+            'statements': [
+                {'jump': {'label': 'unknownLabel'}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Unknown global label "unknownLabel" (index 0)'
+        ])
 
 
-# test('lintScript, function label redefined', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'label': 'testLabel'},
-#                         {'label': 'testLabel'},
-#                         {'jump': {'label': 'testLabel'}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Redefinition of label "testLabel" in function "testFn" (index 1)'
-#     ]);
-# });
+    def test_lint_script_function_label_redefined(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'label': 'testLabel'},
+                            {'label': 'testLabel'},
+                            {'jump': {'label': 'testLabel'}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Redefinition of label "testLabel" in function "testFn" (index 1)'
+        ])
 
 
-# test('lintScript, global label redefined', () => {
-#     const script = {
-#         'statements': [
-#             {'label': 'testLabel'},
-#             {'label': 'testLabel'},
-#             {'jump': {'label': 'testLabel'}}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Redefinition of global label "testLabel" (index 1)'
-#     ]);
-# });
+    def test_lint_script_global_label_redefined(self):
+        script = {
+            'statements': [
+                {'label': 'testLabel'},
+                {'label': 'testLabel'},
+                {'jump': {'label': 'testLabel'}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Redefinition of global label "testLabel" (index 1)'
+        ])
 
 
-# test('lintScript, function pointless statement', () => {
-#     const script = {
-#         'statements': [
-#             {
-#                 'function': {
-#                     'name': 'testFn',
-#                     'statements': [
-#                         {'expr': {'expr': {'unary': {'op': '!', 'expr': {
-#                             'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'function': {'name': 'foo'}}}}
-#                         }}}}},
-#                         {'expr': {'expr': {'unary': {'op': '!', 'expr': {
-#                             'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'number': 1}}}
-#                         }}}}}
-#                     ]
-#                 }
-#             }
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Pointless statement in function "testFn" (index 1)'
-#     ]);
-# });
+    def test_lint_script_function_pointless_statement(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'expr': {'expr': {'unary': {'op': '!', 'expr': {
+                                'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'function': {'name': 'foo'}}}}
+                            }}}}},
+                            {'expr': {'expr': {'unary': {'op': '!', 'expr': {
+                                'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'number': 1}}}
+                            }}}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Pointless statement in function "testFn" (index 1)'
+        ])
 
 
-# test('lintScript, global pointless statement', () => {
-#     const script = {
-#         'statements': [
-#             {'expr': {'expr': {'unary': {'op': '!', 'expr': {
-#                 'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'function': {'name': 'foo'}}}}
-#             }}}}},
-#             {'expr': {'expr': {'unary': {'op': '!', 'expr': {
-#                 'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'number': 1}}}
-#             }}}}}
-#         ]
-#     };
-#     assert.deepEqual(lintScript(validateScript(script)), [
-#         'Pointless global statement (index 1)'
-#     ]);
-# });
+    def test_lint_script_global_pointless_statement(self):
+        script = {
+            'statements': [
+                {'expr': {'expr': {'unary': {'op': '!', 'expr': {
+                    'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'function': {'name': 'foo'}}}}
+                }}}}},
+                {'expr': {'expr': {'unary': {'op': '!', 'expr': {
+                    'group': {'binary': {'op': '+', 'left': {'number': 0}, 'right': {'number': 1}}}
+                }}}}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [
+            'Pointless global statement (index 1)'
+        ])
