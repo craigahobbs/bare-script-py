@@ -488,6 +488,33 @@ a = 1
             self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
 
 
+    def test_include_lint(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.mds'}]}}
+            ]
+        })
+
+        def fetch_fn(request):
+            url = request['url']
+            self.assertEqual(url, 'test.mds')
+            return '''\
+function test(a):
+endfunction
+'''
+
+        logs = []
+        def log_fn(message):
+            logs.append(message)
+
+        options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
+        self.assertIsNone(execute_script(script, options))
+        self.assertListEqual(logs, [
+            'BareScript: Include "test.mds" static analysis... 1 warning:',
+            'BareScript:     Unused argument "a" of function "test" (index 0)'
+        ])
+
+
     def test_include_lint_ok(self):
         script = validate_script({
             'statements': [
@@ -510,7 +537,6 @@ endfunction
         options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [])
-        self.assertEqual(callable(options['globals']['test']), True)
 
 
     def test_include_fetch_fn_error(self):

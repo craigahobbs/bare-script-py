@@ -137,7 +137,7 @@ def _execute_script_helper(statements, options, locals_):
                     warnings = lint_script(script)
                     if warnings:
                         warning_prefix = f'BareScript: Include "{url}" static analysis...'
-                        log_fn(f'{warning_prefix} {len(warnings)} warning${"s" if len(warnings) > 1 else ""}:')
+                        log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                         for warning in warnings:
                             log_fn(f'BareScript:     {warning}')
 

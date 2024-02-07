@@ -254,4 +254,192 @@ def lint_script(script):
     :return: The list of lint warnings
     :rtype: list[str]
     """
-    return [] if script else []
+
+    warnings = []
+
+    # Empty script?
+    if len(script['statements']) == 0:
+        warnings.append('Empty script')
+
+    # Variable used before assignment?
+    var_assigns = {}
+    var_uses = {}
+    _get_variable_assignments_and_uses(script['statements'], var_assigns, var_uses)
+    for var_name in sorted(var_assigns.keys()):
+        if var_name in var_uses and var_uses[var_name] <= var_assigns[var_name]:
+            warnings.append(
+                f'Global variable "{var_name}" used (index {var_uses[var_name]}) before assignment (index {var_assigns[var_name]})'
+            )
+
+    # Iterate global statements
+    functions_defined = {}
+    labels_defined = {}
+    labels_used = {}
+    for ix_statement, statement in enumerate(script['statements']):
+        statement_key = next(iter(statement.keys()))
+
+        # Function definition checks
+        if statement_key == 'function':
+            function_name = statement['function']['name']
+
+            # Function redefinition?
+            if function_name in functions_defined:
+                warnings.append(f'Redefinition of function "{function_name}" (index {ix_statement})')
+            else:
+                functions_defined[function_name] = ix_statement
+
+            # Variable used before assignment?
+            fn_var_assigns = {}
+            fn_var_uses = {}
+            args = statement['function'].get('args')
+            _get_variable_assignments_and_uses(statement['function']['statements'], fn_var_assigns, fn_var_uses)
+            for var_name in sorted(fn_var_assigns.keys()):
+                # Ignore re-assigned function arguments
+                if args is not None and var_name in args:
+                    continue
+                if var_name in fn_var_uses and fn_var_uses[var_name] <= fn_var_assigns[var_name]:
+                    warnings.append(
+                        f'Variable "{var_name}" of function "{function_name}" used (index {fn_var_uses[var_name]}) ' +
+                            f'before assignment (index {fn_var_assigns[var_name]})'
+                    )
+
+            # Unused variables?
+            for var_name in sorted(fn_var_assigns.keys()):
+                if var_name not in fn_var_uses:
+                    warnings.append(
+                        f'Unused variable "{var_name}" defined in function "{function_name}" (index {fn_var_assigns[var_name]})'
+                    )
+
+            # Function argument checks
+            if args is not None:
+                args_defined = set()
+                for arg in args:
+                    # Duplicate argument?
+                    if arg in args_defined:
+                        warnings.append(f'Duplicate argument "{arg}" of function "{function_name}" (index {ix_statement})')
+                    else:
+                        args_defined.add(arg)
+
+                        # Unused argument?
+                        if arg not in fn_var_uses:
+                            warnings.append(f'Unused argument "{arg}" of function "{function_name}" (index {ix_statement})')
+
+            # Iterate function statements
+            fn_labels_defined = {}
+            fn_labels_used = {}
+            for ix_fn_statement, fn_statement in enumerate(statement['function']['statements']):
+                fn_statement_key = next(iter(fn_statement.keys()))
+
+                # Function expression statement checks
+                if fn_statement_key == 'expr':
+                    # Pointless function expression statement?
+                    if 'name' not in fn_statement['expr'] and _is_pointless_expression(fn_statement['expr']['expr']):
+                        warnings.append(f'Pointless statement in function "{function_name}" (index {ix_fn_statement})')
+
+                # Function label statement checks
+                elif fn_statement_key == 'label':
+                    # Label redefinition?
+                    fn_statement_label = fn_statement['label']
+                    if fn_statement_label in fn_labels_defined:
+                        warnings.append(
+                            f'Redefinition of label "{fn_statement_label}" in function "{function_name}" (index {ix_fn_statement})'
+                        )
+                    else:
+                        fn_labels_defined[fn_statement_label] = ix_fn_statement
+
+                # Function jump statement checks
+                elif fn_statement_key == 'jump':
+                    if fn_statement['jump']['label'] not in fn_labels_used:
+                        fn_labels_used[fn_statement['jump']['label']] = ix_fn_statement
+
+            # Unused function labels?
+            for label in sorted(fn_labels_defined.keys()):
+                if label not in fn_labels_used:
+                    warnings.append(f'Unused label "{label}" in function "{function_name}" (index {fn_labels_defined[label]})')
+
+            # Unknown function labels?
+            for label in sorted(fn_labels_used.keys()):
+                if label not in fn_labels_defined:
+                    warnings.append(f'Unknown label "{label}" in function "{function_name}" (index {fn_labels_used[label]})')
+
+        # Global expression statement checks
+        elif (statement_key == 'expr'):
+            # Pointless global expression statement?
+            if 'name' not in statement['expr'] and _is_pointless_expression(statement['expr']['expr']):
+                warnings.append(f'Pointless global statement (index {ix_statement})')
+
+        # Global label statement checks
+        elif statement_key == 'label':
+            # Label redefinition?
+            statement_label = statement['label']
+            if statement_label in labels_defined:
+                warnings.append(f'Redefinition of global label "{statement_label}" (index ${ix_statement})')
+            else:
+                labels_defined[statement_label] = ix_statement
+
+        # Global jump statement checks
+        elif statement_key == 'jump':
+            if statement['jump']['label'] not in labels_used:
+                labels_used[statement['jump']['label']] = ix_statement
+
+    # Unused global labels?
+    for label in sorted(labels_defined.keys()):
+        if label not in labels_used:
+            warnings.append(f'Unused global label "{label}" (index {labels_defined[label]})')
+
+    # Unknown global labels?
+    for label in sorted(labels_used.keys()):
+        if label not in labels_defined:
+            warnings.append(f'Unknown global label "{label}" (index {labels_used[label]})')
+
+    return warnings
+
+
+# Helper function to determine if an expression statement's expression is pointless
+def _is_pointless_expression(expr):
+    expr_key = next(iter(expr.keys()))
+    if expr_key == 'function':
+        return False
+    elif expr_key == 'binary':
+        return _is_pointless_expression(expr['binary']['left']) and _is_pointless_expression(expr['binary']['right'])
+    elif expr_key == 'unary':
+        return _is_pointless_expression(expr['unary']['expr'])
+    elif expr_key == 'group':
+        return _is_pointless_expression(expr['group'])
+    return True
+
+
+# Helper function to set variable assignments/uses for a statements array
+def _get_variable_assignments_and_uses(statements, assigns, uses):
+    for ix_statement, statement in enumerate(statements):
+        statement_key = next(iter(statement.keys()))
+        if statement_key == 'expr':
+            if 'name' in statement['expr']:
+                if statement['expr']['name'] not in assigns:
+                    assigns[statement['expr']['name']] = ix_statement
+            _get_xpression_variable_uses(statement['expr']['expr'], uses, ix_statement)
+        elif statement_key == 'jump' and 'expr' in statement['jump']:
+            _get_xpression_variable_uses(statement['jump']['expr'], uses, ix_statement)
+        elif statement_key == 'return' and 'expr' in statement['return']:
+            _get_xpression_variable_uses(statement['return']['expr'], uses, ix_statement)
+
+
+# Helper function to set variable uses for an expression
+def _get_xpression_variable_uses(expr, uses, ix_statement):
+    expr_key = next(iter(expr.keys()))
+    if expr_key == 'variable':
+        if expr['variable'] not in uses:
+            uses[expr['variable']] = ix_statement
+    elif expr_key == 'binary':
+        _get_xpression_variable_uses(expr['binary']['left'], uses, ix_statement)
+        _get_xpression_variable_uses(expr['binary']['right'], uses, ix_statement)
+    elif expr_key == 'unary':
+        _get_xpression_variable_uses(expr['unary']['expr'], uses, ix_statement)
+    elif expr_key == 'group':
+        _get_xpression_variable_uses(expr['group'], uses, ix_statement)
+    elif expr_key == 'function':
+        if expr.function.name not in uses:
+            uses[expr['function']['name']] = ix_statement
+        if 'args' in expr.function:
+            for arg_expr in expr['function']['args']:
+                _get_xpression_variable_uses(arg_expr, uses, ix_statement)
