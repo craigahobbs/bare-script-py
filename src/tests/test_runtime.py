@@ -23,6 +23,22 @@ class TestExecuteScript(unittest.TestCase):
         self.assertEqual(execute_script(script), 12)
 
 
+    def test_execute_script_global_override(self):
+        script = validate_script({
+            'statements': [
+                {'return': {
+                    'expr': {'function': {'name': 'systemFetch', 'args': [{'string': 'the-url'}]}}
+                }}
+            ]
+        })
+        options = {
+            'globals': {
+                'systemFetch': lambda args, unused_options: f'Hello, {args[0]}!'
+            }
+        }
+        self.assertEqual(execute_script(script, options), 'Hello, the-url!')
+
+
     def test_function(self):
         script = validate_script({
             'statements': [
