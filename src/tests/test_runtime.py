@@ -3,6 +3,7 @@
 
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
+import datetime
 import os
 import unittest
 
@@ -938,64 +939,115 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertListEqual(test_values, ['abc'])
 
 
-    def test_binary_exponentiation(self):
-        expr = validate_expression({'binary': {'op': '**', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 100)
-
-
-    def test_binary_multiplication(self):
-        expr = validate_expression({'binary': {'op': '*', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 20)
-
-
-    def test_binary_division(self):
-        expr = validate_expression({'binary': {'op': '/', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 5)
-
-
-    def test_binary_modulus(self):
-        expr = validate_expression({'binary': {'op': '%', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 0)
-
-
     def test_binary_addition(self):
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': '10'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 12)
+
+        # string + string
+        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'string': 'bar'}}})
+        self.assertEqual(evaluate_expression(expr), 'foobar')
+
+        # string + <non-string>
+        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), 'foo2')
+
+        # <non-string> + string
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 2}, 'right': {'string': 'foo'}}})
+        self.assertEqual(evaluate_expression(expr), '2foo')
+
+        # datetime + number
+        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'dt'}, 'right': {'number': 86400000}}})
+        options = {'globals': {'dt': datetime.datetime(2024, 2, 7)}}
+        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 2, 8))
+
+        # number + datetime
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'variable': 'dt'}}})
+        options = {'globals': {'dt': datetime.datetime(2024, 2, 7)}}
+        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 2, 6))
+
+        # Invalid
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        self.assertIsNone(evaluate_expression(expr))
 
 
     def test_binary_subtraction(self):
-        expr = validate_expression({'binary': {'op': '-', 'left': {'number': '10'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), 8)
 
+        # datetime - datetime
+        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt1'}, 'right': {'variable': 'dt2'}}})
+        options = {'globals': {'dt1': datetime.datetime(2024, 2, 8), 'dt2': datetime.datetime(2024, 2, 7)}}
+        self.assertEqual(evaluate_expression(expr, options), 86400000)
 
-    def test_binary_less_than_or_equal_to(self):
-        expr = validate_expression({'binary': {'op': '<=', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), False)
-
-
-    def test_binary_less_than(self):
-        expr = validate_expression({'binary': {'op': '<', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), False)
-
-
-    def test_binary_greater_than_or_equal_to(self):
-        expr = validate_expression({'binary': {'op': '>=', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), True)
+        # Invalid
+        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        self.assertIsNone(evaluate_expression(expr))
 
 
-    def test_binary_greater_than(self):
-        expr = validate_expression({'binary': {'op': '>', 'left': {'number': '10'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), True)
+    def test_binary_multiplication(self):
+        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), 20)
+
+        # Invalid
+        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        self.assertIsNone(evaluate_expression(expr))
+
+
+    def test_binary_division(self):
+        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), 5)
+
+        # Invalid
+        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        self.assertIsNone(evaluate_expression(expr))
 
 
     def test_binary_equality(self):
-        expr = validate_expression({'binary': {'op': '==', 'left': {'number': '10'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '==', 'left': {'number': 10}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), False)
 
 
     def test_binary_inequality(self):
-        expr = validate_expression({'binary': {'op': '!=', 'left': {'number': '10'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '!=', 'left': {'number': 10}, 'right': {'number': 2}}})
         self.assertEqual(evaluate_expression(expr), True)
+
+
+    def test_binary_less_than_or_equal_to(self):
+        expr = validate_expression({'binary': {'op': '<=', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), False)
+
+
+    def test_binary_less_than(self):
+        expr = validate_expression({'binary': {'op': '<', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), False)
+
+
+    def test_binary_greater_than_or_equal_to(self):
+        expr = validate_expression({'binary': {'op': '>=', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), True)
+
+
+    def test_binary_greater_than(self):
+        expr = validate_expression({'binary': {'op': '>', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), True)
+
+
+    def test_binary_modulus(self):
+        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), 0)
+
+        # Invalid
+        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        self.assertIsNone(evaluate_expression(expr))
+
+
+    def test_binary_exponentiation(self):
+        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'number': 2}}})
+        self.assertEqual(evaluate_expression(expr), 100)
+
+        # Invalid
+        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        self.assertIsNone(evaluate_expression(expr))
 
 
     def test_unary_not(self):
@@ -1006,6 +1058,10 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_unary_negate(self):
         expr = validate_expression({'unary': {'op': '-', 'expr': {'number': 1}}})
         self.assertEqual(evaluate_expression(expr), -1)
+
+        # Invalid
+        expr = validate_expression({'unary': {'op': '-', 'expr': {'string': 'abc'}}})
+        self.assertIsNone(evaluate_expression(expr))
 
 
     def test_group(self):

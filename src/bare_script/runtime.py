@@ -253,12 +253,14 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         bin_op = expr['binary']['op']
         left_value = evaluate_expression(expr['binary']['left'], options, locals_, builtins)
 
-        # Short-circuiting binary operators
+        # Short-circuiting "and" binary operator
         if bin_op == '&&':
             if not value_boolean(left_value):
                 return left_value
             else:
                 return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+
+        # Short-circuiting "or" binary operator
         elif bin_op == '||':
             if value_boolean(left_value):
                 return left_value
@@ -268,46 +270,70 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         # Non-short-circuiting binary operators
         right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins)
         if bin_op == '+':
+            # number + number
             if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
                 return left_value + right_value
+
+            # string + string
             elif isinstance(left_value, str) and isinstance(right_value, str):
                 return left_value + right_value
+
+            # string + <any>
             elif isinstance(left_value, str):
                 return left_value + value_string(right_value)
             elif isinstance(right_value, str):
                 return value_string(left_value) + right_value
+
+            # datetime + number
             elif isinstance(left_value, datetime.datetime) and isinstance(right_value, (int, float)):
                 return left_value + datetime.timedelta(milliseconds=right_value)
             elif isinstance(left_value, (int, float)) and isinstance(right_value, datetime.datetime):
                 return right_value + datetime.timedelta(milliseconds=left_value)
+
         elif bin_op == '-':
+            # number - number
             if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
                 return left_value - right_value
+
+            # datetime - datetime
             elif isinstance(left_value, datetime.datetime) and isinstance(right_value, datetime.datetime):
                 return round_number((left_value - right_value).total_seconds() * 1000, 0)
+
         elif bin_op == '*':
+            # number * number
             if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
                 return left_value * right_value
+
         elif bin_op == '/':
+            # number / number
             if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
                 return left_value / right_value
+
         elif bin_op == '==':
             return value_compare(left_value, right_value) == 0
+
         elif bin_op == '!=':
             return value_compare(left_value, right_value) != 0
+
         elif bin_op == '<=':
             return value_compare(left_value, right_value) <= 0
+
         elif bin_op == '<':
             return value_compare(left_value, right_value) < 0
+
         elif bin_op == '>=':
             return value_compare(left_value, right_value) >= 0
+
         elif bin_op == '>':
             return value_compare(left_value, right_value) > 0
+
         elif bin_op == '%':
+            # number % number
             if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
                 return left_value % right_value
-        else:
-            # bin_op == '**':
+
+        else: # bin_op == '**'
+            # number ** number
             if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
                 return left_value ** right_value
 
