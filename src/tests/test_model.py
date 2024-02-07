@@ -220,25 +220,29 @@ class TestModel(unittest.TestCase):
                     'function': {
                         'name': 'testFn',
                         'statements': [
-                            {'label': 'unusedLabel'}
+                            {'label': 'usedLabel'},
+                            {'label': 'unusedLabel'},
+                            {'jump': {'label': 'usedLabel'}}
                         ]
                     }
                 }
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused label "unusedLabel" in function "testFn" (index 0)'
+            'Unused label "unusedLabel" in function "testFn" (index 1)'
         ])
 
 
     def test_lint_script_global_unused_label(self):
         script = {
             'statements': [
-                {'label': 'unusedLabel'}
+                {'label': 'usedLabel'},
+                {'label': 'unusedLabel'},
+                {'jump': {'label': 'usedLabel'}}
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused global label "unusedLabel" (index 0)'
+            'Unused global label "unusedLabel" (index 1)'
         ])
 
 
@@ -341,3 +345,12 @@ class TestModel(unittest.TestCase):
         self.assertListEqual(lint_script(validate_script(script)), [
             'Pointless global statement (index 1)'
         ])
+
+
+    def test_lint_script_inert(self):
+        script = {
+            'statements': [
+                {'return': {'expr': {'number': 0}}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [])

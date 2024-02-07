@@ -349,8 +349,7 @@ def lint_script(script):
 
                 # Function jump statement checks
                 elif fn_statement_key == 'jump':
-                    if fn_statement['jump']['label'] not in fn_labels_used:
-                        fn_labels_used[fn_statement['jump']['label']] = ix_fn_statement
+                    fn_labels_used[fn_statement['jump']['label']] = ix_fn_statement
 
             # Unused function labels?
             for label in sorted(fn_labels_defined.keys()):
@@ -363,7 +362,7 @@ def lint_script(script):
                     warnings.append(f'Unknown label "{label}" in function "{function_name}" (index {fn_labels_used[label]})')
 
         # Global expression statement checks
-        elif (statement_key == 'expr'):
+        elif statement_key == 'expr':
             # Pointless global expression statement?
             if 'name' not in statement['expr'] and _is_pointless_expression(statement['expr']['expr']):
                 warnings.append(f'Pointless global statement (index {ix_statement})')
@@ -379,8 +378,7 @@ def lint_script(script):
 
         # Global jump statement checks
         elif statement_key == 'jump':
-            if statement['jump']['label'] not in labels_used:
-                labels_used[statement['jump']['label']] = ix_statement
+            labels_used[statement['jump']['label']] = ix_statement
 
     # Unused global labels?
     for label in sorted(labels_defined.keys()):
@@ -415,8 +413,7 @@ def _get_variable_assignments_and_uses(statements, assigns, uses):
         statement_key = next(iter(statement.keys()))
         if statement_key == 'expr':
             if 'name' in statement['expr']:
-                if statement['expr']['name'] not in assigns:
-                    assigns[statement['expr']['name']] = ix_statement
+                assigns[statement['expr']['name']] = ix_statement
             _get_xpression_variable_uses(statement['expr']['expr'], uses, ix_statement)
         elif statement_key == 'jump' and 'expr' in statement['jump']:
             _get_xpression_variable_uses(statement['jump']['expr'], uses, ix_statement)
@@ -428,8 +425,7 @@ def _get_variable_assignments_and_uses(statements, assigns, uses):
 def _get_xpression_variable_uses(expr, uses, ix_statement):
     expr_key = next(iter(expr.keys()))
     if expr_key == 'variable':
-        if expr['variable'] not in uses:
-            uses[expr['variable']] = ix_statement
+        uses[expr['variable']] = ix_statement
     elif expr_key == 'binary':
         _get_xpression_variable_uses(expr['binary']['left'], uses, ix_statement)
         _get_xpression_variable_uses(expr['binary']['right'], uses, ix_statement)
@@ -438,8 +434,7 @@ def _get_xpression_variable_uses(expr, uses, ix_statement):
     elif expr_key == 'group':
         _get_xpression_variable_uses(expr['group'], uses, ix_statement)
     elif expr_key == 'function':
-        if expr['function']['name'] not in uses:
-            uses[expr['function']['name']] = ix_statement
+        uses[expr['function']['name']] = ix_statement
         if 'args' in expr['function']:
             for arg_expr in expr['function']['args']:
                 _get_xpression_variable_uses(arg_expr, uses, ix_statement)
