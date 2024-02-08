@@ -23,8 +23,8 @@ def main(argv=None):
 
     # Command line arguments
     parser = argparse.ArgumentParser(prog='bare', description='The BareScript command-line interface')
-    parser.add_argument('file', nargs='*', action=_ScriptAction, help='files to process')
-    parser.add_argument('-c', '--code', nargs=1, action=_ScriptAction, help='execute the BareScript code')
+    parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
+    parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
     parser.add_argument('-s', '--static', action='store_true', help='perform static analysis')
     parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'),
@@ -32,20 +32,27 @@ def main(argv=None):
     args = parser.parse_args(args=argv)
 
     status_code = 0
-    current_file = None
+    inline_count = 0
     try:
         # Parse and execute all source files in order
         globals_ = dict(args.var) if args.var is not None else {}
-        for file_, source in args.files:
-            current_file = file_
+        for script_type, script_value in args.scripts:
+            # Get the script source
+            if script_type == 'file':
+                script_name = script_value
+                script_source = fetch_read_write({'url': script_value})
+            else:
+                inline_count += 1
+                script_name = f'-c {inline_count}'
+                script_source = script_value
 
-            # Parse the source
-            script = parse_script(source if source is not None else fetch_read_write({'url': file_}))
+            # Parse the script source
+            script = parse_script(script_source)
 
             # Run the bare-script linter?
             if args.static or args.debug:
                 warnings = lint_script(script)
-                warning_prefix = f'BareScript: Static analysis "{file_}" ...'
+                warning_prefix = f'BareScript: Static analysis "{script_name}" ...'
                 if not warnings:
                     print(f'{warning_prefix} OK')
                 else:
@@ -66,7 +73,7 @@ def main(argv=None):
                 'globals': globals_,
                 'logFn': log_print,
                 'systemPrefix': 'https://craigahobbs.github.io/markdown-up/include/',
-                'urlFn': partial(url_file_relative, file_)
+                'urlFn': partial(url_file_relative, script_value) if script_type == 'file' else None
             })
             if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:
                 status_code = int(result)
@@ -83,8 +90,7 @@ def main(argv=None):
                 break
 
     except Exception as e: # pylint: disable=broad-exception-caught
-        if current_file is not None:
-            print(f'{current_file}:')
+        print(f'{script_name}:')
         print(str(e))
         status_code = 1
 
@@ -92,18 +98,15 @@ def main(argv=None):
     sys.exit(status_code)
 
 
-# Custom argparse action for script file arguments
-class _ScriptAction(argparse.Action):
-
+class _InlineScriptAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        files = getattr(namespace, 'files', [])
-        if option_string in ['-c', '--code']:
-            code_count = getattr(namespace, 'code_count', 0)
-            code_count += 1
-            setattr(namespace, 'code_count', code_count)
-            for value in values:
-                files.append((f'-c {code_count}', value))
-        elif option_string is None:
-            for value in values:
-                files.append((value, None))
-        setattr(namespace, 'files', files)
+        if 'scripts' not in namespace:
+            setattr(namespace, 'scripts', [])
+        namespace.scripts.append(('code', values))
+
+
+class _FileScriptAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if 'scripts' not in namespace:
+            setattr(namespace, 'scripts', [])
+        namespace.scripts.extend(('file', value) for value in values)
