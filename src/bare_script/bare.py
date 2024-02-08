@@ -23,7 +23,7 @@ def main(argv=None):
 
     # Command line arguments
     parser = argparse.ArgumentParser(prog='bare', description='The BareScript command-line interface')
-    parser.add_argument('filename', nargs='*', action=_ScriptAction, help='files to process')
+    parser.add_argument('files', metavar='file', nargs='*', action=_ScriptAction, help='files to process')
     parser.add_argument('-c', '--code', nargs=1, action=_ScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
     parser.add_argument('-s', '--static', action='store_true', help='perform static analysis')

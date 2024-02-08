@@ -5,22 +5,28 @@
 bare-script library documentation command-line interface (CLI) main module
 """
 
+import argparse
 import json
 import re
 import sys
 
 
-def main():
+def main(argv=None):
     """
     BareScript library documentation command-line interface (CLI) main entry point
     """
+
+    # Command line arguments
+    parser = argparse.ArgumentParser(prog='bare', description='The BareScript library documentation tool')
+    parser.add_argument('files', metavar='file', nargs='+', help='files to process')
+    args = parser.parse_args(args=argv)
 
     # Parse each source file line-by-line
     errors = []
     funcs = {}
     func = None
-    for filename in sys.argv[1:]:
-        with open(filename, 'r', encoding='utf-8') as fh:
+    for file_ in args.files:
+        with open(file_, 'r', encoding='utf-8') as fh:
             source = fh.read()
         lines = R_SPLIT.split(source)
         for ix_line, line in enumerate(lines):
@@ -33,16 +39,16 @@ def main():
 
                 # Keyword used outside of function?
                 if key != 'function' and func is None:
-                    errors.append(f'{filename}:{ix_line + 1}: {key} keyword outside function')
+                    errors.append(f'{file_}:{ix_line + 1}: {key} keyword outside function')
                     continue
 
                 # Process the keyword
                 if key == 'group':
                     if text_trim == '':
-                        errors.append(f'{filename}:{ix_line + 1}: Invalid function group name "{text_trim}"')
+                        errors.append(f'{file_}:{ix_line + 1}: Invalid function group name "{text_trim}"')
                         continue
                     if 'group' in func:
-                        errors.append(f'{filename}:{ix_line + 1}: Function "{func["name"]}" group redefinition')
+                        errors.append(f'{file_}:{ix_line + 1}: Function "{func["name"]}" group redefinition')
                         continue
 
                     # Set the function group
@@ -60,10 +66,10 @@ def main():
                 else:
                     # key == 'function'
                     if text_trim == '':
-                        errors.append(f'{filename}:{ix_line + 1}: Invalid function name "{text_trim}"')
+                        errors.append(f'{file_}:{ix_line + 1}: Invalid function name "{text_trim}"')
                         continue
                     if text_trim in funcs:
-                        errors.append(f'{filename}:{ix_line + 1}: Function "{text_trim}" redefinition')
+                        errors.append(f'{file_}:{ix_line + 1}: Function "{text_trim}" redefinition')
                         continue
 
                     # Add the function
@@ -81,7 +87,7 @@ def main():
 
                 # Keyword used outside of function?
                 if func is None:
-                    errors.append(f'{filename}:{ix_line + 1}: Function argument "{name}" outside function')
+                    errors.append(f'{file_}:{ix_line + 1}: Function argument "{name}" outside function')
                     continue
 
                 # Add the function arg documentation line - don't add leading blank lines
@@ -104,7 +110,7 @@ def main():
             match_unknown = R_UNKNOWN.match(line)
             if match_unknown is not None:
                 unknown = match_unknown.groups['unknown']
-                errors.append(f'{filename}:{ix_line + 1}: Invalid documentation comment "{unknown}"')
+                errors.append(f'{file_}:{ix_line + 1}: Invalid documentation comment "{unknown}"')
                 continue
 
     # Create the library documentation model
