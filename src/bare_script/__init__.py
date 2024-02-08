@@ -5,6 +5,15 @@
 bare-script package
 """
 
+from .data import \
+    add_calculated_field, \
+    aggregate_data, \
+    filter_data, \
+    join_data, \
+    parse_csv, \
+    sort_data, \
+    top_data
+
 from .library import \
     EXPRESSION_FUNCTIONS, \
     SCRIPT_FUNCTIONS
