@@ -4,6 +4,7 @@
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
 from io import StringIO
+import sys
 import unittest
 import unittest.mock
 
@@ -26,5 +27,8 @@ class TestBare(unittest.TestCase):
             self.assertNotEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
-            self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file ...]')
+            if sys.version_info < (3, 9): # pragma: no cover
+                self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file [file ...]]')
+            else:
+                self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file ...]')
             self.assertEqual(stderr.getvalue(), '')
