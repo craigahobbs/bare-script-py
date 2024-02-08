@@ -391,10 +391,10 @@ a = 1
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'system/test.mds')
+            self.assertEqual(url, os.path.join('system', 'test.mds'))
             return 'a = 1'
 
-        options = {'globals': {}, 'fetchFn': fetch_fn, 'systemPrefix': 'system/'}
+        options = {'globals': {}, 'fetchFn': fetch_fn, 'systemPrefix': 'system' + os.sep}
         self.assertIsNone(execute_script(script, options))
         self.assertEqual(options['globals']['a'], 1)
 

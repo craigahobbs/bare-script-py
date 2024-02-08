@@ -3,6 +3,7 @@
 
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
+import os
 import unittest
 import unittest.mock
 import urllib.request
@@ -171,15 +172,63 @@ class TestOptions(unittest.TestCase):
             url_file_relative('http://craigahobbs.github.io/file.txt', 'http://craigahobbs.github.io/'),
             'http://craigahobbs.github.io/'
         )
-        self.assertEqual(url_file_relative('/file.txt', 'http://craigahobbs.github.io/'), 'http://craigahobbs.github.io/')
-        self.assertEqual(url_file_relative('file.txt', 'http://craigahobbs.github.io/'), 'http://craigahobbs.github.io/')
+        self.assertEqual(
+            url_file_relative(os.sep + os.path.join('subdir', 'file.txt'), 'http://craigahobbs.github.io/'),
+            'http://craigahobbs.github.io/'
+        )
+        self.assertEqual(
+            url_file_relative(os.sep, 'http://craigahobbs.github.io/'),
+            'http://craigahobbs.github.io/'
+        )
+        self.assertEqual(
+            url_file_relative(os.path.join('subdir', 'file.txt'), 'http://craigahobbs.github.io/'),
+            'http://craigahobbs.github.io/'
+        )
+        self.assertEqual(
+            url_file_relative('file.txt', 'http://craigahobbs.github.io/'),
+            'http://craigahobbs.github.io/'
+        )
 
         # Absolute path
-        self.assertEqual(url_file_relative('http://craigahobbs.github.io/file.txt', '/file2.txt'), '/file2.txt')
-        self.assertEqual(url_file_relative('/file.txt', '/file2.txt'), '/file2.txt')
-        self.assertEqual(url_file_relative('file.txt', '/file2.txt'), '/file2.txt')
+        self.assertEqual(
+            url_file_relative('http://craigahobbs.github.io/file.txt', '/file2.txt'),
+            os.sep + 'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.sep + os.path.join('subdir', 'file.txt'), '/file2.txt'),
+            os.sep + 'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.sep, '/file2.txt'),
+            os.sep + 'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.path.join('subdir', 'file.txt'), '/file2.txt'),
+            os.sep + 'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative('file.txt', '/file2.txt'),
+            os.sep + 'file2.txt'
+        )
 
         # Relative path
-        self.assertEqual(url_file_relative('http://craigahobbs.github.io/file.txt', 'file2.txt'), 'http://craigahobbs.github.io/file2.txt')
-        self.assertEqual(url_file_relative('/file.txt', 'file2.txt'), '/file2.txt')
-        self.assertEqual(url_file_relative('file.txt', 'file2.txt'), 'file2.txt')
+        self.assertEqual(
+            url_file_relative('http://craigahobbs.github.io/file.txt', 'file2.txt'),
+            'http://craigahobbs.github.io/file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.sep + os.path.join('subdir', 'file.txt'), 'file2.txt'),
+            os.sep + os.path.join('subdir', 'file2.txt')
+        )
+        self.assertEqual(
+            url_file_relative(os.sep, 'file2.txt'),
+            os.sep + 'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.path.join('subdir', 'file.txt'), 'file2.txt'),
+            os.path.join('subdir', 'file2.txt')
+        )
+        self.assertEqual(
+            url_file_relative('file.txt', 'file2.txt'),
+            'file2.txt'
+        )
