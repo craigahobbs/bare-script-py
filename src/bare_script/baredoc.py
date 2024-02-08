@@ -127,13 +127,12 @@ def main(argv=None):
         if 'doc' not in func:
             errors.append(f'error: Function "{func.name}" missing documentation')
 
-    # Errors?
-    if len(errors) != 0:
+    # Output the library JSON (or report errors)
+    if len(errors) == 0:
+        print(json.dumps(library, separators=(',', ':'), sort_keys=True))
+    else:
         print('\n'.join(errors))
-        sys.exit(len(errors))
-
-    # Output the library JSON
-    print(json.dumps(library))
+    sys.exit(len(errors))
 
 
 # Library documentation regular expressions
