@@ -60,3 +60,99 @@ class TestBare(unittest.TestCase):
             self.assertEqual(mock_stdout.getvalue(), 'Hello!\n')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_status_returned(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return 2'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 2)
+
+
+    def test_main_debug(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', '-c', 'systemLog("Hello!")'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... OK
+Hello!
+BareScript: Script executed in 100.0 milliseconds
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_debug_lint_warnings(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', '-c', '0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... 1 warning:
+BareScript:     Pointless global statement (index 0)
+BareScript: Script executed in 100.0 milliseconds
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_static_ok(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-s', '-c', 'systemLog("Hello!")'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... OK
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_static_error(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-s', '-c', '0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... 1 warning:
+BareScript:     Pointless global statement (index 0)
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_status_parse_error(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'asdf asdf'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+-c 1:
+Syntax error, line number 1:
+asdf asdf
+    ^
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)

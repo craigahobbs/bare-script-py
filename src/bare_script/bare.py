@@ -60,8 +60,8 @@ def main(argv=None):
                     for warning in warnings:
                         print(f'BareScript:     {warning}')
                     if args.static:
-                        # pylint: disable=broad-exception-raised
-                        raise Exception('Static analysis failed')
+                        status_code = 1
+                        break
             if args.static:
                 continue
 
@@ -91,7 +91,7 @@ def main(argv=None):
 
     except Exception as e: # pylint: disable=broad-exception-caught
         print(f'{script_name}:')
-        print(str(e))
+        print(str(e).strip())
         status_code = 1
 
     # Return the status code
