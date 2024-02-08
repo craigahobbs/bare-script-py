@@ -62,6 +62,69 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
 
 
+    def test_main_mixed_begin(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000, 1000.1, 1000.2, 1000.3, 1000.4]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['systemLog("1")', 'systemLog("2")']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare', 'test2.bare', '-c', 'systemLog("3")', '-c', 'systemLog("4")'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+1
+2
+3
+4
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_mixed_middle(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000, 1000.1, 1000.2, 1000.3, 1000.4]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['systemLog("2")', 'systemLog("3")']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'systemLog("1")', 'test.bare', 'test2.bare', '-c', 'systemLog("4")'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+1
+2
+3
+4
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_mixed_end(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000, 1000.1, 1000.2, 1000.3, 1000.4]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['systemLog("3")', 'systemLog("4")']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'systemLog("1")', '-c', 'systemLog("2")', 'test.bare', 'test2.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+1
+2
+3
+4
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
     def test_main_status_returned(self):
         with unittest.mock.patch('time.time', side_effect=[1000]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
