@@ -56,7 +56,7 @@ def main(argv=None):
 
                 elif key in ('doc', 'return'):
                     # Add the documentation line - don't add leading blank lines
-                    func_doc = func.get('key')
+                    func_doc = func.get(key)
                     if func_doc is not None or text_trim != '':
                         if func_doc is None:
                             func_doc = []
@@ -122,10 +122,11 @@ def main(argv=None):
     if len(library['functions']) == 0:
         errors.append('error: No library functions')
     for func in library['functions']:
+        func_name = func['name']
         if 'group' not in func:
-            errors.append(f'error: Function "{func.name}" missing group')
+            errors.append(f'error: Function "{func_name}" missing group')
         if 'doc' not in func:
-            errors.append(f'error: Function "{func.name}" missing documentation')
+            errors.append(f'error: Function "{func_name}" missing documentation')
 
     # Output the library JSON (or report errors)
     if len(errors) == 0:
