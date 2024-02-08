@@ -109,7 +109,7 @@ def main(argv=None):
             # Unknown documentation comment?
             match_unknown = R_UNKNOWN.match(line)
             if match_unknown is not None:
-                unknown = match_unknown.groups['unknown']
+                unknown = match_unknown.groups('unknown')
                 errors.append(f'{file_}:{ix_line + 1}: Invalid documentation comment "{unknown}"')
                 continue
 
@@ -133,7 +133,7 @@ def main(argv=None):
         print(json.dumps(library, separators=(',', ':'), sort_keys=True))
     else:
         print('\n'.join(errors))
-    sys.exit(len(errors))
+    sys.exit(1 if len(errors) != 0 else 0)
 
 
 # Library documentation regular expressions

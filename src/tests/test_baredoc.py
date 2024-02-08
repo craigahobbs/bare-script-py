@@ -68,6 +68,72 @@ endfunction
             self.assertEqual(cm_exc.exception.code, 0)
 
 
+    def test_main_function_doc_leading_trim(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['''\
+# $function: myFunction
+# $group: My Group
+# $doc:
+# $doc: This is my function
+# $doc:
+function myFunction()
+    systemLog('Hello')
+endfunction
+''']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), json.dumps({
+                'functions': [
+                    {
+                        'doc': ['This is my function', ''],
+                        'group': 'My Group',
+                        'name': 'myFunction'
+                    }
+                ]
+            }, separators=(',', ':'), sort_keys=True) + '\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_arg_doc_leading_trim(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['''\
+# $function: myFunction
+# $group: My Group
+# $doc: This is my function
+# $arg arg:
+# $arg arg: The first argument
+# $arg arg:
+function myFunction()
+    systemLog('Hello')
+endfunction
+''']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), json.dumps({
+                'functions': [
+                    {
+                        'args':[{'doc':['The first argument',''], 'name':'arg'}],
+                        'doc': ['This is my function'],
+                        'group': 'My Group',
+                        'name': 'myFunction'
+                    }
+                ]
+            }, separators=(',', ':'), sort_keys=True) + '\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
     def test_main_error_no_files(self):
         with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
@@ -105,7 +171,7 @@ error: Function "myFunction" missing group
 error: Function "myFunction" missing documentation
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(cm_exc.exception.code, 1)
 
 
     def test_main_error_keyword_outside_function(self):
@@ -128,7 +194,7 @@ test.bare:1: group keyword outside function
 error: No library functions
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(cm_exc.exception.code, 1)
 
 
     def test_main_error_empty_group(self):
@@ -139,7 +205,7 @@ error: No library functions
             mock_file.return_value.read.side_effect = ['''\
 # $function: myFunction
 # $group:
-# $doc: This is my function.
+# $doc: This is my function
 function myFunction()
     systemLog('Hello')
 endfunction
@@ -153,7 +219,7 @@ test.bare:2: Invalid function group name ""
 error: Function "myFunction" missing group
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(cm_exc.exception.code, 1)
 
 
     def test_main_error_group_redefinition(self):
@@ -165,7 +231,7 @@ error: Function "myFunction" missing group
 # $function: myFunction
 # $group: My Group
 # $group: My Other Group
-# $doc: This is my function.
+# $doc: This is my function
 function myFunction()
     systemLog('Hello')
 endfunction
@@ -176,6 +242,107 @@ endfunction
 
             self.assertEqual(mock_stdout.getvalue(), '''\
 test.bare:3: Function "myFunction" group redefinition
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_error_empty_function(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['''\
+# $function:
+# $group: My Group
+# $doc: This is my function
+function myFunction()
+    systemLog('Hello')
+endfunction
+''']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+test.bare:1: Invalid function name ""
+test.bare:2: group keyword outside function
+test.bare:3: doc keyword outside function
+error: No library functions
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_error_function_redefinition(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['''\
+# $function: myFunction
+# $group: My Group
+# $doc: This is my function
+function myFunction()
+    systemLog('Hello')
+endfunction
+
+# $function: myFunction
+''']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+test.bare:8: Function "myFunction" redefinition
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_error_arg_outside_function(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['''\
+# $arg arg: My arg
+function myFunction()
+    systemLog('Hello')
+endfunction
+''']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+test.bare:1: Function argument "arg" outside function
+error: No library functions
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_error_invalid_keyword(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['''\
+# $function: myFunction
+# $group: My Group
+# $doc: This is my function
+# $returns: Bad return keyword
+function myFunction()
+    systemLog('Hello')
+endfunction
+''']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+test.bare:4: Invalid documentation comment "('returns',)"
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)
