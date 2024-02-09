@@ -38,9 +38,7 @@ doc:
 	cp -R static/* build/doc/html
 
     # Generate the library documentation
-	if ! $(DEFAULT_VENV_CMD)/baredoc src/bare_script/library.py > build/doc/html/library/library.json; \
-		then cat build/doc/html/library/library.json; exit 1; \
-	fi
+	$(DEFAULT_VENV_CMD)/baredoc src/bare_script/library.py -o build/doc/html/library/library.json
 
     # Generate the expression library documentation
 	cat build/doc/html/library/library.json | \

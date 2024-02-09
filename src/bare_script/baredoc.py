@@ -19,6 +19,7 @@ def main(argv=None):
     # Command line arguments
     parser = argparse.ArgumentParser(prog='bare', description='The BareScript library documentation tool')
     parser.add_argument('files', metavar='file', nargs='+', help='files to process')
+    parser.add_argument('-o', dest='output', metavar='file', help='write output to file')
     args = parser.parse_args(args=argv)
 
     # Parse each source file line-by-line
@@ -91,18 +92,18 @@ def main(argv=None):
                     continue
 
                 # Add the function arg documentation line - don't add leading blank lines
-                args = func.get('args')
-                arg = None
-                if args is not None:
-                    arg = next((arg_find for arg_find in args if arg_find['name'] == name), None)
-                if arg is not None or text_trim != '':
-                    if args is None:
-                        args = []
-                        func['args'] = args
-                    if arg is None:
-                        arg = {'name': name, 'doc': []}
-                        args.append(arg)
-                    arg['doc'].append(text)
+                func_args = func.get('args')
+                func_arg = None
+                if func_args is not None:
+                    func_arg = next((find_arg for find_arg in func_args if find_arg['name'] == name), None)
+                if func_arg is not None or text_trim != '':
+                    if func_args is None:
+                        func_args = []
+                        func['args'] = func_args
+                    if func_arg is None:
+                        func_arg = {'name': name, 'doc': []}
+                        func_args.append(func_arg)
+                    func_arg['doc'].append(text)
 
                 continue
 
@@ -128,12 +129,21 @@ def main(argv=None):
         if 'doc' not in func:
             errors.append(f'error: Function "{func_name}" missing documentation')
 
-    # Output the library JSON (or report errors)
-    if len(errors) == 0:
-        print(json.dumps(library, separators=(',', ':'), sort_keys=True))
-    else:
+    # Errors?
+    if len(errors) != 0:
         print('\n'.join(errors))
-    sys.exit(1 if len(errors) != 0 else 0)
+        sys.exit(1)
+
+    # JSON-serialize the library documentation model
+    library_json = json.dumps(library, separators=(',', ':'), sort_keys=True)
+
+    # Output to stdout?
+    if args.output is None or args.output == '-':
+        print(library_json)
+
+    # Output to file
+    with open(args.output, 'w', encoding='utf-8') as fh:
+        fh.write(library_json)
 
 
 # Library documentation regular expressions

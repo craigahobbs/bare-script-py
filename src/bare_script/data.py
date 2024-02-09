@@ -7,7 +7,7 @@ The BareScript data manipulation library
 
 import re
 
-from schema_markdown import parse_schema_markdown, validate_type
+from schema_markdown import parse_schema_markdown
 
 
 def validate_data(unused_data, unused_csv=False):
@@ -292,79 +292,20 @@ def filter_data(unused_data, unused_expr, unused_variables=None, unused_options=
     # return result
 
 
-# The aggregation model
-AGGREGATION_TYPES = parse_schema_markdown('''\
-group "Aggregation"
-
-
-# A data aggregation specification
-struct Aggregation
-
-    # The aggregation category fields
-    optional string[len > 0] categories
-
-    # The aggregation measures
-    AggregationMeasure[len > 0] measures
-
-
-# An aggregation measure specification
-struct AggregationMeasure
-
-    # The aggregation measure field
-    string field
-
-    # The aggregation function
-    AggregationFunction function
-
-    # The aggregated-measure field name
-    optional string name
-
-
-# An aggregation function
-enum AggregationFunction
-
-    # The average of the measure's values
-    average
-
-    # The count of the measure's values
-    count
-
-    # The greatest of the measure's values
-    max
-
-    # The least of the measure's values
-    min
-
-    # The standard deviation of the measure's values
-    stddev
-
-    # The sum of the measure's values
-    sum
-''')
-
-
-def validate_aggregation(aggregation):
-    """
-    Validate an aggregation model
-
-    @param {Object} aggregation - The [aggregation model]{@link https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'}
-    @returns {Object} - The validated [aggregation model]{@link https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'}
-    @throws [ValidationError]{@link https://craigahobbs.github.io/schema-markdown-js/module-lib_schema.ValidationError.html}
-    """
-
-    return validate_type(AGGREGATION_TYPES, 'Aggregation', aggregation)
-
-
 def aggregate_data(unused_data, unused_aggregation):
     """
     Aggregate data rows
 
     @param {Object[]} data - The data array
-    @param {Object} aggregation - The [aggregation model]{@link https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'}
+    @param {Object} aggregation - The
+        [aggregation model]{@link https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'}
     @returns {Object[]} - The aggregated data array
     """
 
     return None
+
+    # Validate the aggregation model
+    # validate_type(AGGREGATION_TYPES, 'Aggregation', aggregation)
 
     # categories = aggregation.categories ?? null
 
@@ -430,6 +371,57 @@ def aggregate_data(unused_data, unused_aggregation):
     # }
 
     # return aggregateRows
+
+
+# The aggregation model
+AGGREGATION_TYPES = parse_schema_markdown('''\
+group "Aggregation"
+
+
+# A data aggregation specification
+struct Aggregation
+
+    # The aggregation category fields
+    optional string[len > 0] categories
+
+    # The aggregation measures
+    AggregationMeasure[len > 0] measures
+
+
+# An aggregation measure specification
+struct AggregationMeasure
+
+    # The aggregation measure field
+    string field
+
+    # The aggregation function
+    AggregationFunction function
+
+    # The aggregated-measure field name
+    optional string name
+
+
+# An aggregation function
+enum AggregationFunction
+
+    # The average of the measure's values
+    average
+
+    # The count of the measure's values
+    count
+
+    # The greatest of the measure's values
+    max
+
+    # The least of the measure's values
+    min
+
+    # The standard deviation of the measure's values
+    stddev
+
+    # The sum of the measure's values
+    sum
+''')
 
 
 def sort_data(unused_data, unused_sorts):
