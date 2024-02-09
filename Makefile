@@ -41,14 +41,13 @@ doc:
 	$(DEFAULT_VENV_CMD)/baredoc src/bare_script/library.py -o build/doc/html/library/library.json
 
     # Generate the expression library documentation
-	cat build/doc/html/library/library.json | \
-		$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" > build/doc/html/library/expression.json
+	$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" build/doc/html/library/library.json build/doc/html/library/expression.json
 
     # Generate the library model documentation
-	$(DEFAULT_VENV_PYTHON) -c "$$DOC_LIBRARY_MODEL_PY" > build/doc/html/library/model.json
+	$(DEFAULT_VENV_PYTHON) -c "$$DOC_LIBRARY_MODEL_PY" build/doc/html/library/model.json
 
     # Generate the runtime model documentation
-	$(DEFAULT_VENV_PYTHON) -c "$$DOC_RUNTIME_MODEL_PY" > build/doc/html/model/model.json
+	$(DEFAULT_VENV_PYTHON) -c "$$DOC_RUNTIME_MODEL_PY" build/doc/html/model/model.json
 
 
 # Python to generate the expression library documentation
@@ -57,34 +56,46 @@ import json
 import sys
 from bare_script.library import EXPRESSION_FUNCTION_MAP
 
-# Read the script library documentation JSON from stdin
-library = json.load(sys.stdin)
-library_function_map = dict((func['name'], func) for func in library['functions'])
+# Read the script library documentation model
+with open(sys.argv[1], 'r', encoding='utf-8') as fh:
+	library = json.load(fh)
 
-# Output the expression library documentation
-library_expr = {'functions': []}
-for expr_fn_name, script_fn_name in EXPRESSION_FUNCTION_MAP.items():
-	library_expr['functions'].append(dict(library_function_map[script_fn_name], name=expr_fn_name))
+# Create the expression documentation model
+library_map = dict((func['name'], func) for func in library['functions'])
+expression = {'functions': [dict(library_map[lib_name], name=expr_name) for expr_name, lib_name in EXPRESSION_FUNCTION_MAP.items()]}
 
-print(json.dumps(library_expr))
+# Write the expression documentation model
+with open(sys.argv[2], 'w', encoding='utf-8') as fh:
+	json.dump(expression, fh, separators=(',', ':'), sort_keys=True)
 endef
 export DOC_EXPR_PY
 
 
-# Python to generate the library model documentation
+# Python to generate the library type model
 define DOC_LIBRARY_MODEL_PY
 import json
+import sys
 from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
-print(json.dumps({**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}))
+
+# Create the library type model
+types = {**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
+
+# Write the library type model
+with open(sys.argv[1], 'w', encoding='utf-8') as fh:
+	json.dump(types, fh, separators=(',', ':'), sort_keys=True)
 endef
 export DOC_LIBRARY_MODEL_PY
 
 
-# Python to generate the runtime model documentation
+# Python to generate the runtime type model
 define DOC_RUNTIME_MODEL_PY
 import json
+import sys
 from bare_script.model import BARE_SCRIPT_TYPES
-print(json.dumps(BARE_SCRIPT_TYPES))
+
+# Write the runtime type model
+with open(sys.argv[1], 'w', encoding='utf-8') as fh:
+	json.dump(BARE_SCRIPT_TYPES, fh, separators=(',', ':'), sort_keys=True)
 endef
 export DOC_RUNTIME_MODEL_PY
 
