@@ -10,9 +10,9 @@ from .data import \
     aggregate_data, \
     filter_data, \
     join_data, \
-    parse_csv, \
     sort_data, \
-    top_data
+    top_data, \
+    validate_data
 
 from .library import \
     EXPRESSION_FUNCTIONS, \
