@@ -224,13 +224,20 @@ def add_calculated_field(unused_unused_data, unused_field_name, unused_expr, unu
     """
     Add a calculated field to each row of a data array
 
-    @param {Object[]} data - The data array. Row objects are updated with the calculated field values.
-    @param {string} fieldName - The calculated field name
-    @param {string} expr - The calculated field expression
-    @param {?Object} [variables = null] -  Additional variables for expression evaluation
-    @param {?Object} [options = null] - The [script execution options]{@link module:lib/runtime~ExecuteScriptOptions}
-    @returns {Object[]} - The updated data array
+    :param data: The data array. Row objects are updated with the calculated field values.
+    :type data: list[dict]
+    :param fieldName: The calculated field name
+    :type fieldName: str
+    :param expr: The calculated field expression
+    :type expr: str
+    :param variables:  Additional variables for expression evaluation
+    :type variables: dict
+    :param options: The :class:`script execution options <ExecuteScriptOptions>`
+    :type options: dict
+    :return: The updated data array
+    :rtype: list[dict]
     """
+
     return None
 
     # # Parse the calculation expression
@@ -258,11 +265,16 @@ def filter_data(unused_data, unused_expr, unused_variables=None, unused_options=
     """
     Filter data rows
 
-    @param {Object[]} data - The data array
-    @param {string} expr - The boolean filter [expression]{@link https://craigahobbs.github.io/bare-script/language/#expressions}
-    @param {?Object} [variables = null] -  Additional variables for expression evaluation
-    @param {?Object} [options = null] - The [script execution options]{@link module:lib/runtime~ExecuteScriptOptions}
-    @returns {Object[]} - The filtered data array
+    :param data: The data array
+    :type data: list[dict]
+    :param expr: The boolean filter `expression <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :type expr: str
+    :param variables:  Additional variables for expression evaluation
+    :type variables: dict
+    :param options: The :class:`script execution options <ExecuteScriptOptions>`
+    :type options: dict
+    :return: The filtered data array
+    :rtype: list[dict]
     """
     return None
 
@@ -296,10 +308,12 @@ def aggregate_data(unused_data, unused_aggregation):
     """
     Aggregate data rows
 
-    @param {Object[]} data - The data array
-    @param {Object} aggregation - The
-        [aggregation model]{@link https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'}
-    @returns {Object[]} - The aggregated data array
+    :param data: The data array
+    :type data: list[dict]
+    :param aggregation: The `aggregation model <https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'>`__
+    :type aggregation: dict
+    :return: The aggregated data array
+    :rtype: list[dict]
     """
 
     return None
@@ -428,9 +442,12 @@ def sort_data(unused_data, unused_sorts):
     """
     Sort data rows
 
-    @param {Object[]} data - The data array
-    @param {Object[]} sorts - The sort field-name/descending-sort tuples
-    @returns {Object[]} - The sorted data array
+    :param data: The data array
+    :type data: list[dict]
+    :param sorts: The sort field-name/descending-sort tuples
+    :type sorts: list[list]
+    :return: The sorted data array
+    :rtype: list[dict]
     """
 
     return None
@@ -451,10 +468,14 @@ def top_data(unused_data, unused_count, unused_category_fields=None):
     """
     Top data rows
 
-    @param {Object[]} data - The data array
-    @param {number} count - The number of rows to keep
-    @param {?string[]} [categoryFields = null] - The category fields
-    @returns {Object[]} - The top data array
+    :param data: The data array
+    :type data: list[dict]
+    :param count: The number of rows to keep
+    :type count: int
+    :param categoryFields: The category fields
+    :type categoryFields: list[str]
+    :return: The top data array
+    :rtype: list[dict]
     """
 
     return None
