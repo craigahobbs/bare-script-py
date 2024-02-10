@@ -163,4 +163,4 @@ It was started using `python-template <https://github.com/craigahobbs/python-tem
 
 .. code-block:: sh
 
-    template-specialize python-template/template/ bare-script/ -k package bare-script -k name 'Craig A. Hobbs' -k email 'craigahobbs@gmail.com' -k github 'craigahobbs'
+    template-specialize python-template/template/ bare-script-py/ -k package bare-script -k name 'Craig A. Hobbs' -k email 'craigahobbs@gmail.com' -k github 'craigahobbs'
