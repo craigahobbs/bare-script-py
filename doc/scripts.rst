@@ -24,13 +24,3 @@ lint_script
 -----------
 
 .. autofunction:: bare_script.lint_script
-
-
-The BareScript Type Model
--------------------------
-
-.. py:data:: BARE_SCRIPT_TYPES
-   :module: bare_script
-   :type: dict
-
-   The BareScript `type model <https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types'>`__
