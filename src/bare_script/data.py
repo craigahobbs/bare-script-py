@@ -5,12 +5,14 @@
 The BareScript data manipulation library
 """
 
-import re
+import datetime
 
 from schema_markdown import parse_schema_markdown
 
+from .value import parse_datetime, parse_number, value_json
 
-def validate_data(unused_data, unused_csv=False):
+
+def validate_data(data, csv=False):
     """
     Determine data field types and parse/validate field values
 
@@ -22,104 +24,79 @@ def validate_data(unused_data, unused_csv=False):
     :rtype: dict
     :raises TypeError: Data is invalid
     """
-    return None
 
-    # # Determine field types
-    # types = {}
-    # for (row of data) {
-    #     for ([field, value] of Object.entries(row)) {
-    #         if !(field in types)) {
-    #             if typeof value == 'number') {
-    #                 types[field] = 'number'
-    #             elif value instanceof Date:
-    #                 types[field] = 'datetime'
-    #             elif typeof value == 'string' && (!csv || value != 'null'):
-    #                 if parseDatetime(value) != null:
-    #                     types[field] = 'datetime'
-    #                 elif csv && parseNumber(value) != null:
-    #                     types[field] = 'number'
-    #                 else:
-    #                     types[field] = 'string'
-    #                 }
-    #             }
-    #         }
-    #     }
-    # }
+    # Determine field types
+    types = {}
+    for row in data:
+        for field, value in row.items():
+            if field not in types:
+                if isinstance(value, bool):
+                    types[field] = 'boolean'
+                elif isinstance(value, (int, float)):
+                    types[field] = 'number'
+                elif isinstance(value, datetime.datetime):
+                    types[field] = 'datetime'
+                elif isinstance(value, str) and (not csv or value != 'null'):
+                    if parse_datetime(value) is not None:
+                        types[field] = 'datetime'
+                    elif csv and value in ('true', 'false'):
+                        types[field] = 'boolean'
+                    elif csv and parse_number(value) is not None:
+                        types[field] = 'number'
+                    else:
+                        types[field] = 'string'
 
-    # # Validate field values
-    # throwFieldError = (field, fieldType, fieldValue) => {
-    #     throw new Error(`Invalid "${field}" field value ${JSON.stringify(fieldValue)}, expected type ${fieldType}`)
-    # }
-    # for (row of data) {
-    #     for ([field, value] of Object.entries(row)) {
-    #         fieldType = types[field]
+    # Helper to format and raise validation errors
+    def throw_field_error(field, field_type, field_value):
+        raise TypeError(f'Invalid "{field}" field value {value_json(field_value)}, expected type {field_type}')
 
-    #         # Null string?
-    #         if csv && value == 'null':
-    #             row[field] = null
+    # Validate field values
+    for row in data:
+        for field, value in row.items():
+            field_type = types.get(field)
+            if field_type is None:
+                continue
 
-    #         # Number field
-    #         elif fieldType == 'number':
-    #             if csv && typeof value == 'string':
-    #                 numberValue = parseNumber(value)
-    #                 if numberValue == null:
-    #                     throwFieldError(field, fieldType, value)
-    #                 }
-    #                 row[field] = numberValue
-    #             elif value != null && typeof value != 'number':
-    #                 throwFieldError(field, fieldType, value)
-    #             }
+            # Null string?
+            if csv and value == 'null':
+                row[field] = None
 
-    #         # Datetime field
-    #         elif fieldType == 'datetime':
-    #             if typeof value == 'string':
-    #                 datetimeValue = parseDatetime(value)
-    #                 if datetimeValue == null:
-    #                     throwFieldError(field, fieldType, value)
-    #                 }
-    #                 row[field] = datetimeValue
-    #             elif value != null && !(value instanceof Date):
-    #                 throwFieldError(field, fieldType, value)
-    #             }
+            # Number field
+            elif field_type == 'number':
+                if csv and isinstance(value, str):
+                    number_value = parse_number(value)
+                    if number_value is None:
+                        throw_field_error(field, field_type, value)
+                    row[field] = number_value
+                elif value is not None and not (isinstance(value, (int, float)) and not isinstance(value, bool)):
+                    throw_field_error(field, field_type, value)
 
-    #         # String field
-    #         else:
-    #             if value != null && typeof value != 'string':
-    #                 throwFieldError(field, fieldType, value)
-    #             }
-    #         }
-    #     }
-    # }
+            # Datetime field
+            elif field_type == 'datetime':
+                if isinstance(value, str):
+                    datetime_value = parse_datetime(value)
+                    if datetime_value is None:
+                        throw_field_error(field, field_type, value)
+                    row[field] = datetime_value
+                elif value is not None and not isinstance(value, datetime.datetime):
+                    throw_field_error(field, field_type, value)
 
-    # return types
+            # Boolean field
+            elif field_type == 'boolean':
+                if csv and isinstance(value, str):
+                    boolean_value = True if value == 'true' else (False if value == 'false' else None)
+                    if boolean_value is None:
+                        throw_field_error(field, field_type, value)
+                    row[field] = boolean_value
+                elif value is not None and not isinstance(value, bool):
+                    throw_field_error(field, field_type, value)
 
+            # String field
+            else:
+                if value is not None and not isinstance(value, str):
+                    throw_field_error(field, field_type, value)
 
-def _parse_number(unused_text):
-    return None
-
-    # value = Number.parseFloat(text)
-    # if Number.isNaN(value) || !Number.isFinite(value):
-    #     return null
-    # }
-    # return value
-
-
-def _parse_datetime(unused_text):
-    return None
-
-    # mDate = text.match(rDate)
-    # if mDate != null:
-    #     year = Number.parseInt(mDate.groups.year, 10)
-    #     month = Number.parseInt(mDate.groups.month, 10)
-    #     day = Number.parseInt(mDate.groups.day, 10)
-    #     return new Date(year, month - 1, day)
-    # elif rDatetime.test(text):
-    #     return new Date(text)
-    # }
-    # return null
-
-R_DATE = re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})$')
-R_DATETIME = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$')
+    return types
 
 
 def join_data(unused_left_data, unused_right_data, unused_join_expr, unused_right_expr=None, unused_is_left_join=False,

@@ -16,7 +16,8 @@ import urllib
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .value import R_NUMBER_CLEANUP, REGEX_TYPE, round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
+from .value import R_NUMBER_CLEANUP, REGEX_TYPE, parse_datetime, parse_number, round_number, \
+    value_boolean, value_compare, value_is, value_json, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -411,7 +412,7 @@ def _datetime_iso_format(args, unused_options):
 
     if value_boolean(is_date):
         return datetime.date(datetime_.year, datetime_.month, datetime_.day).isoformat()
-    return datetime_.astimezone(datetime.timezone.utc).isoformat()
+    return value_string(datetime_)
 
 
 # $function: datetimeISOParse
@@ -424,12 +425,7 @@ def _datetime_iso_parse(args, unused_options):
     if not isinstance(string, str):
         return None
 
-    try:
-        return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', string))
-    except ValueError:
-        return None
-
-_R_ZULU = re.compile(r'Z$')
+    return parse_datetime(string)
 
 
 # $function: datetimeMillisecond
@@ -899,10 +895,7 @@ def _number_parse_float(args, unused_options):
     if not isinstance(string, str):
         return None
 
-    try:
-        return float(string)
-    except ValueError:
-        return None
+    return parse_number(string)
 
 
 # $function: numberParseInt

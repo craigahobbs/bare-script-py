@@ -6,25 +6,8 @@ BareScript value utilities
 """
 
 import datetime
+import json
 import re
-
-from schema_markdown import JSONEncoder
-
-
-def round_number(value, digits):
-    """
-    Round a number
-
-    :param value: The number to round
-    :type value: int or float
-    :param digits: The number of digits of precision
-    :type digits: int
-    :return: The rounded number
-    :rtype: float
-    """
-
-    multiplier = 10 ** digits
-    return int(value * multiplier + (0.5 if value >= 0 else -0.5)) / multiplier
 
 
 def value_type(value):
@@ -81,7 +64,7 @@ def value_string(value):
     elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
     elif isinstance(value, datetime.datetime):
-        return value.isoformat()
+        return value.astimezone(datetime.timezone.utc).isoformat()
     elif isinstance(value, (dict)):
         return value_json(value)
     elif isinstance(value, (list)):
@@ -109,9 +92,18 @@ def value_json(value, indent=None):
     """
 
     if indent is not None and indent > 0:
-        return JSONEncoder(allow_nan=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
+        return _JSONEncoder(allow_nan=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
     else:
-        return JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True).encode(value)
+        return _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True).encode(value)
+
+
+class _JSONEncoder(json.JSONEncoder):
+    __slots__ = ()
+
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return (o if o.tzinfo else o.astimezone(datetime.timezone.utc)).isoformat()
+        return None
 
 
 def value_boolean(value):
@@ -197,3 +189,53 @@ def value_compare(left, right):
     type1 = value_type(left) or 'unknown'
     type2 = value_type(right) or 'unknown'
     return -1 if type1 < type2 else (0 if type1 == type2 else 1)
+
+
+def round_number(value, digits):
+    """
+    Round a number
+
+    :param value: The number to round
+    :type value: int or float
+    :param digits: The number of digits of precision
+    :type digits: int
+    :return: The rounded number
+    :rtype: float
+    """
+
+    multiplier = 10 ** digits
+    return int(value * multiplier + (0.5 if value >= 0 else -0.5)) / multiplier
+
+
+def parse_number(text):
+    """
+    Parse a number string
+
+    :param text: The string to parse as a number
+    :type text: str
+    :return: A number value or None if parsing fails
+    :rtype: float or None
+    """
+
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def parse_datetime(text):
+    """
+    Parse a datetime string
+
+    :param text: The string to parse as a datetime
+    :type text: str
+    :return: A datetime value or None if parsing fails
+    :rtype: datetime.datetime or None
+    """
+
+    try:
+        return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', text))
+    except ValueError:
+        return None
+
+_R_ZULU = re.compile(r'Z$')

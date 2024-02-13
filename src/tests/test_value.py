@@ -7,17 +7,11 @@ import datetime
 import re
 import unittest
 
-from bare_script.value import round_number, value_boolean, value_compare, value_is, value_json, value_string, value_type
+from bare_script.value import parse_datetime, parse_number, round_number, \
+    value_boolean, value_compare, value_is, value_json, value_string, value_type
 
 
 class TestValue(unittest.TestCase):
-
-    def test_round_number(self):
-        self.assertEqual(round_number(1.5, 0), 2)
-        self.assertEqual(round_number(2.5, 0), 3)
-        self.assertEqual(round_number(1.25, 1), 1.3)
-        self.assertEqual(round_number(1.35, 1), 1.4)
-
 
     def test_value_type(self):
         # null
@@ -106,6 +100,10 @@ class TestValue(unittest.TestCase):
 
         # Datetime
         self.assertEqual(value_json(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '"2024-01-12T06:09:00+00:00"')
+
+        # Invalid
+        self.assertEqual(value_json({'A': 1, 'B': re.compile('^$')}), '{"A":1,"B":null}')
+        self.assertEqual(value_json(re.compile('^$')), 'null')
 
 
     def test_value_boolean(self):
@@ -313,3 +311,37 @@ class TestValue(unittest.TestCase):
         # string < unknown
         self.assertEqual(value_compare('abc', (1, 2, 3)), -1)
         self.assertEqual(value_compare((1, 2, 3), 'abc'), 1)
+
+
+    def test_round_number(self):
+        self.assertEqual(round_number(1.5, 0), 2)
+        self.assertEqual(round_number(2.5, 0), 3)
+        self.assertEqual(round_number(1.25, 1), 1.3)
+        self.assertEqual(round_number(1.35, 1), 1.4)
+
+
+    def test_parse_number(self):
+        self.assertEqual(parse_number('123.45'), 123.45)
+
+        # Parse failure
+        self.assertIsNone(parse_number('invalid'))
+        self.assertIsNone(parse_number('1234.45asdf'))
+        self.assertIsNone(parse_number('1234.45 asdf'))
+
+
+    def test_parse_datetime(self):
+        self.assertEqual(
+            parse_datetime('2022-08-29T15:08:00+00:00'),
+            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
+        )
+        self.assertEqual(
+            parse_datetime('2022-08-29T15:08:00Z'),
+            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
+        )
+        self.assertEqual(
+            parse_datetime('2022-08-29T15:08:00-08:00').astimezone(datetime.timezone.utc),
+            datetime.datetime(2022, 8, 29, 23, 8, tzinfo=datetime.timezone.utc)
+        )
+
+        # Parse failure
+        self.assertIsNone(parse_datetime('invalid'))

@@ -450,16 +450,16 @@ class TestLibrary(unittest.TestCase):
 
     def test_datetime_iso_parse(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOFormat']([SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00+00:00'], None)], None),
-            '2022-08-29T15:08:00+00:00'
+            SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00+00:00'], None),
+            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
         )
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOFormat']([SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00Z'], None)], None),
-            '2022-08-29T15:08:00+00:00'
+            SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00Z'], None),
+            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
         )
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOFormat']([SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00-08:00'], None)], None),
-            '2022-08-29T23:08:00+00:00'
+            SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00-08:00'], None).astimezone(datetime.timezone.utc),
+            datetime.datetime(2022, 8, 29, 23, 8, tzinfo=datetime.timezone.utc)
         )
 
         # Invalid datetime string
@@ -1006,7 +1006,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['numberParseFloat'](['123.45'], None), 123.45)
 
         # Parse failure
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['asdf'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['invalid'], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45asdf'], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45 asdf'], None))
 
