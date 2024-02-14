@@ -408,7 +408,7 @@ def _sort_data_fn(sorts, row1, row2):
     return 0
 
 
-def top_data(unused_data, unused_count, unused_category_fields=None):
+def top_data(data, count, category_fields=None):
     """
     Top data rows
 
@@ -422,28 +422,25 @@ def top_data(unused_data, unused_count, unused_category_fields=None):
     :rtype: list[dict]
     """
 
-    return None
+    # Bucket rows by category
+    category_rows = {}
+    category_order = []
+    for row in data:
+        category_key = '' if category_fields is None else value_json([row.get(field) for field in category_fields])
+        if category_key not in category_rows:
+            category_rows[category_key] = []
+            category_order.append(category_key)
+        category_rows[category_key].append(row)
 
-    # # Bucket rows by category
-    # categoryRows = {}
-    # categoryOrder = []
-    # for (row of data) {
-    #     categoryKey = categoryFields == null ? ''
-    #         : jsonStringifySortKeys(categoryFields.map((field) => (field in row ? row[field] : null)))
-    #     if !(categoryKey in categoryRows):
-    #         categoryRows[categoryKey] = []
-    #         categoryOrder.push(categoryKey)
-    #     }
-    #     categoryRows[categoryKey].push(row)
-    # }
-    # # Take only the top rows
-    # dataTop = []
-    # topCount = count
-    # for (categoryKey of categoryOrder) {
-    #     categoryKeyRows = categoryRows[categoryKey]
-    #     categoryKeyLength = categoryKeyRows.length
-    #     for (ixRow = 0; ixRow < topCount && ixRow < categoryKeyLength; ixRow++) {
-    #         dataTop.push(categoryKeyRows[ixRow])
-    #     }
-    # }
-    # return dataTop
+    # Take only the top rows
+    data_top = []
+    top_count = count
+    for category_key in category_order:
+        category_key_rows = category_rows[category_key]
+        category_key_length = len(category_key_rows)
+        ix_row = 0
+        while ix_row < top_count and ix_row < category_key_length:
+            data_top.append(category_key_rows[ix_row])
+            ix_row += 1
+
+    return data_top

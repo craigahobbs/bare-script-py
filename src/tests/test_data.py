@@ -8,7 +8,7 @@ import unittest
 
 from schema_markdown import ValidationError
 
-from bare_script import add_calculated_field, aggregate_data, filter_data, join_data, sort_data, validate_data
+from bare_script import add_calculated_field, aggregate_data, filter_data, join_data, sort_data, top_data, validate_data
 
 
 class TestData(unittest.TestCase):
@@ -621,4 +621,34 @@ class TestData(unittest.TestCase):
             {'A': 1, 'B': 1, 'C': 6},
             {'A': 1, 'B': 2, 'C': 8},
             {'B': 2, 'C': 7}
+        ])
+
+
+    def test_top_data(self):
+        data = [
+            {'A': 'abc', 'B': 1, 'C': 1},
+            {'A': 'abc', 'B': 1, 'C': 2},
+            {'A': 'abc', 'B': 1, 'C': 3},
+            {'A': 'abc', 'B': 2, 'C': 1},
+            {'A': 'abc', 'B': 2, 'C': 2},
+            {'A': 'def', 'B': 1, 'C': 1},
+            {'A': 'ghi', 'C': 1}
+        ]
+        self.assertListEqual(top_data(data, 2, ['A', 'B']), [
+            {'A': 'abc', 'B': 1, 'C': 1},
+            {'A': 'abc', 'B': 1, 'C': 2},
+            {'A': 'abc', 'B': 2, 'C': 1},
+            {'A': 'abc', 'B': 2, 'C': 2},
+            {'A': 'def', 'B': 1, 'C': 1},
+            {'A': 'ghi', 'C': 1}
+        ])
+        self.assertListEqual(top_data(data, 1, ['A']), [
+            {'A': 'abc', 'B': 1, 'C': 1},
+            {'A': 'def', 'B': 1, 'C': 1},
+            {'A': 'ghi', 'C': 1}
+        ])
+        self.assertListEqual(top_data(data, 3), [
+            {'A': 'abc', 'B': 1, 'C': 1},
+            {'A': 'abc', 'B': 1, 'C': 2},
+            {'A': 'abc', 'B': 1, 'C': 3}
         ])
