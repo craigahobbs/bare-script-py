@@ -6,8 +6,9 @@ The BareScript data manipulation library
 """
 
 import datetime
+import statistics
 
-from schema_markdown import parse_schema_markdown
+from schema_markdown import parse_schema_markdown, validate_type
 
 from .parser import parse_expression
 from .runtime import evaluate_expression
@@ -260,7 +261,7 @@ def filter_data(data, expr, variables=None, options=None):
     return result
 
 
-def aggregate_data(unused_data, unused_aggregation):
+def aggregate_data(data, aggregation):
     """
     Aggregate data rows
 
@@ -272,75 +273,59 @@ def aggregate_data(unused_data, unused_aggregation):
     :rtype: list[dict]
     """
 
-    return None
-
     # Validate the aggregation model
-    # validate_type(AGGREGATION_TYPES, 'Aggregation', aggregation)
+    validate_type(AGGREGATION_TYPES, 'Aggregation', aggregation)
+    categories = aggregation.get('categories')
 
-    # categories = aggregation.categories ?? null
+    # Create the aggregate rows
+    category_rows = {}
+    for row in data:
+        # Compute the category values
+        category_values = [row.get(category) for category in categories] if categories is not None else None
 
-    # # Create the aggregate rows
-    # categoryRows = {}
-    # for (row of data) {
-    #     # Compute the category values
-    #     categoryValues = (categories != null ? categories.map((categoryField) => row[categoryField]) : null)
+        # Get or create the aggregate row
+        row_key = value_json(category_values) if category_values is not None else ''
+        if row_key in category_rows:
+            aggregate_row = category_rows[row_key]
+        else:
+            aggregate_row = {}
+            category_rows[row_key] = aggregate_row
+            if categories is not None:
+                for ix_category_field, category in enumerate(categories):
+                    aggregate_row[category] = category_values[ix_category_field]
 
-    #     # Get or create the aggregate row
-    #     aggregateRow
-    #     rowKey = (categoryValues != null ? jsonStringifySortKeys(categoryValues) : '')
-    #     if rowKey in categoryRows:
-    #         aggregateRow = categoryRows[rowKey]
-    #     else:
-    #         aggregateRow = {}
-    #         categoryRows[rowKey] = aggregateRow
-    #         if categories != null:
-    #             for (ixCategoryField = 0; ixCategoryField < categories.length; ixCategoryField++) {
-    #                 aggregateRow[categories[ixCategoryField]] = categoryValues[ixCategoryField]
-    #             }
-    #         }
-    #     }
+        # Add to the aggregate measure values
+        for measure in aggregation['measures']:
+            field = measure.get('name', measure['field'])
+            value = row.get(measure['field'])
+            if field not in aggregate_row:
+                aggregate_row[field] = []
+            if value is not None:
+                aggregate_row[field].append(value)
 
-    #     # Add to the aggregate measure values
-    #     for (measure of aggregation.measures) {
-    #         field = measure.name ?? measure.field
-    #         value = row[measure.field] ?? null
-    #         if !(field in aggregateRow):
-    #             aggregateRow[field] = []
-    #         }
-    #         if value != null:
-    #             aggregateRow[field].push(value)
-    #         }
-    #     }
-    # }
+    # Compute the measure values aggregate function value
+    aggregate_rows = list(category_rows.values())
+    for aggregate_row in aggregate_rows:
+        for measure in aggregation['measures']:
+            field = measure.get('name', measure['field'])
+            func = measure['function']
+            measure_values = aggregate_row[field]
+            if len(measure_values) == 0:
+                aggregate_row[field] = None
+            elif func == 'count':
+                aggregate_row[field] = len(measure_values)
+            elif func == 'max':
+                aggregate_row[field] = max(measure_values)
+            elif func == 'min':
+                aggregate_row[field] = min(measure_values)
+            elif func == 'sum':
+                aggregate_row[field] = sum(measure_values)
+            elif func == 'stddev':
+                aggregate_row[field] = statistics.pstdev(measure_values)
+            else: # func == 'average'
+                aggregate_row[field] = statistics.mean(measure_values)
 
-    # # Compute the measure values aggregate function value
-    # aggregateRows = Object.values(categoryRows)
-    # for (aggregateRow of aggregateRows) {
-    #     for (measure of aggregation.measures) {
-    #         field = measure.name ?? measure.field
-    #         func = measure.function
-    #         measureValues = aggregateRow[field]
-    #         if !measureValues.length:
-    #             aggregateRow[field] = null
-    #         elif func == 'count':
-    #             aggregateRow[field] = measureValues.length
-    #         elif func == 'max':
-    #             aggregateRow[field] = measureValues.reduce((max, val) => (val > max ? val : max))
-    #         elif func == 'min':
-    #             aggregateRow[field] = measureValues.reduce((min, val) => (val < min ? val : min))
-    #         elif func == 'sum':
-    #             aggregateRow[field] = measureValues.reduce((sum, val) => sum + val, 0)
-    #         elif func == 'stddev':
-    #             average = measureValues.reduce((sum, val) => sum + val, 0) / measureValues.length
-    #             aggregateRow[field] = Math.sqrt(measureValues.reduce((sum, val) => sum + (val - average) ** 2, 0) / measureValues.length)
-    #         else:
-    #             # func == 'average'
-    #             aggregateRow[field] = measureValues.reduce((sum, val) => sum + val, 0) / measureValues.length
-    #         }
-    #     }
-    # }
-
-    # return aggregateRows
+    return aggregate_rows
 
 
 # The aggregation model

@@ -6,7 +6,9 @@
 import datetime
 import unittest
 
-from bare_script import add_calculated_field, filter_data, join_data, validate_data
+from schema_markdown import ValidationError
+
+from bare_script import add_calculated_field, aggregate_data, filter_data, join_data, validate_data
 
 
 class TestData(unittest.TestCase):
@@ -422,3 +424,178 @@ class TestData(unittest.TestCase):
         self.assertListEqual(filter_data(data, 'A > test * X', {'test': 2.5}, {'globals': {'X': 2}}), [
             {'A': 6, 'B': 2}
         ])
+
+
+    def test_aggregate_data(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 4},
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1}
+        ]
+        aggregation = {
+            'measures': [
+                {'field': 'C', 'function': 'average'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'C': 4.5}
+        ])
+
+
+    def test_aggregate_data_categories(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 4},
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 1, 'B': 2, 'C': 8},
+            {'A': 2, 'B': 1, 'C': 9},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2}
+        ]
+        aggregation = {
+            'categories': ['A', 'B'],
+            'measures': [
+                {'field': 'C', 'function': 'average'},
+                {'field': 'C', 'function': 'average', 'name': 'Average(C)'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'A': 1, 'B': 1, 'C': 4.5, 'Average(C)': 4.5},
+            {'A': 1, 'B': 2, 'C': 7.5, 'Average(C)': 7.5},
+            {'A': 2, 'B': 1, 'C': 9.5, 'Average(C)': 9.5},
+            {'A': 2, 'B': 2, 'C': None, 'Average(C)': None}
+        ])
+
+
+    def test_aggregate_data_count(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1, 'C': 6},
+            {'A': 1, 'B': 1},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 1, 'B': 2, 'C': 8},
+            {'A': 2, 'B': 1, 'C': 9},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2}
+        ]
+        aggregation = {
+            'categories': ['A', 'B'],
+            'measures': [
+                {'field': 'C', 'function': 'count'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'A': 1, 'B': 1, 'C': 2},
+            {'A': 1, 'B': 2, 'C': 2},
+            {'A': 2, 'B': 1, 'C': 2},
+            {'A': 2, 'B': 2, 'C': None}
+        ])
+
+
+    def test_aggregate_data_max(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1, 'C': 6},
+            {'A': 1, 'B': 1, 'C': 4},
+            {'A': 1, 'B': 1},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 1, 'B': 2, 'C': 8},
+            {'A': 2, 'B': 1, 'C': 9},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2}
+        ]
+        aggregation = {
+            'categories': ['A', 'B'],
+            'measures': [
+                {'field': 'C', 'function': 'max'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'A': 1, 'B': 1, 'C': 6},
+            {'A': 1, 'B': 2, 'C': 8},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2, 'C': None}
+        ])
+
+
+    def test_aggregate_data_min(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1, 'C': 6},
+            {'A': 1, 'B': 1, 'C': 4},
+            {'A': 1, 'B': 1},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 1, 'B': 2, 'C': 8},
+            {'A': 2, 'B': 1, 'C': 9},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2}
+        ]
+        aggregation = {
+            'categories': ['A', 'B'],
+            'measures': [
+                {'field': 'C', 'function': 'min'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'A': 1, 'B': 1, 'C': 4},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 2, 'B': 1, 'C': 9},
+            {'A': 2, 'B': 2, 'C': None}
+        ])
+
+
+    def test_aggregate_data_stddev(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1, 'C': 6},
+            {'A': 1, 'B': 1},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 1, 'B': 2, 'C': 10},
+            {'A': 2, 'B': 1, 'C': 5},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2}
+        ]
+        aggregation = {
+            'categories': ['A', 'B'],
+            'measures': [
+                {'field': 'C', 'function': 'stddev'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'A': 1, 'B': 1, 'C': 0.5},
+            {'A': 1, 'B': 2, 'C': 1.5},
+            {'A': 2, 'B': 1, 'C': 2.5},
+            {'A': 2, 'B': 2, 'C': None}
+        ])
+
+
+    def test_aggregate_data_sum(self):
+        data = [
+            {'A': 1, 'B': 1, 'C': 5},
+            {'A': 1, 'B': 1, 'C': 6},
+            {'A': 1, 'B': 1},
+            {'A': 1, 'B': 2, 'C': 7},
+            {'A': 1, 'B': 2, 'C': 8},
+            {'A': 2, 'B': 1, 'C': 9},
+            {'A': 2, 'B': 1, 'C': 10},
+            {'A': 2, 'B': 2}
+        ]
+        aggregation = {
+            'categories': ['A', 'B'],
+            'measures': [
+                {'field': 'C', 'function': 'sum'}
+            ]
+        }
+        self.assertListEqual(aggregate_data(data, aggregation), [
+            {'A': 1, 'B': 1, 'C': 11},
+            {'A': 1, 'B': 2, 'C': 15},
+            {'A': 2, 'B': 1, 'C': 19},
+            {'A': 2, 'B': 2, 'C': None}
+        ])
+
+
+    def test_aggregate_data_invalid(self):
+        with self.assertRaises(ValidationError) as cm_exc:
+            aggregate_data([], {})
+        self.assertEqual(str(cm_exc.exception), "Required member 'measures' missing")
