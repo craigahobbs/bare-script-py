@@ -6,7 +6,7 @@
 import datetime
 import unittest
 
-from bare_script import join_data, validate_data
+from bare_script import add_calculated_field, filter_data, join_data, validate_data
 
 
 class TestData(unittest.TestCase):
@@ -355,4 +355,70 @@ class TestData(unittest.TestCase):
             {'a': 2, 'b': 7, 'a2': 0, 'a3': 2, 'c': 11},
             {'a': 2, 'b': 7, 'a2': 0, 'a3': 2, 'c': 12},
             {'a': 3, 'b': 8}
+        ])
+
+
+    def test_add_calculated_field(self):
+        data = [
+            {'A': 1, 'B': 5},
+            {'A': 2, 'B': 6}
+        ]
+        self.assertListEqual(add_calculated_field(data, 'C', 'A * B'), [
+            {'A': 1, 'B': 5, 'C': 5},
+            {'A': 2, 'B': 6, 'C': 12}
+        ])
+
+
+    def test_add_calculated_field_variables(self):
+        data = [
+            {'A': 1},
+            {'A': 2}
+        ]
+        self.assertListEqual(add_calculated_field(data, 'C', 'A * B', {'B': 5}), [
+            {'A': 1, 'C': 5},
+            {'A': 2, 'C': 10}
+        ])
+
+
+    def test_add_calculated_field_globals(self):
+        data = [
+            {'A': 1},
+            {'A': 2}
+        ]
+        self.assertListEqual(add_calculated_field(data, 'C', 'A * B * X', {'B': 5}, {'globals': {'X': 2}}), [
+            {'A': 1, 'C': 10},
+            {'A': 2, 'C': 20}
+        ])
+
+
+    def test_filter_data(self):
+        data = [
+            {'A': 1, 'B': 5},
+            {'A': 6, 'B': 2},
+            {'A': 3, 'B': 7}
+        ]
+        self.assertListEqual(filter_data(data, 'A > B'), [
+            {'A': 6, 'B': 2}
+        ])
+
+
+    def test_filter_data_variables(self):
+        data = [
+            {'A': 1, 'B': 5},
+            {'A': 6, 'B': 2},
+            {'A': 3, 'B': 7}
+        ]
+        self.assertListEqual(filter_data(data, 'A > test', {'test': 5}), [
+            {'A': 6, 'B': 2}
+        ])
+
+
+    def test_filter_data_globals(self):
+        data = [
+            {'A': 1, 'B': 5},
+            {'A': 6, 'B': 2},
+            {'A': 3, 'B': 7}
+        ]
+        self.assertListEqual(filter_data(data, 'A > test * X', {'test': 2.5}, {'globals': {'X': 2}}), [
+            {'A': 6, 'B': 2}
         ])

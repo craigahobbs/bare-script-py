@@ -11,7 +11,7 @@ from schema_markdown import parse_schema_markdown
 
 from .parser import parse_expression
 from .runtime import evaluate_expression
-from .value import parse_datetime, parse_number, value_json
+from .value import parse_datetime, parse_number, value_boolean, value_json
 
 
 def validate_data(data, csv=False):
@@ -185,7 +185,7 @@ def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=Fa
     return data
 
 
-def add_calculated_field(unused_unused_data, unused_field_name, unused_expr, unused_variables=None, unused_options=None):
+def add_calculated_field(data, field_name, expr, variables=None, options=None):
     """
     Add a calculated field to each row of a data array
 
@@ -203,30 +203,26 @@ def add_calculated_field(unused_unused_data, unused_field_name, unused_expr, unu
     :rtype: list[dict]
     """
 
-    return None
+    # Parse the calculation expression
+    calc_expr = parse_expression(expr)
 
-    # # Parse the calculation expression
-    # calcExpr = parseExpression(expr)
+    # Create the evaluation options object
+    eval_options = options
+    if variables is not None:
+        eval_options = dict(options) if options is not None else {}
+        if 'globals' in eval_options:
+            eval_options['globals'] = {**eval_options['globals'], **variables}
+        else:
+            eval_options['globals'] = variables
 
-    # # Create the evaluation options object
-    # evalOptions = options
-    # if variables != null:
-    #     evalOptions = (options != null ? {...options} : {})
-    #     if 'globals' in evalOptions:
-    #         evalOptions.globals = {...evalOptions.globals, ...variables}
-    #     else:
-    #         evalOptions.globals = variables
-    #     }
-    # }
+    # Compute the calculated field for each row
+    for row in data:
+        row[field_name] = evaluate_expression(calc_expr, eval_options, row)
 
-    # # Compute the calculated field for each row
-    # for (row of data) {
-    #     row[fieldName] = evaluateExpression(calcExpr, evalOptions, row)
-    # }
-    # return data
+    return data
 
 
-def filter_data(unused_data, unused_expr, unused_variables=None, unused_options=None):
+def filter_data(data, expr, variables=None, options=None):
     """
     Filter data rows
 
@@ -241,32 +237,27 @@ def filter_data(unused_data, unused_expr, unused_variables=None, unused_options=
     :return: The filtered data array
     :rtype: list[dict]
     """
-    return None
 
-    # result = []
+    result = []
 
-    # # Parse the filter expression
-    # filterExpr = parseExpression(expr)
+    # Parse the filter expression
+    filter_expr = parse_expression(expr)
 
-    # # Create the evaluation options object
-    # evalOptions = options
-    # if variables != null:
-    #     evalOptions = (options != null ? {...options} : {})
-    #     if 'globals' in evalOptions:
-    #         evalOptions.globals = {...evalOptions.globals, ...variables}
-    #     else:
-    #         evalOptions.globals = variables
-    #     }
-    # }
+    # Create the evaluation options object
+    eval_options = options
+    if variables is not None:
+        eval_options = dict(options) if options is not None else {}
+        if 'globals' in eval_options:
+            eval_options['globals'] = {**eval_options['globals'], **variables}
+        else:
+            eval_options['globals'] = variables
 
-    # # Filter the data
-    # for (row of data) {
-    #     if evaluateExpression(filterExpr, evalOptions, row):
-    #         result.push(row)
-    #     }
-    # }
+    # Filter the data
+    for row in data:
+        if value_boolean(evaluate_expression(filter_expr, eval_options, row)):
+            result.append(row)
 
-    # return result
+    return result
 
 
 def aggregate_data(unused_data, unused_aggregation):
