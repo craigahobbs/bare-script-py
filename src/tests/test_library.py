@@ -522,82 +522,73 @@ class TestLibrary(unittest.TestCase):
             {'a': 3, 'b': 8}
         ])
 
+        # Left join
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', None, True], {}), [
+            {'a': 1, 'b': 5, 'a2': 1, 'c': 10},
+            {'a': 1, 'b': 6, 'a2': 1, 'c': 10},
+            {'a': 2, 'b': 7, 'a2': 2, 'c': 11},
+            {'a': 2, 'b': 7, 'a2': 2, 'c': 12}
+        ])
 
-    def test_data_join_options(self):
-        left_data = [
-            {'a': 1, 'b': 5},
-            {'a': 1, 'b': 6},
-            {'a': 2, 'b': 7},
-            {'a': 3, 'b': 8}
-        ]
-        right_data = [
-            {'a': 2, 'c': 10},
-            {'a': 4, 'c': 11},
-            {'a': 4, 'c': 12}
-        ]
+        # Right expression and variables - left join
         self.assertListEqual(
             SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', 'a / denominator', True, {'denominator': 2}], {}),
             [
-                {'a': 1, 'b': 5, 'a2': 2, 'c': 10},
-                {'a': 1, 'b': 6, 'a2': 2, 'c': 10},
-                {'a': 2, 'b': 7, 'a2': 4, 'c': 11},
-                {'a': 2, 'b': 7, 'a2': 4, 'c': 12}
+                {'a': 1, 'a2': 2, 'b': 5, 'c': 11},
+                {'a': 1, 'a2': 2, 'b': 5, 'c': 12},
+                {'a': 1, 'a2': 2, 'b': 6, 'c': 11},
+                {'a': 1, 'a2': 2, 'b': 6, 'c': 12}
             ]
         )
 
+        # Right expression and globals
+        options = {'globals': {'denominator': 2}}
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', 'a / denominator'], options),
+            [
+                {'a': 1, 'a2': 2, 'b': 5, 'c': 11},
+                {'a': 1, 'a2': 2, 'b': 5, 'c': 12},
+                {'a': 1, 'a2': 2, 'b': 6, 'c': 11},
+                {'a': 1, 'a2': 2, 'b': 6, 'c': 12},
+                {'a': 2, 'b': 7},
+                {'a': 3, 'b': 8}
+            ]
+        )
 
-    def test_data_join_globals(self):
-        left_data = [
-            {'a': 1, 'c': 5},
-            {'a': 2, 'c': 6}
-        ]
-        right_data = [
-            {'b': 1, 'd': 10},
-            {'b': 2, 'd': 11}
-        ]
-        options = {'globals': {'e': 1}}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a + e', 'b'], options), [
-            {'a': 1, 'b': 2, 'c': 5, 'd': 11},
-            {'a': 2, 'c': 6}
-        ])
-
-
-    def test_data_join_globals_variables(self):
-        left_data = [
-            {'a': 1, 'c': 5},
-            {'a': 2, 'c': 6}
-        ]
-        right_data = [
-            {'b': 2, 'd': 10},
-            {'b': 3, 'd': 11}
-        ]
-        variables = {'f': 1}
-        options = {'globals': {'e': 1}}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a + e + f', 'b', None, variables], options), [
-            {'a': 1, 'b': 3, 'c': 5, 'd': 11},
-            {'a': 2, 'c': 6}
-        ])
-
-
-    def test_data_join_runtime(self):
+        # Runtime integration
         options = {
             'globals': {
                 'documentURL': lambda args, func_options: func_options['urlFn'](args[0])
             },
             'urlFn': lambda url: (url if url.startswith('/') else f'/foo/{url}')
         }
-        left_data = [
+        left_data_runtime = [
             {'a': '/foo', 'c': 5},
             {'a': 'bar', 'c': 6}
         ]
-        right_data = [
+        right_data_runtime = [
             {'b': '/foo', 'd': 10},
             {'b': '/foo/bar', 'd': 11}
         ]
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'documentURL(a)', 'b'], options), [
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data_runtime, right_data_runtime, 'documentURL(a)', 'b'], options), [
             {'a': '/foo', 'b': '/foo', 'c': 5, 'd': 10},
             {'a': 'bar', 'b': '/foo/bar', 'c': 6, 'd': 11}
         ])
+
+        # Non-list left data
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([None, right_data, 'a'], None))
+
+        # Non-list right data
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([left_data, None, 'a'], None))
+
+        # Non-string expression
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, None], None))
+
+        # Non-string right expression
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', 7], None))
+
+        # Non-dict variables
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([left_data, right_data, 'a', None, False, 'invalid'], None))
 
 
     def test_data_parse_csv(self):
@@ -614,6 +605,16 @@ a,b
             {'a': 1, 'b': 4},
             {'a': 2, 'b': 5}
         ])
+
+        # None arg
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataParseCSV']([text, None, text2], None), [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ])
+
+        # Non-string
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataParseCSV']([text, 7, text2], None))
 
 
     def test_data_sort(self):

@@ -342,6 +342,10 @@ def _data_filter(args, options):
 # $return: The joined data array
 def _data_join(args, options):
     left_data, right_data, join_expr, right_expr, is_left_join, variables = default_args(args, (None, None, None, None, False, None))
+    if not isinstance(left_data, list) or not isinstance(right_data, list) or not isinstance(join_expr, str) or \
+       (right_expr is not None and not isinstance(right_expr, str)) or (variables is not None and not isinstance(variables, dict)):
+        return None
+
     return join_data(left_data, right_data, join_expr, right_expr, is_left_join, variables, options)
 
 
@@ -353,8 +357,12 @@ def _data_join(args, options):
 def _data_parse_csv(args, unused_options):
     # Split the input CSV parts into lines
     lines = []
-    for part in args:
-        lines.extend(part.splitlines())
+    for arg in args:
+        if arg is None:
+            continue
+        if not isinstance(arg, str):
+            return None
+        lines.extend(arg.splitlines())
 
     # Parse the CSV
     data = list(csv.DictReader(lines))
