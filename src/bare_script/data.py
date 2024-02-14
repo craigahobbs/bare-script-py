@@ -434,13 +434,9 @@ def top_data(data, count, category_fields=None):
 
     # Take only the top rows
     data_top = []
-    top_count = count
     for category_key in category_order:
         category_key_rows = category_rows[category_key]
-        category_key_length = len(category_key_rows)
-        ix_row = 0
-        while ix_row < top_count and ix_row < category_key_length:
+        for ix_row in range(min(count, len(category_key_rows))):
             data_top.append(category_key_rows[ix_row])
-            ix_row += 1
 
     return data_top
