@@ -291,6 +291,9 @@ def _array_sort(args, options):
 # $return: The aggregated data array
 def _data_aggregate(args, unused_options):
     data, aggregation = default_args(args, (None, None))
+    if not isinstance(data, list) or (aggregation is not None and not isinstance(aggregation, dict)):
+        return None
+
     return aggregate_data(data, aggregation)
 
 
@@ -304,6 +307,10 @@ def _data_aggregate(args, unused_options):
 # $return: The updated data array
 def _data_calculated_field(args, options):
     data, field_name, expr, variables = default_args(args, (None, None, None, None))
+    if not isinstance(data, list) or not isinstance(field_name, str) or not isinstance(expr, str) or \
+       (variables is not None and not isinstance(variables, dict)):
+        return None
+
     return add_calculated_field(data, field_name, expr, variables, options)
 
 
@@ -316,6 +323,9 @@ def _data_calculated_field(args, options):
 # $return: The filtered data array
 def _data_filter(args, options):
     data, expr, variables = default_args(args, (None, None, None))
+    if not isinstance(data, list) or not isinstance(expr, str) or (variables is not None and not isinstance(variables, dict)):
+        return None
+
     return filter_data(data, expr, variables, options)
 
 

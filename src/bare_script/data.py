@@ -18,11 +18,11 @@ from .value import parse_datetime, parse_number, value_boolean, value_compare, v
 
 # Helper to dynamically import evaluate_expression to avoid the circular dependency
 def _import_evaluate_expression():
-    if _EVALUATE_EXPRESSION[0] is None:
-        _EVALUATE_EXPRESSION[0] = importlib.import_module('bare_script.runtime').evaluate_expression
+    if not _EVALUATE_EXPRESSION:
+        _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
     return _EVALUATE_EXPRESSION[0]
 
-_EVALUATE_EXPRESSION = [None]
+_EVALUATE_EXPRESSION = []
 
 
 def validate_data(data, csv=False):
@@ -177,7 +177,7 @@ def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=Fa
     # Bucket the right rows by the right expression value
     right_category_rows = {}
     for right_row in right_data:
-        category_key = value_json(evaluate_expression(right_expression, eval_options, right_row)) # pylint: disable=not-callable
+        category_key = value_json(evaluate_expression(right_expression, eval_options, right_row))
         if category_key not in right_category_rows:
             right_category_rows[category_key] = []
         right_category_rows[category_key].append(right_row)
@@ -185,7 +185,7 @@ def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=Fa
     # Join the left with the right
     data = []
     for left_row in left_data:
-        category_key = value_json(evaluate_expression(left_expression, eval_options, left_row)) # pylint: disable=not-callable
+        category_key = value_json(evaluate_expression(left_expression, eval_options, left_row))
         if category_key in right_category_rows:
             for right_row in right_category_rows[category_key]:
                 join_row = dict(left_row)
@@ -232,7 +232,7 @@ def add_calculated_field(data, field_name, expr, variables=None, options=None):
 
     # Compute the calculated field for each row
     for row in data:
-        row[field_name] = evaluate_expression(calc_expr, eval_options, row) # pylint: disable=not-callable
+        row[field_name] = evaluate_expression(calc_expr, eval_options, row)
 
     return data
 
@@ -270,7 +270,7 @@ def filter_data(data, expr, variables=None, options=None):
 
     # Filter the data
     for row in data:
-        if value_boolean(evaluate_expression(filter_expr, eval_options, row)): # pylint: disable=not-callable
+        if value_boolean(evaluate_expression(filter_expr, eval_options, row)):
             result.append(row)
 
     return result

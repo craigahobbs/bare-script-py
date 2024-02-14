@@ -386,6 +386,17 @@ class TestLibrary(unittest.TestCase):
             {'a': 2, 'sum_b': 5}
         ])
 
+        # Non-list
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataAggregate']([None], None))
+
+        # Non-dict
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataAggregate']([data, 'invalid'], None))
+
+        # Invalid aggregation model
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataAggregate']([data, {}], None)
+        self.assertEqual(str(cm_exc.exception), "Required member 'measures' missing")
+
 
     def test_data_calculated_field(self):
         data = [
@@ -399,52 +410,23 @@ class TestLibrary(unittest.TestCase):
             {'a': 2, 'b': 5, 'c': 10}
         ])
 
-
-    def test_data_calculated_field_variables(self):
-        data = [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
-        ]
-        variables = {'d': 2}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'b * d', variables], {}), [
+        # Variables
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'a * b * X', {'X': 2}], {}), [
             {'a': 1, 'b': 3, 'c': 6},
             {'a': 1, 'b': 4, 'c': 8},
-            {'a': 2, 'b': 5, 'c': 10}
+            {'a': 2, 'b': 5, 'c': 20}
         ])
 
-
-    def test_data_calculated_field_globals(self):
-        data = [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
-        ]
-        options = {'globals': {'e': 3}}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'b * e'], options), [
-            {'a': 1, 'b': 3, 'c': 9},
-            {'a': 1, 'b': 4, 'c': 12},
-            {'a': 2, 'b': 5, 'c': 15}
+        # Globals
+        options = {'globals': {'X': 2}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'a * b * X'], options), [
+            {'a': 1, 'b': 3, 'c': 6},
+            {'a': 1, 'b': 4, 'c': 8},
+            {'a': 2, 'b': 5, 'c': 20}
         ])
 
-
-    def test_data_calculated_field_globals_variables(self):
-        data = [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
-        ]
-        variables = {'d': 2}
-        options = {'globals': {'e': 3}}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'b * d * e', variables], options), [
-            {'a': 1, 'b': 3, 'c': 18},
-            {'a': 1, 'b': 4, 'c': 24},
-            {'a': 2, 'b': 5, 'c': 30}
-        ])
-
-
-    def test_data_calculated_field_runtime(self):
-        data = [
+        # Runtime integration
+        data_runtime = [
             {'a': '/foo'},
             {'a': 'bar'}
         ]
@@ -454,10 +436,22 @@ class TestLibrary(unittest.TestCase):
             },
             'urlFn': lambda url: (url if url.startswith('/') else f'/foo/{url}')
         }
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'b', 'documentURL(a)'], options), [
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data_runtime, 'b', 'documentURL(a)'], options), [
             {'a': '/foo', 'b': '/foo'},
             {'a': 'bar', 'b': '/foo/bar'}
         ])
+
+        # Non-list
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([None, 'c', 'a * b'], None))
+
+        # Non-string field name
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([data, None, 'a * b'], None))
+
+        # Non-string expression
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', None], None))
+
+        # Non-dict variables
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'a * b', 'invalid'], None))
 
 
     def test_data_filter(self):
@@ -471,47 +465,20 @@ class TestLibrary(unittest.TestCase):
             {'a': 2, 'b': 5}
         ])
 
-
-    def test_data_filter_variables(self):
-        data = [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
-        ]
-        variables = {'d': 3}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'b > d', variables], {}), [
+        # Variables
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'b > d', {'d': 3}], {}), [
             {'a': 1, 'b': 4},
             {'a': 2, 'b': 5}
         ])
 
-
-    def test_data_filter_globals(self):
-        data = [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
-        ]
+        # Globals
         options = {'globals': {'c': 2}}
         self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'a == c'], options), [
             {'a': 2, 'b': 5}
         ])
 
-
-    def test_data_filter_globals_variables(self):
-        data = [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
-        ]
-        variables = {'d': 1}
-        options = {'globals': {'c': 1}}
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'a == (c + d)', variables], options), [
-            {'a': 2, 'b': 5}
-        ])
-
-
-    def test_data_filter_runtime(self):
-        data = [
+        # Runtime integration
+        data_runtime = [
             {'a': '/foo'},
             {'a': 'bar'}
         ]
@@ -521,9 +488,18 @@ class TestLibrary(unittest.TestCase):
             },
             'urlFn': lambda url: (url if url.startswith('/') else f'/foo/{url}')
         }
-        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'documentURL(a) == "/foo/bar"'], options), [
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data_runtime, 'documentURL(a) == "/foo/bar"'], options), [
             {'a': 'bar'}
         ])
+
+        # Non-list
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([None, 'a * b'], None))
+
+        # Non-string expression
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([data, None], None))
+
+        # Non-dict variables
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([data, 'a * b', 'invalid'], None))
 
 
     def test_data_join(self):
