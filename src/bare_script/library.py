@@ -1868,7 +1868,7 @@ SCRIPT_FUNCTIONS = {
 }
 
 
-# The built-in expression function name script function name map
+# The built-in expression functions
 EXPRESSION_FUNCTION_MAP = {
     'abs': 'mathAbs',
     'acos': 'mathAcos',
@@ -1917,9 +1917,7 @@ EXPRESSION_FUNCTION_MAP = {
     'upper': 'stringUpper',
     'year': 'datetimeYear'
 }
-
-
-# The built-in expression functions
 EXPRESSION_FUNCTIONS = dict(
-    (expr_fn_name, SCRIPT_FUNCTIONS[script_fn_name]) for expr_fn_name, script_fn_name in EXPRESSION_FUNCTION_MAP.items()
+    (expr_fn_name, SCRIPT_FUNCTIONS[script_fn_name])
+    for expr_fn_name, script_fn_name in EXPRESSION_FUNCTION_MAP.items()
 )
