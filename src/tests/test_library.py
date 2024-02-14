@@ -386,10 +386,10 @@ class TestLibrary(unittest.TestCase):
             {'a': 2, 'sum_b': 5}
         ])
 
-        # Non-list
+        # Non-list data
         self.assertIsNone(SCRIPT_FUNCTIONS['dataAggregate']([None], None))
 
-        # Non-dict
+        # Non-dict aggregation model
         self.assertIsNone(SCRIPT_FUNCTIONS['dataAggregate']([data, 'invalid'], None))
 
         # Invalid aggregation model
@@ -441,7 +441,7 @@ class TestLibrary(unittest.TestCase):
             {'a': 'bar', 'b': '/foo/bar'}
         ])
 
-        # Non-list
+        # Non-list data
         self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([None, 'c', 'a * b'], None))
 
         # Non-string field name
@@ -492,7 +492,7 @@ class TestLibrary(unittest.TestCase):
             {'a': 'bar'}
         ])
 
-        # Non-list
+        # Non-list data
         self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([None, 'a * b'], None))
 
         # Non-string expression
@@ -633,6 +633,12 @@ a,b
             {'a': 1, 'b': 4}
         ])
 
+        # Non-list data
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataSort']([None, [['a', True], ['b']]], None))
+
+        # Non-list sorts
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataSort']([data, None], None))
+
 
     def test_data_top(self):
         data = [
@@ -654,6 +660,21 @@ a,b
             {'a': 4, 'b': 7}
         ])
 
+        # Non-list data
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([None], None))
+
+        # Non-number count
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, None], None))
+
+        # Non-integer count
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, 3.5], None))
+
+        # Negative count
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, -3], None))
+
+        # Non-list category fields
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, 3, 'invalid'], None))
+
 
     def test_data_validate(self):
         data = [
@@ -666,6 +687,9 @@ a,b
             {'a': '1', 'b': 4},
             {'a': '2', 'b': 5}
         ])
+
+        # Non-list data
+        self.assertIsNone(SCRIPT_FUNCTIONS['dataValidate']([None], None))
 
 
     #

@@ -380,6 +380,9 @@ def _data_parse_csv(args, unused_options):
 # $return: The sorted data array
 def _data_sort(args, unused_options):
     data, sorts = default_args(args, (None, None))
+    if not isinstance(data, list) or not isinstance(sorts, list):
+        return None
+
     return sort_data(data, sorts)
 
 
@@ -387,11 +390,15 @@ def _data_sort(args, unused_options):
 # $group: Data
 # $doc: Keep the top rows for each category
 # $arg data: The data array
-# $arg count: The number of rows to keep
+# $arg count: The number of rows to keep (default is 1)
 # $arg categoryFields: Optional (default is null). The category fields.
 # $return: The top data array
 def _data_top(args, unused_options):
-    data, count, category_fields = default_args(args, (None, None, None))
+    data, count, category_fields = default_args(args, (None, 1, None))
+    if not isinstance(data, list) or not isinstance(count, (int, float)) or int(count) != count or count < 1 or \
+       (category_fields is not None and not isinstance(category_fields, list)):
+        return None
+
     return top_data(data, count, category_fields)
 
 
@@ -402,6 +409,9 @@ def _data_top(args, unused_options):
 # $return: The validated data array
 def _data_validate(args, unused_options):
     data, = default_args(args, (None,))
+    if not isinstance(data, list):
+        return None
+
     validate_data(data)
     return data
 
