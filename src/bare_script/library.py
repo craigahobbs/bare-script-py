@@ -6,6 +6,7 @@ The BareScript library
 """
 
 import calendar
+import csv
 import datetime
 import functools
 import json
@@ -16,6 +17,7 @@ import urllib
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
+from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
 from .value import R_NUMBER_CLEANUP, REGEX_TYPE, parse_datetime, parse_number, round_number, \
     value_boolean, value_compare, value_is, value_json, value_string, value_type
 
@@ -287,8 +289,9 @@ def _array_sort(args, options):
 # $arg data: The data array
 # $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='Aggregation')
 # $return: The aggregated data array
-def _data_aggregate(unused_args, unused_options):
-    return None
+def _data_aggregate(args, unused_options):
+    data, aggregation = default_args(args, (None, None))
+    return aggregate_data(data, aggregation)
 
 
 # $function: dataCalculatedField
@@ -299,8 +302,9 @@ def _data_aggregate(unused_args, unused_options):
 # $arg expr: The calculated field expression
 # $arg variables: Optional (default is null). A variables object the expression evaluation.
 # $return: The updated data array
-def _data_calculated_field(unused_args, unused_options):
-    return None
+def _data_calculated_field(args, options):
+    data, field_name, expr, variables = default_args(args, (None, None, None, None))
+    return add_calculated_field(data, field_name, expr, variables, options)
 
 
 # $function: dataFilter
@@ -310,8 +314,9 @@ def _data_calculated_field(unused_args, unused_options):
 # $arg expr: The filter expression
 # $arg variables: Optional (default is null). A variables object the expression evaluation.
 # $return: The filtered data array
-def _data_filter(unused_args, unused_options):
-    return None
+def _data_filter(args, options):
+    data, expr, variables = default_args(args, (None, None, None))
+    return filter_data(data, expr, variables, options)
 
 
 # $function: dataJoin
@@ -325,8 +330,9 @@ def _data_filter(unused_args, unused_options):
 # $arg isLeftJoin: Optional (default is false). If true, perform a left join (always include left row).
 # $arg variables: Optional (default is null). A variables object for join expression evaluation.
 # $return: The joined data array
-def _data_join(unused_args, unused_options):
-    return None
+def _data_join(args, options):
+    left_data, right_data, join_expr, right_expr, is_left_join, variables = default_args(args, (None, None, None, None, False, None))
+    return join_data(left_data, right_data, join_expr, right_expr, is_left_join, variables, options)
 
 
 # $function: dataParseCSV
@@ -334,8 +340,18 @@ def _data_join(unused_args, unused_options):
 # $doc: Parse CSV text to a data array
 # $arg text...: The CSV text
 # $return: The data array
-def _data_parse_csv(unused_args, unused_options):
-    return None
+def _data_parse_csv(args, unused_options):
+    # Split the input CSV parts into lines
+    lines = []
+    for part in args:
+        lines.extend(part.splitlines())
+
+    # Parse the CSV
+    data = list(csv.DictReader(lines))
+
+    # Validate the data (as CSV)
+    validate_data(data, True)
+    return data
 
 
 # $function: dataSort
@@ -344,8 +360,9 @@ def _data_parse_csv(unused_args, unused_options):
 # $arg data: The data array
 # $arg sorts: The sort field-name/descending-sort tuples
 # $return: The sorted data array
-def _data_sort(unused_args, unused_options):
-    return None
+def _data_sort(args, unused_options):
+    data, sorts = default_args(args, (None, None))
+    return sort_data(data, sorts)
 
 
 # $function: dataTop
@@ -355,8 +372,9 @@ def _data_sort(unused_args, unused_options):
 # $arg count: The number of rows to keep
 # $arg categoryFields: Optional (default is null). The category fields.
 # $return: The top data array
-def _data_top(unused_args, unused_options):
-    return None
+def _data_top(args, unused_options):
+    data, count, category_fields = default_args(args, (None, None, None))
+    return top_data(data, count, category_fields)
 
 
 # $function: dataValidate
@@ -364,8 +382,10 @@ def _data_top(unused_args, unused_options):
 # $doc: Validate a data array
 # $arg data: The data array
 # $return: The validated data array
-def _data_validate(unused_args, unused_options):
-    return None
+def _data_validate(args, unused_options):
+    data, = default_args(args, (None,))
+    validate_data(data)
+    return data
 
 
 #

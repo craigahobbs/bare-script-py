@@ -7,13 +7,22 @@ The BareScript data manipulation library
 
 import datetime
 import functools
+import importlib
 import statistics
 
 from schema_markdown import parse_schema_markdown, validate_type
 
 from .parser import parse_expression
-from .runtime import evaluate_expression
 from .value import parse_datetime, parse_number, value_boolean, value_compare, value_json
+
+
+# Helper to dynamically import evaluate_expression to avoid the circular dependency
+def _import_evaluate_expression():
+    if not _EVALUATE_EXPRESSION:
+        _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
+    return _EVALUATE_EXPRESSION[0]
+
+_EVALUATE_EXPRESSION = []
 
 
 def validate_data(data, csv=False):
@@ -125,6 +134,8 @@ def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=Fa
     :rtype: list[dict]
     """
 
+    evaluate_expression = _import_evaluate_expression()
+
     # Compute the map of row field name to joined row field name
     left_names = {}
     right_names_raw = {}
@@ -205,6 +216,8 @@ def add_calculated_field(data, field_name, expr, variables=None, options=None):
     :rtype: list[dict]
     """
 
+    evaluate_expression = _import_evaluate_expression()
+
     # Parse the calculation expression
     calc_expr = parse_expression(expr)
 
@@ -241,6 +254,7 @@ def filter_data(data, expr, variables=None, options=None):
     """
 
     result = []
+    evaluate_expression = _import_evaluate_expression()
 
     # Parse the filter expression
     filter_expr = parse_expression(expr)

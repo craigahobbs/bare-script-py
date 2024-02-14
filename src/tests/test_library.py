@@ -369,44 +369,326 @@ class TestLibrary(unittest.TestCase):
     #
 
 
-    @unittest.skip
     def test_data_aggregate(self):
-        self.fail()
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        aggregation = {
+            'categories': ['a'],
+            'measures': [
+                {'field': 'b', 'function': 'sum', 'name': 'sum_b'}
+            ]
+        }
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataAggregate']([data, aggregation], None), [
+            {'a': 1, 'sum_b': 7},
+            {'a': 2, 'sum_b': 5}
+        ])
 
 
-    @unittest.skip
     def test_data_calculated_field(self):
-        self.fail()
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'a * b'], {}), [
+            {'a': 1, 'b': 3, 'c': 3},
+            {'a': 1, 'b': 4, 'c': 4},
+            {'a': 2, 'b': 5, 'c': 10}
+        ])
 
 
-    @unittest.skip
+    def test_data_calculated_field_variables(self):
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        variables = {'d': 2}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'b * d', variables], {}), [
+            {'a': 1, 'b': 3, 'c': 6},
+            {'a': 1, 'b': 4, 'c': 8},
+            {'a': 2, 'b': 5, 'c': 10}
+        ])
+
+
+    def test_data_calculated_field_globals(self):
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        options = {'globals': {'e': 3}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'b * e'], options), [
+            {'a': 1, 'b': 3, 'c': 9},
+            {'a': 1, 'b': 4, 'c': 12},
+            {'a': 2, 'b': 5, 'c': 15}
+        ])
+
+
+    def test_data_calculated_field_globals_variables(self):
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        variables = {'d': 2}
+        options = {'globals': {'e': 3}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'b * d * e', variables], options), [
+            {'a': 1, 'b': 3, 'c': 18},
+            {'a': 1, 'b': 4, 'c': 24},
+            {'a': 2, 'b': 5, 'c': 30}
+        ])
+
+
+    def test_data_calculated_field_runtime(self):
+        data = [
+            {'a': '/foo'},
+            {'a': 'bar'}
+        ]
+        options = {
+            'globals': {
+                'documentURL': lambda args, func_options: func_options['urlFn'](args[0])
+            },
+            'urlFn': lambda url: (url if url.startswith('/') else f'/foo/{url}')
+        }
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'b', 'documentURL(a)'], options), [
+            {'a': '/foo', 'b': '/foo'},
+            {'a': 'bar', 'b': '/foo/bar'}
+        ])
+
+
     def test_data_filter(self):
-        self.fail()
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'b > 3'], {}), [
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ])
 
 
-    @unittest.skip
+    def test_data_filter_variables(self):
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        variables = {'d': 3}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'b > d', variables], {}), [
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ])
+
+
+    def test_data_filter_globals(self):
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        options = {'globals': {'c': 2}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'a == c'], options), [
+            {'a': 2, 'b': 5}
+        ])
+
+
+    def test_data_filter_globals_variables(self):
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ]
+        variables = {'d': 1}
+        options = {'globals': {'c': 1}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'a == (c + d)', variables], options), [
+            {'a': 2, 'b': 5}
+        ])
+
+
+    def test_data_filter_runtime(self):
+        data = [
+            {'a': '/foo'},
+            {'a': 'bar'}
+        ]
+        options = {
+            'globals': {
+                'documentURL': lambda args, func_options: func_options['urlFn'](args[0])
+            },
+            'urlFn': lambda url: (url if url.startswith('/') else f'/foo/{url}')
+        }
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataFilter']([data, 'documentURL(a) == "/foo/bar"'], options), [
+            {'a': 'bar'}
+        ])
+
+
     def test_data_join(self):
-        self.fail()
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7},
+            {'a': 3, 'b': 8}
+        ]
+        right_data = [
+            {'a': 1, 'c': 10},
+            {'a': 2, 'c': 11},
+            {'a': 2, 'c': 12}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a'], {}), [
+            {'a': 1, 'b': 5, 'a2': 1, 'c': 10},
+            {'a': 1, 'b': 6, 'a2': 1, 'c': 10},
+            {'a': 2, 'b': 7, 'a2': 2, 'c': 11},
+            {'a': 2, 'b': 7, 'a2': 2, 'c': 12},
+            {'a': 3, 'b': 8}
+        ])
 
 
-    @unittest.skip
+    def test_data_join_options(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7},
+            {'a': 3, 'b': 8}
+        ]
+        right_data = [
+            {'a': 2, 'c': 10},
+            {'a': 4, 'c': 11},
+            {'a': 4, 'c': 12}
+        ]
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', 'a / denominator', True, {'denominator': 2}], {}),
+            [
+                {'a': 1, 'b': 5, 'a2': 2, 'c': 10},
+                {'a': 1, 'b': 6, 'a2': 2, 'c': 10},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 11},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 12}
+            ]
+        )
+
+
+    def test_data_join_globals(self):
+        left_data = [
+            {'a': 1, 'c': 5},
+            {'a': 2, 'c': 6}
+        ]
+        right_data = [
+            {'b': 1, 'd': 10},
+            {'b': 2, 'd': 11}
+        ]
+        options = {'globals': {'e': 1}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a + e', 'b'], options), [
+            {'a': 1, 'b': 2, 'c': 5, 'd': 11},
+            {'a': 2, 'c': 6}
+        ])
+
+
+    def test_data_join_globals_variables(self):
+        left_data = [
+            {'a': 1, 'c': 5},
+            {'a': 2, 'c': 6}
+        ]
+        right_data = [
+            {'b': 2, 'd': 10},
+            {'b': 3, 'd': 11}
+        ]
+        variables = {'f': 1}
+        options = {'globals': {'e': 1}}
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a + e + f', 'b', None, variables], options), [
+            {'a': 1, 'b': 3, 'c': 5, 'd': 11},
+            {'a': 2, 'c': 6}
+        ])
+
+
+    def test_data_join_runtime(self):
+        options = {
+            'globals': {
+                'documentURL': lambda args, func_options: func_options['urlFn'](args[0])
+            },
+            'urlFn': lambda url: (url if url.startswith('/') else f'/foo/{url}')
+        }
+        left_data = [
+            {'a': '/foo', 'c': 5},
+            {'a': 'bar', 'c': 6}
+        ]
+        right_data = [
+            {'b': '/foo', 'd': 10},
+            {'b': '/foo/bar', 'd': 11}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'documentURL(a)', 'b'], options), [
+            {'a': '/foo', 'b': '/foo', 'c': 5, 'd': 10},
+            {'a': 'bar', 'b': '/foo/bar', 'c': 6, 'd': 11}
+        ])
+
+
     def test_data_parse_csv(self):
-        self.fail()
+        text = '''\
+a,b
+1,3
+'''
+        text2 = '''\
+1,4
+2,5
+'''
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataParseCSV']([text, text2], None), [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ])
 
 
-    @unittest.skip
     def test_data_sort(self):
-        self.fail()
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5},
+            {'a': 3, 'b': 6},
+            {'a': 4, 'b': 7}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataSort']([data, [['a', True], ['b']]], None), [
+            {'a': 4, 'b': 7},
+            {'a': 3, 'b': 6},
+            {'a': 2, 'b': 5},
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4}
+        ])
 
 
-    @unittest.skip
     def test_data_top(self):
-        self.fail()
+        data = [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5},
+            {'a': 3, 'b': 6},
+            {'a': 4, 'b': 7}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataTop']([data, 3], None), [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ])
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataTop']([data, 1, ['a']], None), [
+            {'a': 1, 'b': 3},
+            {'a': 2, 'b': 5},
+            {'a': 3, 'b': 6},
+            {'a': 4, 'b': 7}
+        ])
 
 
-    @unittest.skip
     def test_data_validate(self):
-        self.fail()
+        data = [
+            {'a': '1', 'b': 3},
+            {'a': '1', 'b': 4},
+            {'a': '2', 'b': 5}
+        ]
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataValidate']([data], None), [
+            {'a': '1', 'b': 3},
+            {'a': '1', 'b': 4},
+            {'a': '2', 'b': 5}
+        ])
 
 
     #
@@ -1650,7 +1932,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([dt], None), '2022-06-21T12:30:15.100000+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([{'b': 2, 'a': 1}], None), '{"a":1,"b":2}')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([[1, 2, 3]], None), '[1,2,3]')
-        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([lambda: 1], None), '<function>')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([SCRIPT_FUNCTIONS['stringNew']], None), '<function>')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([re.compile('^test')], None), '<regex>')
 
 
@@ -1767,7 +2049,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([True], None), True)
         self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([False], None), False)
         self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([datetime.datetime.now()], None), True)
-        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([lambda: 1], None), True)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([SCRIPT_FUNCTIONS['systemBoolean']], None), True)
         self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([None], None), False)
         self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([0], None), False)
         self.assertEqual(SCRIPT_FUNCTIONS['systemBoolean']([1], None), True)
@@ -2057,7 +2339,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['systemType']([True], None), 'boolean')
         self.assertEqual(SCRIPT_FUNCTIONS['systemType']([False], None), 'boolean')
         self.assertEqual(SCRIPT_FUNCTIONS['systemType']([datetime.datetime.now()], None), 'datetime')
-        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([lambda: 1], None), 'function')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemType']([SCRIPT_FUNCTIONS['systemType']], None), 'function')
         self.assertEqual(SCRIPT_FUNCTIONS['systemType']([None], None), 'null')
         self.assertEqual(SCRIPT_FUNCTIONS['systemType']([0], None), 'number')
         self.assertEqual(SCRIPT_FUNCTIONS['systemType']([0.], None), 'number')
