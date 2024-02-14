@@ -2,7 +2,7 @@
 # https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE
 
 """
-bare-script library documentation command-line interface (CLI) main module
+bare-script library documentation tool
 """
 
 import argparse
@@ -13,7 +13,7 @@ import sys
 
 def main(argv=None):
     """
-    BareScript library documentation command-line interface (CLI) main entry point
+    BareScript library documentation tool main entry point
     """
 
     # Command line arguments

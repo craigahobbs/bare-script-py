@@ -2,7 +2,7 @@
 # https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE
 
 """
-bare-script command-line interface (CLI) main module
+bare-script command-line interface (CLI)
 """
 
 import argparse
