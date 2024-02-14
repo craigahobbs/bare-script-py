@@ -6,13 +6,14 @@ The BareScript data manipulation library
 """
 
 import datetime
+import functools
 import statistics
 
 from schema_markdown import parse_schema_markdown, validate_type
 
 from .parser import parse_expression
 from .runtime import evaluate_expression
-from .value import parse_datetime, parse_number, value_boolean, value_json
+from .value import parse_datetime, parse_number, value_boolean, value_compare, value_json
 
 
 def validate_data(data, csv=False):
@@ -379,7 +380,7 @@ enum AggregationFunction
 ''')
 
 
-def sort_data(unused_data, unused_sorts):
+def sort_data(data, sorts):
     """
     Sort data rows
 
@@ -391,18 +392,20 @@ def sort_data(unused_data, unused_sorts):
     :rtype: list[dict]
     """
 
-    return None
+    data.sort(key=functools.cmp_to_key(functools.partial(_sort_data_fn, sorts)))
+    return data
 
-    # return data.sort((row1, row2) => sorts.reduce((result, sort) => {
-    #     if result != 0:
-    #         return result
-    #     }
-    #     [field, desc = false] = sort
-    #     value1 = row1[field] ?? null
-    #     value2 = row2[field] ?? null
-    #     compare = compareValues(value1, value2)
-    #     return desc ? -compare : compare
-    # }, 0))
+
+def _sort_data_fn(sorts, row1, row2):
+    for sort in sorts:
+        field = sort[0]
+        desc = sort[1] if len(sort) > 1 else False
+        value1 = row1.get(field)
+        value2 = row2.get(field)
+        result = value_compare(value2, value1) if desc else value_compare(value1, value2)
+        if result != 0:
+            return result
+    return 0
 
 
 def top_data(unused_data, unused_count, unused_category_fields=None):
