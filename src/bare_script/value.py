@@ -92,9 +92,11 @@ def value_json(value, indent=None):
     """
 
     if indent is not None and indent > 0:
-        return _JSONEncoder(allow_nan=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
+        result = _JSONEncoder(allow_nan=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
     else:
-        return _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True).encode(value)
+        result = _JSON_ENCODER_DEFAULT.encode(value)
+    result = _R_VALUE_JSON_NUMBER_CLEANUP.sub(r'', result)
+    return _R_VALUE_JSON_NUMBER_CLEANUP2.sub(r'\1', result)
 
 
 class _JSONEncoder(json.JSONEncoder):
@@ -104,6 +106,11 @@ class _JSONEncoder(json.JSONEncoder):
         if isinstance(o, datetime.datetime):
             return (o if o.tzinfo else o.astimezone(datetime.timezone.utc)).isoformat()
         return None
+
+_JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True)
+
+_R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'.0$')
+_R_VALUE_JSON_NUMBER_CLEANUP2 = re.compile(r'\.0([,}\]])')
 
 
 def value_boolean(value):

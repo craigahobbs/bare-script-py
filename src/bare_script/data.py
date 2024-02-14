@@ -9,6 +9,8 @@ import datetime
 
 from schema_markdown import parse_schema_markdown
 
+from .parser import parse_expression
+from .runtime import evaluate_expression
 from .value import parse_datetime, parse_number, value_json
 
 
@@ -99,8 +101,7 @@ def validate_data(data, csv=False):
     return types
 
 
-def join_data(unused_left_data, unused_right_data, unused_join_expr, unused_right_expr=None, unused_is_left_join=False,
-              unused_variables=None, unused_options=None):
+def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=False, variables=None, options=None):
     """
     Join two data arrays
 
@@ -122,79 +123,66 @@ def join_data(unused_left_data, unused_right_data, unused_join_expr, unused_righ
     :rtype: list[dict]
     """
 
-    return None
+    # Compute the map of row field name to joined row field name
+    left_names = {}
+    right_names_raw = {}
+    right_names = {}
+    for row in left_data:
+        for field_name in row:
+            if field_name not in left_names:
+                left_names[field_name] = field_name
+    for row in right_data:
+        for field_name in row:
+            if field_name not in right_names_raw:
+                right_names_raw[field_name] = field_name
+    for field_name in right_names_raw:
+        if field_name not in left_names:
+            right_names[field_name] = field_name
+        else:
+            unique_name = field_name
+            ix_unique = 2
+            unique_name = f'{field_name}{ix_unique}'
+            right_names[field_name] = unique_name
+            while unique_name in left_names or unique_name in right_names_raw:
+                ix_unique += 1
+                unique_name = f'{field_name}{ix_unique}'
+                right_names[field_name] = unique_name
 
-    # # Compute the map of row field name to joined row field name
-    # leftNames = {}
-    # for (row of leftData) {
-    #     for (fieldName of Object.keys(row)) {
-    #         if !(fieldName in leftNames):
-    #             leftNames[fieldName] = fieldName
-    #         }
-    #     }
-    # }
-    # rightNames = {}
-    # for (row of rightData) {
-    #     for (fieldName of Object.keys(row)) {
-    #         if !(fieldName in rightNames):
-    #             if !(fieldName in leftNames):
-    #                 rightNames[fieldName] = fieldName
-    #             else:
-    #                 uniqueName = fieldName
-    #                 ixUnique = 2
-    #                 do {
-    #                     uniqueName = `${fieldName}${ixUnique}`
-    #                     ixUnique += 1
-    #                 } while (uniqueName in leftNames || uniqueName in rightNames)
-    #                 rightNames[fieldName] = uniqueName
-    #             }
-    #         }
-    #     }
-    # }
+    # Create the evaluation options object
+    eval_options = options
+    if variables is not None:
+        eval_options = dict(options) if options is not None else {}
+        if 'globals' in eval_options:
+            eval_options['globals'] = {**eval_options['globals'], **variables}
+        else:
+            eval_options['globals'] = variables
 
-    # # Create the evaluation options object
-    # evalOptions = options
-    # if variables != null:
-    #     evalOptions = (options != null ? {...options} : {})
-    #     if 'globals' in evalOptions:
-    #         evalOptions.globals = {...evalOptions.globals, ...variables}
-    #     else:
-    #         evalOptions.globals = variables
-    #     }
-    # }
+    # Parse the left and right expressions
+    left_expression = parse_expression(join_expr)
+    right_expression = parse_expression(right_expr) if right_expr is not None else left_expression
 
-    # # Parse the left and right expressions
-    # leftExpression = parseExpression(joinExpr)
-    # rightExpression = (rightExpr != null ? parseExpression(rightExpr) : leftExpression)
+    # Bucket the right rows by the right expression value
+    right_category_rows = {}
+    for right_row in right_data:
+        category_key = value_json(evaluate_expression(right_expression, eval_options, right_row))
+        if category_key not in right_category_rows:
+            right_category_rows[category_key] = []
+        right_category_rows[category_key].append(right_row)
 
-    # # Bucket the right rows by the right expression value
-    # rightCategoryRows = {}
-    # for (rightRow of rightData) {
-    #     categoryKey = jsonStringifySortKeys(evaluateExpression(rightExpression, evalOptions, rightRow))
-    #     if !(categoryKey in rightCategoryRows):
-    #         rightCategoryRows[categoryKey] = []
-    #     }
-    #     rightCategoryRows[categoryKey].push(rightRow)
-    # }
+    # Join the left with the right
+    data = []
+    for left_row in left_data:
+        category_key = value_json(evaluate_expression(left_expression, eval_options, left_row))
+        if category_key in right_category_rows:
+            for right_row in right_category_rows[category_key]:
+                join_row = dict(left_row)
+                for right_name, right_value in right_row.items():
+                    join_row[right_names[right_name]] = right_value
+                data.append(join_row)
+        elif not is_left_join:
+            data.append(dict(left_row))
 
-    # # Join the left with the right
-    # data = []
-    # for (leftRow of leftData) {
-    #     categoryKey = jsonStringifySortKeys(evaluateExpression(leftExpression, evalOptions, leftRow))
-    #     if categoryKey in rightCategoryRows:
-    #         for (rightRow of rightCategoryRows[categoryKey]) {
-    #             joinRow = {...leftRow}
-    #             for ([rightName, rightValue] of Object.entries(rightRow)) {
-    #                 joinRow[rightNames[rightName]] = rightValue
-    #             }
-    #             data.push(joinRow)
-    #         }
-    #     elif !isLeftJoin:
-    #         data.push({...leftRow})
-    #     }
-    # }
-
-    # return data
+    return data
 
 
 def add_calculated_field(unused_unused_data, unused_field_name, unused_expr, unused_variables=None, unused_options=None):

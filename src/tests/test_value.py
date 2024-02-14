@@ -101,6 +101,12 @@ class TestValue(unittest.TestCase):
         # Datetime
         self.assertEqual(value_json(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '"2024-01-12T06:09:00+00:00"')
 
+        # Number
+        self.assertEqual(value_json(5), '5')
+        self.assertEqual(value_json(5.), '5')
+        self.assertEqual(value_json({'a': 5}), '{"a":5}')
+        self.assertEqual(value_json({'a': 5.}), '{"a":5}')
+
         # Invalid
         self.assertEqual(value_json({'A': 1, 'B': re.compile('^$')}), '{"A":1,"B":null}')
         self.assertEqual(value_json(re.compile('^$')), 'null')

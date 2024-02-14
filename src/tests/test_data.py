@@ -6,7 +6,7 @@
 import datetime
 import unittest
 
-from bare_script import validate_data
+from bare_script import join_data, validate_data
 
 
 class TestData(unittest.TestCase):
@@ -231,3 +231,128 @@ class TestData(unittest.TestCase):
         with self.assertRaises(TypeError) as cm_exc:
             validate_data(data, True)
         self.assertEqual(str(cm_exc.exception), 'Invalid "A" field value 2, expected type string')
+
+
+    def test_join_data(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7},
+            {'a': 3, 'b': 8}
+        ]
+        right_data = [
+            {'a': 1, 'c': 10},
+            {'a': 2, 'c': 11},
+            {'a': 2, 'c': 12}
+        ]
+        self.assertListEqual(join_data(left_data, right_data, 'a'), [
+            {'a': 1, 'b': 5, 'a2': 1, 'c': 10},
+            {'a': 1, 'b': 6, 'a2': 1, 'c': 10},
+            {'a': 2, 'b': 7, 'a2': 2, 'c': 11},
+            {'a': 2, 'b': 7, 'a2': 2, 'c': 12},
+            {'a': 3, 'b': 8}
+        ])
+
+
+    def test_join_data_left(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 2, 'b': 7}
+        ]
+        right_data = [
+            {'a': 1, 'c': 10}
+        ]
+        self.assertListEqual(join_data(left_data, right_data, 'a'), [
+            {'a': 1, 'b': 5, 'a2': 1, 'c': 10},
+            {'a': 2, 'b': 7}
+        ])
+        self.assertListEqual(join_data(left_data, right_data, 'a', is_left_join=True), [
+            {'a': 1, 'b': 5, 'a2': 1, 'c': 10}
+        ])
+
+
+    def test_join_data_variables(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7}
+        ]
+        right_data = [
+            {'a': 2, 'c': 10},
+            {'a': 4, 'c': 11},
+            {'a': 4, 'c': 12}
+        ]
+        self.assertListEqual(
+            join_data(left_data, right_data, 'a', 'a / denominator', variables={'denominator': 2}),
+            [
+                {'a': 1, 'b': 5, 'a2': 2, 'c': 10},
+                {'a': 1, 'b': 6, 'a2': 2, 'c': 10},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 11},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 12}
+            ]
+        )
+
+
+    def test_join_data_globals(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7}
+        ]
+        right_data = [
+            {'a': 2, 'c': 10},
+            {'a': 4, 'c': 11},
+            {'a': 4, 'c': 12}
+        ]
+        self.assertListEqual(
+            join_data(left_data, right_data, 'a', 'a / denominator', options = {'globals': {'denominator': 2}}),
+            [
+                {'a': 1, 'b': 5, 'a2': 2, 'c': 10},
+                {'a': 1, 'b': 6, 'a2': 2, 'c': 10},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 11},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 12}
+            ]
+        )
+
+
+    def test_join_data_globals_variables(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7}
+        ]
+        right_data = [
+            {'a': 2, 'c': 10},
+            {'a': 4, 'c': 11},
+            {'a': 4, 'c': 12}
+        ]
+        self.assertListEqual(
+            join_data(left_data, right_data, 'a', 'a / (d1 + d2)', False, {'d1': 1.5}, {'globals': {'d2': 0.5}}),
+            [
+                {'a': 1, 'b': 5, 'a2': 2, 'c': 10},
+                {'a': 1, 'b': 6, 'a2': 2, 'c': 10},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 11},
+                {'a': 2, 'b': 7, 'a2': 4, 'c': 12}
+            ]
+        )
+
+
+    def test_join_data_unique(self):
+        left_data = [
+            {'a': 1, 'b': 5},
+            {'a': 1, 'b': 6},
+            {'a': 2, 'b': 7},
+            {'a': 3, 'b': 8}
+        ]
+        right_data = [
+            {'a': 1, 'a2': 0, 'c': 10},
+            {'a': 2, 'a2': 0, 'c': 11},
+            {'a': 2, 'a2': 0, 'c': 12}
+        ]
+        self.assertListEqual(join_data(left_data, right_data, 'a'), [
+            {'a': 1, 'b': 5, 'a2': 0, 'a3': 1, 'c': 10},
+            {'a': 1, 'b': 6, 'a2': 0, 'a3': 1, 'c': 10},
+            {'a': 2, 'b': 7, 'a2': 0, 'a3': 2, 'c': 11},
+            {'a': 2, 'b': 7, 'a2': 0, 'a3': 2, 'c': 12},
+            {'a': 3, 'b': 8}
+        ])
