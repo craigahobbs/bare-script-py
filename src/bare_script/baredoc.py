@@ -19,7 +19,7 @@ def main(argv=None):
     # Command line arguments
     parser = argparse.ArgumentParser(prog='bare', description='The BareScript library documentation tool')
     parser.add_argument('files', metavar='file', nargs='+', help='files to process')
-    parser.add_argument('-o', dest='output', metavar='file', help='write output to file')
+    parser.add_argument('-o', dest='output', metavar='file', default='-', help='write output to file (default is "-")')
     args = parser.parse_args(args=argv)
 
     # Parse each source file line-by-line
@@ -115,11 +115,9 @@ def main(argv=None):
                 continue
 
     # Create the library documentation model
-    library = {
-        'functions': sorted(funcs.values(), key=lambda func: func['name'])
-    }
+    library = {'functions': sorted(funcs.values(), key=lambda func: func['name'])}
 
-    # Validate
+    # Validate the library documentation model
     if len(library['functions']) == 0:
         errors.append('error: No library functions')
     for func in library['functions']:
@@ -138,7 +136,7 @@ def main(argv=None):
     library_json = json.dumps(library, separators=(',', ':'), sort_keys=True)
 
     # Output to stdout?
-    if args.output is None or args.output == '-':
+    if args.output == '-':
         print(library_json)
 
     # Output to file
