@@ -313,6 +313,7 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1], None), [2, 3, 4])
 
         # Empty slice
+        self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 4], None), [])
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 1, 1], None), [])
 
         # End index less than start index
@@ -322,24 +323,24 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 1, 3], None))
 
         # Start index outside valid range
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, -1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 4], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, -1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 5], None))
 
         # Non-number start index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 'abc'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 'abc'], None))
 
         # Non-integer start index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 1.5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 1.5], None))
 
         # End index outside valid range
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, -1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, 5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, -1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 5], None))
 
         # Non-number end index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, 'abc'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 'abc'], None))
 
         # Non-integer end index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 0, 1.5], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 1.5], None))
 
 
     def test_array_sort(self):
@@ -1978,6 +1979,10 @@ a,b
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1., 5.], None), 'oo b')
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 0, 7], None), 'foo bar')
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 6], None), 'oo ba')
+
+        # Empty slice
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 7], None), '')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 1], None), '')
 
         # No end index
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1], None), 'oo bar')

@@ -253,7 +253,7 @@ def _array_slice(args, unused_options):
     array, start, end = default_args(args, (None, 0, None))
     if isinstance(array, list) and end is None:
         end = len(array)
-    if not isinstance(array, list) or not isinstance(start, (int, float)) or int(start) != start or start < 0 or start >= len(array) or \
+    if not isinstance(array, list) or not isinstance(start, (int, float)) or int(start) != start or start < 0 or start > len(array) or \
        not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(array):
         return None
 
@@ -1492,7 +1492,7 @@ def _string_slice(args, unused_options):
     if end is None and isinstance(string, str):
         end = len(string)
     if not isinstance(string, str) or \
-       not isinstance(begin, (int, float)) or int(begin) != begin or begin < 0 or begin >= len(string) or \
+       not isinstance(begin, (int, float)) or int(begin) != begin or begin < 0 or begin > len(string) or \
        not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(string):
         return None
 

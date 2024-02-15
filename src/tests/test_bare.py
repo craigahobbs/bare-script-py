@@ -138,6 +138,19 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 2)
 
 
+    def test_main_variables(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'systemLog("Hi " + vName + "!")', '-v', 'vName', '"Bob"'])
+
+            self.assertEqual(mock_stdout.getvalue(), 'Hi Bob!\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
     def test_main_debug(self):
         with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \

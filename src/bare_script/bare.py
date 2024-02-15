@@ -12,8 +12,8 @@ import time
 
 from .model import lint_script
 from .options import fetch_read_write, log_print, url_file_relative
-from .parser import parse_script
-from .runtime import execute_script
+from .parser import parse_expression, parse_script
+from .runtime import evaluate_expression, execute_script
 
 
 def main(argv=None):
@@ -35,7 +35,10 @@ def main(argv=None):
     inline_count = 0
     try:
         # Parse and execute all source files in order
-        globals_ = dict(args.var) if args.var is not None else {}
+        if args.var is not None:
+            globals_ = {var_name: evaluate_expression(parse_expression(var_expr)) for var_name, var_expr in args.var}
+        else:
+            globals_ = {}
         for script_type, script_value in args.scripts:
             # Get the script source
             if script_type == 'file':
