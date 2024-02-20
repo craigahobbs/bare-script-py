@@ -594,24 +594,24 @@ class TestLibrary(unittest.TestCase):
 
     def test_data_parse_csv(self):
         text = '''\
-a,b
-1,3
+a,b,c
+1,3,abc
 '''
         text2 = '''\
-1,4
+1,4,
 2,5
 '''
         self.assertListEqual(SCRIPT_FUNCTIONS['dataParseCSV']([text, text2], None), [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
+            {'a': 1, 'b': 3, 'c': 'abc'},
+            {'a': 1, 'b': 4, 'c': ''},
+            {'a': 2, 'b': 5, 'c': None}
         ])
 
         # None arg
         self.assertListEqual(SCRIPT_FUNCTIONS['dataParseCSV']([text, None, text2], None), [
-            {'a': 1, 'b': 3},
-            {'a': 1, 'b': 4},
-            {'a': 2, 'b': 5}
+            {'a': 1, 'b': 3, 'c': 'abc'},
+            {'a': 1, 'b': 4, 'c': ''},
+            {'a': 2, 'b': 5, 'c': None}
         ])
 
         # Non-string
