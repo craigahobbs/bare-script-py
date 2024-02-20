@@ -104,7 +104,7 @@ class _JSONEncoder(json.JSONEncoder):
 
     def default(self, o):
         if isinstance(o, datetime.datetime):
-            return (o if o.tzinfo else o.astimezone(datetime.timezone.utc)).isoformat()
+            return o.astimezone(datetime.timezone.utc).isoformat()
         return None
 
 _JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True)

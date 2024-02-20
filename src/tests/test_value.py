@@ -101,6 +101,12 @@ class TestValue(unittest.TestCase):
         # Datetime
         self.assertEqual(value_json(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '"2024-01-12T06:09:00+00:00"')
 
+        # Datetime (non-UTC)
+        dt = datetime.datetime(2024, 1, 12, 6, 9).astimezone()
+        self.assertEqual(value_compare(parse_datetime(value_json(dt)[1:-1]), dt), 0)
+        self.assertTrue(value_json(dt).startswith('"2024-01-'))
+        self.assertTrue(value_json(dt).endswith(':09:00+00:00"'))
+
         # Number
         self.assertEqual(value_json(5), '5')
         self.assertEqual(value_json(5.), '5')
