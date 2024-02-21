@@ -8,7 +8,7 @@ import unittest
 import unittest.mock
 import urllib.request
 
-from bare_script import fetch_http, fetch_read_only, fetch_read_write, log_print, url_file_relative
+from bare_script import fetch_http, fetch_read_only, fetch_read_write, log_stdout, url_file_relative
 
 
 class MockResponse:
@@ -160,9 +160,9 @@ class TestOptions(unittest.TestCase):
             mock_file().write.assert_called_with('Hello!')
 
 
-    def test_log_print(self):
+    def test_log_stdout(self):
         with unittest.mock.patch('builtins.print') as mock_print:
-            log_print('Hello!')
+            log_stdout('Hello!')
             mock_print.assert_called_once_with("Hello!")
 
 

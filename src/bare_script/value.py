@@ -77,6 +77,7 @@ def value_string(value):
     # Unknown value type
     return '<unknown>'
 
+
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 
 
@@ -107,9 +108,10 @@ class _JSONEncoder(json.JSONEncoder):
             return o.astimezone(datetime.timezone.utc).isoformat()
         return None
 
+
 _JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True)
 
-_R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'.0$')
+_R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'.0$', re.MULTILINE)
 _R_VALUE_JSON_NUMBER_CLEANUP2 = re.compile(r'\.0([,}\]])')
 
 
@@ -132,16 +134,10 @@ def value_boolean(value):
         return value != 0
     elif isinstance(value, datetime.datetime):
         return True
-    elif isinstance(value, dict):
-        return True
     elif isinstance(value, list):
         return len(value) != 0
-    elif callable(value):
-        return True
-    elif isinstance(value, REGEX_TYPE):
-        return True
 
-    # Unknown value type
+    # Everything else is true
     return True
 
 
@@ -244,5 +240,6 @@ def parse_datetime(text):
         return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', text))
     except ValueError:
         return None
+
 
 _R_ZULU = re.compile(r'Z$')

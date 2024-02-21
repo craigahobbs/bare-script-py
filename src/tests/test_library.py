@@ -11,7 +11,7 @@ import unittest
 
 import schema_markdown
 
-from bare_script import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from bare_script.value import REGEX_TYPE
 
 

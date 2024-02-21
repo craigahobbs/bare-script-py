@@ -1196,7 +1196,7 @@ def _regex_new(args, unused_options):
         return None
 
     # Translate JavaScript named group syntax to Python
-    pattern = R_REGEX_NEW_NAMED.sub(r'(?P<\1>', pattern)
+    pattern = _R_REGEX_NEW_NAMED.sub(r'(?P<\1>', pattern)
 
     # Compute the flags mask
     flags_mask = 0
@@ -1214,7 +1214,7 @@ def _regex_new(args, unused_options):
     return re.compile(pattern, flags_mask)
 
 
-R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
+_R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 
 
 # $function: regexReplace
@@ -1236,14 +1236,14 @@ def _regex_replace(args, unused_options):
     substr = substr.replace('$$', '$')
 
     # Translate JavaScript replacers to Python replacers
-    substr = R_REGEX_REPLACE_INDEX.sub(r'\\\1', substr)
-    substr = R_REGEX_REPLACE_NAMED.sub(r'\\g<\1>', substr)
+    substr = _R_REGEX_REPLACE_INDEX.sub(r'\\\1', substr)
+    substr = _R_REGEX_REPLACE_NAMED.sub(r'\\g<\1>', substr)
 
     return regex.sub(substr, string)
 
 
-R_REGEX_REPLACE_INDEX = re.compile(r'\$(\d+)')
-R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
+_R_REGEX_REPLACE_INDEX = re.compile(r'\$(\d+)')
+_R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 
 
 # $function: regexSplit

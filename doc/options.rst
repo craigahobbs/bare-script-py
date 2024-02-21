@@ -85,7 +85,7 @@ Log Functions
    :type text: str
 
 
-.. autofunction:: bare_script.log_print
+.. autofunction:: bare_script.log_stdout
 
 
 URL Functions

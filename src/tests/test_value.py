@@ -112,6 +112,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_json(5.), '5')
         self.assertEqual(value_json({'a': 5}), '{"a":5}')
         self.assertEqual(value_json({'a': 5.}), '{"a":5}')
+        self.assertEqual(value_json({'a': 5., 'b': 6.}, 4), '''\
+{
+    "a": 5,
+    "b": 6
+}''')
 
         # Invalid
         self.assertEqual(value_json({'A': 1, 'B': re.compile('^$')}), '{"A":1,"B":null}')

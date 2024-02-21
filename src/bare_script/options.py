@@ -70,7 +70,7 @@ def fetch_read_write(request):
         return fh.read()
 
 
-def log_print(message):
+def log_stdout(message):
     """
     A :func:`log function <log_fn>` implementation that uses print
     """

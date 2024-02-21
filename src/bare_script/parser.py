@@ -9,33 +9,31 @@ import re
 
 
 # BareScript regex
-R_SCRIPT_LINE_SPLIT = re.compile(r'\r?\n')
-R_SCRIPT_CONTINUATION = re.compile(r'\\\s*$')
-R_SCRIPT_COMMENT = re.compile(r'^\s*(?:#.*)?$')
-R_SCRIPT_ASSIGNMENT = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*=\s*(?P<expr>.+)$')
-R_SCRIPT_FUNCTION_BEGIN = re.compile(
+_R_SCRIPT_LINE_SPLIT = re.compile(r'\r?\n')
+_R_SCRIPT_CONTINUATION = re.compile(r'\\\s*$')
+_R_SCRIPT_COMMENT = re.compile(r'^\s*(?:#.*)?$')
+_R_SCRIPT_ASSIGNMENT = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*=\s*(?P<expr>.+)$')
+_R_SCRIPT_FUNCTION_BEGIN = re.compile(
     r'^(?P<async>\s*async)?\s*function\s+(?P<name>[A-Za-z_]\w*)\s*\('
     r'\s*(?P<args>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)?(?P<lastArgArray>\s*\.\.\.)?\s*\)\s*:\s*$'
 )
-R_SCRIPT_FUNCTION_ARG_SPLIT = re.compile(r'\s*,\s*')
-R_SCRIPT_FUNCTION_END = re.compile(r'^\s*endfunction\s*$')
-R_SCRIPT_LABEL = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*:\s*$')
-R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s+(?P<name>[A-Za-z_]\w*)\s*$')
-R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>.+))?)\s*$')
-R_SCRIPT_INCLUDE = re.compile(r'^\s*include\s+(?P<delim>\')(?P<url>(?:\\\'|[^\'])*)\'\s*$')
-R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>\s*$')
-R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:\s*$')
-R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:\s*$')
-R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:\s*$')
-R_SCRIPT_IF_END = re.compile(r'^\s*endif\s*$')
-R_SCRIPT_FOR_BEGIN = re.compile(
-    r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:\s*$'
-)
-R_SCRIPT_FOR_END = re.compile(r'^\s*endfor\s*$')
-R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:\s*$')
-R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile\s*$')
-R_SCRIPT_BREAK = re.compile(r'^\s*break\s*$')
-R_SCRIPT_CONTINUE = re.compile(r'^\s*continue\s*$')
+_R_SCRIPT_FUNCTION_ARG_SPLIT = re.compile(r'\s*,\s*')
+_R_SCRIPT_FUNCTION_END = re.compile(r'^\s*endfunction\s*$')
+_R_SCRIPT_LABEL = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*:\s*$')
+_R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s+(?P<name>[A-Za-z_]\w*)\s*$')
+_R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>.+))?)\s*$')
+_R_SCRIPT_INCLUDE = re.compile(r'^\s*include\s+(?P<delim>\')(?P<url>(?:\\\'|[^\'])*)\'\s*$')
+_R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>\s*$')
+_R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:\s*$')
+_R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:\s*$')
+_R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:\s*$')
+_R_SCRIPT_IF_END = re.compile(r'^\s*endif\s*$')
+_R_SCRIPT_FOR_BEGIN = re.compile(r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:\s*$')
+_R_SCRIPT_FOR_END = re.compile(r'^\s*endfor\s*$')
+_R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:\s*$')
+_R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile\s*$')
+_R_SCRIPT_BREAK = re.compile(r'^\s*break\s*$')
+_R_SCRIPT_CONTINUE = re.compile(r'^\s*continue\s*$')
 
 
 def parse_script(script_text, start_line_number=1):
@@ -56,10 +54,10 @@ def parse_script(script_text, start_line_number=1):
     # Line-split all script text
     lines = []
     if isinstance(script_text, str):
-        lines.extend(R_SCRIPT_LINE_SPLIT.split(script_text))
+        lines.extend(_R_SCRIPT_LINE_SPLIT.split(script_text))
     else:
         for script_text_part in script_text:
-            lines.extend(R_SCRIPT_LINE_SPLIT.split(script_text_part))
+            lines.extend(_R_SCRIPT_LINE_SPLIT.split(script_text_part))
 
     # Process each line
     line_continuation = []
@@ -71,7 +69,7 @@ def parse_script(script_text, start_line_number=1):
         statements = function_def['function']['statements'] if function_def is not None else script['statements']
 
         # Comment?
-        if R_SCRIPT_COMMENT.match(line_part) is not None:
+        if _R_SCRIPT_COMMENT.match(line_part) is not None:
             continue
 
         # Set the line index
@@ -80,7 +78,7 @@ def parse_script(script_text, start_line_number=1):
             ix_line = ix_line_part
 
         # Line continuation?
-        line_part_no_continuation = R_SCRIPT_CONTINUATION.sub('', line_part)
+        line_part_no_continuation = _R_SCRIPT_CONTINUATION.sub('', line_part)
         if line_part != line_part_no_continuation:
             line_continuation.append(line_part_no_continuation.strip() if is_continued else line_part_no_continuation.rstrip())
             continue
@@ -95,7 +93,7 @@ def parse_script(script_text, start_line_number=1):
             line = line_part
 
         # Assignment?
-        match_assignment = R_SCRIPT_ASSIGNMENT.match(line)
+        match_assignment = _R_SCRIPT_ASSIGNMENT.match(line)
         if match_assignment:
             try:
                 expr_statement = {
@@ -111,7 +109,7 @@ def parse_script(script_text, start_line_number=1):
                 raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line)
 
         # Function definition begin?
-        match_function_begin = R_SCRIPT_FUNCTION_BEGIN.match(line)
+        match_function_begin = _R_SCRIPT_FUNCTION_BEGIN.match(line)
         if match_function_begin:
             # Nested function definitions are not allowed
             if function_def is not None:
@@ -126,7 +124,7 @@ def parse_script(script_text, start_line_number=1):
                 }
             }
             if match_function_begin.group('args') is not None:
-                function_def['function']['args'] = R_SCRIPT_FUNCTION_ARG_SPLIT.split(match_function_begin.group('args'))
+                function_def['function']['args'] = _R_SCRIPT_FUNCTION_ARG_SPLIT.split(match_function_begin.group('args'))
             if match_function_begin.group('async') is not None:
                 function_def['function']['async'] = True
             if match_function_begin.group('lastArgArray') is not None:
@@ -135,7 +133,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Function definition end?
-        match_function_end = R_SCRIPT_FUNCTION_END.match(line)
+        match_function_end = _R_SCRIPT_FUNCTION_END.match(line)
         if match_function_end:
             if function_def is None:
                 raise BareScriptParserError('No matching function definition', line, 1, start_line_number + ix_line)
@@ -152,7 +150,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # If-then begin?
-        match_if_begin = R_SCRIPT_IF_BEGIN.match(line)
+        match_if_begin = _R_SCRIPT_IF_BEGIN.match(line)
         if match_if_begin:
             # Add the if-then label definition
             ifthen = {
@@ -173,7 +171,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Else-if-then?
-        match_if_else_if = R_SCRIPT_IF_ELSE_IF.match(line)
+        match_if_else_if = _R_SCRIPT_IF_ELSE_IF.match(line)
         if match_if_else_if:
             # Get the if-then definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -202,7 +200,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Else-then?
-        match_if_else = R_SCRIPT_IF_ELSE.match(line)
+        match_if_else = _R_SCRIPT_IF_ELSE.match(line)
         if match_if_else:
             # Get the if-then definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -223,7 +221,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # If-then end?
-        match_if_end = R_SCRIPT_IF_END.match(line)
+        match_if_end = _R_SCRIPT_IF_END.match(line)
         if match_if_end:
             # Pop the if-then definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -240,7 +238,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # While-do begin?
-        match_while_begin = R_SCRIPT_WHILE_BEGIN.match(line)
+        match_while_begin = _R_SCRIPT_WHILE_BEGIN.match(line)
         if match_while_begin:
             # Add the while-do label
             whiledo = {
@@ -260,7 +258,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # While-do end?
-        match_while_end = R_SCRIPT_WHILE_END.match(line)
+        match_while_end = _R_SCRIPT_WHILE_END.match(line)
         if match_while_end:
             # Pop the while-do definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -277,7 +275,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # For-each begin?
-        match_for_begin = R_SCRIPT_FOR_BEGIN.match(line)
+        match_for_begin = _R_SCRIPT_FOR_BEGIN.match(line)
         if match_for_begin:
             # Add the for-each label
             foreach = {
@@ -312,7 +310,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # For-each end?
-        match_for_end = R_SCRIPT_FOR_END.match(line)
+        match_for_end = _R_SCRIPT_FOR_END.match(line)
         if match_for_end:
             # Pop the foreach definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -340,7 +338,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Break statement?
-        match_break = R_SCRIPT_BREAK.match(line)
+        match_break = _R_SCRIPT_BREAK.match(line)
         if match_break:
             # Get the loop definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -356,7 +354,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Continue statement?
-        match_continue = R_SCRIPT_CONTINUE.match(line)
+        match_continue = _R_SCRIPT_CONTINUE.match(line)
         if match_continue:
             # Get the loop definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
@@ -373,13 +371,13 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Label definition?
-        match_label = R_SCRIPT_LABEL.match(line)
+        match_label = _R_SCRIPT_LABEL.match(line)
         if match_label:
             statements.append({'label': match_label.group('name')})
             continue
 
         # Jump definition?
-        match_jump = R_SCRIPT_JUMP.match(line)
+        match_jump = _R_SCRIPT_JUMP.match(line)
         if match_jump:
             jump_statement = {'jump': {'label': match_jump.group('name')}}
             if match_jump.group('expr'):
@@ -392,7 +390,7 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Return definition?
-        match_return = R_SCRIPT_RETURN.match(line)
+        match_return = _R_SCRIPT_RETURN.match(line)
         if match_return:
             return_statement = {'return': {}}
             if match_return.group('expr'):
@@ -405,10 +403,10 @@ def parse_script(script_text, start_line_number=1):
             continue
 
         # Include definition?
-        match_include = R_SCRIPT_INCLUDE.match(line) or R_SCRIPT_INCLUDE_SYSTEM.match(line)
+        match_include = _R_SCRIPT_INCLUDE.match(line) or _R_SCRIPT_INCLUDE_SYSTEM.match(line)
         if match_include:
             delim = match_include.group('delim')
-            url = match_include.group('url') if delim == '<' else R_EXPR_STRING_ESCAPE.sub('\\1', match_include.group('url'))
+            url = match_include.group('url') if delim == '<' else _R_EXPR_STRING_ESCAPE.sub('\\1', match_include.group('url'))
             include_statement = statements[-1] if statements else None
             if include_statement is None or 'include' not in include_statement:
                 include_statement = {'include': {'includes': []}}
@@ -434,21 +432,21 @@ def parse_script(script_text, start_line_number=1):
 
 
 # BareScript expression regex
-R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<=|<|>=|>|==|!=|&&|\|\|)')
-R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-)')
-R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
-R_EXPR_FUNCTION_SEPARATOR = re.compile(r'^\s*,')
-R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
-R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')
-R_EXPR_GROUP_CLOSE = re.compile(r'^\s*\)')
-R_EXPR_NUMBER = re.compile(r'^\s*([+-]?\d+(?:\.\d*)?(?:e[+-]\d+)?)')
-R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
-R_EXPR_STRING_ESCAPE = re.compile(r'\\([\\\'])')
-R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')
-R_EXPR_STRING_DOUBLE_ESCAPE = re.compile(r'\\([\\"])')
-R_EXPR_VARIABLE = re.compile(r'^\s*([A-Za-z_]\w*)')
-R_EXPR_VARIABLE_EX = re.compile(r'^\s*\[\s*((?:\\\]|[^\]])+)\s*\]')
-R_EXPR_VARIABLE_EX_ESCAPE = re.compile(r'\\([\\\]])')
+_R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<=|<|>=|>|==|!=|&&|\|\|)')
+_R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-)')
+_R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
+_R_EXPR_FUNCTION_SEPARATOR = re.compile(r'^\s*,')
+_R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
+_R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')
+_R_EXPR_GROUP_CLOSE = re.compile(r'^\s*\)')
+_R_EXPR_NUMBER = re.compile(r'^\s*([+-]?\d+(?:\.\d*)?(?:e[+-]\d+)?)')
+_R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
+_R_EXPR_STRING_ESCAPE = re.compile(r'\\([\\\'])')
+_R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')
+_R_EXPR_STRING_DOUBLE_ESCAPE = re.compile(r'\\([\\"])')
+_R_EXPR_VARIABLE = re.compile(r'^\s*([A-Za-z_]\w*)')
+_R_EXPR_VARIABLE_EX = re.compile(r'^\s*\[\s*((?:\\\]|[^\]])+)\s*\]')
+_R_EXPR_VARIABLE_EX_ESCAPE = re.compile(r'\\([\\\]])')
 
 
 # Binary operator re-order map
@@ -500,7 +498,7 @@ def _parse_binary_expression(expr_text, bin_left_expr=None):
         left_expr, bin_text = _parse_unary_expression(expr_text)
 
     # Match a binary operator - if not found, return the left expression
-    match_binary_op = R_EXPR_BINARY_OP.match(bin_text)
+    match_binary_op = _R_EXPR_BINARY_OP.match(bin_text)
     if match_binary_op is None:
         return [left_expr, bin_text]
     bin_op = match_binary_op.group(1)
@@ -528,17 +526,17 @@ def _parse_binary_expression(expr_text, bin_left_expr=None):
 # Helper function to parse a unary expression
 def _parse_unary_expression(expr_text):
     # Group open?
-    match_group_open = R_EXPR_GROUP_OPEN.match(expr_text)
+    match_group_open = _R_EXPR_GROUP_OPEN.match(expr_text)
     if match_group_open:
         group_text = expr_text[len(match_group_open.group(0)):]
         expr, next_text = _parse_binary_expression(group_text)
-        match_group_close = R_EXPR_GROUP_CLOSE.match(next_text)
+        match_group_close = _R_EXPR_GROUP_CLOSE.match(next_text)
         if match_group_close is None:
             raise BareScriptParserError('Unmatched parenthesis', expr_text)
         return [{'group': expr}, next_text[len(match_group_close.group(0)):]]
 
     # Unary operator?
-    match_unary = R_EXPR_UNARY_OP.match(expr_text)
+    match_unary = _R_EXPR_UNARY_OP.match(expr_text)
     if match_unary:
         unary_text = expr_text[len(match_unary.group(0)):]
         expr, next_text = _parse_unary_expression(unary_text)
@@ -546,20 +544,20 @@ def _parse_unary_expression(expr_text):
         return [unary_expr, next_text]
 
     # Function?
-    match_function_open = R_EXPR_FUNCTION_OPEN.match(expr_text)
+    match_function_open = _R_EXPR_FUNCTION_OPEN.match(expr_text)
     if match_function_open:
         arg_text = expr_text[len(match_function_open.group(0)):]
         args = []
         while True:
             # Function close?
-            match_function_close = R_EXPR_FUNCTION_CLOSE.match(arg_text)
+            match_function_close = _R_EXPR_FUNCTION_CLOSE.match(arg_text)
             if match_function_close:
                 arg_text = arg_text[len(match_function_close.group(0)):]
                 break
 
             # Function argument separator
             if args:
-                match_function_separator = R_EXPR_FUNCTION_SEPARATOR.match(arg_text)
+                match_function_separator = _R_EXPR_FUNCTION_SEPARATOR.match(arg_text)
                 if match_function_separator is None:
                     raise BareScriptParserError('Syntax error', arg_text)
                 arg_text = arg_text[len(match_function_separator.group(0)):]
@@ -573,36 +571,36 @@ def _parse_unary_expression(expr_text):
         return [fn_expr, arg_text]
 
     # Number?
-    match_number = R_EXPR_NUMBER.match(expr_text)
+    match_number = _R_EXPR_NUMBER.match(expr_text)
     if match_number:
         number = float(match_number.group(1))
         expr = {'number': number}
         return [expr, expr_text[len(match_number.group(0)):]]
 
     # String?
-    match_string = R_EXPR_STRING.match(expr_text)
+    match_string = _R_EXPR_STRING.match(expr_text)
     if match_string:
-        string = R_EXPR_STRING_ESCAPE.sub('\\1', match_string.group(1))
+        string = _R_EXPR_STRING_ESCAPE.sub('\\1', match_string.group(1))
         expr = {'string': string}
         return [expr, expr_text[len(match_string.group(0)):]]
 
     # String (double quotes)?
-    match_string_double = R_EXPR_STRING_DOUBLE.match(expr_text)
+    match_string_double = _R_EXPR_STRING_DOUBLE.match(expr_text)
     if match_string_double:
-        string = R_EXPR_STRING_DOUBLE_ESCAPE.sub('\\1', match_string_double.group(1))
+        string = _R_EXPR_STRING_DOUBLE_ESCAPE.sub('\\1', match_string_double.group(1))
         expr = {'string': string}
         return [expr, expr_text[len(match_string_double.group(0)):]]
 
     # Variable?
-    match_variable = R_EXPR_VARIABLE.match(expr_text)
+    match_variable = _R_EXPR_VARIABLE.match(expr_text)
     if match_variable:
         expr = {'variable': match_variable.group(1)}
         return [expr, expr_text[len(match_variable.group(0)):]]
 
     # Variable (brackets)?
-    match_variable_ex = R_EXPR_VARIABLE_EX.match(expr_text)
+    match_variable_ex = _R_EXPR_VARIABLE_EX.match(expr_text)
     if match_variable_ex:
-        variable_name = R_EXPR_VARIABLE_EX_ESCAPE.sub('\\1', match_variable_ex.group(1))
+        variable_name = _R_EXPR_VARIABLE_EX_ESCAPE.sub('\\1', match_variable_ex.group(1))
         expr = {'variable': variable_name}
         return [expr, expr_text[len(match_variable_ex.group(0)):]]
 

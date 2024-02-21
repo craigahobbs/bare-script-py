@@ -11,9 +11,10 @@ import sys
 import time
 
 from .model import lint_script
-from .options import fetch_read_write, log_print, url_file_relative
+from .options import fetch_read_write, log_stdout, url_file_relative
 from .parser import parse_expression, parse_script
 from .runtime import evaluate_expression, execute_script
+from .value import value_boolean
 
 
 def main(argv=None):
@@ -74,14 +75,14 @@ def main(argv=None):
                 'debug': args.debug or False,
                 'fetchFn': fetch_read_write,
                 'globals': globals_,
-                'logFn': log_print,
+                'logFn': log_stdout,
                 'systemPrefix': 'https://craigahobbs.github.io/markdown-up/include/',
                 'urlFn': partial(url_file_relative, script_value) if script_type == 'file' else None
             })
             if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:
                 status_code = int(result)
             else:
-                status_code = 1 if result else 0
+                status_code = 1 if value_boolean(result) else 0
 
             # Log script execution end with timing
             if args.debug:

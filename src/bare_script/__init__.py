@@ -14,12 +14,7 @@ from .data import \
     top_data, \
     validate_data
 
-from .library import \
-    EXPRESSION_FUNCTIONS, \
-    SCRIPT_FUNCTIONS
-
 from .model import \
-    BARE_SCRIPT_TYPES, \
     lint_script, \
     validate_expression, \
     validate_script
@@ -28,7 +23,7 @@ from .options import \
     fetch_http, \
     fetch_read_only, \
     fetch_read_write, \
-    log_print, \
+    log_stdout, \
     url_file_relative
 
 from .parser import \
