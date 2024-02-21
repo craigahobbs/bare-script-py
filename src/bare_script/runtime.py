@@ -37,9 +37,7 @@ def execute_script(script, options=None):
         options['globals'] = globals_
 
     # Set the script function globals variables
-    for script_func_name, script_func in SCRIPT_FUNCTIONS.items():
-        if script_func_name not in globals_:
-            globals_[script_func_name] = script_func
+    globals_.update(name_func for name_func in SCRIPT_FUNCTIONS.items() if name_func[0] not in globals_)
 
     # Execute the script
     options['statementCount'] = 0
