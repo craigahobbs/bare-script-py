@@ -35,7 +35,7 @@ doc:
 	cp -R static/* build/doc/html
 
     # Generate the library documentation
-	$(DEFAULT_VENV_CMD)/baredoc src/bare_script/library.py -o build/doc/html/library/library.json
+	$(DEFAULT_VENV_BIN)/baredoc src/bare_script/library.py -o build/doc/html/library/library.json
 
     # Generate the expression library documentation
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" build/doc/html/library/library.json build/doc/html/library/expression.json
@@ -102,7 +102,7 @@ export DOC_RUNTIME_MODEL_PY
 perf: $(DEFAULT_VENV_BUILD)
 	mkdir -p $(dir $(PERF_JSON))
 	echo "[" > $(PERF_JSON)
-	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "BareScript", "timeMs": '$$($(DEFAULT_VENV_CMD)/bare perf/test.bare)'},' >> $(PERF_JSON); done
+	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "BareScript", "timeMs": '$$($(DEFAULT_VENV_BIN)/bare perf/test.bare)'},' >> $(PERF_JSON); done
 	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "Python", "timeMs": '$$($(DEFAULT_VENV_PYTHON) perf/test.py)'},' >> $(PERF_JSON); done
 	echo '{}' >> $(PERF_JSON)
 	echo "]" >> $(PERF_JSON)
