@@ -42,22 +42,36 @@ def validate_data(data, csv=False):
     types = {}
     for row in data:
         for field, value in row.items():
-            if field not in types:
+            if types.get(field) is None:
                 if isinstance(value, bool):
                     types[field] = 'boolean'
                 elif isinstance(value, (int, float)):
                     types[field] = 'number'
                 elif isinstance(value, datetime.datetime):
                     types[field] = 'datetime'
-                elif isinstance(value, str) and (not csv or value != 'null'):
-                    if parse_datetime(value) is not None:
+                elif isinstance(value, str):
+                    # If we aren't parsing CSV strings, its just a string
+                    if not csv:
+                        types[field] = 'string'
+
+                    # If its the null string we can't determine the type yet
+                    elif value in ('', 'null'):
+                        types[field] = None
+
+                    # Can the string be parsed into another type?
+                    elif parse_datetime(value) is not None:
                         types[field] = 'datetime'
-                    elif csv and value in ('true', 'false'):
+                    elif value in ('true', 'false'):
                         types[field] = 'boolean'
-                    elif csv and parse_number(value) is not None:
+                    elif parse_number(value) is not None:
                         types[field] = 'number'
                     else:
                         types[field] = 'string'
+
+    # Set the type for fields with undetermined type
+    for field, field_type in types.items():
+        if field_type is None:
+            types[field] = 'string'
 
     # Helper to format and raise validation errors
     def throw_field_error(field, field_type, field_value):
@@ -77,19 +91,25 @@ def validate_data(data, csv=False):
             # Number field
             elif field_type == 'number':
                 if csv and isinstance(value, str):
-                    number_value = parse_number(value)
-                    if number_value is None:
-                        throw_field_error(field, field_type, value)
+                    if value == '':
+                        number_value = None
+                    else:
+                        number_value = parse_number(value)
+                        if number_value is None:
+                            throw_field_error(field, field_type, value)
                     row[field] = number_value
                 elif value is not None and not (isinstance(value, (int, float)) and not isinstance(value, bool)):
                     throw_field_error(field, field_type, value)
 
             # Datetime field
             elif field_type == 'datetime':
-                if isinstance(value, str):
-                    datetime_value = parse_datetime(value)
-                    if datetime_value is None:
-                        throw_field_error(field, field_type, value)
+                if csv and isinstance(value, str):
+                    if value == '':
+                        datetime_value = None
+                    else:
+                        datetime_value = parse_datetime(value)
+                        if datetime_value is None:
+                            throw_field_error(field, field_type, value)
                     row[field] = datetime_value
                 elif value is not None and not isinstance(value, datetime.datetime):
                     throw_field_error(field, field_type, value)
@@ -97,9 +117,12 @@ def validate_data(data, csv=False):
             # Boolean field
             elif field_type == 'boolean':
                 if csv and isinstance(value, str):
-                    boolean_value = True if value == 'true' else (False if value == 'false' else None)
-                    if boolean_value is None:
-                        throw_field_error(field, field_type, value)
+                    if value == '':
+                        boolean_value = None
+                    else:
+                        boolean_value = True if value == 'true' else (False if value == 'false' else None)
+                        if boolean_value is None:
+                            throw_field_error(field, field_type, value)
                     row[field] = boolean_value
                 elif value is not None and not isinstance(value, bool):
                     throw_field_error(field, field_type, value)

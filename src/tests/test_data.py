@@ -35,7 +35,8 @@ class TestData(unittest.TestCase):
         data = [
             {'A': 1, 'B': '5', 'C': 10},
             {'A': 2, 'B': 6, 'C': None},
-            {'A': 3, 'B': '7', 'C': 'null'}
+            {'A': 3, 'B': '7', 'C': 'null'},
+            {'A': 4, 'B': 8, 'C': ''}
         ]
         self.assertDictEqual(validate_data(data, True), {
             'A': 'number',
@@ -45,7 +46,8 @@ class TestData(unittest.TestCase):
         self.assertListEqual(data, [
             {'A': 1, 'B': 5, 'C': 10},
             {'A': 2, 'B': 6, 'C': None},
-            {'A': 3, 'B': 7, 'C': None}
+            {'A': 3, 'B': 7, 'C': None},
+            {'A': 4, 'B': 8, 'C': None}
         ])
 
 
@@ -80,7 +82,9 @@ class TestData(unittest.TestCase):
             {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
             {'date': '2022-08-30T11:04:00Z'},
             {'date': '2022-08-30T11:04:00-07:00'},
-            {'date': None}
+            {'date': None},
+            {'date': 'null'},
+            {'date': ''}
         ]
         self.assertDictEqual(validate_data(data, True), {
             'date': 'datetime'
@@ -95,6 +99,8 @@ class TestData(unittest.TestCase):
             {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
             {'date': datetime.datetime(2022, 8, 30, 11, 4, tzinfo=datetime.timezone.utc)},
             {'date': datetime.datetime(2022, 8, 30, 18, 4, tzinfo=datetime.timezone.utc)},
+            {'date': None},
+            {'date': None},
             {'date': None}
         ])
 
@@ -126,7 +132,9 @@ class TestData(unittest.TestCase):
             {'A': 2, 'B': 'false'},
             {'A': 3, 'B': True},
             {'A': 4, 'B': False},
-            {'A': 5, 'B': None}
+            {'A': 5, 'B': None},
+            {'A': 5, 'B': 'null'},
+            {'A': 5, 'B': ''}
         ]
         self.assertDictEqual(validate_data(data, True), {
             'A': 'number',
@@ -137,6 +145,8 @@ class TestData(unittest.TestCase):
             {'A': 2, 'B': False},
             {'A': 3, 'B': True},
             {'A': 4, 'B': False},
+            {'A': 5, 'B': None},
+            {'A': 5, 'B': None},
             {'A': 5, 'B': None}
         ])
 
@@ -152,6 +162,21 @@ class TestData(unittest.TestCase):
         self.assertListEqual(data, [
             {'A': 1, 'B': set('1')},
             {'A': 2, 'B': set('2')}
+        ])
+
+
+    def test_validate_data_undetermined(self):
+        data = [
+            {'A': '', 'B': 'null'},
+            {'A': 2, 'B': ''}
+        ]
+        self.assertDictEqual(validate_data(data, True), {
+            'A': 'number',
+            'B': 'string'
+        })
+        self.assertListEqual(data, [
+            {'A': None, 'B': None},
+            {'A': 2, 'B': ''}
         ])
 
 
