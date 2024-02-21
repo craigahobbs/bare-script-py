@@ -1533,9 +1533,7 @@ a,b,c
             {
                 'index': 0,
                 'input': 'foo bar',
-                'match': 'foo',
-                'groups': {},
-                'groupArray': []
+                'groups': {'0': 'foo'},
             }
         )
 
@@ -1545,9 +1543,7 @@ a,b,c
             {
                 'index': 0,
                 'input': 'foo bar thud',
-                'match': 'foo bar',
-                'groups': {'first': 'foo', 'last': 'bar'},
-                'groupArray': ['foo', ' ', 'bar']
+                'groups': {'0': 'foo bar', '1': 'foo', '2': ' ', '3': 'bar', 'first': 'foo', 'last': 'bar'}
             }
         )
 
@@ -1563,21 +1559,17 @@ a,b,c
 
     def test_regex_match_all(self):
         self.assertListEqual(
-            SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), 'foo foo bar'], None),
+            SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('(?P<name>([fb])o+)'), 'foo boooo bar'], None),
             [
                 {
                     'index': 0,
-                    'input': 'foo foo bar',
-                    'match': 'foo',
-                    'groupArray': [],
-                    'groups': {}
+                    'input': 'foo boooo bar',
+                    'groups': {'0': 'foo', '1': 'foo', '2': 'f', 'name': 'foo'}
                 },
                 {
                     'index': 4,
-                    'input': 'foo foo bar',
-                    'match': 'foo',
-                    'groupArray': [],
-                    'groups': {}
+                    'input': 'foo boooo bar',
+                    'groups': {'0': 'boooo', '1': 'boooo', '2': 'b', 'name': 'boooo'}
                 }
             ]
         )

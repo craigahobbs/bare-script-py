@@ -1136,12 +1136,32 @@ def _regex_match(args, unused_options):
     if match is None:
         return None
 
+    return _regex_match_groups(match)
+
+
+# $function: regexMatchAll
+# $group: Regex
+# $doc: Find all matches of regular expression in a string
+# $arg regex: The regular expression
+# $arg string: The string
+# $return: The array of [match objects](model.html#var.vName='RegexMatch')
+def _regex_match_all(args, unused_options):
+    regex, string = default_args(args, (None, None))
+    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+        return None
+
+    return [_regex_match_groups(match) for match in regex.finditer(string)]
+
+
+# Helper function to create a match model from a metch object
+def _regex_match_groups(match):
+    groups = {'0': match[0]}
+    groups.update((f'{match_ix + 1}', match_text) for match_ix, match_text in enumerate(match.groups()))
+    groups.update(match.groupdict())
     return {
         'index': match.start(),
         'input': match.string,
-        'match': match.group(0),
-        'groups': match.groupdict(),
-        'groupArray': list(match.groups())
+        'groups': groups
     }
 
 
@@ -1159,38 +1179,10 @@ struct RegexMatch
     # The input string
     string input
 
-    # The match string
-    string match
-
-    # The named groups
+    # The matched groups. The "0" key is the full match text. Ordered (non-named) groups use keys "1", "2", and so on.
     string{} groups
-
-    # The ordered groups
-    string[] groupArray
 ''')
 
-
-# $function: regexMatchAll
-# $group: Regex
-# $doc: Find all matches of regular expression in a string
-# $arg regex: The regular expression
-# $arg string: The string
-# $return: The array of [match objects](model.html#var.vName='RegexMatch')
-def _regex_match_all(args, unused_options):
-    regex, string = default_args(args, (None, None))
-    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
-        return None
-
-    return [
-        {
-            'index': match.start(),
-            'input': match.string,
-            'match': match.group(0),
-            'groups': match.groupdict(),
-            'groupArray': list(match.groups())
-        }
-        for match in regex.finditer(string)
-    ]
 
 # $function: regexNew
 # $group: Regex
