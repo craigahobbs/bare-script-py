@@ -91,20 +91,28 @@ def main(argv=None):
                     errors.append(f'{file_}:{ix_line + 1}: Function argument "{name}" outside function')
                     continue
 
-                # Add the function arg documentation line - don't add leading blank lines
+                # Get the function argument model, if it exists
                 func_args = func.get('args')
                 func_arg = None
                 if func_args is not None:
                     func_arg = next((find_arg for find_arg in func_args if find_arg['name'] == name), None)
-                if func_arg is not None or text_trim != '':
-                    if func_args is None:
-                        func_args = []
-                        func['args'] = func_args
-                    if func_arg is None:
-                        func_arg = {'name': name, 'doc': []}
-                        func_args.append(func_arg)
-                    func_arg['doc'].append(text)
 
+                # Ignore leading argument documentation blank lines
+                if func_arg is None and text_trim == '':
+                    continue
+
+                # Add the fuction model arguments member, if necessary
+                if func_args is None:
+                    func_args = []
+                    func['args'] = func_args
+
+                # Add the function argument model, if necessary
+                if func_arg is None:
+                    func_arg = {'name': name, 'doc': []}
+                    func_args.append(func_arg)
+
+                # Add the function argument documentation line
+                func_arg['doc'].append(text)
                 continue
 
             # Unknown documentation comment?
