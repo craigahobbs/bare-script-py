@@ -7,6 +7,7 @@ BareScript value utilities
 
 import datetime
 import json
+import math
 import re
 
 
@@ -222,7 +223,10 @@ def parse_number(text):
     """
 
     try:
-        return float(text)
+        value = float(text)
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
     except ValueError:
         return None
 

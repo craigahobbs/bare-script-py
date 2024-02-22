@@ -339,6 +339,20 @@ class TestValue(unittest.TestCase):
 
     def test_parse_number(self):
         self.assertEqual(parse_number('123.45'), 123.45)
+        self.assertEqual(parse_number('-123.45'), -123.45)
+        self.assertEqual(parse_number('123'), 123)
+        self.assertEqual(parse_number('123.'), 123)
+        self.assertEqual(parse_number('.45'), 0.45)
+        self.assertEqual(parse_number('1.23e3'), 1230)
+        self.assertEqual(parse_number('4.56E+3'), 4560)
+        self.assertEqual(parse_number('0.123e-2'), 0.00123)
+        self.assertEqual(parse_number('0'), 0)
+        self.assertEqual(parse_number('0.0'), 0)
+        self.assertEqual(parse_number('0e0'), 0)
+
+        # Special values
+        self.assertIsNone(parse_number('NaN'))
+        self.assertIsNone(parse_number('Infinity'))
 
         # Parse failure
         self.assertIsNone(parse_number('invalid'))
