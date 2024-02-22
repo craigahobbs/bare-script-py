@@ -41,6 +41,7 @@ def value_type(value):
     # Unknown value type
     return None
 
+
 REGEX_TYPE = type(re.compile(''))
 
 
@@ -172,7 +173,7 @@ def value_compare(left, right):
         return 0 if right is None else -1
     elif right is None:
         return 1
-    if isinstance(left, str) and isinstance(right, str):
+    elif isinstance(left, str) and isinstance(right, str):
         return -1 if left < right else (0 if left == right else 1)
     elif isinstance(left, bool) and isinstance(right, bool):
         return -1 if left < right else (0 if left == right else 1)
