@@ -1923,7 +1923,7 @@ a,b,c
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0], None), '0')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0.], None), '0')
         dt = SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100], None)
-        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([dt], None), '2022-06-21T12:30:15.100000+00:00')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([dt], None), '2022-06-21T12:30:15.100+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([{'b': 2, 'a': 1}], None), '{"a":1,"b":2}')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([[1, 2, 3]], None), '[1,2,3]')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([SCRIPT_FUNCTIONS['stringNew']], None), '<function>')

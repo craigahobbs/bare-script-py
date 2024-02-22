@@ -71,6 +71,10 @@ class TestValue(unittest.TestCase):
 
         # datetime
         self.assertEqual(value_string(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '2024-01-12T06:09:00+00:00')
+        self.assertEqual(
+            value_string(datetime.datetime(2024, 1, 12, 6, 9, 0, 123000, tzinfo=datetime.timezone.utc)),
+            '2024-01-12T06:09:00.123+00:00'
+        )
 
         # object
         self.assertEqual(value_string({'value': 1}), '{"value":1}')
@@ -92,7 +96,7 @@ class TestValue(unittest.TestCase):
 
 
     def test_value_json(self):
-        self.assertEqual(value_json({'value': 1}), '{"value":1}')
+        self.assertEqual(value_json({'value': 4, 'c': 3, 'a': 1, 'b': 2}), '{"a":1,"b":2,"c":3,"value":4}')
         self.assertEqual(value_json([1, 2, 3]), '[1,2,3]')
 
         # Indent
@@ -372,6 +376,12 @@ class TestValue(unittest.TestCase):
         self.assertEqual(
             parse_datetime('2022-08-29T15:08:00-08:00').astimezone(datetime.timezone.utc),
             datetime.datetime(2022, 8, 29, 23, 8, tzinfo=datetime.timezone.utc)
+        )
+
+        # Date
+        self.assertEqual(
+            parse_datetime('2022-08-29'),
+            datetime.datetime(2022, 8, 29)
         )
 
         # Parse failure

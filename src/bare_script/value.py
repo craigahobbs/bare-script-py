@@ -66,7 +66,7 @@ def value_string(value):
     elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
     elif isinstance(value, datetime.datetime):
-        return value.astimezone(datetime.timezone.utc).isoformat()
+        return _R_DATETIME_CLEANUP.sub(r'\1', value.astimezone(datetime.timezone.utc).isoformat())
     elif isinstance(value, (dict)):
         return value_json(value)
     elif isinstance(value, (list)):
@@ -81,6 +81,7 @@ def value_string(value):
 
 
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
+_R_DATETIME_CLEANUP = re.compile(r'000([+-]\d\d:\d\d)$')
 
 
 def value_json(value, indent=None):
