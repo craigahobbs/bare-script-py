@@ -46,13 +46,34 @@ class TestBare(unittest.TestCase):
 
 
     def test_main_inline(self):
-        with unittest.mock.patch('time.time', side_effect=[1000]), \
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
             with self.assertRaises(SystemExit) as cm_exc:
                 main(['-c', 'systemLog("Hello")'])
 
+            self.assertListEqual(mock_file.call_args_list, [])
+            self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_inline_fetch(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['Hello']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', "systemLog(systemFetch('test.txt', null, true))"])
+
+            self.assertListEqual(mock_file.call_args_list, [
+                unittest.mock.call('subdir/test.txt', 'r', encoding='utf-8')
+            ])
             self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -69,6 +90,29 @@ class TestBare(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm_exc:
                 main(['test.bare'])
 
+            self.assertListEqual(mock_file.call_args_list, [
+                unittest.mock.call('test.bare', 'r', encoding='utf-8')
+            ])
+            self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_inline_fetch(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ["systemLog(systemFetch('test.txt', null, true))", 'Hello']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['subdir/test.bare'])
+
+            self.assertListEqual(mock_file.call_args_list, [
+                unittest.mock.call('subdir/test.bare', 'r', encoding='utf-8'),
+                unittest.mock.call('subdir/test.txt', 'r', encoding='utf-8')
+            ])
             self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -352,6 +396,27 @@ BareScript: Script executed in 100.0 milliseconds
             self.assertEqual(mock_stdout.getvalue(), '''\
 BareScript: Static analysis "-c 1" ... 1 warning:
 BareScript:     Pointless global statement (index 0)
+BareScript: Script executed in 100.0 milliseconds
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_debug_static_analysis_warnings_multiple(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
+             unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_file.return_value.read.side_effect = ['0\n1\n']
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', 'test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "test.bare" ... 2 warnings:
+BareScript:     Pointless global statement (index 0)
+BareScript:     Pointless global statement (index 1)
 BareScript: Script executed in 100.0 milliseconds
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
