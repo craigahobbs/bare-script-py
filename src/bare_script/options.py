@@ -70,12 +70,12 @@ def fetch_read_write(request):
         return fh.read()
 
 
-def log_stdout(message):
+def log_stdout(text):
     """
-    A :func:`log function <log_fn>` implementation that uses print
+    A :func:`log function <log_fn>` implementation that outputs to stdout
     """
 
-    print(message)
+    print(text)
 
 
 def url_file_relative(file_, url):
