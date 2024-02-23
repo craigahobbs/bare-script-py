@@ -33,15 +33,27 @@ class TestBare(unittest.TestCase):
             self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_main_argument_error(self):
+        with unittest.mock.patch('sys.stdout', StringIO()) as stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['--unknown'])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue().splitlines()[-1], 'bare: error: unrecognized arguments: --unknown')
+
+
     def test_main_inline(self):
         with unittest.mock.patch('time.time', side_effect=[1000]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
             with self.assertRaises(SystemExit) as cm_exc:
-                main(['-c', 'systemLog("Hello!")'])
+                main(['-c', 'systemLog("Hello")'])
 
-            self.assertEqual(mock_stdout.getvalue(), 'Hello!\n')
+            self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
 
@@ -52,12 +64,12 @@ class TestBare(unittest.TestCase):
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
-            mock_file.return_value.read.side_effect = ['systemLog("Hello!")']
+            mock_file.return_value.read.side_effect = ['systemLog("Hello")']
 
             with self.assertRaises(SystemExit) as cm_exc:
                 main(['test.bare'])
 
-            self.assertEqual(mock_stdout.getvalue(), 'Hello!\n')
+            self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
 
@@ -125,98 +137,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
 
 
-    def test_main_status_returned(self):
-        with unittest.mock.patch('time.time', side_effect=[1000]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-c', 'return 2'])
-
-            self.assertEqual(mock_stdout.getvalue(), '')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 2)
-
-
-    def test_main_variables(self):
-        with unittest.mock.patch('time.time', side_effect=[1000]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-c', 'systemLog("Hi " + vName + "!")', '-v', 'vName', '"Bob"'])
-
-            self.assertEqual(mock_stdout.getvalue(), 'Hi Bob!\n')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 0)
-
-
-    def test_main_debug(self):
-        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-d', '-c', 'systemLog("Hello!")'])
-
-            self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... OK
-Hello!
-BareScript: Script executed in 100.0 milliseconds
-''')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 0)
-
-
-    def test_main_debug_lint_warnings(self):
-        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-d', '-c', '0'])
-
-            self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... 1 warning:
-BareScript:     Pointless global statement (index 0)
-BareScript: Script executed in 100.0 milliseconds
-''')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 0)
-
-
-    def test_main_static_ok(self):
-        with unittest.mock.patch('time.time', side_effect=[1000]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-s', '-c', 'systemLog("Hello!")'])
-
-            self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... OK
-''')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 0)
-
-
-    def test_main_static_error(self):
-        with unittest.mock.patch('time.time', side_effect=[1000]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-s', '-c', '0'])
-
-            self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... 1 warning:
-BareScript:     Pointless global statement (index 0)
-''')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 1)
-
-
-    def test_main_status_parse_error(self):
+    def test_main_parse_error(self):
         with unittest.mock.patch('time.time', side_effect=[1000]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
@@ -234,13 +155,147 @@ asdf asdf
             self.assertEqual(cm_exc.exception.code, 1)
 
 
+    def test_main_script_error(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'unknown()'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+-c 1:
+Undefined function "unknown"
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_fetch_error(self):
+        with unittest.mock.patch('builtins.open', side_effect=FileNotFoundError), \
+             unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertEqual(mock_stdout.getvalue(), 'Failed to load "test.bare"\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_status_return(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return 2'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 2)
+
+
+    def test_main_status_return_zero(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return 0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_status_return_max(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return 255'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 255)
+
+
+    def test_main_status_return_beyond_max(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return 256'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_status_return_negative(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return -1'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_status_return_non_integer_true(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return "abc"'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_status_return_non_integer_false(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'return ""'])
+
+            self.assertEqual(mock_stdout.getvalue(), '')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_variables(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'systemLog("Hi " + vName + "!")', '-v', 'vName', '"Bob"'])
+
+            self.assertEqual(mock_stdout.getvalue(), 'Hi Bob!\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
     def test_main_variables_parse_error(self):
         with unittest.mock.patch('time.time', side_effect=[1000]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
             with self.assertRaises(SystemExit) as cm_exc:
-                main(['-v', 'A', 'asdf asdf', '-c', '0'])
+                main(['-v', 'A', 'asdf asdf', '-c', 'return A'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
 Syntax error:
@@ -257,10 +312,79 @@ asdf asdf
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
             with self.assertRaises(SystemExit) as cm_exc:
-                main(['-v', 'A', 'unknown()', '-c', '0'])
+                main(['-v', 'A', 'unknown()', '-c', 'return A'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
 Undefined function "unknown"
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_debug(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1, 1001, 1001.1]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', '-c', 'systemLog("Hello")', '-c', 'systemLogDebug("Goodbye")'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... OK
+Hello
+BareScript: Script executed in 100.0 milliseconds
+BareScript: Static analysis "-c 2" ... OK
+Goodbye
+BareScript: Script executed in 100.0 milliseconds
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_debug_static_analysis_warnings(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', '-c', '0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... 1 warning:
+BareScript:     Pointless global statement (index 0)
+BareScript: Script executed in 100.0 milliseconds
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_static_analysis(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-s', '-c', 'return 0', '-c', 'return 1'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... OK
+BareScript: Static analysis "-c 2" ... OK
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_static_analysis_error(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-s', '-c', '0', '-c', '1'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript: Static analysis "-c 1" ... 1 warning:
+BareScript:     Pointless global statement (index 0)
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)

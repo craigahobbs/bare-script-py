@@ -46,7 +46,13 @@ def main(argv=None):
             # Get the script source
             if script_type == 'file':
                 script_name = script_value
-                script_source = fetch_read_write({'url': script_value})
+                script_source = None
+                try:
+                    script_source = fetch_read_write({'url': script_value})
+                except: # pylint: disable=bare-except
+                    pass
+                if script_source is None:
+                    raise ValueError(f'Failed to load "{script_value}"')
             else:
                 inline_count += 1
                 script_name = f'-c {inline_count}'
