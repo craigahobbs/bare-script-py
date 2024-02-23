@@ -28,18 +28,20 @@ def main(argv=None):
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
     parser.add_argument('-s', '--static', action='store_true', help='perform static analysis')
-    parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'),
+    parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'), default = [],
                         help='set a global variable to an expression value')
     args = parser.parse_args(args=argv)
 
     status_code = 0
     inline_count = 0
+    error_name = None
     try:
+        # Evaluate the global variable expression arguments
+        globals_ = {}
+        for var_name, var_expr in args.var:
+            globals_[var_name] = evaluate_expression(parse_expression(var_expr))
+
         # Parse and execute all source files in order
-        if args.var is not None:
-            globals_ = {var_name: evaluate_expression(parse_expression(var_expr)) for var_name, var_expr in args.var}
-        else:
-            globals_ = {}
         for script_type, script_value in args.scripts:
             # Get the script source
             if script_type == 'file':
@@ -51,6 +53,7 @@ def main(argv=None):
                 script_source = script_value
 
             # Parse the script source
+            error_name = script_name
             script = parse_script(script_source)
 
             # Run the bare-script linter?
@@ -94,7 +97,8 @@ def main(argv=None):
                 break
 
     except Exception as e: # pylint: disable=broad-exception-caught
-        print(f'{script_name}:')
+        if error_name is not None:
+            print(f'{error_name}:')
         print(str(e).strip())
         status_code = 1
 

@@ -232,3 +232,35 @@ asdf asdf
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_variables_parse_error(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-v', 'A', 'asdf asdf', '-c', '0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+Syntax error:
+asdf asdf
+    ^
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_variables_evaluate_error(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-v', 'A', 'unknown()', '-c', '0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+Undefined function "unknown"
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
