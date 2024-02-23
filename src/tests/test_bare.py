@@ -72,7 +72,7 @@ class TestBare(unittest.TestCase):
                 main(['-c', "systemLog(systemFetch('test.txt', null, true))"])
 
             self.assertListEqual(mock_file.call_args_list, [
-                unittest.mock.call('subdir/test.txt', 'r', encoding='utf-8')
+                unittest.mock.call('test.txt', 'r', encoding='utf-8')
             ])
             self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
@@ -98,7 +98,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
 
 
-    def test_main_inline_fetch(self):
+    def test_main_file_fetch(self):
         with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
              unittest.mock.patch('time.time', side_effect=[1000]), \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
