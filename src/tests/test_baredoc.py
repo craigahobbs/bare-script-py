@@ -20,9 +20,21 @@ class TestBaredoc(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm_exc:
                 main(['-h'])
 
-            self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-o file] file [file ...]')
+            self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: baredoc [-h] [-o file] file [file ...]')
             self.assertEqual(stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_argument_error(self):
+        with unittest.mock.patch('sys.stdout', StringIO()) as stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main([])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue().splitlines()[-1], 'baredoc: error: the following arguments are required: file')
 
 
     def test_main(self):
@@ -50,6 +62,7 @@ endfunction
 ''']
 
             main(['test.bare', '-o', 'test.json'])
+
             self.assertEqual(mock_stdout.getvalue(), '')
             self.assertEqual(mock_stderr.getvalue(), '')
 
@@ -163,7 +176,54 @@ endfunction
             self.assertEqual(mock_stderr.getvalue(), '')
 
 
-    def test_main_error_no_files(self):
+    def test_main_fetch_error(self):
+        with unittest.mock.patch('builtins.open', side_effect=FileNotFoundError) as mock_open_ctx, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare'])
+
+            self.assertListEqual(mock_open_ctx.call_args_list, [
+                unittest.mock.call('test.bare', 'r', encoding='utf-8')
+            ])
+            self.assertEqual(mock_stdout.getvalue(), '''\
+Failed to load "test.bare"
+error: No library functions
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_write_error(self):
+        mock_file_handle = unittest.mock.mock_open(read_data='''\
+# $function: myFunction
+# $group: My Group
+# $doc: This is my function.
+function myFunction(arg1, arg2)
+endfunction
+''')
+        with unittest.mock.patch('builtins.open', mock_file_handle) as mock_open_ctx, \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            mock_open_ctx.side_effect = [mock_file_handle.return_value, FileNotFoundError]
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['test.bare', '-o', 'test.json'])
+
+            self.assertListEqual(mock_open_ctx.call_args_list, [
+                unittest.mock.call('test.bare', 'r', encoding='utf-8'),
+                unittest.mock.call('test.json', 'w', encoding='utf-8')
+            ])
+            self.assertEqual(mock_stdout.getvalue(), '''\
+error: Failed to write "test.json"
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_error_no_functions(self):
         with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_open_ctx, \
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
@@ -371,7 +431,7 @@ endfunction
                 main(['test.bare'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-test.bare:4: Invalid documentation comment "('returns',)"
+test.bare:4: Invalid documentation comment "returns"
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)

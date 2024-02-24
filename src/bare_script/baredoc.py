@@ -2,7 +2,7 @@
 # https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE
 
 """
-bare-script library documentation tool
+bare-script documentation tool
 """
 
 import argparse
@@ -13,11 +13,11 @@ import sys
 
 def main(argv=None):
     """
-    BareScript library documentation tool main entry point
+    BareScript documentation tool main entry point
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='bare', description='The BareScript library documentation tool')
+    parser = argparse.ArgumentParser(prog='baredoc', description='The BareScript documentation tool')
     parser.add_argument('files', metavar='file', nargs='+', help='files to process')
     parser.add_argument('-o', dest='output', metavar='file', default='-', help='write output to file (default is "-")')
     args = parser.parse_args(args=argv)
@@ -27,12 +27,22 @@ def main(argv=None):
     funcs = {}
     func = None
     for file_ in args.files:
-        with open(file_, 'r', encoding='utf-8') as fh:
-            source = fh.read()
-        lines = R_SPLIT.split(source)
+        # Read the source file
+        source = None
+        try:
+            with open(file_, 'r', encoding='utf-8') as fh:
+                source = fh.read()
+        except: # pylint: disable=bare-except
+            pass
+        if source is None:
+            errors.append(f'Failed to load "{file_}"')
+            continue
+
+        # Split the source lines and process documentation comments
+        lines = _R_SPLIT.split(source)
         for ix_line, line in enumerate(lines):
             # function/group/doc/return documentation keywords?
-            match_key = R_KEY.match(line)
+            match_key = _R_KEY.match(line)
             if match_key is not None:
                 key = match_key['key']
                 text = match_key['text']
@@ -80,7 +90,7 @@ def main(argv=None):
                 continue
 
             # arg keyword?
-            match_arg = R_ARG.match(line)
+            match_arg = _R_ARG.match(line)
             if match_arg is not None:
                 name = match_arg['name']
                 text = match_arg['text']
@@ -116,9 +126,9 @@ def main(argv=None):
                 continue
 
             # Unknown documentation comment?
-            match_unknown = R_UNKNOWN.match(line)
+            match_unknown = _R_UNKNOWN.match(line)
             if match_unknown is not None:
-                unknown = match_unknown.groups('unknown')
+                unknown = match_unknown.group('unknown')
                 errors.append(f'{file_}:{ix_line + 1}: Invalid documentation comment "{unknown}"')
                 continue
 
@@ -146,14 +156,22 @@ def main(argv=None):
     # Output to stdout?
     if args.output == '-':
         print(library_json)
-
-    # Output to file
-    with open(args.output, 'w', encoding='utf-8') as fh:
-        fh.write(library_json)
+    else:
+        # Output to file
+        success = False
+        try:
+            with open(args.output, 'w', encoding='utf-8') as fh:
+                fh.write(library_json)
+            success = True
+        except: # pylint: disable=bare-except
+            pass
+        if not success:
+            print(f'error: Failed to write "{args.output}"')
+            sys.exit(1)
 
 
 # Library documentation regular expressions
-R_KEY = re.compile(r'^\s*(?:\/\/|#)\s*\$(?P<key>function|group|doc|return):\s?(?P<text>.*)$')
-R_ARG = re.compile(r'^\s*(?:\/\/|#)\s*\$arg\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*(?:\.\.\.)?):\s?(?P<text>.*)$')
-R_UNKNOWN = re.compile(r'^\s*(?:\/\/|#)\s*\$(?P<unknown>[^:]+):')
-R_SPLIT = re.compile(r'\r?\n')
+_R_KEY = re.compile(r'^\s*(?:\/\/|#)\s*\$(?P<key>function|group|doc|return):\s?(?P<text>.*)$')
+_R_ARG = re.compile(r'^\s*(?:\/\/|#)\s*\$arg\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*(?:\.\.\.)?):\s?(?P<text>.*)$')
+_R_UNKNOWN = re.compile(r'^\s*(?:\/\/|#)\s*\$(?P<unknown>[^:]+):')
+_R_SPLIT = re.compile(r'\r?\n')
