@@ -4,6 +4,7 @@
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
 from io import StringIO
+import os
 import sys
 import unittest
 import unittest.mock
@@ -107,11 +108,11 @@ class TestBare(unittest.TestCase):
             mock_file.return_value.read.side_effect = ["systemLog(systemFetch('test.txt', null, true))", 'Hello']
 
             with self.assertRaises(SystemExit) as cm_exc:
-                main(['subdir/test.bare'])
+                main([os.path.join('subdir', 'test.bare')])
 
             self.assertListEqual(mock_file.call_args_list, [
-                unittest.mock.call('subdir/test.bare', 'r', encoding='utf-8'),
-                unittest.mock.call('subdir/test.txt', 'r', encoding='utf-8')
+                unittest.mock.call(os.path.join('subdir', 'test.bare'), 'r', encoding='utf-8'),
+                unittest.mock.call(os.path.join('subdir', 'test.txt'), 'r', encoding='utf-8')
             ])
             self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
