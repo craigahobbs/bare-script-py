@@ -131,17 +131,17 @@ import json
 
 # Read the performance test data
 with open('$(PERF_JSON)', 'r', encoding='utf-8') as fh:
-	timings = json.load(fh)
+    timings = json.load(fh)
 
 # Compute the best time for each language
 best_timings = {}
 for language, time_ms in ((timing.get('language'), timing.get('timeMs')) for timing in timings):
-	if language is not None and (language not in best_timings or time_ms < best_timings[language]):
-		best_timings[language] = time_ms
+    if language is not None and (language not in best_timings or time_ms < best_timings[language]):
+        best_timings[language] = time_ms
 
 # Report the timing multiples
 for language, time_ms in sorted(best_timings.items(), key=lambda val: val[1]):
-	report = f'{language} - {time_ms:.1f} milliseconds'
-	print(report if language == 'BareScript' else f'{report} ({best_timings["BareScript"] / time_ms:.1f}x)')
+    report = f'{language} - {time_ms:.1f} milliseconds'
+    print(report if language == 'BareScript' else f'{report} ({best_timings["BareScript"] / time_ms:.1f}x)')
 endef
 export PERF_PY
