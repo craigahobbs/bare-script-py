@@ -56,11 +56,10 @@ def _execute_script_helper(statements, options, locals_):
         statement_key = next(iter(statement.keys()))
 
         # Increment the statement counter
+        options['statementCount'] += 1
         max_statements = options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
-        if max_statements > 0:
-            options['statementCount'] = options.get('statementCount', 0) + 1
-            if options['statementCount'] > max_statements:
-                raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
+        if max_statements > 0 and options['statementCount'] > max_statements:
+            raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
 
         # Expression?
         if statement_key == 'expr':
@@ -80,10 +79,8 @@ def _execute_script_helper(statements, options, locals_):
                 if label_indexes is not None and statement['jump']['label'] in label_indexes:
                     ix_statement = label_indexes[statement['jump']['label']]
                 else:
-                    ix_label = next(
-                        (ix_stmt for ix_stmt, stmt in enumerate(statements) if stmt.get('label') == statement['jump']['label']),
-                        -1
-                    )
+                    jump_label = statement['jump']['label']
+                    ix_label = next((ix_stmt for ix_stmt, stmt in enumerate(statements) if stmt.get('label') == jump_label), -1)
                     if ix_label == -1:
                         raise BareScriptRuntimeError(f"Unknown jump label \"{statement['jump']['label']}\"")
                     if label_indexes is None:
@@ -255,15 +252,13 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         if bin_op == '&&':
             if not value_boolean(left_value):
                 return left_value
-            else:
-                return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
 
         # Short-circuiting "or" binary operator
         elif bin_op == '||':
             if value_boolean(left_value):
                 return left_value
-            else:
-                return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
 
         # Non-short-circuiting binary operators
         right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins)
@@ -344,10 +339,8 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins)
         if unary_op == '!':
             return not value_boolean(value)
-        else:
-            # unary_op == '-'
-            if isinstance(value, (int, float)):
-                return -value
+        elif unary_op == '-' and isinstance(value, (int, float)):
+            return -value
 
         # Invalid operation value
         return None
