@@ -8,34 +8,6 @@ The BareScript language parser
 import re
 
 
-# BareScript regex
-_R_SCRIPT_LINE_SPLIT = re.compile(r'\r?\n')
-_R_SCRIPT_CONTINUATION = re.compile(r'\\\s*$')
-_R_SCRIPT_COMMENT = re.compile(r'^\s*(?:#.*)?$')
-_R_SCRIPT_ASSIGNMENT = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*=\s*(?P<expr>.+)$')
-_R_SCRIPT_FUNCTION_BEGIN = re.compile(
-    r'^(?P<async>\s*async)?\s*function\s+(?P<name>[A-Za-z_]\w*)\s*\('
-    r'\s*(?P<args>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)?(?P<lastArgArray>\s*\.\.\.)?\s*\)\s*:\s*$'
-)
-_R_SCRIPT_FUNCTION_ARG_SPLIT = re.compile(r'\s*,\s*')
-_R_SCRIPT_FUNCTION_END = re.compile(r'^\s*endfunction\s*$')
-_R_SCRIPT_LABEL = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*:\s*$')
-_R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s+(?P<name>[A-Za-z_]\w*)\s*$')
-_R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>.+))?)\s*$')
-_R_SCRIPT_INCLUDE = re.compile(r'^\s*include\s+(?P<delim>\')(?P<url>(?:\\\'|[^\'])*)\'\s*$')
-_R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>\s*$')
-_R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:\s*$')
-_R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:\s*$')
-_R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:\s*$')
-_R_SCRIPT_IF_END = re.compile(r'^\s*endif\s*$')
-_R_SCRIPT_FOR_BEGIN = re.compile(r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:\s*$')
-_R_SCRIPT_FOR_END = re.compile(r'^\s*endfor\s*$')
-_R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:\s*$')
-_R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile\s*$')
-_R_SCRIPT_BREAK = re.compile(r'^\s*break\s*$')
-_R_SCRIPT_CONTINUE = re.compile(r'^\s*continue\s*$')
-
-
 def parse_script(script_text, start_line_number=1):
     """
     Parse a BareScript script
@@ -431,41 +403,32 @@ def parse_script(script_text, start_line_number=1):
     return script
 
 
-# BareScript expression regex
-_R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<=|<|>=|>|==|!=|&&|\|\|)')
-_R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-)')
-_R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
-_R_EXPR_FUNCTION_SEPARATOR = re.compile(r'^\s*,')
-_R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
-_R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')
-_R_EXPR_GROUP_CLOSE = re.compile(r'^\s*\)')
-_R_EXPR_NUMBER = re.compile(r'^\s*([+-]?\d+(?:\.\d*)?(?:e[+-]\d+)?)')
-_R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
-_R_EXPR_STRING_ESCAPE = re.compile(r'\\([\\\'])')
-_R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')
-_R_EXPR_STRING_DOUBLE_ESCAPE = re.compile(r'\\([\\"])')
-_R_EXPR_VARIABLE = re.compile(r'^\s*([A-Za-z_]\w*)')
-_R_EXPR_VARIABLE_EX = re.compile(r'^\s*\[\s*((?:\\\]|[^\]])+)\s*\]')
-_R_EXPR_VARIABLE_EX_ESCAPE = re.compile(r'\\([\\\]])')
-
-
-# Binary operator re-order map
-BINARY_REORDER = {
-    '**': {'*', '/', '%', '+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '*': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '/': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '%': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '+': {'<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '-': {'<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '<=': {'==', '!=', '&&', '||'},
-    '<': {'==', '!=', '&&', '||'},
-    '>=': {'==', '!=', '&&', '||'},
-    '>': {'==', '!=', '&&', '||'},
-    '==': {'&&', '||'},
-    '!=': {'&&', '||'},
-    '&&': {'||'},
-    '||': set()
-}
+# BareScript regex
+_R_SCRIPT_LINE_SPLIT = re.compile(r'\r?\n')
+_R_SCRIPT_CONTINUATION = re.compile(r'\\\s*$')
+_R_SCRIPT_COMMENT = re.compile(r'^\s*(?:#.*)?$')
+_R_SCRIPT_ASSIGNMENT = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*=\s*(?P<expr>.+)$')
+_R_SCRIPT_FUNCTION_BEGIN = re.compile(
+    r'^(?P<async>\s*async)?\s*function\s+(?P<name>[A-Za-z_]\w*)\s*\('
+    r'\s*(?P<args>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)?(?P<lastArgArray>\s*\.\.\.)?\s*\)\s*:\s*$'
+)
+_R_SCRIPT_FUNCTION_ARG_SPLIT = re.compile(r'\s*,\s*')
+_R_SCRIPT_FUNCTION_END = re.compile(r'^\s*endfunction\s*$')
+_R_SCRIPT_LABEL = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*:\s*$')
+_R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s+(?P<name>[A-Za-z_]\w*)\s*$')
+_R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>.+))?)\s*$')
+_R_SCRIPT_INCLUDE = re.compile(r'^\s*include\s+(?P<delim>\')(?P<url>(?:\\\'|[^\'])*)\'\s*$')
+_R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>\s*$')
+_R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:\s*$')
+_R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:\s*$')
+_R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:\s*$')
+_R_SCRIPT_IF_END = re.compile(r'^\s*endif\s*$')
+_R_SCRIPT_FOR_BEGIN = re.compile(r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:\s*$')
+_R_SCRIPT_FOR_END = re.compile(r'^\s*endfor\s*$')
+_R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:\s*$')
+_R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile\s*$')
+_R_SCRIPT_BREAK = re.compile(r'^\s*break\s*$')
+_R_SCRIPT_CONTINUE = re.compile(r'^\s*continue\s*$')
 
 
 def parse_expression(expr_text):
@@ -521,6 +484,25 @@ def _parse_binary_expression(expr_text, bin_left_expr=None):
 
     # Parse the next binary expression in the chain
     return _parse_binary_expression(next_text, bin_expr)
+
+
+# Binary operator re-order map
+BINARY_REORDER = {
+    '**': {'*', '/', '%', '+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
+    '*': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
+    '/': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
+    '%': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
+    '+': {'<=', '<', '>=', '>', '==', '!=', '&&', '||'},
+    '-': {'<=', '<', '>=', '>', '==', '!=', '&&', '||'},
+    '<=': {'==', '!=', '&&', '||'},
+    '<': {'==', '!=', '&&', '||'},
+    '>=': {'==', '!=', '&&', '||'},
+    '>': {'==', '!=', '&&', '||'},
+    '==': {'&&', '||'},
+    '!=': {'&&', '||'},
+    '&&': {'||'},
+    '||': set()
+}
 
 
 # Helper function to parse a unary expression
@@ -605,6 +587,24 @@ def _parse_unary_expression(expr_text):
         return [expr, expr_text[len(match_variable_ex.group(0)):]]
 
     raise BareScriptParserError('Syntax error', expr_text)
+
+
+# BareScript expression regex
+_R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<=|<|>=|>|==|!=|&&|\|\|)')
+_R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-)')
+_R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
+_R_EXPR_FUNCTION_SEPARATOR = re.compile(r'^\s*,')
+_R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
+_R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')
+_R_EXPR_GROUP_CLOSE = re.compile(r'^\s*\)')
+_R_EXPR_NUMBER = re.compile(r'^\s*([+-]?\d+(?:\.\d*)?(?:e[+-]\d+)?)')
+_R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
+_R_EXPR_STRING_ESCAPE = re.compile(r'\\([\\\'])')
+_R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')
+_R_EXPR_STRING_DOUBLE_ESCAPE = re.compile(r'\\([\\"])')
+_R_EXPR_VARIABLE = re.compile(r'^\s*([A-Za-z_]\w*)')
+_R_EXPR_VARIABLE_EX = re.compile(r'^\s*\[\s*((?:\\\]|[^\]])+)\s*\]')
+_R_EXPR_VARIABLE_EX_ESCAPE = re.compile(r'\\([\\\]])')
 
 
 class BareScriptParserError(Exception):
