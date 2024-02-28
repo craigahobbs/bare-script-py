@@ -382,6 +382,19 @@ a = 1
         self.assertEqual(options['globals']['b'], 2)
 
 
+    def test_include_no_fetch_fn(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.mds'}]}}
+            ]
+        })
+
+        options = {}
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            self.assertIsNone(execute_script(script, options))
+        self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
+
+
     def test_include_system(self):
         script = validate_script({
             'statements': [
@@ -476,19 +489,6 @@ a = 1
         self.assertEqual(options['globals']['b'], 2)
 
 
-    def test_include_no_fetch_fn(self):
-        script = validate_script({
-            'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
-            ]
-        })
-
-        options = {}
-        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            self.assertIsNone(execute_script(script, options))
-        self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
-
-
     def test_include_lint(self):
         script = validate_script({
             'statements': [
@@ -513,6 +513,34 @@ endfunction
         self.assertListEqual(logs, [
             'BareScript: Include "test.mds" static analysis... 1 warning:',
             'BareScript:     Unused argument "a" of function "test" (index 0)'
+        ])
+
+
+    def test_include_lint_multiple(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.mds'}]}}
+            ]
+        })
+
+        def fetch_fn(request):
+            url = request['url']
+            self.assertEqual(url, 'test.mds')
+            return '''\
+function test(a, b):
+endfunction
+'''
+
+        logs = []
+        def log_fn(message):
+            logs.append(message)
+
+        options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
+        self.assertIsNone(execute_script(script, options))
+        self.assertListEqual(logs, [
+            'BareScript: Include "test.mds" static analysis... 2 warnings:',
+            'BareScript:     Unused argument "a" of function "test" (index 0)',
+            'BareScript:     Unused argument "b" of function "test" (index 0)'
         ])
 
 
@@ -968,136 +996,162 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_binary_addition(self):
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 12)
+        options = {'globals': {'testDate': _test_date, 'testNumber': _test_number, 'testString': _test_string}}
+
+        # number + number
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 12)
 
         # string + string
-        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'string': 'bar'}}})
-        self.assertEqual(evaluate_expression(expr), 'foobar')
+        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'function': {'name': 'testString'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 'fooabc')
 
         # string + <non-string>
-        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 'foo2')
+        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 'foo2')
 
         # <non-string> + string
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 2}, 'right': {'string': 'foo'}}})
-        self.assertEqual(evaluate_expression(expr), '2foo')
+        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testNumber'}}, 'right': {'string': 'foo'}}})
+        self.assertEqual(evaluate_expression(expr, options), '2foo')
 
         # datetime + number
-        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'dt'}, 'right': {'number': 86400000}}})
-        options = {'globals': {'dt': datetime.datetime(2024, 2, 7)}}
-        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 2, 8))
+        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testDate'}}, 'right': {'number': 86400000}}})
+        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 7))
 
         # number + datetime
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'variable': 'dt'}}})
-        options = {'globals': {'dt': datetime.datetime(2024, 2, 7)}}
-        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 2, 6))
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'function': {'name': 'testDate'}}}})
+        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 5))
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_binary_subtraction(self):
-        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 8)
+        options = {'globals': {'dt2': datetime.datetime(2024, 1, 7), 'testDate': _test_date, 'testNumber': _test_number}}
+
+        # number - number
+        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 8)
 
         # datetime - datetime
-        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt1'}, 'right': {'variable': 'dt2'}}})
-        options = {'globals': {'dt1': datetime.datetime(2024, 2, 8), 'dt2': datetime.datetime(2024, 2, 7)}}
+        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt2'}, 'right': {'function': {'name': 'testDate'}}}})
         self.assertEqual(evaluate_expression(expr, options), 86400000)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'binary': {'op': '-', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_binary_multiplication(self):
-        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 20)
+        options = {'globals': {'testNumber': _test_number}}
+
+        # number * number
+        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 20)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'binary': {'op': '*', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_binary_division(self):
-        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 5)
+        options = {'globals': {'testNumber': _test_number}}
+
+        # number / number
+        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 5)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'binary': {'op': '/', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_binary_equality(self):
-        expr = validate_expression({'binary': {'op': '==', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), False)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'binary': {'op': '==', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_binary_inequality(self):
-        expr = validate_expression({'binary': {'op': '!=', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), True)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'binary': {'op': '!=', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), True)
 
 
     def test_binary_less_than_or_equal_to(self):
-        expr = validate_expression({'binary': {'op': '<=', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), False)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'binary': {'op': '<=', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_binary_less_than(self):
-        expr = validate_expression({'binary': {'op': '<', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), False)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'binary': {'op': '<', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_binary_greater_than_or_equal_to(self):
-        expr = validate_expression({'binary': {'op': '>=', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), True)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'binary': {'op': '>=', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), True)
 
 
     def test_binary_greater_than(self):
-        expr = validate_expression({'binary': {'op': '>', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), True)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'binary': {'op': '>', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), True)
 
 
     def test_binary_modulus(self):
-        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 0)
+        options = {'globals': {'testNumber': _test_number}}
+
+        # number % number
+        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 0)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'binary': {'op': '%', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_binary_exponentiation(self):
-        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'number': 2}}})
-        self.assertEqual(evaluate_expression(expr), 100)
+        options = {'globals': {'testNumber': _test_number}}
+
+        # number ** number
+        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), 100)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'binary': {'op': '**', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_unary_not(self):
-        expr = validate_expression({'unary': {'op': '!', 'expr': {'variable': 'False'}}})
-        self.assertEqual(evaluate_expression(expr), True)
+        options = {'globals': {'testNumber': _test_number}}
+        expr = validate_expression({'unary': {'op': '!', 'expr': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_unary_negate(self):
-        expr = validate_expression({'unary': {'op': '-', 'expr': {'number': 1}}})
-        self.assertEqual(evaluate_expression(expr), -1)
+        options = {'globals': {'testNumber': _test_number, 'testString': _test_string}}
+
+        # - number
+        expr = validate_expression({'unary': {'op': '-', 'expr': {'function': {'name': 'testNumber'}}}})
+        self.assertEqual(evaluate_expression(expr, options), -2)
 
         # Invalid
-        expr = validate_expression({'unary': {'op': '-', 'expr': {'string': 'abc'}}})
-        self.assertIsNone(evaluate_expression(expr))
+        expr = validate_expression({'unary': {'op': '-', 'expr': {'function': {'name': 'testString'}}}})
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_group(self):
+        options = {'globals': {'testNumber': _test_number}}
         expr = validate_expression({
             'group': {
                 'binary': {
                     'op': '*',
-                    'left': {'number': 2},
+                    'left': {'function': {'name': 'testNumber'}},
                     'right': {
                         'group': {
                             'binary': {
@@ -1110,4 +1164,17 @@ class TestEvaluateExpression(unittest.TestCase):
                 }
             }
         })
-        self.assertEqual(evaluate_expression(expr), 16)
+        self.assertEqual(evaluate_expression(expr, options), 16)
+
+
+# Helper functions to get test values of specific types
+def _test_date(unused_args, unused_options):
+    return datetime.datetime(2024, 1, 6)
+
+
+def _test_number(unused_args, unused_options):
+    return 2
+
+
+def _test_string(unused_args, unused_options):
+    return 'abc'
