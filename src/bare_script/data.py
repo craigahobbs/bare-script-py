@@ -175,14 +175,12 @@ def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=Fa
         if field_name not in left_names:
             right_names[field_name] = field_name
         else:
-            unique_name = field_name
             ix_unique = 2
             unique_name = f'{field_name}{ix_unique}'
-            right_names[field_name] = unique_name
-            while unique_name in left_names or unique_name in right_names_raw:
+            while unique_name in left_names or unique_name in right_names or unique_name in right_names_raw:
                 ix_unique += 1
                 unique_name = f'{field_name}{ix_unique}'
-                right_names[field_name] = unique_name
+            right_names[field_name] = unique_name
 
     # Create the evaluation options object
     eval_options = options
