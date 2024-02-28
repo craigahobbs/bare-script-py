@@ -645,18 +645,15 @@ class TestEvaluateExpression(unittest.TestCase):
                         'left': {'number': 3},
                         'right': {
                             'function': {
-                                'name': 'ceil',
-                                'args': [
-                                    {'variable': 'varName'}
-                                ]
+                                'name': 'testNumber'
                             }
                         }
                     }
                 }
             }
         })
-        options = {'globals': {'varName': 4}}
-        self.assertEqual(evaluate_expression(expr, options), 19)
+        options = {'globals': {'testNumber': _test_number}}
+        self.assertEqual(evaluate_expression(expr, options), 13)
 
 
     def test_no_globals(self):
@@ -750,7 +747,7 @@ class TestEvaluateExpression(unittest.TestCase):
                 'args': [
                     {'variable': 'test'},
                     {'function': {'name': 'testValue', 'args': [{'string': 'a'}]}},
-                    {'function': {'name': 'testValue', 'args': [{'string': 'b'}]}}
+                    {'function': {'name': 'testValue', 'args': [{'function': {'name': 'testString'}}]}}
                 ]
             }
         })
@@ -764,14 +761,15 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {
             'globals': {
                 'test': True,
+                'testString': _test_string,
                 'testValue': test_value
             }
         }
         self.assertEqual(evaluate_expression(expr, options), 'a')
         self.assertListEqual(test_values, ['a'])
         options['globals']['test'] = False
-        self.assertEqual(evaluate_expression(expr, options), 'b')
-        self.assertListEqual(test_values, ['a', 'b'])
+        self.assertEqual(evaluate_expression(expr, options), 'abc')
+        self.assertListEqual(test_values, ['a', 'abc'])
 
 
     def test_function_if_no_value_expression(self):
@@ -788,11 +786,12 @@ class TestEvaluateExpression(unittest.TestCase):
             'function': {
                 'name': 'if',
                 'args': [
-                    {'variable': 'true'}
+                    {'function': {'name': 'testNumber'}}
                 ]
             }
         })
-        self.assertEqual(evaluate_expression(expr), None)
+        options = {'globals': {'testNumber': _test_number}}
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_function_if_no_false_expression(self):
@@ -800,12 +799,13 @@ class TestEvaluateExpression(unittest.TestCase):
             'function': {
                 'name': 'if',
                 'args': [
-                    {'variable': 'false'},
+                    {'function': {'name': 'testFalse'}},
                     {'number': 1}
                 ]
             }
         })
-        self.assertEqual(evaluate_expression(expr), None)
+        options = {'globals': {'testFalse': _test_false}}
+        self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_function_builtin(self):
@@ -813,11 +813,12 @@ class TestEvaluateExpression(unittest.TestCase):
             'function': {
                 'name': 'abs',
                 'args': [
-                    {'number': -1}
+                    {'function': {'name': 'testNumber'}}
                 ]
             }
         })
-        self.assertEqual(evaluate_expression(expr), 1)
+        options = {'globals': {'testNumber': _test_number}}
+        self.assertEqual(evaluate_expression(expr, options), 2)
 
 
     def test_function_no_builtins(self):
@@ -825,12 +826,13 @@ class TestEvaluateExpression(unittest.TestCase):
             'function': {
                 'name': 'abs',
                 'args': [
-                    {'number': -1}
+                    {'function': {'name': 'testNumber'}}
                 ]
             }
         })
+        options = {'globals': {'testNumber': _test_number}}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            evaluate_expression(expr, None, None, False)
+            evaluate_expression(expr, options, None, False)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "abs"')
 
 
@@ -839,7 +841,7 @@ class TestEvaluateExpression(unittest.TestCase):
             'function': {
                 'name': 'fnName',
                 'args': [
-                    {'number': 3}
+                    {'function': {'name': 'testNumber'}}
                 ]
             }
         })
@@ -848,8 +850,8 @@ class TestEvaluateExpression(unittest.TestCase):
             number, = args
             return 2 * number
 
-        options = {'globals': {'fnName': fn_name}}
-        self.assertEqual(evaluate_expression(expr, options), 6)
+        options = {'globals': {'testNumber': _test_number, 'fnName': fn_name}}
+        self.assertEqual(evaluate_expression(expr, options), 4)
 
 
     def test_function_local(self):
@@ -857,7 +859,7 @@ class TestEvaluateExpression(unittest.TestCase):
             'function': {
                 'name': 'fnLocal',
                 'args': [
-                    {'number': 3}
+                    {'function': {'name': 'testNumber'}}
                 ]
             }
         })
@@ -866,17 +868,21 @@ class TestEvaluateExpression(unittest.TestCase):
             number, = args
             return 2 * number
 
+        options = {'globals': {'testNumber': _test_number}}
         locals_ = {'fnLocal': fn_local}
-        self.assertEqual(evaluate_expression(expr, None, locals_), 6)
+        self.assertEqual(evaluate_expression(expr, options, locals_), 4)
 
 
     def test_function_local_null(self):
         expr = validate_expression({
             'function': {
-                'name': 'fnLocal'
+                'name': 'fnLocal',
+                'args': [
+                    {'function': {'name': 'testString'}}
+                ]
             }
         })
-        options = {'globals': {'fnLocal': 'abc'}}
+        options = {'globals': {'testString': _test_string, 'fnLocal': 'abc'}}
         locals_ = {'fnLocal': None}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             evaluate_expression(expr, options, locals_)
@@ -886,17 +892,23 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_function_non_function(self):
         expr = validate_expression({
             'function': {
-                'name': 'fnLocal'
+                'name': 'fnLocal',
+                'args': [
+                    {'function': {'name': 'testString'}}
+                ]
             }
         })
-        options = {'globals': {'fnLocal': 'abc'}}
+        options = {'globals': {'testString': _test_string, 'fnLocal': 'abc'}}
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_function_non_function_log_fn(self):
         expr = validate_expression({
             'function': {
-                'name': 'fnLocal'
+                'name': 'fnLocal',
+                'args': [
+                    {'function': {'name': 'testString'}}
+                ]
             }
         })
 
@@ -904,7 +916,7 @@ class TestEvaluateExpression(unittest.TestCase):
         def log_fn(message):
             logs.append(message)
 
-        options = {'globals': {'fnLocal': 'abc'}, 'logFn': log_fn, 'debug': True}
+        options = {'globals': {'testString': _test_string, 'fnLocal': 'abc'}, 'logFn': log_fn, 'debug': True}
         self.assertEqual(evaluate_expression(expr, options), None)
         self.assertListEqual(logs, ['BareScript: Function "fnLocal" failed with error: \'str\' object is not callable'])
 
@@ -912,23 +924,31 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_function_unknown(self):
         expr = validate_expression({
             'function': {
-                'name': 'fnUnknown'
+                'name': 'fnUnknown',
+                'args': [
+                    {'function': {'name': 'testString'}}
+                ]
             }
         })
         options = {'globals': {}}
+        locals_ = {'testString': _test_string}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            evaluate_expression(expr, options)
+            evaluate_expression(expr, options, locals_)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "fnUnknown"')
 
 
     def test_function_unknown_no_globals(self):
         expr = validate_expression({
             'function': {
-                'name': 'fnUnknown'
+                'name': 'fnUnknown',
+                'args': [
+                    {'function': {'name': 'testString'}}
+                ]
             }
         })
+        locals_ = {'testString': _test_string}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            evaluate_expression(expr)
+            evaluate_expression(expr, None, locals_)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "fnUnknown"')
 
 
@@ -957,7 +977,7 @@ class TestEvaluateExpression(unittest.TestCase):
             'binary': {
                 'op': '&&',
                 'left': {'variable': 'leftValue'},
-                'right': {'function': {'name': 'testValue', 'args': [{'string': 'abc'}]}}
+                'right': {'function': {'name': 'testValue', 'args': [{'function': {'name': 'testString'}}]}}
             }
         })
 
@@ -969,6 +989,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
         options = {
             'globals': {
+                'testString': _test_string,
                 'testValue': test_value
             }
         }
@@ -984,7 +1005,7 @@ class TestEvaluateExpression(unittest.TestCase):
             'binary': {
                 'op': '||',
                 'left': {'variable': 'leftValue'},
-                'right': {'function': {'name': 'testValue', 'args': [{'string': 'abc'}]}}
+                'right': {'function': {'name': 'testValue', 'args': [{'function': {'name': 'testString'}}]}}
             }
         })
 
@@ -997,6 +1018,7 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {
             'globals': {
                 'leftValue': True,
+                'testString': _test_string,
                 'testValue': test_value
             }
         }
@@ -1182,6 +1204,10 @@ class TestEvaluateExpression(unittest.TestCase):
 # Helper functions to get test values of specific types
 def _test_date(unused_args, unused_options):
     return datetime.datetime(2024, 1, 6)
+
+
+def _test_false(unused_args, unused_options):
+    return False
 
 
 def _test_number(unused_args, unused_options):
