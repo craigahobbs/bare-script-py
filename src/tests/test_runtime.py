@@ -915,6 +915,18 @@ class TestEvaluateExpression(unittest.TestCase):
                 'name': 'fnUnknown'
             }
         })
+        options = {'globals': {}}
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            evaluate_expression(expr, options)
+        self.assertEqual(str(cm_exc.exception), 'Undefined function "fnUnknown"')
+
+
+    def test_function_unknown_no_globals(self):
+        expr = validate_expression({
+            'function': {
+                'name': 'fnUnknown'
+            }
+        })
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             evaluate_expression(expr)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "fnUnknown"')
