@@ -365,7 +365,7 @@ def _data_parse_csv(args, unused_options):
         lines.extend(arg.splitlines())
 
     # Parse the CSV
-    data = list(csv.DictReader(lines))
+    data = list(csv.DictReader(lines, skipinitialspace=True))
 
     # Validate the data (as CSV)
     validate_data(data, True)

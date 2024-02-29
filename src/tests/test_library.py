@@ -600,7 +600,7 @@ class TestLibrary(unittest.TestCase):
 
     def test_data_parse_csv(self):
         text = '''\
-a,b,c
+a,b, c
 1,3,abc
 '''
         text2 = '''\
