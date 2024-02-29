@@ -287,6 +287,12 @@ class TestLibrary(unittest.TestCase):
         # Non-array
         self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([None, 1, 5], None))
 
+        # Non-number index
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 'abc'], None))
+
+        # Non-integer index
+        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 1.5], None))
+
         # Index outside valid range
         self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([array, -1, 5], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([array, 3, 5], None))

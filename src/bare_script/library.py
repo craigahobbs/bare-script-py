@@ -97,7 +97,7 @@ def _array_index_of(args, options):
 
     if callable(value):
         for ix in range(int(index), len(array)):
-            if value([array[ix]], options):
+            if value_boolean(value([array[ix]], options)):
                 return ix
     else:
         for ix in range(int(index), len(array)):
@@ -137,7 +137,7 @@ def _array_last_index_of(args, options):
 
     if callable(value):
         for ix in range(int(index), -1, -1):
-            if value([array[ix]], options):
+            if value_boolean(value([array[ix]], options)):
                 return ix
     else:
         for ix in range(int(index), -1, -1):
@@ -220,7 +220,7 @@ def _array_push(args, unused_options):
 # $return: The value
 def _array_set(args, unused_options):
     array, index, value = default_args(args, (None, None, None))
-    if not isinstance(array, list) or index < 0 or index >= len(array):
+    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
         return None
 
     array[index] = value
