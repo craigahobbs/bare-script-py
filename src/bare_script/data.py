@@ -13,7 +13,7 @@ import statistics
 from schema_markdown import parse_schema_markdown, validate_type
 
 from .parser import parse_expression
-from .value import parse_datetime, parse_number, value_boolean, value_compare, value_json
+from .value import value_boolean, value_compare, value_json, value_parse_datetime, value_parse_number
 
 
 # Helper to dynamically import evaluate_expression to avoid the circular dependency
@@ -59,11 +59,11 @@ def validate_data(data, csv=False):
                         types[field] = None
 
                     # Can the string be parsed into another type?
-                    elif parse_datetime(value) is not None:
+                    elif value_parse_datetime(value) is not None:
                         types[field] = 'datetime'
                     elif value in ('true', 'false'):
                         types[field] = 'boolean'
-                    elif parse_number(value) is not None:
+                    elif value_parse_number(value) is not None:
                         types[field] = 'number'
                     else:
                         types[field] = 'string'
@@ -94,7 +94,7 @@ def validate_data(data, csv=False):
                     if value == '':
                         number_value = None
                     else:
-                        number_value = parse_number(value)
+                        number_value = value_parse_number(value)
                         if number_value is None:
                             throw_field_error(field, field_type, value)
                     row[field] = number_value
@@ -107,7 +107,7 @@ def validate_data(data, csv=False):
                     if value == '':
                         datetime_value = None
                     else:
-                        datetime_value = parse_datetime(value)
+                        datetime_value = value_parse_datetime(value)
                         if datetime_value is None:
                             throw_field_error(field, field_type, value)
                     row[field] = datetime_value

@@ -12,7 +12,7 @@ import unittest
 import schema_markdown
 
 from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
-from bare_script.value import REGEX_TYPE, parse_datetime
+from bare_script.value import REGEX_TYPE, value_parse_datetime
 
 
 class TestLibrary(unittest.TestCase):
@@ -722,7 +722,7 @@ a,b, c
 
     def test_datetime_iso_format(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOFormat']([parse_datetime('2022-06-21T07:15:30+00:00')], None),
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([value_parse_datetime('2022-06-21T07:15:30+00:00')], None),
             '2022-06-21T07:15:30+00:00'
         )
 
@@ -1804,7 +1804,7 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([False], None), 'false')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0], None), '0')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0.], None), '0')
-        dt = parse_datetime('2022-06-21T12:30:15.100+00:00')
+        dt = value_parse_datetime('2022-06-21T12:30:15.100+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([dt], None), '2022-06-21T12:30:15.100+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([{'b': 2, 'a': 1}], None), '{"a":1,"b":2}')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([[1, 2, 3]], None), '[1,2,3]')

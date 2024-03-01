@@ -18,8 +18,8 @@ import urllib
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
-from .value import R_NUMBER_CLEANUP, REGEX_TYPE, parse_datetime, parse_number, round_number, \
-    value_boolean, value_compare, value_is, value_json, value_string, value_type
+from .value import R_NUMBER_CLEANUP, REGEX_TYPE, value_boolean, value_compare, value_is, value_json, \
+    value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
 # The default maximum statements for executeScript
@@ -473,7 +473,7 @@ def _datetime_iso_parse(args, unused_options):
     if value_type(string) != 'string':
         return None
 
-    return parse_datetime(string)
+    return value_parse_datetime(string)
 
 
 # $function: datetimeMillisecond
@@ -486,7 +486,7 @@ def _datetime_millisecond(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return int(round_number(datetime_.microsecond / 1000, 0))
+    return int(value_round_number(datetime_.microsecond / 1000, 0))
 
 
 # $function: datetimeMinute
@@ -851,7 +851,7 @@ def _math_round(args, unused_options):
     if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
         return None
 
-    return round_number(x, digits)
+    return value_round_number(x, digits)
 
 
 # $function: mathSign
@@ -921,7 +921,7 @@ def _number_parse_float(args, unused_options):
     if not isinstance(string, str):
         return None
 
-    return parse_number(string)
+    return value_parse_number(string)
 
 
 # $function: numberParseInt
@@ -935,10 +935,7 @@ def _number_parse_int(args, unused_options):
     if not isinstance(string, str) or not isinstance(radix, (int, float)) or int(radix) != radix or radix < 2 or radix > 36:
         return None
 
-    try:
-        return int(string, int(radix))
-    except ValueError:
-        return None
+    return value_parse_integer(string, int(radix))
 
 
 # $function: numberToFixed
@@ -953,7 +950,7 @@ def _number_to_fixed(args, unused_options):
     if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
         return None
 
-    result = f'{round_number(x, digits):.{int(digits)}f}'
+    result = f'{value_round_number(x, digits):.{int(digits)}f}'
     if value_boolean(trim):
         return R_NUMBER_CLEANUP.sub('', result)
     return result

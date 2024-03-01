@@ -12,7 +12,7 @@ from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTI
 from .model import lint_script
 from .options import url_file_relative
 from .parser import BareScriptParserError, parse_script
-from .value import round_number, value_boolean, value_compare, value_string
+from .value import value_boolean, value_compare, value_round_number, value_string
 
 
 def execute_script(script, options=None):
@@ -290,7 +290,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
             # datetime - datetime
             elif isinstance(left_value, datetime.datetime) and isinstance(right_value, datetime.datetime):
-                return round_number((left_value - right_value).total_seconds() * 1000, 0)
+                return value_round_number((left_value - right_value).total_seconds() * 1000, 0)
 
         elif bin_op == '*':
             # number * number

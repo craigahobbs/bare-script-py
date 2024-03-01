@@ -7,8 +7,8 @@ import datetime
 import re
 import unittest
 
-from bare_script.value import parse_datetime, parse_number, round_number, \
-    value_boolean, value_compare, value_is, value_json, value_string, value_type
+from bare_script.value import value_boolean, value_compare, value_is, value_json, value_parse_datetime, \
+    value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
 class TestValue(unittest.TestCase):
@@ -70,8 +70,8 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(0.), '0')
 
         # datetime
-        self.assertEqual(value_string(parse_datetime('2024-01-12T06:09:00+00:00')), '2024-01-12T06:09:00+00:00')
-        self.assertEqual(value_string(parse_datetime('2024-01-12T06:09:00.123+00:00')), '2024-01-12T06:09:00.123+00:00')
+        self.assertEqual(value_string(value_parse_datetime('2024-01-12T06:09:00+00:00')), '2024-01-12T06:09:00+00:00')
+        self.assertEqual(value_string(value_parse_datetime('2024-01-12T06:09:00.123+00:00')), '2024-01-12T06:09:00.123+00:00')
 
         # object
         self.assertEqual(value_string({'value': 1}), '{"value":1}')
@@ -100,7 +100,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_json({'value': 1}, 2), '{\n  "value": 1\n}')
 
         # Datetime
-        self.assertEqual(value_json(parse_datetime('2024-01-12T06:09:00+00:00')), '"2024-01-12T06:09:00+00:00"')
+        self.assertEqual(value_json(value_parse_datetime('2024-01-12T06:09:00+00:00')), '"2024-01-12T06:09:00+00:00"')
 
         # Number
         self.assertEqual(value_json(5), '5')
@@ -181,8 +181,8 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_is(5., 6.), False)
 
         # datetime
-        d1 = parse_datetime('2024-01-12')
-        d2 = parse_datetime('2024-01-12')
+        d1 = value_parse_datetime('2024-01-12')
+        d2 = value_parse_datetime('2024-01-12')
         self.assertEqual(value_is(d1, d1), True)
         self.assertEqual(value_is(d1, d2), False)
 
@@ -249,8 +249,8 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(5.5, 5.), 1)
 
         # datetime
-        d1 = parse_datetime('2024-02-12')
-        d2 = parse_datetime('2024-02-11')
+        d1 = value_parse_datetime('2024-02-12')
+        d2 = value_parse_datetime('2024-02-11')
         self.assertEqual(value_compare(d1, d1), 0)
         self.assertEqual(value_compare(d2, d1), -1)
         self.assertEqual(value_compare(d1, d2), 1)
@@ -328,55 +328,85 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare((1, 2, 3), 'abc'), 1)
 
 
-    def test_round_number(self):
-        self.assertEqual(round_number(1.5, 0), 2)
-        self.assertEqual(round_number(2.5, 0), 3)
-        self.assertEqual(round_number(1.25, 1), 1.3)
-        self.assertEqual(round_number(1.35, 1), 1.4)
+    def test_value_round_number(self):
+        self.assertEqual(value_round_number(1.5, 0), 2)
+        self.assertEqual(value_round_number(2.5, 0), 3)
+        self.assertEqual(value_round_number(1.25, 1), 1.3)
+        self.assertEqual(value_round_number(1.35, 1), 1.4)
 
 
-    def test_parse_number(self):
-        self.assertEqual(parse_number('123.45'), 123.45)
-        self.assertEqual(parse_number('-123.45'), -123.45)
-        self.assertEqual(parse_number('123'), 123)
-        self.assertEqual(parse_number('123.'), 123)
-        self.assertEqual(parse_number('.45'), 0.45)
-        self.assertEqual(parse_number('1.23e3'), 1230)
-        self.assertEqual(parse_number('4.56E+3'), 4560)
-        self.assertEqual(parse_number('0.123e-2'), 0.00123)
-        self.assertEqual(parse_number('0'), 0)
-        self.assertEqual(parse_number('0.0'), 0)
-        self.assertEqual(parse_number('0e0'), 0)
+    def test_value_parse_number(self):
+        self.assertEqual(value_parse_number('123.45'), 123.45)
+        self.assertEqual(value_parse_number('-123.45'), -123.45)
+        self.assertEqual(value_parse_number('123'), 123)
+        self.assertEqual(value_parse_number('123.'), 123)
+        self.assertEqual(value_parse_number('.45'), 0.45)
+        self.assertEqual(value_parse_number('1.23e3'), 1230)
+        self.assertEqual(value_parse_number('4.56E+3'), 4560)
+        self.assertEqual(value_parse_number('0.123e-2'), 0.00123)
+        self.assertEqual(value_parse_number('0'), 0)
+        self.assertEqual(value_parse_number('0.0'), 0)
+        self.assertEqual(value_parse_number('0e0'), 0)
+
+        # Padding
+        self.assertEqual(value_parse_number('  123.45  '), 123.45)
 
         # Special values
-        self.assertIsNone(parse_number('NaN'))
-        self.assertIsNone(parse_number('Infinity'))
+        self.assertIsNone(value_parse_number('NaN'))
+        self.assertIsNone(value_parse_number('Infinity'))
 
         # Parse failure
-        self.assertIsNone(parse_number('invalid'))
-        self.assertIsNone(parse_number('1234.45asdf'))
-        self.assertIsNone(parse_number('1234.45 asdf'))
+        self.assertIsNone(value_parse_number('invalid'))
+        self.assertIsNone(value_parse_number('1234.45asdf'))
+        self.assertIsNone(value_parse_number('1234.45 asdf'))
 
 
-    def test_parse_datetime(self):
+    def test_value_parse_integer(self):
+        self.assertEqual(value_parse_integer('123'), 123)
+        self.assertEqual(value_parse_integer('-123'), -123)
+        self.assertEqual(value_parse_integer('0'), 0)
+
+        # Padding
+        self.assertEqual(value_parse_integer('  123  '), 123)
+
+        # No floating point
+        self.assertEqual(value_parse_integer('123.'), None)
+        self.assertEqual(value_parse_integer('.45'), None)
+        self.assertEqual(value_parse_integer('1.23e3'), None)
+        self.assertEqual(value_parse_integer('4.56E+3'), None)
+        self.assertEqual(value_parse_integer('0.123e-2'), None)
+        self.assertEqual(value_parse_integer('0.0'), None)
+        self.assertEqual(value_parse_integer('0e0'), None)
+
+        # Special values
+        self.assertEqual(value_parse_integer('NaN'), None)
+        self.assertEqual(value_parse_integer('Infinity'), None)
+
+        # Parse failure
+        self.assertEqual(value_parse_integer('invalid'), None)
+        self.assertEqual(value_parse_integer('123asdf'), None)
+        self.assertEqual(value_parse_integer('123 asdf'), None)
+
+
+    def test_value_parse_datetime(self):
         self.assertEqual(
-            value_string(parse_datetime('2022-08-29T15:08:00+00:00')),
+            value_string(value_parse_datetime('2022-08-29T15:08:00+00:00')),
             '2022-08-29T15:08:00+00:00'
         )
         self.assertEqual(
-            value_string(parse_datetime('2022-08-29T15:08:00Z')),
+            value_string(value_parse_datetime('2022-08-29T15:08:00Z')),
             '2022-08-29T15:08:00+00:00'
         )
         self.assertEqual(
-            value_string(parse_datetime('2022-08-29T15:08:00-08:00')),
+            value_string(value_parse_datetime('2022-08-29T15:08:00-08:00')),
             '2022-08-29T23:08:00+00:00'
         )
 
         # Date
         self.assertEqual(
-            parse_datetime('2022-08-29'),
+            value_parse_datetime('2022-08-29'),
             datetime.datetime(2022, 8, 29)
         )
 
         # Parse failure
-        self.assertIsNone(parse_datetime('invalid'))
+        self.assertIsNone(value_parse_datetime('invalid'))

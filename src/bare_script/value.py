@@ -197,7 +197,7 @@ def value_compare(left, right):
     return -1 if type1 < type2 else (0 if type1 == type2 else 1)
 
 
-def round_number(value, digits):
+def value_round_number(value, digits):
     """
     Round a number
 
@@ -213,7 +213,7 @@ def round_number(value, digits):
     return int(value * multiplier + (0.5 if value >= 0 else -0.5)) / multiplier
 
 
-def parse_number(text):
+def value_parse_number(text):
     """
     Parse a number string
 
@@ -232,7 +232,25 @@ def parse_number(text):
         return None
 
 
-def parse_datetime(text):
+def value_parse_integer(text, radix=10):
+    """
+    Parse an integer string
+
+    :param text: The string to parse as a integer
+    :type text: str
+    :param radix: The integer's radix (2 - 36). Default is 10.
+    :type radix: int
+    :return: An integer value or None if parsing fails
+    :rtype: int or None
+    """
+
+    try:
+        return int(text, radix)
+    except ValueError:
+        return None
+
+
+def value_parse_datetime(text):
     """
     Parse a datetime string
 
