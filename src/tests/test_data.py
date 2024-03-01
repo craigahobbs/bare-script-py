@@ -3,12 +3,12 @@
 
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
-import datetime
 import unittest
 
 from schema_markdown import ValidationError
 
 from bare_script import add_calculated_field, aggregate_data, filter_data, join_data, sort_data, top_data, validate_data
+from bare_script.value import parse_datetime
 
 
 class TestData(unittest.TestCase):
@@ -53,7 +53,7 @@ class TestData(unittest.TestCase):
 
     def test_validate_data_datetime(self):
         data = [
-            {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
+            {'date': parse_datetime('2022-08-30T00:00:00+00:00')},
             {'date': '2022-08-30'},
             {'date': '2022-08-30T11:04:00Z'},
             {'date': '2022-08-30T11:04:00-07:00'},
@@ -63,15 +63,11 @@ class TestData(unittest.TestCase):
             'date': 'datetime'
         })
 
-        # Fixup the date-format above as its affected by the current time zone
-        date = data[1].get('date')
-        data[1]['date'] = datetime.datetime(date.year, date.month, date.day, tzinfo=datetime.timezone.utc)
-
         self.assertListEqual(data, [
-            {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
-            {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
-            {'date': datetime.datetime(2022, 8, 30, 11, 4, tzinfo=datetime.timezone.utc)},
-            {'date': datetime.datetime(2022, 8, 30, 18, 4, tzinfo=datetime.timezone.utc)},
+            {'date': parse_datetime('2022-08-30T00:00:00+00:00')},
+            {'date': parse_datetime('2022-08-30')},
+            {'date': parse_datetime('2022-08-30T11:04:00+00:00')},
+            {'date': parse_datetime('2022-08-30T18:04:00+00:00')},
             {'date': None}
         ])
 
@@ -79,7 +75,7 @@ class TestData(unittest.TestCase):
     def test_validate_data_datetime_string(self):
         data = [
             {'date': '2022-08-30'},
-            {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
+            {'date': parse_datetime('2022-08-30T00:00:00+00:00')},
             {'date': '2022-08-30T11:04:00Z'},
             {'date': '2022-08-30T11:04:00-07:00'},
             {'date': None},
@@ -90,15 +86,11 @@ class TestData(unittest.TestCase):
             'date': 'datetime'
         })
 
-        # Fixup the date-format above as its affected by the current time zone
-        date = data[0].get('date')
-        data[0]['date'] = datetime.datetime(date.year, date.month, date.day, tzinfo=datetime.timezone.utc)
-
         self.assertListEqual(data, [
-            {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
-            {'date': datetime.datetime(2022, 8, 30, tzinfo=datetime.timezone.utc)},
-            {'date': datetime.datetime(2022, 8, 30, 11, 4, tzinfo=datetime.timezone.utc)},
-            {'date': datetime.datetime(2022, 8, 30, 18, 4, tzinfo=datetime.timezone.utc)},
+            {'date': parse_datetime('2022-08-30')},
+            {'date': parse_datetime('2022-08-30T00:00:00+00:00')},
+            {'date': parse_datetime('2022-08-30T11:04:00+00:00')},
+            {'date': parse_datetime('2022-08-30T18:04:00+00:00')},
             {'date': None},
             {'date': None},
             {'date': None}
@@ -212,7 +204,7 @@ class TestData(unittest.TestCase):
 
     def test_validate_data_datetime_error(self):
         data = [
-            {'A': datetime.datetime(2022, 7, 30, tzinfo=datetime.timezone.utc)},
+            {'A': parse_datetime('2022-07-30T00:00:00+00:00')},
             {'A': 2}
         ]
         with self.assertRaises(TypeError) as cm_exc:
@@ -222,7 +214,7 @@ class TestData(unittest.TestCase):
 
     def test_validate_data_datetime_error_csv(self):
         data = [
-            {'A': datetime.datetime(2022, 7, 30, tzinfo=datetime.timezone.utc)},
+            {'A': parse_datetime('2022-07-30T00:00:00+00:00')},
             {'A': 'abc'}
         ]
         with self.assertRaises(TypeError) as cm_exc:

@@ -12,7 +12,7 @@ import unittest
 import schema_markdown
 
 from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
-from bare_script.value import REGEX_TYPE
+from bare_script.value import REGEX_TYPE, parse_datetime
 
 
 class TestLibrary(unittest.TestCase):
@@ -705,34 +705,36 @@ a,b, c
 
 
     def test_datetime_day(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([local_dt], None), 21)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([utc_dt], None), 21)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([dt], None), 21)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([None], None), None)
 
 
     def test_datetime_hour(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([local_dt], None), 7)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([utc_dt], None), 7)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([dt], None), 7)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([None], None), None)
 
 
     def test_datetime_iso_format(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([local_dt], None), '2022-06-21T15:15:30+00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([utc_dt], None), '2022-06-21T07:15:30+00:00')
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([parse_datetime('2022-06-21T07:15:30+00:00')], None),
+            '2022-06-21T07:15:30+00:00'
+        )
 
-        # is_date
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([local_dt, True], None), '2022-06-21')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([utc_dt, True], None), '2022-06-21')
+        # isDate
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(2022, 6, 21), True], None),
+            '2022-06-21'
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(2022, 10, 7), True], None),
+            '2022-10-07'
+        )
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([None], None), None)
@@ -741,15 +743,15 @@ a,b, c
     def test_datetime_iso_parse(self):
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00+00:00'], None),
-            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
+            datetime.datetime.fromisoformat('2022-08-29T15:08:00+00:00').astimezone().replace(tzinfo=None)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00Z'], None),
-            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
+            datetime.datetime.fromisoformat('2022-08-29T15:08:00+00:00').astimezone().replace(tzinfo=None)
         )
         self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00-08:00'], None).astimezone(datetime.timezone.utc),
-            datetime.datetime(2022, 8, 29, 23, 8, tzinfo=datetime.timezone.utc)
+            SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00-08:00'], None),
+            datetime.datetime.fromisoformat('2022-08-29T15:08:00-08:00').astimezone().replace(tzinfo=None)
         )
 
         # Invalid datetime string
@@ -760,30 +762,24 @@ a,b, c
 
 
     def test_datetime_millisecond(self):
-        local_dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100500).astimezone()
-        utc_dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 101500, tzinfo=datetime.timezone.utc)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([local_dt], None), 101)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([utc_dt], None), 102)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100000)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([dt], None), 100)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([None], None), None)
 
 
     def test_datetime_minute(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([local_dt], None), 15)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([utc_dt], None), 15)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([dt], None), 15)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([None], None), None)
 
 
     def test_datetime_month(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([local_dt], None), 6)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([utc_dt], None), 6)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([dt], None), 6)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([None], None), None)
@@ -792,98 +788,98 @@ a,b, c
     def test_datetime_new(self):
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 21., 12., 30., 15., 100.], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000)
         )
 
         # Float arguments
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 21., 12., 30., 15., 100.], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000)
         )
 
         # Required arguments only
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21], None), datetime.datetime(2022, 6, 21).astimezone())
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21], None), datetime.datetime(2022, 6, 21))
 
         # Extra months
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 26, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2024, 2, 21, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2024, 2, 21, 12, 30, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, -14, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2020, 10, 21, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2020, 10, 21, 12, 30, 15, 100000)
         )
 
         # Extra days
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 50, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 7, 20, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 7, 20, 12, 30, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 250, 12, 30, 15, 100], None),
-            datetime.datetime(2023, 2, 5, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2023, 2, 5, 12, 30, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, -50, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 4, 11, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 4, 11, 12, 30, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, -250, 12, 30, 15, 100], None),
-            datetime.datetime(2021, 9, 23, 12, 30, 15, 100000).astimezone()
+            datetime.datetime(2021, 9, 23, 12, 30, 15, 100000)
         )
 
         # Extra hours
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 50, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 23, 2, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 23, 2, 30, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, -50, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 18, 22, 30, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 18, 22, 30, 15, 100000)
         )
 
         # Extra minutes
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 200, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 15, 20, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 15, 20, 15, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, -200, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 8, 40, 15, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 8, 40, 15, 100000)
         )
 
         # Extra seconds
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 200, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 33, 20, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 33, 20, 100000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, -200, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 26, 40, 100000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 26, 40, 100000)
         )
 
         # Extra milliseconds
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 2200], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 17, 200000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 30, 17, 200000)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, -2200], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 12, 800000).astimezone()
+            datetime.datetime(2022, 6, 21, 12, 30, 12, 800000)
         )
 
         # Extra everything
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 12, 31, 23, 59, 59, 1000], None),
-            datetime.datetime(2023, 1, 1, 0, 0, 0, 0).astimezone()
+            datetime.datetime(2023, 1, 1, 0, 0, 0, 0)
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2023, 1, 1, 0, 0, 0, -1000], None),
-            datetime.datetime(2022, 12, 31, 23, 59, 59, 0).astimezone()
+            datetime.datetime(2022, 12, 31, 23, 59, 59, 0)
         )
 
         # Non-number arguments
@@ -905,134 +901,13 @@ a,b, c
         self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 100.5], None))
 
 
-    def test_datetime_new_utc(self):
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022., 6., 21., 12., 30., 15., 100.], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Float arguments
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022., 6., 21., 12., 30., 15., 100.], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Required arguments only
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21], None),
-            datetime.datetime(2022, 6, 21, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra months
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 26, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2024, 2, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, -14, 21, 12, 30, 15, 100], None),
-            datetime.datetime(2020, 10, 21, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra days
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 50, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 7, 20, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 250, 12, 30, 15, 100], None),
-            datetime.datetime(2023, 2, 5, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, -50, 12, 30, 15, 100], None),
-            datetime.datetime(2022, 4, 11, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, -250, 12, 30, 15, 100], None),
-            datetime.datetime(2021, 9, 23, 12, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra hours
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 50, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 23, 2, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, -50, 30, 15, 100], None),
-            datetime.datetime(2022, 6, 18, 22, 30, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra minutes
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 200, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 15, 20, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, -200, 15, 100], None),
-            datetime.datetime(2022, 6, 21, 8, 40, 15, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra seconds
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 200, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 33, 20, 100000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, -200, 100], None),
-            datetime.datetime(2022, 6, 21, 12, 26, 40, 100000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra milliseconds
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 2200], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 17, 200000, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, -2200], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 12, 800000, tzinfo=datetime.timezone.utc)
-        )
-
-        # Extra everything
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 12, 31, 23, 59, 59, 1000], None),
-            datetime.datetime(2023, 1, 1, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNewUTC']([2023, 1, 1, 0, 0, 0, -1000], None),
-            datetime.datetime(2022, 12, 31, 23, 59, 59, 0, tzinfo=datetime.timezone.utc)
-        )
-
-        # Non-number arguments
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC'](['2022', 6, 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, '6', 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, '21', 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, '12', 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, '30', 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, '15', 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, '100'], None))
-
-        # Non-integer arguments
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022.5, 6, 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6.5, 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21.5, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12.5, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30.5, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15.5, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100.5], None))
-
-
     def test_datetime_now(self):
         self.assertIsInstance(SCRIPT_FUNCTIONS['datetimeNow']([], None), datetime.datetime)
 
 
     def test_datetime_second(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([local_dt], None), 30)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([utc_dt], None), 30)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([dt], None), 30)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([None], None), None)
@@ -1048,10 +923,8 @@ a,b, c
 
 
     def test_datetime_year(self):
-        local_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-08:00')
-        utc_dt = datetime.datetime.fromisoformat('2022-06-21T07:15:30-00:00')
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([local_dt], None), 2022)
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([utc_dt], None), 2022)
+        dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([dt], None), 2022)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([None], None), None)
@@ -1928,7 +1801,7 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([False], None), 'false')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0], None), '0')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([0.], None), '0')
-        dt = SCRIPT_FUNCTIONS['datetimeNewUTC']([2022, 6, 21, 12, 30, 15, 100], None)
+        dt = parse_datetime('2022-06-21T12:30:15.100+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([dt], None), '2022-06-21T12:30:15.100+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([{'b': 2, 'a': 1}], None), '{"a":1,"b":2}')
         self.assertEqual(SCRIPT_FUNCTIONS['stringNew']([[1, 2, 3]], None), '[1,2,3]')

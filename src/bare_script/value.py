@@ -243,7 +243,7 @@ def parse_datetime(text):
     """
 
     try:
-        return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', text))
+        return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', text)).astimezone().replace(tzinfo=None)
     except ValueError:
         return None
 

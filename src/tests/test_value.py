@@ -70,11 +70,8 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(0.), '0')
 
         # datetime
-        self.assertEqual(value_string(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '2024-01-12T06:09:00+00:00')
-        self.assertEqual(
-            value_string(datetime.datetime(2024, 1, 12, 6, 9, 0, 123000, tzinfo=datetime.timezone.utc)),
-            '2024-01-12T06:09:00.123+00:00'
-        )
+        self.assertEqual(value_string(parse_datetime('2024-01-12T06:09:00+00:00')), '2024-01-12T06:09:00+00:00')
+        self.assertEqual(value_string(parse_datetime('2024-01-12T06:09:00.123+00:00')), '2024-01-12T06:09:00.123+00:00')
 
         # object
         self.assertEqual(value_string({'value': 1}), '{"value":1}')
@@ -103,13 +100,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_json({'value': 1}, 2), '{\n  "value": 1\n}')
 
         # Datetime
-        self.assertEqual(value_json(datetime.datetime(2024, 1, 12, 6, 9, tzinfo=datetime.timezone.utc)), '"2024-01-12T06:09:00+00:00"')
-
-        # Datetime (non-UTC)
-        dt = datetime.datetime(2024, 1, 12, 6, 9).astimezone()
-        self.assertEqual(value_compare(parse_datetime(value_json(dt)[1:-1]), dt), 0)
-        self.assertTrue(value_json(dt).startswith('"2024-01-'))
-        self.assertTrue(value_json(dt).endswith(':09:00+00:00"'))
+        self.assertEqual(value_json(parse_datetime('2024-01-12T06:09:00+00:00')), '"2024-01-12T06:09:00+00:00"')
 
         # Number
         self.assertEqual(value_json(5), '5')
@@ -190,8 +181,8 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_is(5., 6.), False)
 
         # datetime
-        d1 = datetime.datetime(2024, 1, 12)
-        d2 = datetime.datetime(2024, 1, 12)
+        d1 = parse_datetime('2024-01-12')
+        d2 = parse_datetime('2024-01-12')
         self.assertEqual(value_is(d1, d1), True)
         self.assertEqual(value_is(d1, d2), False)
 
@@ -258,9 +249,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(5.5, 5.), 1)
 
         # datetime
-        self.assertEqual(value_compare(datetime.datetime(2024, 1, 12), datetime.datetime(2024, 1, 12)), 0)
-        self.assertEqual(value_compare(datetime.datetime(2024, 1, 11), datetime.datetime(2024, 1, 12)), -1)
-        self.assertEqual(value_compare(datetime.datetime(2024, 1, 12), datetime.datetime(2024, 1, 11)), 1)
+        d1 = parse_datetime('2024-02-12')
+        d2 = parse_datetime('2024-02-11')
+        self.assertEqual(value_compare(d1, d1), 0)
+        self.assertEqual(value_compare(d2, d1), -1)
+        self.assertEqual(value_compare(d1, d2), 1)
 
         # object
         self.assertEqual(value_compare({'value': 1}, {'value': 1}), 0)
@@ -292,10 +285,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(False, [1, 2, 3]), 1)
 
         # boolean < datetime
-        self.assertEqual(value_compare(True, datetime.datetime.now()), -1)
-        self.assertEqual(value_compare(False, datetime.datetime.now()), -1)
-        self.assertEqual(value_compare(datetime.datetime.now(), True), 1)
-        self.assertEqual(value_compare(datetime.datetime.now(), False), 1)
+        dt = datetime.datetime.now()
+        self.assertEqual(value_compare(True, dt), -1)
+        self.assertEqual(value_compare(False, dt), -1)
+        self.assertEqual(value_compare(dt, True), 1)
+        self.assertEqual(value_compare(dt, False), 1)
 
         # boolean < number
         self.assertEqual(value_compare(True, 1), -1)
@@ -308,8 +302,8 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(0, False), 1)
 
         # datetime < function
-        self.assertEqual(value_compare(datetime.datetime.now(), value_compare), -1)
-        self.assertEqual(value_compare(value_compare, datetime.datetime.now()), 1)
+        self.assertEqual(value_compare(dt, value_compare), -1)
+        self.assertEqual(value_compare(value_compare, dt), 1)
 
         # function < number
         self.assertEqual(value_compare(value_compare, 1), -1)
@@ -366,16 +360,16 @@ class TestValue(unittest.TestCase):
 
     def test_parse_datetime(self):
         self.assertEqual(
-            parse_datetime('2022-08-29T15:08:00+00:00'),
-            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
+            value_string(parse_datetime('2022-08-29T15:08:00+00:00')),
+            '2022-08-29T15:08:00+00:00'
         )
         self.assertEqual(
-            parse_datetime('2022-08-29T15:08:00Z'),
-            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc)
+            value_string(parse_datetime('2022-08-29T15:08:00Z')),
+            '2022-08-29T15:08:00+00:00'
         )
         self.assertEqual(
-            parse_datetime('2022-08-29T15:08:00-08:00').astimezone(datetime.timezone.utc),
-            datetime.datetime(2022, 8, 29, 23, 8, tzinfo=datetime.timezone.utc)
+            value_string(parse_datetime('2022-08-29T15:08:00-08:00')),
+            '2022-08-29T23:08:00+00:00'
         )
 
         # Date

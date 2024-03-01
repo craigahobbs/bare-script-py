@@ -428,7 +428,7 @@ def _data_validate(args, unused_options):
 # $return: The day of the month
 def _datetime_day(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return datetime_.day
@@ -441,7 +441,7 @@ def _datetime_day(args, unused_options):
 # $return: The hour
 def _datetime_hour(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return datetime_.hour
@@ -455,7 +455,7 @@ def _datetime_hour(args, unused_options):
 # $return: The formatted datetime string
 def _datetime_iso_format(args, unused_options):
     datetime_, is_date = default_args(args, (None, False))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     if value_boolean(is_date):
@@ -466,11 +466,11 @@ def _datetime_iso_format(args, unused_options):
 # $function: datetimeISOParse
 # $group: Datetime
 # $doc: Parse an ISO date/time string
-# $arg str: The ISO date/time string
+# $arg string: The ISO date/time string
 # $return: The datetime, or null if parsing fails
 def _datetime_iso_parse(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return parse_datetime(string)
@@ -483,7 +483,7 @@ def _datetime_iso_parse(args, unused_options):
 # $return: The millisecond
 def _datetime_millisecond(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return int(round_number(datetime_.microsecond / 1000, 0))
@@ -496,7 +496,7 @@ def _datetime_millisecond(args, unused_options):
 # $return: The minute
 def _datetime_minute(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return datetime_.minute
@@ -509,7 +509,7 @@ def _datetime_minute(args, unused_options):
 # $return: The month
 def _datetime_month(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return datetime_.month
@@ -528,27 +528,6 @@ def _datetime_month(args, unused_options):
 # $return: The new datetime
 def _datetime_new(args, unused_options):
     year, month, day, hour, minute, second, millisecond = default_args(args, (None, None, None, 0, 0, 0, 0))
-    return _datetime_new_helper(year, month, day, hour, minute, second, millisecond, None)
-
-
-# $function: datetimeNewUTC
-# $group: Datetime
-# $doc: Create a new UTC datetime
-# $arg year: The full year
-# $arg month: The month (1-12)
-# $arg day: The day of the month
-# $arg hour: Optional (default is 0). The hour (0-23).
-# $arg minute: Optional (default is 0). The minute.
-# $arg second: Optional (default is 0). The second.
-# $arg millisecond: Optional (default is 0). The millisecond.
-# $return: The new UTC datetime
-def _datetime_new_utc(args, unused_options):
-    year, month, day, hour, minute, second, millisecond = default_args(args, (None, None, None, 0, 0, 0, 0))
-    return _datetime_new_helper(year, month, day, hour, minute, second, millisecond, tzinfo=datetime.timezone.utc)
-
-
-# datetimeNew helper function
-def _datetime_new_helper(year, month, day, hour, minute, second, millisecond, tzinfo):
     if not isinstance(year, (int, float)) or int(year) != year or \
        not isinstance(month, (int, float)) or int(month) != month or \
        not isinstance(day, (int, float)) or int(day) != day or day < -10000 or day > 10000 or \
@@ -604,8 +583,7 @@ def _datetime_new_helper(year, month, day, hour, minute, second, millisecond, tz
             _, month_days = calendar.monthrange(year, month)
 
     # Return the datetime
-    result = datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), int(millisecond) * 1000, tzinfo)
-    return result if tzinfo is not None else result.astimezone()
+    return datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), int(millisecond) * 1000)
 
 
 # $function: datetimeNow
@@ -623,7 +601,7 @@ def _datetime_now(unused_args, unused_options):
 # $return: The second
 def _datetime_second(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return datetime_.second
@@ -645,7 +623,7 @@ def _datetime_today(unused_args, unused_options):
 # $return: The full year
 def _datetime_year(args, unused_options):
     datetime_, = default_args(args, (None,))
-    if not isinstance(datetime_, datetime.datetime):
+    if value_type(datetime_) != 'datetime':
         return None
 
     return datetime_.year
@@ -1810,7 +1788,6 @@ SCRIPT_FUNCTIONS = {
     'datetimeMinute': _datetime_minute,
     'datetimeMonth': _datetime_month,
     'datetimeNew': _datetime_new,
-    'datetimeNewUTC': _datetime_new_utc,
     'datetimeNow': _datetime_now,
     'datetimeSecond': _datetime_second,
     'datetimeToday': _datetime_today,
