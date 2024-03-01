@@ -1105,7 +1105,10 @@ a,b, c
 
 
     def test_math_random(self):
-        self.assertIsInstance((SCRIPT_FUNCTIONS['mathRandom']([], None)), float)
+        value = SCRIPT_FUNCTIONS['mathRandom']([], None)
+        self.assertIsInstance(value, float)
+        self.assertEqual(value >= 0, True)
+        self.assertEqual(value <= 1, True)
 
 
     def test_math_round(self):

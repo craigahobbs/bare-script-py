@@ -803,12 +803,12 @@ def _math_log(args, unused_options):
 # $doc: Compute the maximum value
 # $arg values...: The values
 # $return: The maximum value
-def _math_max(args, unused_options):
-    for x in args:
+def _math_max(values, unused_options):
+    for x in values:
         if not isinstance(x, (int, float)):
             return None
 
-    return max(*args)
+    return max(*values)
 
 
 # $function: mathMin
@@ -816,12 +816,12 @@ def _math_max(args, unused_options):
 # $doc: Compute the minimum value
 # $arg values...: The values
 # $return: The minimum value
-def _math_min(args, unused_options):
-    for x in args:
+def _math_min(values, unused_options):
+    for x in values:
         if not isinstance(x, (int, float)):
             return None
 
-    return min(*args)
+    return min(*values)
 
 
 # $function: mathPi
