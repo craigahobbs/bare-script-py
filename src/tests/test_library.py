@@ -2152,6 +2152,7 @@ a,b, c
         self.assertListEqual(logs, [])
 
         # Non-string message
+        logs = []
         options = {'logFn': log_fn}
         self.assertIsNone(SCRIPT_FUNCTIONS['systemLog']([None], options))
         self.assertListEqual(logs, ['null'])
@@ -2191,9 +2192,10 @@ a,b, c
         self.assertListEqual(logs, [])
 
         # Non-string message
+        logs = []
         options = {'logFn': log_fn, 'debug': True}
         self.assertIsNone(SCRIPT_FUNCTIONS['systemLogDebug']([None], options))
-        self.assertListEqual(logs, [])
+        self.assertListEqual(logs, ['null'])
 
 
     def test_system_partial(self):

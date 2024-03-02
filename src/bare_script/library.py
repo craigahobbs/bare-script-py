@@ -1682,13 +1682,10 @@ def _system_log(args, options):
 # $arg string: The message
 def _system_log_debug(args, options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
-        return None
 
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None and options.get('debug'):
-        log_fn(string)
-    return None
+        log_fn(value_string(string))
 
 
 # $function: systemPartial
@@ -1699,11 +1696,11 @@ def _system_log_debug(args, options):
 # $arg args...: The function arguments
 # $return: The new function called with "args"
 def _system_partial(args, unused_options):
-    fn, fn_args = default_args(args, (None,), True)
-    if not callable(fn) or len(fn_args) < 1:
+    func, args = default_args(args, (None,), True)
+    if not callable(func) or len(args) < 1:
         return None
 
-    return lambda args_extra, options: fn([*fn_args, *args_extra], options)
+    return lambda args_extra, options: func([*args, *args_extra], options)
 
 
 # $function: systemType
