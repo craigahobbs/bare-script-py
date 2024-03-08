@@ -287,7 +287,7 @@ def _array_sort(args, options):
 # $group: Data
 # $doc: Aggregate a data array
 # $arg data: The data array
-# $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='Aggregation')
+# $arg aggregation: The [aggregation model](model.html#var.vName='Aggregation')
 # $return: The aggregated data array
 def _data_aggregate(args, unused_options):
     data, aggregation = default_args(args, (None, None))
