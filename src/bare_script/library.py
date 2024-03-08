@@ -18,7 +18,7 @@ import urllib
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
-from .value import R_NUMBER_CLEANUP, REGEX_TYPE, value_boolean, value_compare, value_is, value_json, \
+from .value import R_NUMBER_CLEANUP, value_boolean, value_compare, value_is, value_json, \
     value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
@@ -48,7 +48,7 @@ def default_args(args, defaults, last_arg_array=False):
 # $return: The array copy
 def _array_copy(args, unused_options):
     array, = default_args(args, (None,))
-    if not isinstance(array, list):
+    if value_type(array) != 'array':
         return None
 
     return list(array)
@@ -62,7 +62,7 @@ def _array_copy(args, unused_options):
 # $return: The extended array
 def _array_extend(args, unused_options):
     array, array2 = default_args(args, (None, None))
-    if not isinstance(array, list) or not isinstance(array2, list):
+    if value_type(array) != 'array' or value_type(array2) != 'array':
         return None
 
     array.extend(array2)
@@ -77,7 +77,8 @@ def _array_extend(args, unused_options):
 # $return: The array element
 def _array_get(args, unused_options):
     array, index = default_args(args, (None, None))
-    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+    if value_type(array) != 'array' or \
+       value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
         return None
 
     return array[int(index)]
@@ -92,10 +93,11 @@ def _array_get(args, unused_options):
 # $return: The first index of the value in the array; -1 if not found.
 def _array_index_of(args, options):
     array, value, index = default_args(args, (None, None, 0))
-    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+    if value_type(array) != 'array' or \
+       value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
         return -1
 
-    if callable(value):
+    if value_type(value) == 'function':
         for ix in range(int(index), len(array)):
             if value_boolean(value([array[ix]], options)):
                 return ix
@@ -115,7 +117,7 @@ def _array_index_of(args, options):
 # $return: The joined string
 def _array_join(args, unused_options):
     array, separator = default_args(args, (None, None))
-    if not isinstance(array, list) or not isinstance(separator, str):
+    if value_type(array) != 'array' or value_type(separator) != 'string':
         return None
 
     return separator.join(value_string(value) for value in array)
@@ -130,12 +132,13 @@ def _array_join(args, unused_options):
 # $return: The last index of the value in the array; -1 if not found.
 def _array_last_index_of(args, options):
     array, value, index = default_args(args, (None, None, None))
-    if isinstance(array, list) and index is None:
+    if value_type(array) == 'array' and index is None:
         index = len(array) - 1
-    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+    if value_type(array) != 'array' or \
+        value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
         return -1
 
-    if callable(value):
+    if value_type(value) == 'function':
         for ix in range(int(index), -1, -1):
             if value_boolean(value([array[ix]], options)):
                 return ix
@@ -154,7 +157,7 @@ def _array_last_index_of(args, options):
 # $return: The array's length; zero if not an array
 def _array_length(args, unused_options):
     array, = default_args(args, (None,))
-    if not isinstance(array, list):
+    if value_type(array) != 'array':
         return 0
 
     return len(array)
@@ -177,7 +180,7 @@ def _array_new(args, unused_options):
 # $return: The new array
 def _array_new_size(args, unused_options):
     size, value = default_args(args, (0, 0))
-    if not isinstance(size, (int, float)) or int(size) != size or size < 0:
+    if value_type(size) != 'number' or int(size) != size or size < 0:
         return None
 
     return list(value for _ in range(int(size)))
@@ -190,7 +193,7 @@ def _array_new_size(args, unused_options):
 # $return: The last element of the array; null if the array is empty.
 def _array_pop(args, unused_options):
     array, = default_args(args, (None,))
-    if not isinstance(array, list) or len(array) == 0:
+    if value_type(array) != 'array' or len(array) == 0:
         return None
 
     return array.pop()
@@ -204,7 +207,7 @@ def _array_pop(args, unused_options):
 # $return: The array
 def _array_push(args, unused_options):
     array, values = default_args(args, (None,), True)
-    if not isinstance(array, list):
+    if value_type(array) != 'array':
         return None
 
     array.extend(values)
@@ -220,7 +223,8 @@ def _array_push(args, unused_options):
 # $return: The value
 def _array_set(args, unused_options):
     array, index, value = default_args(args, (None, None, None))
-    if not isinstance(array, list) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(array):
+    if value_type(array) != 'array' or \
+       value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
         return None
 
     array[index] = value
@@ -234,7 +238,7 @@ def _array_set(args, unused_options):
 # $return: The first element of the array; null if the array is empty.
 def _array_shift(args, unused_options):
     array, = default_args(args, (None,))
-    if not isinstance(array, list) or len(array) == 0:
+    if value_type(array) != 'array' or len(array) == 0:
         return None
 
     result = array[0]
@@ -251,10 +255,11 @@ def _array_shift(args, unused_options):
 # $return: The new array slice
 def _array_slice(args, unused_options):
     array, start, end = default_args(args, (None, 0, None))
-    if isinstance(array, list) and end is None:
+    if value_type(array) == 'array' and end is None:
         end = len(array)
-    if not isinstance(array, list) or not isinstance(start, (int, float)) or int(start) != start or start < 0 or start > len(array) or \
-       not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(array):
+    if value_type(array) != 'array' or \
+       value_type(start) != 'number' or int(start) != start or start < 0 or start > len(array) or \
+       value_type(end) != 'number' or int(end) != end or end < 0 or end > len(array):
         return None
 
     return array[int(start):int(end)]
@@ -268,7 +273,7 @@ def _array_slice(args, unused_options):
 # $return: The sorted array
 def _array_sort(args, options):
     array, compare_fn = default_args(args, (None, None))
-    if not isinstance(array, list) or (compare_fn is not None and not callable(compare_fn)):
+    if value_type(array) != 'array' or (compare_fn is not None and value_type(compare_fn) != 'function'):
         return None
 
     if compare_fn is None:
@@ -291,7 +296,7 @@ def _array_sort(args, options):
 # $return: The aggregated data array
 def _data_aggregate(args, unused_options):
     data, aggregation = default_args(args, (None, None))
-    if not isinstance(data, list) or (aggregation is not None and not isinstance(aggregation, dict)):
+    if value_type(data) != 'array' or (aggregation is not None and value_type(aggregation) != 'object'):
         return None
 
     return aggregate_data(data, aggregation)
@@ -307,8 +312,8 @@ def _data_aggregate(args, unused_options):
 # $return: The updated data array
 def _data_calculated_field(args, options):
     data, field_name, expr, variables = default_args(args, (None, None, None, None))
-    if not isinstance(data, list) or not isinstance(field_name, str) or not isinstance(expr, str) or \
-       (variables is not None and not isinstance(variables, dict)):
+    if value_type(data) != 'array' or value_type(field_name) != 'string' or value_type(expr) != 'string' or \
+        (variables is not None and value_type(variables) != 'object'):
         return None
 
     return add_calculated_field(data, field_name, expr, variables, options)
@@ -323,7 +328,7 @@ def _data_calculated_field(args, options):
 # $return: The filtered data array
 def _data_filter(args, options):
     data, expr, variables = default_args(args, (None, None, None))
-    if not isinstance(data, list) or not isinstance(expr, str) or (variables is not None and not isinstance(variables, dict)):
+    if value_type(data) != 'array' or value_type(expr) != 'string' or (variables is not None and value_type(variables) != 'object'):
         return None
 
     return filter_data(data, expr, variables, options)
@@ -342,8 +347,8 @@ def _data_filter(args, options):
 # $return: The joined data array
 def _data_join(args, options):
     left_data, right_data, join_expr, right_expr, is_left_join, variables = default_args(args, (None, None, None, None, False, None))
-    if not isinstance(left_data, list) or not isinstance(right_data, list) or not isinstance(join_expr, str) or \
-       (right_expr is not None and not isinstance(right_expr, str)) or (variables is not None and not isinstance(variables, dict)):
+    if value_type(left_data) != 'array' or value_type(right_data) != 'array' or value_type(join_expr) != 'string' or \
+        (right_expr is not None and value_type(right_expr) != 'string') or (variables is not None and value_type(variables) != 'object'):
         return None
 
     return join_data(left_data, right_data, join_expr, right_expr, is_left_join, variables, options)
@@ -360,7 +365,7 @@ def _data_parse_csv(args, unused_options):
     for arg in args:
         if arg is None:
             continue
-        if not isinstance(arg, str):
+        if value_type(arg) != 'string':
             return None
         lines.extend(arg.splitlines())
 
@@ -380,7 +385,7 @@ def _data_parse_csv(args, unused_options):
 # $return: The sorted data array
 def _data_sort(args, unused_options):
     data, sorts = default_args(args, (None, None))
-    if not isinstance(data, list) or not isinstance(sorts, list):
+    if value_type(data) != 'array' or value_type(sorts) != 'array':
         return None
 
     return sort_data(data, sorts)
@@ -395,8 +400,9 @@ def _data_sort(args, unused_options):
 # $return: The top data array
 def _data_top(args, unused_options):
     data, count, category_fields = default_args(args, (None, 1, None))
-    if not isinstance(data, list) or not isinstance(count, (int, float)) or int(count) != count or count < 1 or \
-       (category_fields is not None and not isinstance(category_fields, list)):
+    if value_type(data) != 'array' or \
+        value_type(count) != 'number' or int(count) != count or count < 1 or \
+        (category_fields is not None and value_type(category_fields) != 'array'):
         return None
 
     return top_data(data, count, category_fields)
@@ -409,7 +415,7 @@ def _data_top(args, unused_options):
 # $return: The validated data array
 def _data_validate(args, unused_options):
     data, = default_args(args, (None,))
-    if not isinstance(data, list):
+    if value_type(data) != 'array':
         return None
 
     validate_data(data)
@@ -528,13 +534,13 @@ def _datetime_month(args, unused_options):
 # $return: The new datetime
 def _datetime_new(args, unused_options):
     year, month, day, hour, minute, second, millisecond = default_args(args, (None, None, None, 0, 0, 0, 0))
-    if not isinstance(year, (int, float)) or int(year) != year or \
-       not isinstance(month, (int, float)) or int(month) != month or \
-       not isinstance(day, (int, float)) or int(day) != day or day < -10000 or day > 10000 or \
-       not isinstance(hour, (int, float)) or int(hour) != hour or \
-       not isinstance(minute, (int, float)) or int(minute) != minute or \
-       not isinstance(second, (int, float)) or int(second) != second or \
-       not isinstance(millisecond, (int, float)) or int(millisecond) != millisecond:
+    if value_type(year) != 'number' or int(year) != year or \
+        value_type(month) != 'number' or int(month) != month or \
+        value_type(day) != 'number' or int(day) != day or day < -10000 or day > 10000 or \
+        value_type(hour) != 'number' or int(hour) != hour or \
+        value_type(minute) != 'number' or int(minute) != minute or \
+        value_type(second) != 'number' or int(second) != second or \
+        value_type(millisecond) != 'number' or int(millisecond) != millisecond:
         return None
 
     # Adjust millisecond
@@ -641,7 +647,7 @@ def _datetime_year(args, unused_options):
 # $return: The object
 def _json_parse(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return json.loads(string)
@@ -655,7 +661,7 @@ def _json_parse(args, unused_options):
 # $return: The JSON string
 def _json_stringify(args, unused_options):
     value, indent = default_args(args, (None, None))
-    if indent is not None and (not isinstance(indent, (int, float)) or int(indent) != indent or indent < 1):
+    if indent is not None and (value_type(indent) != 'number' or int(indent) != indent or indent < 1):
         return None
 
     return value_json(value, int(indent) if indent is not None else None)
@@ -673,7 +679,7 @@ def _json_stringify(args, unused_options):
 # $return: The absolute value of the number
 def _math_abs(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return abs(x)
@@ -686,7 +692,7 @@ def _math_abs(args, unused_options):
 # $return: The arccosine, in radians, of the number
 def _math_acos(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.acos(x)
@@ -699,7 +705,7 @@ def _math_acos(args, unused_options):
 # $return: The arcsine, in radians, of the number
 def _math_asin(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.asin(x)
@@ -712,7 +718,7 @@ def _math_asin(args, unused_options):
 # $return: The arctangent, in radians, of the number
 def _math_atan(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.atan(x)
@@ -726,7 +732,7 @@ def _math_atan(args, unused_options):
 # $return: The angle, in radians
 def _math_atan2(args, unused_options):
     y, x = default_args(args, (None, None))
-    if not isinstance(y, (int, float)) or not isinstance(x, (int, float)):
+    if value_type(y) != 'number' or value_type(x) != 'number':
         return None
 
     return math.atan2(y, x)
@@ -739,7 +745,7 @@ def _math_atan2(args, unused_options):
 # $return: The ceiling of the number
 def _math_ceil(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.ceil(x)
@@ -752,7 +758,7 @@ def _math_ceil(args, unused_options):
 # $return: The cosine of the angle
 def _math_cos(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.cos(x)
@@ -765,7 +771,7 @@ def _math_cos(args, unused_options):
 # $return: The floor of the number
 def _math_floor(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.floor(x)
@@ -778,7 +784,7 @@ def _math_floor(args, unused_options):
 # $return: The natural logarithm of the number
 def _math_ln(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)) or x <= 0:
+    if value_type(x) != 'number' or x <= 0:
         return None
 
     return math.log(x)
@@ -792,7 +798,7 @@ def _math_ln(args, unused_options):
 # $return: The logarithm of the number
 def _math_log(args, unused_options):
     x, base = default_args(args, (None, 10))
-    if not isinstance(x, (int, float)) or x <= 0 or not isinstance(base, (int, float)) or base <= 0 or base == 1:
+    if value_type(x) != 'number' or x <= 0 or value_type(base) != 'number' or base <= 0 or base == 1:
         return None
 
     return math.log(x, base)
@@ -804,9 +810,8 @@ def _math_log(args, unused_options):
 # $arg values...: The values
 # $return: The maximum value
 def _math_max(values, unused_options):
-    for x in values:
-        if not isinstance(x, (int, float)):
-            return None
+    if any(value_type(value) != 'number' for value in values):
+        return None
 
     return max(*values)
 
@@ -817,9 +822,8 @@ def _math_max(values, unused_options):
 # $arg values...: The values
 # $return: The minimum value
 def _math_min(values, unused_options):
-    for x in values:
-        if not isinstance(x, (int, float)):
-            return None
+    if any(value_type(value) != 'number' for value in values):
+        return None
 
     return min(*values)
 
@@ -848,7 +852,7 @@ def _math_random(unused_args, unused_options):
 # $return: The rounded number
 def _math_round(args, unused_options):
     x, digits = default_args(args, (None, 0))
-    if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
+    if value_type(x) != 'number' or value_type(digits) != 'number' or int(digits) != digits or digits < 0:
         return None
 
     return value_round_number(x, digits)
@@ -861,7 +865,7 @@ def _math_round(args, unused_options):
 # $return: -1 for a negative number, 1 for a positive number, and 0 for zero
 def _math_sign(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return -1 if x < 0 else (0 if x == 0 else 1)
@@ -874,7 +878,7 @@ def _math_sign(args, unused_options):
 # $return: The sine of the angle
 def _math_sin(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.sin(x)
@@ -887,7 +891,7 @@ def _math_sin(args, unused_options):
 # $return: The square root of the number
 def _math_sqrt(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)) or x < 0:
+    if value_type(x) != 'number' or x < 0:
         return None
 
     return math.sqrt(x)
@@ -900,7 +904,7 @@ def _math_sqrt(args, unused_options):
 # $return: The tangent of the angle
 def _math_tan(args, unused_options):
     x, = default_args(args, (None,))
-    if not isinstance(x, (int, float)):
+    if value_type(x) != 'number':
         return None
 
     return math.tan(x)
@@ -918,7 +922,7 @@ def _math_tan(args, unused_options):
 # $return: The number
 def _number_parse_float(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return value_parse_number(string)
@@ -932,7 +936,7 @@ def _number_parse_float(args, unused_options):
 # $return: The integer
 def _number_parse_int(args, unused_options):
     string, radix = default_args(args, (None, 10))
-    if not isinstance(string, str) or not isinstance(radix, (int, float)) or int(radix) != radix or radix < 2 or radix > 36:
+    if value_type(string) != 'string' or value_type(radix) != 'number' or int(radix) != radix or radix < 2 or radix > 36:
         return None
 
     return value_parse_integer(string, int(radix))
@@ -947,7 +951,7 @@ def _number_parse_int(args, unused_options):
 # $return: The fixed-point notation string
 def _number_to_fixed(args, unused_options):
     x, digits, trim = default_args(args, (None, 2, False))
-    if not isinstance(x, (int, float)) or not isinstance(digits, (int, float)) or int(digits) != digits or digits < 0:
+    if value_type(x) != 'number' or value_type(digits) != 'number' or int(digits) != digits or digits < 0:
         return None
 
     result = f'{value_round_number(x, digits):.{int(digits)}f}'
@@ -969,7 +973,7 @@ def _number_to_fixed(args, unused_options):
 # $return: The updated object
 def _object_assign(args, unused_options):
     object_, object2 = default_args(args, (None, None))
-    if not isinstance(object_, dict) or not isinstance(object2, dict):
+    if value_type(object_) != 'object' or value_type(object2) != 'object':
         return None
 
     object_.update(object2)
@@ -983,7 +987,7 @@ def _object_assign(args, unused_options):
 # $return: The object copy
 def _object_copy(args, unused_options):
     object_, = default_args(args, (None,))
-    if not isinstance(object_, dict):
+    if value_type(object_) != 'object':
         return None
 
     return dict(object_)
@@ -996,7 +1000,7 @@ def _object_copy(args, unused_options):
 # $arg key: The key to delete
 def _object_delete(args, unused_options):
     object_, key = default_args(args, (None, None))
-    if not isinstance(object_, dict) or not isinstance(key, str):
+    if value_type(object_) != 'object' or value_type(key) != 'string':
         return None
 
     if key in object_:
@@ -1013,7 +1017,7 @@ def _object_delete(args, unused_options):
 # $return: The value or null if the key does not exist
 def _object_get(args, unused_options):
     object_, key, default_value = default_args(args, (None, None, None))
-    if not isinstance(object_, dict) or not isinstance(key, str):
+    if value_type(object_) != 'object' or value_type(key) != 'string':
         return default_value
 
     return object_.get(key, default_value)
@@ -1027,7 +1031,7 @@ def _object_get(args, unused_options):
 # $return: true if the object contains the key, false otherwise
 def _object_has(args, unused_options):
     object_, key = default_args(args, (None, None))
-    if not isinstance(object_, dict) or not isinstance(key, str):
+    if value_type(object_) != 'object' or value_type(key) != 'string':
         return False
 
     return key in object_
@@ -1040,7 +1044,7 @@ def _object_has(args, unused_options):
 # $return: The array of keys
 def _object_keys(args, unused_options):
     object_, = default_args(args, (None,))
-    if not isinstance(object_, dict):
+    if value_type(object_) != 'object':
         return None
 
     return list(object_.keys())
@@ -1052,12 +1056,13 @@ def _object_keys(args, unused_options):
 # $arg keyValues...: The object's initial key and value pairs
 # $return: The new object
 def _object_new(args, unused_options):
-    args_length = len(args)
     object_ = {}
-    ix = 0
-    while ix < args_length:
-        object_[args[ix]] = (args[ix + 1] if ix + 1 < len(args) else None)
-        ix += 2
+    for ix in range(0, len(args), 2):
+        key = args[ix]
+        value = args[ix + 1] if ix + 1 < len(args) else None
+        if value_type(key) != 'string':
+            return None
+        object_[key] = value
     return object_
 
 
@@ -1070,7 +1075,7 @@ def _object_new(args, unused_options):
 # $return: The value to set
 def _object_set(args, unused_options):
     object_, key, value = default_args(args, (None, None, None))
-    if not isinstance(object_, dict) or not isinstance(key, str):
+    if value_type(object_) != 'object' or value_type(key) != 'string':
         return None
 
     object_[key] = value
@@ -1089,7 +1094,7 @@ def _object_set(args, unused_options):
 # $return: The escaped string
 def _regex_escape(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return re.escape(string)
@@ -1103,7 +1108,7 @@ def _regex_escape(args, unused_options):
 # $return: The [match object](model.html#var.vName='RegexMatch'), or null if no matches are found
 def _regex_match(args, unused_options):
     regex, string = default_args(args, (None, None))
-    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+    if value_type(regex) != 'regex' or value_type(string) != 'string':
         return None
 
     # Match?
@@ -1122,7 +1127,7 @@ def _regex_match(args, unused_options):
 # $return: The array of [match objects](model.html#var.vName='RegexMatch')
 def _regex_match_all(args, unused_options):
     regex, string = default_args(args, (None, None))
-    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+    if value_type(regex) != 'regex' or value_type(string) != 'string':
         return None
 
     return [_regex_match_groups(match) for match in regex.finditer(string)]
@@ -1172,7 +1177,7 @@ struct RegexMatch
 # $return: The regular expression or null if the pattern is invalid
 def _regex_new(args, unused_options):
     pattern, flags = default_args(args, (None, None))
-    if not isinstance(pattern, str) or (flags is not None and not isinstance(flags, str)):
+    if value_type(pattern) != 'string' or (flags is not None and value_type(flags) != 'string'):
         return None
 
     # Translate JavaScript named group syntax to Python
@@ -1206,7 +1211,7 @@ _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 # $return: The updated string
 def _regex_replace(args, unused_options):
     regex, string, substr = default_args(args, (None, None, None))
-    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str) or not isinstance(substr, str):
+    if value_type(regex) != 'regex' or value_type(string) != 'string' or value_type(substr) != 'string':
         return None
 
     # Escape Python escapes
@@ -1234,7 +1239,7 @@ _R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 # $return: The array of split parts
 def _regex_split(args, unused_options):
     regex, string = default_args(args, (None, None))
-    if not isinstance(regex, REGEX_TYPE) or not isinstance(string, str):
+    if value_type(regex) != 'regex' or value_type(string) != 'string':
         return None
 
     return regex.split(string)
@@ -1265,7 +1270,8 @@ def _schema_parse(args, unused_options):
 # $return: The schema's [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_parse_ex(args, unused_options):
     lines, types, filename = default_args(args, (None, {}, ''))
-    if not isinstance(lines, (list, str)) or not isinstance(types, dict) or not isinstance(filename, str):
+    if not (value_type(lines) == 'array' or value_type(lines) == 'string') or \
+        value_type(types) != 'object' or value_type(filename) != 'string':
         return None
 
     return parse_schema_markdown(lines, types, filename)
@@ -1288,7 +1294,7 @@ def _schema_type_model(unused_args, unused_options):
 # $return: The validated object or null if validation fails
 def _schema_validate(args, unused_options):
     types, type_name, value = default_args(args, (None, None, None))
-    if not isinstance(types, dict) or not isinstance(type_name, str):
+    if value_type(types) != 'object' or value_type(type_name) != 'string':
         return None
 
     validate_type_model(types)
@@ -1302,7 +1308,7 @@ def _schema_validate(args, unused_options):
 # $return: The validated [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_validate_type_model(args, unused_options):
     types, = default_args(args, (None,))
-    if not isinstance(types, dict):
+    if value_type(types) != 'object':
         return None
 
     return validate_type_model(types)
@@ -1321,7 +1327,8 @@ def _schema_validate_type_model(args, unused_options):
 # $return: The character code
 def _string_char_code_at(args, unused_options):
     string, index = default_args(args, (None, None))
-    if not isinstance(string, str) or not isinstance(index, (int, float)) or int(index) != index or index < 0 or index >= len(string):
+    if value_type(string) != 'string' or \
+        value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(string):
         return None
 
     return ord(string[int(index)])
@@ -1335,7 +1342,7 @@ def _string_char_code_at(args, unused_options):
 # $return: true if the string ends with the search string, false otherwise
 def _string_ends_with(args, unused_options):
     string, search = default_args(args, (None, None))
-    if not isinstance(string, str) or not isinstance(search, str):
+    if value_type(string) != 'string' or value_type(search) != 'string':
         return None
 
     return string.endswith(search)
@@ -1347,7 +1354,7 @@ def _string_ends_with(args, unused_options):
 # $arg charCodes...: The character codes
 # $return: The string of characters
 def _string_from_char_code(args, unused_options):
-    if any((not isinstance(code, (int, float)) or int(code) != code or code < 0) for code in args):
+    if any((value_type(code) != 'number' or int(code) != code or code < 0) for code in args):
         return None
 
     return ''.join(chr(int(code)) for code in args)
@@ -1362,8 +1369,8 @@ def _string_from_char_code(args, unused_options):
 # $return: The first index of the search string; -1 if not found.
 def _string_index_of(args, unused_options):
     string, search, index = default_args(args, (None, None, 0))
-    if not isinstance(string, str) or not isinstance(search, str) or \
-       not isinstance(index, (int, float)) or int(index) != index or index < 0  or index >= len(string):
+    if value_type(string) != 'string' or value_type(search) != 'string' or \
+        value_type(index) != 'number' or int(index) != index or index < 0  or index >= len(string):
         return -1
 
     return string.find(search, int(index))
@@ -1378,10 +1385,10 @@ def _string_index_of(args, unused_options):
 # $return: The last index of the search string; -1 if not found.
 def _string_last_index_of(args, unused_options):
     string, search, index = default_args(args, (None, None, None))
-    if index is None and isinstance(string, str):
+    if index is None and value_type(string) == 'string':
         index = len(string) - 1
-    if not isinstance(string, str) or not isinstance(search, str) or \
-       not isinstance(index, (int, float)) or int(index) != index or index < 0  or index >= len(string):
+    if value_type(string) != 'string' or value_type(search) != 'string' or \
+        value_type(index) != 'number' or int(index) != index or index < 0  or index >= len(string):
         return -1
 
     return string.rfind(search, 0, int(index) + len(search))
@@ -1394,7 +1401,7 @@ def _string_last_index_of(args, unused_options):
 # $return: The string's length; zero if not a string
 def _string_length(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return 0
 
     return len(string)
@@ -1407,7 +1414,7 @@ def _string_length(args, unused_options):
 # $return: The lower-case string
 def _string_lower(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return string.lower()
@@ -1431,7 +1438,7 @@ def _string_new(args, unused_options):
 # $return: The repeated string
 def _string_repeat(args, unused_options):
     string, count = default_args(args, (None, None))
-    if not isinstance(string, str) or not isinstance(count, (int, float)) or int(count) != count or count < 0:
+    if value_type(string) != 'string' or value_type(count) != 'number' or int(count) != count or count < 0:
         return None
 
     return string * int(count)
@@ -1446,7 +1453,7 @@ def _string_repeat(args, unused_options):
 # $return: The updated string
 def _string_replace(args, unused_options):
     string, substr, new_substr = default_args(args, (None, None, None))
-    if not isinstance(string, str) or not isinstance(substr, str) or not isinstance(new_substr, str):
+    if value_type(string) != 'string' or value_type(substr) != 'string' or value_type(new_substr) != 'string':
         return None
 
     return string.replace(substr, new_substr)
@@ -1461,11 +1468,11 @@ def _string_replace(args, unused_options):
 # $return: The new string slice
 def _string_slice(args, unused_options):
     string, begin, end = default_args(args, (None, None, None))
-    if end is None and isinstance(string, str):
+    if end is None and value_type(string) == 'string':
         end = len(string)
-    if not isinstance(string, str) or \
-       not isinstance(begin, (int, float)) or int(begin) != begin or begin < 0 or begin > len(string) or \
-       not isinstance(end, (int, float)) or int(end) != end or end < 0 or end > len(string):
+    if value_type(string) != 'string' or \
+        value_type(begin) != 'number' or int(begin) != begin or begin < 0 or begin > len(string) or \
+        value_type(end) != 'number' or int(end) != end or end < 0 or end > len(string):
         return None
 
     return string[int(begin):int(end)]
@@ -1479,7 +1486,7 @@ def _string_slice(args, unused_options):
 # $return: The array of split-out strings
 def _string_split(args, unused_options):
     string, separator = default_args(args, (None, None))
-    if not isinstance(string, str) or not isinstance(separator, str):
+    if value_type(string) != 'string' or value_type(separator) != 'string':
         return None
 
     return string.split(separator)
@@ -1493,7 +1500,7 @@ def _string_split(args, unused_options):
 # $return: true if the string starts with the search string, false otherwise
 def _string_starts_with(args, unused_options):
     string, search = default_args(args, (None, None))
-    if not isinstance(string, str) or not isinstance(search, str):
+    if value_type(string) != 'string' or value_type(search) != 'string':
         return None
 
     return string.startswith(search)
@@ -1506,7 +1513,7 @@ def _string_starts_with(args, unused_options):
 # $return: The trimmed string
 def _string_trim(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return string.strip()
@@ -1519,7 +1526,7 @@ def _string_trim(args, unused_options):
 # $return: The upper-case string
 def _string_upper(args, unused_options):
     string, = default_args(args, (None,))
-    if not isinstance(string, str):
+    if value_type(string) != 'string':
         return None
 
     return string.upper()
@@ -1558,7 +1565,7 @@ def _system_compare(args, unused_options):
 # $arg url: [request model](model.html#var.vName='SystemFetchRequest')
 # $return: The response string or array of strings; null if an error occurred
 def _system_fetch(args, options):
-    url_arg, = default_args(args, (None,))
+    url, = default_args(args, (None,))
 
     # Options
     fetch_fn = options.get('fetchFn') if options is not None else None
@@ -1568,14 +1575,14 @@ def _system_fetch(args, options):
     # Validate the URL argument
     requests = []
     is_response_array = False
-    if isinstance(url_arg, str):
-        requests.append({'url': url_arg})
-    elif isinstance(url_arg, dict):
-        requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_arg))
-    elif isinstance(url_arg, list):
+    if value_type(url) == 'string':
+        requests.append({'url': url})
+    elif value_type(url) == 'object':
+        requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url))
+    elif value_type(url) == 'array':
         is_response_array = True
-        for url_item in url_arg:
-            if isinstance(url_item, str):
+        for url_item in url:
+            if value_type(url_item) == 'string':
                 requests.append({'url': url_item})
             else:
                 requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
@@ -1634,7 +1641,7 @@ struct SystemFetchRequest
 # $return: The global variable's value or null if it does not exist
 def _system_global_get(args, options):
     name, default_value = default_args(args, (None, None))
-    if not isinstance(name, str):
+    if value_type(name) != 'string':
         return default_value
 
     globals_ = options.get('globals') if options is not None else None
@@ -1649,7 +1656,7 @@ def _system_global_get(args, options):
 # $return: The global variable's value
 def _system_global_set(args, options):
     name, value = default_args(args, (None, None))
-    if not isinstance(name, str):
+    if value_type(name) != 'string':
         return None
 
     globals_ = options.get('globals') if options is not None else None
@@ -1672,19 +1679,19 @@ def _system_is(args, unused_options):
 # $function: systemLog
 # $group: System
 # $doc: Log a message to the console
-# $arg string: The message
+# $arg message: The log message
 def _system_log(args, options):
-    string, = default_args(args, (None,))
+    message, = default_args(args, (None,))
 
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None:
-        log_fn(value_string(string))
+        log_fn(value_string(message))
 
 
 # $function: systemLogDebug
 # $group: System
 # $doc: Log a message to the console, if in debug mode
-# $arg string: The message
+# $arg message: The log message
 def _system_log_debug(args, options):
     string, = default_args(args, (None,))
 
@@ -1702,7 +1709,7 @@ def _system_log_debug(args, options):
 # $return: The new function called with "args"
 def _system_partial(args, unused_options):
     func, args = default_args(args, (None,), True)
-    if not callable(func) or len(args) < 1:
+    if value_type(func) != 'function' or len(args) < 1:
         return None
 
     return lambda args_extra, options: func([*args, *args_extra], options)
@@ -1732,7 +1739,7 @@ def _system_type(args, unused_options):
 # $return: The encoded URL string
 def _url_encode(args, unused_options):
     url, extra = default_args(args, (None, True))
-    if not isinstance(url, str):
+    if value_type(url) != 'string':
         return None
 
     safe = "':/&(" if value_boolean(extra) else "':/&()"
@@ -1747,7 +1754,7 @@ def _url_encode(args, unused_options):
 # $return: The encoded URL component string
 def _url_encode_component(args, unused_options):
     url, extra = default_args(args, (None, True))
-    if not isinstance(url, str):
+    if value_type(url) != 'string':
         return None
 
     safe = "'(" if value_boolean(extra) else "'()"

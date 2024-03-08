@@ -1374,6 +1374,9 @@ a,b, c
         # Missing final value
         self.assertDictEqual(SCRIPT_FUNCTIONS['objectNew'](['a', 1, 'b'], None), {'a': 1, 'b': None})
 
+        # Non-string key
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectNew']([0, 1, 'b'], None), None)
+
 
     def test_object_set(self):
         obj = {'a': 1, 'b': 2}
