@@ -1556,9 +1556,9 @@ def _system_fetch(args, options):
     url_arg, = default_args(args, (None,))
 
     # Options
-    log_fn = options.get('logFn') if options is not None else None
-    url_fn = options.get('urlFn') if options is not None else None
     fetch_fn = options.get('fetchFn') if options is not None else None
+    log_fn = options.get('logFn') if options is not None and options.get('debug') else None
+    url_fn = options.get('urlFn') if options is not None else None
 
     # Validate the URL argument
     requests = []
@@ -1596,7 +1596,7 @@ def _system_fetch(args, options):
         responses.append(response)
 
         # Log failure
-        if response is None and log_fn is not None and options.get('debug'):
+        if response is None and log_fn is not None:
             log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_fetch["url"]}"')
 
     return responses if is_response_array else responses[0]

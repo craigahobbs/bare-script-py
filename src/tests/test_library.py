@@ -12,7 +12,7 @@ import unittest
 import schema_markdown
 
 from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
-from bare_script.value import REGEX_TYPE, value_parse_datetime
+from bare_script.value import REGEX_TYPE, value_json, value_parse_datetime
 
 
 class TestLibrary(unittest.TestCase):
@@ -1976,13 +1976,16 @@ a,b, c
 
             body = request.get('body')
             headers = request.get('headers')
-            method = "GET" if body is None else "POST"
+            method = 'GET' if body is None else 'POST'
             body_msg = '' if body is None else f' - {body}'
-            headers_msg = '' if headers is None else f' - {headers}'
+            headers_msg = '' if headers is None else f' - {value_json(headers)}'
             return f'{method} {url}{body_msg}{headers_msg}'
 
         def log_fn(message):
             logs.append(message)
+
+        def url_fn(url):
+            return 'dir/' + url
 
         options = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn}
 
@@ -2004,6 +2007,14 @@ a,b, c
         )
         self.assertListEqual(logs, [])
 
+        # Headers
+        logs = []
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'headers': {'HEADER': 'VALUE'}}], options),
+            'GET test.txt - {"HEADER":"VALUE"}'
+        )
+        self.assertListEqual(logs, [])
+
         # Empty array
         logs = []
         self.assertListEqual(SCRIPT_FUNCTIONS['systemFetch']([[]], options), [])
@@ -2011,7 +2022,7 @@ a,b, c
 
         # URL function
         logs = []
-        options_url_fn = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn, 'urlFn': lambda url: 'dir/' + url}
+        options_url_fn = {'debug': True, 'fetchFn': fetch_fn, 'logFn': log_fn, 'urlFn': url_fn}
         self.assertEqual(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], options_url_fn), 'GET dir/test.txt')
         self.assertListEqual(logs, [])
 
@@ -2025,10 +2036,20 @@ a,b, c
         self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['raise.txt'], options))
         self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "raise.txt"'])
 
+        # Null options failure
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], None))
+        self.assertListEqual(logs, [])
+
         # Null fetch function failure
         logs = []
         self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], {'debug': True, 'logFn': log_fn}))
         self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "test.txt"'])
+
+        # Failure with null log function
+        logs = []
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch'](['test.txt'], {'debug': True}))
+        self.assertListEqual(logs, [])
 
         # Failure with debug off
         logs = []
