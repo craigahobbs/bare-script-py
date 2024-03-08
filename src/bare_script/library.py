@@ -1162,8 +1162,13 @@ struct RegexMatch
 # $function: regexNew
 # $group: Regex
 # $doc: Create a regular expression
-# $arg pattern: The regular expression pattern string
-# $arg flags: The [regular expression flags ("i", "m", "s", "u")
+# pylint: disable=line-too-long
+# $arg pattern: The [regular expression pattern string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#writing_a_regular_expression_pattern)
+# pylint: enable=line-too-long
+# $arg flags: The regular expression flags. The string may contain the following characters:
+# $arg flags: - **i** - case-insensitive search
+# $arg flags: - **m** - multi-line search - "^" and "$" matches next to newline characters
+# $arg flags: - **s** - "." matches newline characters
 # $return: The regular expression or null if the pattern is invalid
 def _regex_new(args, unused_options):
     pattern, flags = default_args(args, (None, None))
