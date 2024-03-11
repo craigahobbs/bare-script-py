@@ -19,7 +19,7 @@ def execute_script(script, options=None):
     """
     Execute a BareScript model
 
-    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :param script: The `BareScript model <./model/#var.vName='BareScript'>`__
     :type script: dict
     :param options: The :class:`script execution options <ExecuteScriptOptions>`
     :type options: dict or None, optional
@@ -168,14 +168,13 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
     """
     Evaluate an expression model
 
-    :param script: The `expression model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='Expression'>`__
+    :param script: The `expression model <./model/#var.vName='Expression'>`__
     :type script: dict
     :param options: The :class:`script execution options <ExecuteScriptOptions>`
     :type options: dict or None, optional
     :param locals_: The local variables
     :type locals_: dict or None, optional
-    :param builtins: If true, include the
-        `built-in expression functions <https://craigahobbs.github.io/bare-script-py/library/expression.html>`__
+    :param builtins: If true, include the `built-in expression functions <library/expression.html>`__
     :type builtins: bool, optional
     :returns: The expression result
     :raises BareScriptRuntimeError: A script runtime error occurred

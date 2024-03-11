@@ -16,7 +16,7 @@ def parse_script(script_text, start_line_number=1):
     :type script_text: str or ~collections.abc.Iterable(str)
     :param start_line_number: The script's starting line number
     :type start_line_number: int, optional
-    :return: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :return: The `BareScript model <./model/#var.vName='BareScript'>`__
     :rtype: dict
     :raises BareScriptParserError: A parsing error occurred
     """
@@ -437,7 +437,7 @@ def parse_expression(expr_text):
 
     :param expr_text: The `expression text <https://craigahobbs.github.io/bare-script/language/#expressions>`__
     :type expr_text: str or ~collections.abc.Iterable(str)
-    :return: The `expression model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='Expression'>`__
+    :return: The `expression model <./model/#var.vName='Expression'>`__
     :rtype: dict
     :raises BareScriptParserError: A parsing error occurred
     """

@@ -303,7 +303,7 @@ def aggregate_data(data, aggregation):
 
     :param data: The data array
     :type data: list[dict]
-    :param aggregation: The `aggregation model <https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation'>`__
+    :param aggregation: The `aggregation model <./library/model.html#var.vName='Aggregation'>`__
     :type aggregation: dict
     :return: The aggregated data array
     :rtype: list[dict]

@@ -223,7 +223,7 @@ def validate_script(script):
     """
     Validate a BareScript script model
 
-    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :param script: The `BareScript model <./model/#var.vName='BareScript'>`__
     :type script: dict
     :return: The validated BareScript model
     :rtype: dict
@@ -236,7 +236,7 @@ def validate_expression(expr):
     """
     Validate an expression model
 
-    :param script: The `expression model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='Expression'>`__
+    :param script: The `expression model <./model/#var.vName='Expression'>`__
     :type script: dict
     :return: The validated expression model
     :rtype: dict
@@ -249,7 +249,7 @@ def lint_script(script):
     """
     Lint a BareScript script model
 
-    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script-py/model/#var.vName='BareScript'>`__
+    :param script: The `BareScript model <./model/#var.vName='BareScript'>`__
     :type script: dict
     :return: The list of lint warnings
     :rtype: list[str]
