@@ -145,6 +145,10 @@ files use the ".bare" file extension.
 **Note:** In the BareScript CLI, import statements and the
 `systemFetch <https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&systemfetch>`__
 function read non-URL paths from the local file system.
+`systemFetch <https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&systemfetch>`__
+calls with a non-URL path and a
+`request body <https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest'>`__
+write the body to the path.
 
 
 MarkdownUp, a Markdown Viewer with BareScript
