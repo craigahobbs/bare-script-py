@@ -19,7 +19,22 @@ bare-script
 
 |badge-status| |badge-version| |badge-license| |badge-python|
 
-BareScript is a light-weight scripting and expression language.
+`BareScript <https://craigahobbs.github.io/bare-script/language/>`__.
+is a simple, lightweight, and portable programming language. Its Pythonic syntax is influenced by
+JavaScript, C, and the Unix Shell. BareScript also has a
+`library of built-in functions <#the-barescript-library>`__
+for common programming operations. BareScript can be
+`embedded within applications <#markdownup-a-markdown-viewer-with-barescript>`__
+or used as a
+stand-alone programming language using the
+`command-line interface <#the-barescript-command-line-interface-cli>`__.
+
+There are two implementations of BareScript:
+`BareScript for Python <https://craigahobbs.github.io/bare-script-py/>`__
+(this package) and
+`BareScript for JavaScript <https://craigahobbs.github.io/bare-script/>`__.
+Both implementations have 100% unit test coverage with identical unit test suites, so you can be
+confident that BareScript will execute the same regardless of the underlying runtime environment.
 
 
 Links
