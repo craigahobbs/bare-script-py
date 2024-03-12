@@ -70,8 +70,24 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(0.), '0')
 
         # datetime
-        self.assertEqual(value_string(value_parse_datetime('2024-01-12T06:09:00+00:00')), '2024-01-12T06:09:00+00:00')
-        self.assertEqual(value_string(value_parse_datetime('2024-01-12T06:09:00.123+00:00')), '2024-01-12T06:09:00.123+00:00')
+        d1 = datetime.datetime(2024, 1, 12, 6, 9)
+        d2 = datetime.datetime(2023, 12, 7, 16, 19, 23, 123000)
+        d3 = datetime.datetime(2023, 12, 7, 16, 19, 23, 12000)
+        d4 = datetime.datetime(2023, 12, 7, 16, 19, 23, 1000)
+        d5 = d1.replace(tzinfo=datetime.timezone.utc) + (d1.astimezone() - d1.replace(tzinfo=datetime.timezone.utc))
+        def tz_suffix(dt):
+            tz_offset = (dt.replace(tzinfo=datetime.timezone.utc) - dt.astimezone()).total_seconds() // 60
+            tz_sign = '-' if tz_offset < 0 else '+'
+            tz_hour = abs(tz_offset) // 60
+            tz_hour_str = f'{"0" if tz_hour < 10 else ""}{int(tz_hour)}'
+            tz_minute = abs(tz_offset) - tz_hour * 60
+            tz_minute_str = f'{"0" if tz_minute < 10 else ""}{int(tz_minute)}'
+            return f'{tz_sign}{tz_hour_str}:{tz_minute_str}'
+        self.assertEqual(value_string(d1), f'2024-01-12T06:09:00{tz_suffix(d1)}')
+        self.assertEqual(value_string(d2), f'2023-12-07T16:19:23.123{tz_suffix(d2)}')
+        self.assertEqual(value_string(d3), f'2023-12-07T16:19:23.012{tz_suffix(d3)}')
+        self.assertEqual(value_string(d4), f'2023-12-07T16:19:23.001{tz_suffix(d4)}')
+        self.assertEqual(value_string(d5), f'2024-01-12T06:09:00{tz_suffix(d1)}')
 
         # object
         self.assertEqual(value_string({'value': 1}), '{"value":1}')
@@ -100,7 +116,12 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_json({'value': 1}, 2), '{\n  "value": 1\n}')
 
         # Datetime
-        self.assertEqual(value_json(value_parse_datetime('2024-01-12T06:09:00+00:00')), '"2024-01-12T06:09:00+00:00"')
+        d1 = datetime.datetime(2024, 1, 12, 6, 9)
+        d2 = datetime.datetime(2023, 12, 7, 16, 19, 23, 123)
+        d3 = d1.replace(tzinfo=datetime.timezone.utc) + (d1.astimezone() - d1.replace(tzinfo=datetime.timezone.utc))
+        self.assertEqual(value_json(d1), f'"{value_string(d1)}"')
+        self.assertEqual(value_json(d2), f'"{value_string(d2)}"')
+        self.assertEqual(value_json(d3), f'"{value_string(d3)}"')
 
         # Number
         self.assertEqual(value_json(5), '5')
@@ -390,16 +411,20 @@ class TestValue(unittest.TestCase):
 
     def test_value_parse_datetime(self):
         self.assertEqual(
-            value_string(value_parse_datetime('2022-08-29T15:08:00+00:00')),
-            '2022-08-29T15:08:00+00:00'
+            value_parse_datetime('2022-08-29T15:08:00+00:00'),
+            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
         )
         self.assertEqual(
-            value_string(value_parse_datetime('2022-08-29T15:08:00Z')),
-            '2022-08-29T15:08:00+00:00'
+            value_parse_datetime('2022-08-29T15:08:00Z'),
+            datetime.datetime(2022, 8, 29, 15, 8, tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
         )
         self.assertEqual(
-            value_string(value_parse_datetime('2022-08-29T15:08:00-08:00')),
-            '2022-08-29T23:08:00+00:00'
+            value_parse_datetime('2022-08-29T15:08:00.123+00:00'),
+            datetime.datetime(2022, 8, 29, 15, 8, 0, 123000, tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+        )
+        self.assertEqual(
+            value_parse_datetime('2022-08-29T15:08:00.123567+00:00'),
+            datetime.datetime(2022, 8, 29, 15, 8, 0, 123000, tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
         )
 
         # Date
@@ -409,4 +434,5 @@ class TestValue(unittest.TestCase):
         )
 
         # Parse failure
+        self.assertIsNone(value_parse_datetime('2022-08-29T15:08:00'))
         self.assertIsNone(value_parse_datetime('invalid'))

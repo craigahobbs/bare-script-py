@@ -66,7 +66,14 @@ def value_string(value):
     elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
     elif isinstance(value, datetime.datetime):
-        return _R_DATETIME_CLEANUP.sub(r'\1', value.astimezone(datetime.timezone.utc).isoformat())
+        iso = value.astimezone().isoformat()
+        match_microsecond = _R_DATETIME_MICROSECOND.search(iso)
+        if match_microsecond is not None:
+            microsecond_begin, microsecond_end = match_microsecond.span()
+            millisecond = int(iso[microsecond_begin + 1:microsecond_end]) // 1000
+            millisecond_str = f'{"0" if millisecond < 100 else ""}{"0" if millisecond < 10 else ''}{millisecond}'
+            iso = f'{iso[0:microsecond_begin]}.{millisecond_str}{iso[microsecond_end:]}'
+        return iso
     elif isinstance(value, (dict)):
         return value_json(value)
     elif isinstance(value, (list)):
@@ -81,7 +88,7 @@ def value_string(value):
 
 
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
-_R_DATETIME_CLEANUP = re.compile(r'000([+-]\d\d:\d\d)$')
+_R_DATETIME_MICROSECOND = re.compile(r'\.(\d{6})')
 
 
 def value_json(value, indent=None):
@@ -108,7 +115,7 @@ class _JSONEncoder(json.JSONEncoder):
 
     def default(self, o):
         if isinstance(o, datetime.datetime):
-            return o.astimezone(datetime.timezone.utc).isoformat()
+            return value_string(o)
         return None
 
 
@@ -260,10 +267,18 @@ def value_parse_datetime(text):
     :rtype: datetime.datetime or None
     """
 
-    try:
-        return datetime.datetime.fromisoformat(_R_ZULU.sub('+00:00', text)).astimezone().replace(tzinfo=None)
-    except ValueError:
-        return None
+    m_date = _R_DATE.match(text)
+    if m_date is not None:
+        year = int(m_date.group('year'))
+        month = int(m_date.group('month'))
+        day = int(m_date.group('day'))
+        return datetime.datetime(year, month, day)
+    elif _R_DATETIME.match(text):
+        result = datetime.datetime.fromisoformat(_R_DATETIME_ZULU.sub('+00:00', text)).astimezone().replace(tzinfo=None)
+        return result.replace(microsecond=(result.microsecond // 1000) * 1000)
 
+    return None
 
-_R_ZULU = re.compile(r'Z$')
+_R_DATE = re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})$')
+_R_DATETIME = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$')
+_R_DATETIME_ZULU = re.compile(r'Z$')
