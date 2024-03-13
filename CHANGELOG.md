@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2 (2024-03-13)
+
+- [9fbc216](https://github.com/craigahobbs/bare-script-py/commit/9fbc216) - fix bad f-string
+
 ## 3.0.1 (2024-03-12)
 
 - [fb4dc11](https://github.com/craigahobbs/bare-script-py/commit/fb4dc11) - datetime iso format now uses local timezone
