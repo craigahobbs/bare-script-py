@@ -71,7 +71,7 @@ def value_string(value):
         if match_microsecond is not None:
             microsecond_begin, microsecond_end = match_microsecond.span()
             millisecond = int(iso[microsecond_begin + 1:microsecond_end]) // 1000
-            millisecond_str = f'{"0" if millisecond < 100 else ""}{"0" if millisecond < 10 else ''}{millisecond}'
+            millisecond_str = f'{"0" if millisecond < 100 else ""}{"0" if millisecond < 10 else ""}{millisecond}'
             iso = f'{iso[0:microsecond_begin]}.{millisecond_str}{iso[microsecond_end:]}'
         return iso
     elif isinstance(value, (dict)):
