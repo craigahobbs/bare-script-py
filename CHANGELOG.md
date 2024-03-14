@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.4 (2024-03-14)
+
+- [df85155](https://github.com/craigahobbs/bare-script-py/commit/df85155) - add dataValidate csv argument
+
 ## 3.0.3 (2024-03-14)
 
 - [a8fe883](https://github.com/craigahobbs/bare-script-py/commit/a8fe883) - datetime improvements
