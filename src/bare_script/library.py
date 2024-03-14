@@ -412,13 +412,14 @@ def _data_top(args, unused_options):
 # $group: Data
 # $doc: Validate a data array
 # $arg data: The data array
+# $arg csv: Optional (default is false). If true, parse value strings.
 # $return: The validated data array
 def _data_validate(args, unused_options):
-    data, = default_args(args, (None,))
+    data, csv_ = default_args(args, (None, False))
     if value_type(data) != 'array':
         return None
 
-    validate_data(data)
+    validate_data(data, value_boolean(csv_))
     return data
 
 

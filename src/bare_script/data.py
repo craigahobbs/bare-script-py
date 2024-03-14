@@ -31,7 +31,7 @@ def validate_data(data, csv=False):
 
     :param data: The data array. Row objects are updated with parsed/validated values.
     :type data: list[dict]
-    :param csv: If true, parse number and null strings
+    :param csv: If true, parse value strings
     :type csv: bool
     :return: The map of field name to field type ("datetime", "number", "string")
     :rtype: dict

@@ -695,6 +695,13 @@ a,b, c
             {'a': '2', 'b': 5}
         ])
 
+        # CSV
+        self.assertListEqual(SCRIPT_FUNCTIONS['dataValidate']([data, True], None), [
+            {'a': 1, 'b': 3},
+            {'a': 1, 'b': 4},
+            {'a': 2, 'b': 5}
+        ])
+
         # Non-list data
         self.assertIsNone(SCRIPT_FUNCTIONS['dataValidate']([None], None))
 
