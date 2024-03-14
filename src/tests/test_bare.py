@@ -70,7 +70,7 @@ class TestBare(unittest.TestCase):
             mock_file.return_value.read.side_effect = ['Hello']
 
             with self.assertRaises(SystemExit) as cm_exc:
-                main(['-c', "systemLog(systemFetch('test.txt', null, true))"])
+                main(['-c', "systemLog(systemFetch('test.txt'))"])
 
             self.assertListEqual(mock_file.call_args_list, [
                 unittest.mock.call('test.txt', 'r', encoding='utf-8')
@@ -105,7 +105,7 @@ class TestBare(unittest.TestCase):
              unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
-            mock_file.return_value.read.side_effect = ["systemLog(systemFetch('test.txt', null, true))", 'Hello']
+            mock_file.return_value.read.side_effect = ["systemLog(systemFetch('test.txt'))", 'Hello']
 
             with self.assertRaises(SystemExit) as cm_exc:
                 main([os.path.join('subdir', 'test.bare')])
