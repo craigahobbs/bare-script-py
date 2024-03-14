@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.3 (2024-03-14)
+
+- [a8fe883](https://github.com/craigahobbs/bare-script-py/commit/a8fe883) - datetime improvements
+
 ## 3.0.2 (2024-03-13)
 
 - [9fbc216](https://github.com/craigahobbs/bare-script-py/commit/9fbc216) - fix bad f-string
