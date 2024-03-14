@@ -534,7 +534,7 @@ def _datetime_month(args, unused_options):
 # $return: The new datetime
 def _datetime_new(args, unused_options):
     year, month, day, hour, minute, second, millisecond = default_args(args, (None, None, None, 0, 0, 0, 0))
-    if value_type(year) != 'number' or int(year) != year or \
+    if value_type(year) != 'number' or int(year) != year or year < 100 or \
         value_type(month) != 'number' or int(month) != month or \
         value_type(day) != 'number' or int(day) != day or day < -10000 or day > 10000 or \
         value_type(hour) != 'number' or int(hour) != hour or \

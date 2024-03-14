@@ -75,19 +75,19 @@ class TestValue(unittest.TestCase):
         d3 = datetime.datetime(2023, 12, 7, 16, 19, 23, 12000)
         d4 = datetime.datetime(2023, 12, 7, 16, 19, 23, 1000)
         d5 = d1.replace(tzinfo=datetime.timezone.utc) + (d1.astimezone() - d1.replace(tzinfo=datetime.timezone.utc))
+        d6 = datetime.datetime(900, 1, 1)
         def tz_suffix(dt):
-            tz_offset = (dt.replace(tzinfo=datetime.timezone.utc) - dt.astimezone()).total_seconds() // 60
+            tz_offset = (dt.replace(tzinfo=datetime.timezone.utc) - dt.astimezone()).total_seconds() / 60
             tz_sign = '-' if tz_offset < 0 else '+'
-            tz_hour = abs(tz_offset) // 60
-            tz_hour_str = f'{"0" if tz_hour < 10 else ""}{int(tz_hour)}'
-            tz_minute = abs(tz_offset) - tz_hour * 60
-            tz_minute_str = f'{"0" if tz_minute < 10 else ""}{int(tz_minute)}'
-            return f'{tz_sign}{tz_hour_str}:{tz_minute_str}'
+            tz_hour = int(abs(tz_offset) / 60)
+            tz_minute = int(abs(tz_offset)) - tz_hour * 60
+            return f'{tz_sign}{tz_hour:0{2}d}:{tz_minute:0{2}d}'
         self.assertEqual(value_string(d1), f'2024-01-12T06:09:00{tz_suffix(d1)}')
         self.assertEqual(value_string(d2), f'2023-12-07T16:19:23.123{tz_suffix(d2)}')
         self.assertEqual(value_string(d3), f'2023-12-07T16:19:23.012{tz_suffix(d3)}')
         self.assertEqual(value_string(d4), f'2023-12-07T16:19:23.001{tz_suffix(d4)}')
         self.assertEqual(value_string(d5), f'2024-01-12T06:09:00{tz_suffix(d1)}')
+        self.assertEqual(value_string(d6), f'0900-01-01T00:00:00{tz_suffix(d6)}')
 
         # object
         self.assertEqual(value_string({'value': 1}), '{"value":1}')

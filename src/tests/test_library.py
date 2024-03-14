@@ -735,6 +735,10 @@ a,b, c
             SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(2022, 10, 7), True], None),
             '2022-10-07'
         )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(900, 10, 7), True], None),
+            '0900-10-07'
+        )
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([None], None), None)
@@ -881,6 +885,9 @@ a,b, c
             SCRIPT_FUNCTIONS['datetimeNew']([2023, 1, 1, 0, 0, 0, -1000], None),
             datetime.datetime(2022, 12, 31, 23, 59, 59, 0)
         )
+
+        # Invalid year
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([90, 7, 21, 12, 30, 15, 100], None))
 
         # Non-number arguments
         self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew'](['2022', 6, 21, 12, 30, 15, 100], None))

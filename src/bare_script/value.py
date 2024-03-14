@@ -71,9 +71,8 @@ def value_string(value):
         if match_microsecond is not None:
             microsecond_begin, microsecond_end = match_microsecond.span()
             millisecond = int(iso[microsecond_begin + 1:microsecond_end]) // 1000
-            millisecond_str = f'{"0" if millisecond < 100 else ""}{"0" if millisecond < 10 else ""}{millisecond}'
-            iso = f'{iso[0:microsecond_begin]}.{millisecond_str}{iso[microsecond_end:]}'
-        return iso
+            iso = f'{iso[0:microsecond_begin]}.{millisecond:0{3}d}{iso[microsecond_end:]}'
+        return _R_DATETIME_TZ_CLEANUP.sub(r'\1', iso)
     elif isinstance(value, (dict)):
         return value_json(value)
     elif isinstance(value, (list)):
@@ -89,6 +88,7 @@ def value_string(value):
 
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 _R_DATETIME_MICROSECOND = re.compile(r'\.(\d{6})')
+_R_DATETIME_TZ_CLEANUP = re.compile(r'([+-]\d\d:\d\d):\d\d$')
 
 
 def value_json(value, indent=None):
