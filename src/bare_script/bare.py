@@ -31,6 +31,9 @@ def main(argv=None):
     parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'), default = [],
                         help='set a global variable to an expression value')
     args = parser.parse_args(args=argv)
+    if not args.scripts:
+        parser.print_help()
+        parser.exit()
 
     status_code = 0
     inline_count = 0
