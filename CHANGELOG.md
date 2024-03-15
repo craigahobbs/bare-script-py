@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.5 (2024-03-15)
+
+- [bd28818](https://github.com/craigahobbs/bare-script-py/commit/bd28818) - add bare cli no-scripts test
+
 ## 3.0.4 (2024-03-14)
 
 - [df85155](https://github.com/craigahobbs/bare-script-py/commit/df85155) - add dataValidate csv argument
