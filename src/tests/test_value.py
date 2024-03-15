@@ -89,7 +89,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(d5), f'2024-01-12T06:09:00{tz_suffix(d1)}')
 
         # https://github.com/python/cpython/issues/80940 - astimezone() fails on Windows for pre-epoch times
-        if platform.system() != 'Windows': # pragma: no branch
+        if platform.system() != 'Windows': # pragma: no cover
             d6 = datetime.datetime(900, 1, 1)
             self.assertEqual(value_string(d6), f'0900-01-01T00:00:00{tz_suffix(d6)}')
 
