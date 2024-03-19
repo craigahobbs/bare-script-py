@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.7 (2024-03-19)
+
+- [0efb82d](https://github.com/craigahobbs/bare-script-py/commit/0efb82d) - fix datetimeNew for extra float days
+
 ## 3.0.6 (2024-03-19)
 
 - [27224a8](https://github.com/craigahobbs/bare-script-py/commit/27224a8) - handle datetime.date objects since they can be created by schema validation
