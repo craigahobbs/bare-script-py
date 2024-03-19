@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.6 (2024-03-19)
+
+- [27224a8](https://github.com/craigahobbs/bare-script-py/commit/27224a8) - handle datetime.date objects since they can be created by schema validation
+
 ## 3.0.5 (2024-03-15)
 
 - [bd28818](https://github.com/craigahobbs/bare-script-py/commit/bd28818) - add bare cli no-scripts test
