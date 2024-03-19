@@ -7,9 +7,10 @@ import datetime
 import platform
 import re
 import unittest
+import uuid
 
-from bare_script.value import value_boolean, value_compare, value_is, value_json, value_parse_datetime, \
-    value_parse_integer, value_parse_number, value_round_number, value_string, value_type
+from bare_script.value import value_boolean, value_compare, value_is, value_json, value_normalize_datetime, \
+    value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
 class TestValue(unittest.TestCase):
@@ -33,6 +34,9 @@ class TestValue(unittest.TestCase):
 
         # datetime
         self.assertEqual(value_type(datetime.datetime.now()), 'datetime')
+
+        # datetime (date)
+        self.assertEqual(value_type(datetime.date.today()), 'datetime')
 
         # object
         self.assertEqual(value_type({}), 'object')
@@ -88,6 +92,10 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(d4), f'2023-12-07T16:19:23.001{tz_suffix(d4)}')
         self.assertEqual(value_string(d5), f'2024-01-12T06:09:00{tz_suffix(d1)}')
 
+        # datetime (date)
+        d6 = datetime.date(2024, 1, 12)
+        self.assertEqual(value_string(d6), f'2024-01-12T00:00:00{tz_suffix(d1)}')
+
         # https://github.com/python/cpython/issues/80940 - astimezone() fails on Windows for pre-epoch times
         if platform.system() != 'Windows': # pragma: no cover
             d6 = datetime.datetime(900, 1, 1)
@@ -106,6 +114,9 @@ class TestValue(unittest.TestCase):
 
         # regex
         self.assertEqual(value_string(re.compile('^test')), '<regex>')
+
+        # Additional stringify-able values
+        self.assertEqual(value_string(uuid.UUID('47f833d3-4414-4c4a-ac02-ceb36898ff87')), '47f833d3-4414-4c4a-ac02-ceb36898ff87')
 
         # unknown
         self.assertEqual(value_string((1, 2, 3)), '<unknown>')
@@ -126,6 +137,10 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_json(d1), f'"{value_string(d1)}"')
         self.assertEqual(value_json(d2), f'"{value_string(d2)}"')
         self.assertEqual(value_json(d3), f'"{value_string(d3)}"')
+
+        # Datetime (date)
+        d4 = datetime.date.today()
+        self.assertEqual(value_json(d4), f'"{value_string(d4)}"')
 
         # Number
         self.assertEqual(value_json(5), '5')
@@ -163,6 +178,9 @@ class TestValue(unittest.TestCase):
 
         # datetime
         self.assertEqual(value_boolean(datetime.datetime.now()), True)
+
+        # datetime (date)
+        self.assertEqual(value_boolean(datetime.date.today()), True)
 
         # object
         self.assertEqual(value_boolean({'value': 1}), True)
@@ -210,6 +228,11 @@ class TestValue(unittest.TestCase):
         d2 = value_parse_datetime('2024-01-12')
         self.assertEqual(value_is(d1, d1), True)
         self.assertEqual(value_is(d1, d2), False)
+
+        # datetime (date)
+        d3 = datetime.date(2024, 1, 12)
+        self.assertEqual(value_is(d3, d3), True)
+        self.assertEqual(value_is(d3, d2), False)
 
         # object
         o1 = {'value': 1}
@@ -279,6 +302,12 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(d1, d1), 0)
         self.assertEqual(value_compare(d2, d1), -1)
         self.assertEqual(value_compare(d1, d2), 1)
+
+        # datetime (date)
+        d3 = datetime.date(2024, 2, 12)
+        self.assertEqual(value_compare(d3, d3), 0)
+        self.assertEqual(value_compare(d2, d3), -1)
+        self.assertEqual(value_compare(d3, d2), 1)
 
         # object
         self.assertEqual(value_compare({'value': 1}, {'value': 1}), 0)
@@ -411,6 +440,15 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_parse_integer('invalid'), None)
         self.assertEqual(value_parse_integer('123asdf'), None)
         self.assertEqual(value_parse_integer('123 asdf'), None)
+
+
+    def test_value_normalize_datetime(self):
+        d1 = datetime.datetime(2024, 3, 19, 12, 21)
+        d2 = d1.astimezone()
+        d3 = datetime.date(2024, 3, 19)
+        self.assertIs(value_normalize_datetime(d1), d1)
+        self.assertEqual(value_normalize_datetime(d2), d1)
+        self.assertEqual(value_normalize_datetime(d3), datetime.datetime(2024, 3, 19))
 
 
     def test_value_parse_datetime(self):

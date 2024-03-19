@@ -33,7 +33,7 @@ def validate_data(data, csv=False):
     :type data: list[dict]
     :param csv: If true, parse value strings
     :type csv: bool
-    :return: The map of field name to field type ("datetime", "number", "string")
+    :return: The map of field name to field type ("boolean", "datetime", "number", "string")
     :rtype: dict
     :raises TypeError: Data is invalid
     """
@@ -47,7 +47,7 @@ def validate_data(data, csv=False):
                     types[field] = 'boolean'
                 elif isinstance(value, (int, float)):
                     types[field] = 'number'
-                elif isinstance(value, datetime.datetime):
+                elif isinstance(value, datetime.date):
                     types[field] = 'datetime'
                 elif isinstance(value, str):
                     # If we aren't parsing CSV strings, its just a string
@@ -111,7 +111,7 @@ def validate_data(data, csv=False):
                         if datetime_value is None:
                             throw_field_error(field, field_type, value)
                     row[field] = datetime_value
-                elif value is not None and not isinstance(value, datetime.datetime):
+                elif value is not None and not isinstance(value, datetime.date):
                     throw_field_error(field, field_type, value)
 
             # Boolean field

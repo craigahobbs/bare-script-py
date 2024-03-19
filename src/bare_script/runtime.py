@@ -12,7 +12,7 @@ from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTI
 from .model import lint_script
 from .options import url_file_relative
 from .parser import BareScriptParserError, parse_script
-from .value import value_boolean, value_compare, value_round_number, value_string
+from .value import value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
 
 
 def execute_script(script, options=None):
@@ -277,10 +277,12 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                 return value_string(left_value) + right_value
 
             # datetime + number
-            elif isinstance(left_value, datetime.datetime) and isinstance(right_value, (int, float)):
-                return left_value + datetime.timedelta(milliseconds=right_value)
-            elif isinstance(left_value, (int, float)) and isinstance(right_value, datetime.datetime):
-                return right_value + datetime.timedelta(milliseconds=left_value)
+            elif isinstance(left_value, datetime.date) and isinstance(right_value, (int, float)):
+                left_dt = value_normalize_datetime(left_value)
+                return left_dt + datetime.timedelta(milliseconds=right_value)
+            elif isinstance(left_value, (int, float)) and isinstance(right_value, datetime.date):
+                right_dt = value_normalize_datetime(right_value)
+                return right_dt + datetime.timedelta(milliseconds=left_value)
 
         elif bin_op == '-':
             # number - number
@@ -288,8 +290,10 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                 return left_value - right_value
 
             # datetime - datetime
-            elif isinstance(left_value, datetime.datetime) and isinstance(right_value, datetime.datetime):
-                return value_round_number((left_value - right_value).total_seconds() * 1000, 0)
+            elif isinstance(left_value, datetime.date) and isinstance(right_value, datetime.date):
+                left_dt = value_normalize_datetime(left_value)
+                right_dt = value_normalize_datetime(right_value)
+                return value_round_number((left_dt - right_dt).total_seconds() * 1000, 0)
 
         elif bin_op == '*':
             # number * number

@@ -9,6 +9,7 @@ import datetime
 import json
 import math
 import re
+import uuid
 
 
 def value_type(value):
@@ -28,7 +29,7 @@ def value_type(value):
         return 'boolean'
     elif isinstance(value, (int, float)):
         return 'number'
-    elif isinstance(value, datetime.datetime):
+    elif isinstance(value, datetime.date):
         return 'datetime'
     elif isinstance(value, dict):
         return 'object'
@@ -65,8 +66,8 @@ def value_string(value):
         return str(value)
     elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
-    elif isinstance(value, datetime.datetime):
-        iso = value.astimezone().isoformat()
+    elif isinstance(value, datetime.date):
+        iso = value_normalize_datetime(value).astimezone().isoformat()
         match_microsecond = _R_DATETIME_MICROSECOND.search(iso)
         if match_microsecond is not None:
             microsecond_begin, microsecond_end = match_microsecond.span()
@@ -81,6 +82,10 @@ def value_string(value):
         return '<function>'
     elif isinstance(value, REGEX_TYPE):
         return '<regex>'
+
+    # Additional types that can be stringified but are otherwise considered unknown
+    elif isinstance(value, uuid.UUID):
+        return str(value)
 
     # Unknown value type
     return '<unknown>'
@@ -114,7 +119,7 @@ class _JSONEncoder(json.JSONEncoder):
     __slots__ = ()
 
     def default(self, o):
-        if isinstance(o, datetime.datetime):
+        if isinstance(o, datetime.date):
             return value_string(o)
         return None
 
@@ -142,7 +147,7 @@ def value_boolean(value):
         return value
     elif isinstance(value, (int, float)):
         return value != 0
-    elif isinstance(value, datetime.datetime):
+    elif isinstance(value, datetime.date):
         return True
     elif isinstance(value, list):
         return len(value) != 0
@@ -189,8 +194,10 @@ def value_compare(left, right):
     elif isinstance(left, (int, float)) and not isinstance(left, bool) and \
          isinstance(right, (int, float)) and not isinstance(right, bool):
         return -1 if left < right else (0 if left == right else 1)
-    elif isinstance(left, datetime.datetime) and isinstance(right, datetime.datetime):
-        return -1 if left < right else (0 if left == right else 1)
+    elif isinstance(left, datetime.date) and isinstance(right, datetime.date):
+        left_dt = value_normalize_datetime(left)
+        right_dt = value_normalize_datetime(right)
+        return -1 if left_dt < right_dt else (0 if left_dt == right_dt else 1)
     elif isinstance(left, list) and isinstance(right, list):
         for ix in range(min(len(left), len(right))):
             item_compare = value_compare(left[ix], right[ix])
@@ -282,3 +289,20 @@ def value_parse_datetime(text):
 _R_DATE = re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})$')
 _R_DATETIME = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$')
 _R_DATETIME_ZULU = re.compile(r'Z$')
+
+
+def value_normalize_datetime(value):
+    """
+    Normalize a datetime value
+
+    :param value: The datetime value to normalize
+    :type value: datetime
+    :return: The normalized datetime value
+    :rtype: datetime
+    """
+
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is not None:
+            return value.astimezone().replace(tzinfo=None)
+        return value
+    return datetime.datetime(value.year, value.month, value.day)

@@ -18,7 +18,7 @@ import urllib
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
-from .value import R_NUMBER_CLEANUP, value_boolean, value_compare, value_is, value_json, \
+from .value import R_NUMBER_CLEANUP, value_boolean, value_compare, value_is, value_json, value_normalize_datetime, \
     value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
@@ -438,7 +438,7 @@ def _datetime_day(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return datetime_.day
+    return value_normalize_datetime(datetime_).day
 
 
 # $function: datetimeHour
@@ -451,7 +451,7 @@ def _datetime_hour(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return datetime_.hour
+    return value_normalize_datetime(datetime_).hour
 
 
 # $function: datetimeISOFormat
@@ -461,10 +461,11 @@ def _datetime_hour(args, unused_options):
 # $arg isDate: If true, format the datetime as an ISO date
 # $return: The formatted datetime string
 def _datetime_iso_format(args, unused_options):
-    datetime_, is_date = default_args(args, (None, False))
-    if value_type(datetime_) != 'datetime':
+    datetime_arg, is_date = default_args(args, (None, False))
+    if value_type(datetime_arg) != 'datetime':
         return None
 
+    datetime_ = value_normalize_datetime(datetime_arg)
     if value_boolean(is_date):
         return datetime.date(datetime_.year, datetime_.month, datetime_.day).isoformat()
     return value_string(datetime_)
@@ -493,7 +494,7 @@ def _datetime_millisecond(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return int(value_round_number(datetime_.microsecond / 1000, 0))
+    return int(value_round_number(value_normalize_datetime(datetime_).microsecond / 1000, 0))
 
 
 # $function: datetimeMinute
@@ -506,7 +507,7 @@ def _datetime_minute(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return datetime_.minute
+    return value_normalize_datetime(datetime_).minute
 
 
 # $function: datetimeMonth
@@ -519,7 +520,7 @@ def _datetime_month(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return datetime_.month
+    return value_normalize_datetime(datetime_).month
 
 
 # $function: datetimeNew
@@ -611,7 +612,7 @@ def _datetime_second(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return datetime_.second
+    return value_normalize_datetime(datetime_).second
 
 
 # $function: datetimeToday
@@ -633,7 +634,7 @@ def _datetime_year(args, unused_options):
     if value_type(datetime_) != 'datetime':
         return None
 
-    return datetime_.year
+    return value_normalize_datetime(datetime_).year
 
 
 #

@@ -1030,7 +1030,14 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_binary_addition(self):
-        options = {'globals': {'testDate': _test_date, 'testNumber': _test_number, 'testString': _test_string}}
+        options = {
+            'globals': {
+                'dt3': datetime.date(2024, 1, 6),
+                'testDate': _test_date,
+                'testNumber': _test_number,
+                'testString': _test_string
+            }
+        }
 
         # number + number
         expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
@@ -1052,8 +1059,16 @@ class TestEvaluateExpression(unittest.TestCase):
         expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testDate'}}, 'right': {'number': 86400000}}})
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 7))
 
+        # datetime (date) + number
+        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'dt3'}, 'right': {'number': 86400000}}})
+        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 7))
+
         # number + datetime
         expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'function': {'name': 'testDate'}}}})
+        self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 5))
+
+        # number + datetime (date)
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'variable': 'dt3'}}})
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 5))
 
         # Invalid
@@ -1062,7 +1077,14 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_binary_subtraction(self):
-        options = {'globals': {'dt2': datetime.datetime(2024, 1, 7), 'testDate': _test_date, 'testNumber': _test_number}}
+        options = {
+            'globals': {
+                'dt2': datetime.datetime(2024, 1, 7),
+                'dt3': datetime.date(2024, 1, 6),
+                'testDate': _test_date,
+                'testNumber': _test_number
+            }
+        }
 
         # number - number
         expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
@@ -1071,6 +1093,14 @@ class TestEvaluateExpression(unittest.TestCase):
         # datetime - datetime
         expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt2'}, 'right': {'function': {'name': 'testDate'}}}})
         self.assertEqual(evaluate_expression(expr, options), 86400000)
+
+        # datetime (date) - datetime
+        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt2'}, 'right': {'variable': 'dt3'}}})
+        self.assertEqual(evaluate_expression(expr, options), 86400000)
+
+        # datetime - datetime (date)
+        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt3'}, 'right': {'variable': 'dt2'}}})
+        self.assertEqual(evaluate_expression(expr, options), -86400000)
 
         # Invalid
         expr = validate_expression({'binary': {'op': '-', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})

@@ -715,6 +715,10 @@ a,b, c
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([dt], None), 21)
 
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([dt2], None), 21)
+
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([None], None), None)
 
@@ -722,6 +726,10 @@ a,b, c
     def test_datetime_hour(self):
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([dt], None), 7)
+
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([dt2], None), 0)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([None], None), None)
@@ -732,6 +740,10 @@ a,b, c
         d2 = value_parse_datetime('2022-06-21T07:15:30.123567+00:00')
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([d1], None), value_string(d1))
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([d2], None), value_string(d2))
+
+        # datetime (date)
+        d3 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([d3], None), value_string(d3))
 
         # isDate
         self.assertEqual(
@@ -745,6 +757,12 @@ a,b, c
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeISOFormat']([datetime.datetime(900, 10, 7), True], None),
             '0900-10-07'
+        )
+
+        # isDate (date)
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([d3, True], None),
+            '2022-06-21'
         )
 
         # Non-datetime
@@ -776,6 +794,10 @@ a,b, c
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100000)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([dt], None), 100)
 
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([dt2], None), 0)
+
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([None], None), None)
 
@@ -784,6 +806,10 @@ a,b, c
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([dt], None), 15)
 
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([dt2], None), 0)
+
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([None], None), None)
 
@@ -791,6 +817,10 @@ a,b, c
     def test_datetime_month(self):
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([dt], None), 6)
+
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([dt2], None), 6)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([None], None), None)
@@ -923,6 +953,10 @@ a,b, c
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([dt], None), 30)
 
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([dt2], None), 0)
+
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([None], None), None)
 
@@ -939,6 +973,10 @@ a,b, c
     def test_datetime_year(self):
         dt = datetime.datetime(2022, 6, 21, 7, 15, 30, 100)
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([dt], None), 2022)
+
+        # datetime (date)
+        dt2 = datetime.date(2022, 6, 21)
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([dt2], None), 2022)
 
         # Non-datetime
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([None], None), None)
