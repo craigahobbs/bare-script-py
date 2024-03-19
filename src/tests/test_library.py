@@ -831,15 +831,19 @@ a,b, c
             SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 100], None),
             datetime.datetime(2022, 6, 21, 12, 30, 15, 100000)
         )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 21., 12., 30., 15., 100.], None),
-            datetime.datetime(2022, 6, 21, 12, 30, 15, 100000)
-        )
 
         # Float arguments
         self.assertEqual(
             SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 21., 12., 30., 15., 100.], None),
             datetime.datetime(2022, 6, 21, 12, 30, 15, 100000)
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 0., 12., 30., 15., 100.], None),
+            datetime.datetime(2022, 5, 31, 12, 30, 15, 100000)
+        )
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeNew']([2022., 6., 31., 12., 30., 15., 100.], None),
+            datetime.datetime(2022, 7, 1, 12, 30, 15, 100000)
         )
 
         # Required arguments only

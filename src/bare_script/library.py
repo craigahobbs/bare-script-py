@@ -580,15 +580,15 @@ def _datetime_new(args, unused_options):
         while day < 1:
             year = year if month != 1 else year - 1
             month = month - 1 if month != 1 else 12
-            _, month_days = calendar.monthrange(year, month)
+            _, month_days = calendar.monthrange(int(year), int(month))
             day += month_days
     elif day > 28:
-        _, month_days = calendar.monthrange(year, month)
+        _, month_days = calendar.monthrange(int(year), int(month))
         while day > month_days:
             day -= month_days
             year = year if month != 12 else year + 1
             month = month + 1 if month != 12 else 1
-            _, month_days = calendar.monthrange(year, month)
+            _, month_days = calendar.monthrange(int(year), int(month))
 
     # Return the datetime
     return datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), int(millisecond) * 1000)
