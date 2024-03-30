@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.8 (2024-03-30)
+
+- [20e6954](https://github.com/craigahobbs/bare-script-py/commit/20e6954) - improved library function argument validation
+
 ## 3.0.7 (2024-03-19)
 
 - [0efb82d](https://github.com/craigahobbs/bare-script-py/commit/0efb82d) - fix datetimeNew for extra float days
