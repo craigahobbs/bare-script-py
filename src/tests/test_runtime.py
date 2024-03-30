@@ -9,6 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
+from bare_script.value import ValueArgsError
 
 
 class TestExecuteScript(unittest.TestCase):
@@ -242,6 +243,22 @@ class TestExecuteScript(unittest.TestCase):
 
         options = {'globals': {'errorFunction': error_function}}
         self.assertIsNone(execute_script(script, options))
+
+
+    def test_function_argument_error(self):
+        script = validate_script({
+            'statements': [
+                {'return': {
+                    'expr': {'function': {'name': 'errorFunction'}}
+                }}
+            ]
+        })
+
+        def error_function(unused_args, unused_options):
+            raise ValueArgsError('myArg', None, -1)
+
+        options = {'globals': {'errorFunction': error_function}}
+        self.assertEqual(execute_script(script, options), -1)
 
 
     def test_function_error_log(self):

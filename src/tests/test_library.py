@@ -12,7 +12,7 @@ import unittest
 import schema_markdown
 
 from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
-from bare_script.value import REGEX_TYPE, value_json, value_parse_datetime, value_string
+from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
 
 class TestLibrary(unittest.TestCase):
@@ -83,7 +83,10 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNot(result, array)
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayCopy']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayCopy']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_extend(self):
@@ -94,10 +97,16 @@ class TestLibrary(unittest.TestCase):
         self.assertIs(result, array)
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayExtend']([None, None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayExtend']([None, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Second non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayExtend']([array, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayExtend']([array, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array2" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_get(self):
@@ -108,17 +117,33 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 2], None), 3)
 
         # Non-array
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([None, 0], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayGet']([None, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Index outside valid range
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, -1], None), None)
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 3], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayGet']([array, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayGet']([array, 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 3')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number index
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, '1'], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayGet']([array, '1'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, "1"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer index
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 1.5], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayGet']([array, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_index_of(self):
@@ -153,17 +178,33 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, value_fn, 2.], options), 3)
 
         # Non-array
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([None, 2], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayIndexOf']([None, 2], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Index outside valid range
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, -1], None), -1)
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 4], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 4], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 4')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-number index
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 'abc'], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, "abc"')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-integer index
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 1.5], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
 
     def test_array_join(self):
@@ -171,10 +212,16 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayJoin']([array, ', '], None), 'a, 2, null')
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayJoin']([None, ', '], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string separator
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayJoin']([array, 1], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayJoin']([array, 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "separator" argument value, 1')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_last_index_of(self):
@@ -209,17 +256,33 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, value_fn, 2.], options), 1)
 
         # Non-array
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([None, 2], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayLastIndexOf']([None, 2], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Index outside valid range
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, -1], None), -1)
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 4], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 4], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 4')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-number index
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 'abc'], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, "abc"')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-integer index
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 1.5], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
 
     def test_array_length(self):
@@ -227,7 +290,10 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayLength']([array], None), 3)
 
         # Non-array
-        self.assertEqual(SCRIPT_FUNCTIONS['arrayLength']([None], None), 0)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayLength']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, 0)
 
 
     def test_array_new(self):
@@ -246,16 +312,28 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(SCRIPT_FUNCTIONS['arrayNewSize']([], None), [])
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayNewSize']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "size" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative size
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize']([-1], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayNewSize']([-1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "size" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number size
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayNewSize'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "size" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer size
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayNewSize']([1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayNewSize']([1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "size" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_pop(self):
@@ -264,10 +342,16 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(array, [1, 2])
 
         # Empty array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayPop']([[]], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayPop']([[]], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, []')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayPop']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayPop']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_push(self):
@@ -276,7 +360,10 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(array, [1, 2, 3, 5])
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayPush']([None, 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayPush']([None, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_set(self):
@@ -285,17 +372,33 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(array, [1, 5, 3])
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([None, 1, 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySet']([None, 1, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySort']([array, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "compareFn" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySort']([array, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "compareFn" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Index outside valid range
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([array, -1, 5], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySet']([array, 3, 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySet']([array, -1, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySet']([array, 3, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 3')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_shift(self):
@@ -304,10 +407,16 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(array, [2, 3])
 
         # Empty array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayShift']([[]], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayShift']([[]], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, []')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arrayShift']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayShift']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_slice(self):
@@ -326,27 +435,56 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(SCRIPT_FUNCTIONS['arraySlice']([array, 2, 1], None), [])
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([None, 1, 3], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([None, 1, 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Start index outside valid range
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, -1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, 5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number start index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer start index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # End index outside valid range
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, -1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 0, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 0, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, 5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number end index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 0, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer end index
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySlice']([array, 0, 1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySlice']([array, 0, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_array_sort(self):
@@ -364,11 +502,16 @@ class TestLibrary(unittest.TestCase):
         self.assertListEqual(array, [3, 2, 1])
 
         # Non-array
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySort']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-function cmopare function
-        self.assertIsNone(SCRIPT_FUNCTIONS['arraySort']([array, 'asdf'], None))
-        self.assertListEqual(array, [3, 2, 1])
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arraySort']([array, 'asdf'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "compareFn" argument value, "asdf"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -393,11 +536,17 @@ class TestLibrary(unittest.TestCase):
             {'a': 2, 'sum_b': 5}
         ])
 
-        # Non-list data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataAggregate']([None], None))
+        # Non-array data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataAggregate']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "data" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-dict aggregation model
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataAggregate']([data, 'invalid'], None))
+        # Non-object aggregation model
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataAggregate']([data, 'invalid'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "aggregation" argument value, "invalid"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Invalid aggregation model
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
@@ -448,17 +597,29 @@ class TestLibrary(unittest.TestCase):
             {'a': 'bar', 'b': '/foo/bar'}
         ])
 
-        # Non-list data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([None, 'c', 'a * b'], None))
+        # Non-array data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataCalculatedField']([None, 'c', 'a * b'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "data" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string field name
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([data, None, 'a * b'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataCalculatedField']([data, None, 'a * b'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "fieldName" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string expression
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "expr" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-dict variables
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'a * b', 'invalid'], None))
+        # Non-object variables
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataCalculatedField']([data, 'c', 'a * b', 'invalid'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "variables" argument value, "invalid"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_data_filter(self):
@@ -499,14 +660,23 @@ class TestLibrary(unittest.TestCase):
             {'a': 'bar'}
         ])
 
-        # Non-list data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([None, 'a * b'], None))
+        # Non-array data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataFilter']([None, 'a * b'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "data" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string expression
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([data, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataFilter']([data, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "expr" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-dict variables
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([data, 'a * b', 'invalid'], None))
+        # Non-object variables
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataFilter']([data, 'a * b', 'invalid'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "variables" argument value, "invalid"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_data_join(self):
@@ -582,20 +752,35 @@ class TestLibrary(unittest.TestCase):
             {'a': 'bar', 'b': '/foo/bar', 'c': 6, 'd': 11}
         ])
 
-        # Non-list left data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([None, right_data, 'a'], None))
+        # Non-array left data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataJoin']([None, right_data, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "leftData" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-list right data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([left_data, None, 'a'], None))
+        # Non-array right data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataJoin']([left_data, None, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "rightData" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string expression
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "joinExpr" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string right expression
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', 7], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataJoin']([left_data, right_data, 'a', 7], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "rightExpr" argument value, 7')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-dict variables
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataFilter']([left_data, right_data, 'a', None, False, 'invalid'], None))
+        # Non-object variables
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataFilter']([left_data, right_data, 'a', None, False, 'invalid'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "expr" argument value, [{"a":1,"c":10},{"a":2,"c":11},{"a":2,"c":12}]')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_data_parse_csv(self):
@@ -640,11 +825,17 @@ a,b, c
             {'a': 1, 'b': 4}
         ])
 
-        # Non-list data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataSort']([None, [['a', True], ['b']]], None))
+        # Non-array data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataSort']([None, [['a', True], ['b']]], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "data" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-list sorts
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataSort']([data, None], None))
+        # Non-array sorts
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataSort']([data, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "sorts" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_data_top(self):
@@ -667,20 +858,35 @@ a,b, c
             {'a': 4, 'b': 7}
         ])
 
-        # Non-list data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([None], None))
+        # Non-array data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataTop']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "data" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number count
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataTop']([data, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "count" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer count
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, 3.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataTop']([data, 3.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "count" argument value, 3.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative count
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, -3], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataTop']([data, -3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "count" argument value, -3')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-list category fields
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataTop']([data, 3, 'invalid'], None))
+        # Non-array category fields
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataTop']([data, 3, 'invalid'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "categoryFields" argument value, "invalid"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_data_validate(self):
@@ -702,8 +908,11 @@ a,b, c
             {'a': 2, 'b': 5}
         ])
 
-        # Non-list data
-        self.assertIsNone(SCRIPT_FUNCTIONS['dataValidate']([None], None))
+        # Non-array data
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['dataValidate']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "data" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -720,7 +929,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([dt2], None), 21)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeDay']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeDay']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_hour(self):
@@ -732,7 +944,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([dt2], None), 0)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeHour']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeHour']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_iso_format(self):
@@ -766,7 +981,10 @@ a,b, c
         )
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOFormat']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeISOFormat']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_iso_parse(self):
@@ -787,7 +1005,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse'](['invalid'], None), None)
 
         # Non-string datetime string
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeISOParse']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_millisecond(self):
@@ -799,7 +1020,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([dt2], None), 0)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMillisecond']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeMillisecond']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_minute(self):
@@ -811,7 +1035,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([dt2], None), 0)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMinute']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeMinute']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_month(self):
@@ -823,7 +1050,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([dt2], None), 6)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeMonth']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeMonth']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_new(self):
@@ -928,25 +1158,82 @@ a,b, c
         )
 
         # Invalid year
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([90, 7, 21, 12, 30, 15, 100], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([90, 7, 21, 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "year" argument value, 90')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number arguments
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew'](['2022', 6, 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, '6', 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, '21', 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, '12', 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, '30', 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, '15', 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, '100'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew'](['2022', 6, 21, 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "year" argument value, "2022"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, '6', 21, 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "month" argument value, "6"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, '21', 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "day" argument value, "21"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, '12', 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "hour" argument value, "12"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, '30', 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "minute" argument value, "30"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, '15', 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "second" argument value, "15"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, '100'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "millisecond" argument value, "100"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer arguments
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022.5, 6, 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6.5, 21, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21.5, 12, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12.5, 30, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30.5, 15, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15.5, 100], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 100.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022.5, 6, 21, 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "year" argument value, 2022.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6.5, 21, 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "month" argument value, 6.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21.5, 12, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "day" argument value, 21.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12.5, 30, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "hour" argument value, 12.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30.5, 15, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "minute" argument value, 30.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15.5, 100], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "second" argument value, 15.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeNew']([2022, 6, 21, 12, 30, 15, 100.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "millisecond" argument value, 100.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_now(self):
@@ -962,7 +1249,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([dt2], None), 0)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeSecond']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeSecond']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_datetime_today(self):
@@ -983,7 +1273,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([dt2], None), 2022)
 
         # Non-datetime
-        self.assertEqual(SCRIPT_FUNCTIONS['datetimeYear']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['datetimeYear']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "datetime" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -999,7 +1292,10 @@ a,b, c
             SCRIPT_FUNCTIONS['jsonParse'](['asdf'], None)
 
         # Non-string
-        self.assertIsNone(SCRIPT_FUNCTIONS['jsonParse']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonParse']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_json_stringify(self):
@@ -1030,16 +1326,28 @@ a,b, c
         )
 
         # Non-number indent
-        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonStringify']([None, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "indent" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer indent
-        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, 4.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonStringify']([None, 4.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "indent" argument value, 4.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Zero indent
-        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 0], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonStringify']([{'a': 1, 'b': 2}, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "indent" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative indent
-        self.assertIsNone(SCRIPT_FUNCTIONS['jsonStringify']([None, -4], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonStringify']([None, -4], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "indent" argument value, -4')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -1051,68 +1359,106 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['mathAbs']([-3], None), 3)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathAbs'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAbs'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_acos(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAcos']([1], None), 0)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathAcos'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAcos'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_asin(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAsin']([0], None), 0)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathAsin'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAsin'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_atan(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAtan']([0], None), 0)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathAtan'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAtan'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_atan2(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAtan2']([0, 1], None), 0)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathAtan2'](['abc', 1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathAtan2']([0, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAtan2'](['abc', 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "y" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAtan2']([0, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_ceil(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathCeil']([0.25], None), 1)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathCeil'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathCeil'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_cos(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathCos']([0], None), 1)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathCos'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathCos'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_floor(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathFloor']([1.125], None), 1)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathFloor'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathFloor'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_ln(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathLn']([math.e], None), 1)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLn'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLn'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Invalid value
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLn']([0], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLn']([-10], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLn']([0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLn']([-10], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, -10')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_log(self):
@@ -1122,38 +1468,67 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['mathLog']([8, 2], None), 3)
         self.assertEqual(SCRIPT_FUNCTIONS['mathLog']([8, 0.5], None), -3)
 
-        # Non-number value
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number base
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog']([10, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "base" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Invalid value
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([0], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([-10], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog']([0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog']([-10], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, -10')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Invalid base
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, 1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, 0], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathLog']([10, -10], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog']([10, 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "base" argument value, 1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog']([10, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "base" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathLog']([10, -10], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "base" argument value, -10')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_max(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathMax']([1, 2, 3], None), 3)
 
+        # Empty values
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax']([], None))
+
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax'](['abc', 2, 3], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax']([1, 'abc', 3], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathMax']([1, 2, 'abc'], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['mathMax'](['abc', 2, 3], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['mathMax']([1, 'abc', 3], None), 'abc')
+        self.assertEqual(SCRIPT_FUNCTIONS['mathMax']([1, 2, 'abc'], None), 'abc')
 
 
     def test_math_min(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathMin']([1, 2, 3], None), 1)
 
+        # Empty values
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin']([], None))
+
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin'](['abc', 2, 3], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin']([1, 'abc', 3], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathMin']([1, 2, 'abc'], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['mathMin'](['abc', 2, 3], None), 2)
+        self.assertEqual(SCRIPT_FUNCTIONS['mathMin']([1, 'abc', 3], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['mathMin']([1, 2, 'abc'], None), 1)
 
 
     def test_math_pi(self):
@@ -1176,47 +1551,74 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.15, 1], None), 5.2)
 
         # Non-number value
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathRound'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number base
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([5.125, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathRound']([5.125, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "digits" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer base
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([5.125, 1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathRound']([5.125, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "digits" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative base
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([5.125, -1], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathRound']([5.125, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "digits" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_sign(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathSign']([5.125], None), 1)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathSign'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathSign'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_sin(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathSin']([0], None), 0)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathSin'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathSin'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_sqrt(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathSqrt']([4], None), 2)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathSqrt'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathSqrt'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative value
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathSqrt']([-4], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathSqrt']([-4], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, -4')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_math_tan(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathTan']([0], None), 0)
 
         # Non-number
-        self.assertIsNone(SCRIPT_FUNCTIONS['mathTan'](['abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathTan'](['abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -1233,7 +1635,10 @@ a,b, c
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45 asdf'], None))
 
         # Non-string value
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat']([10], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberParseFloat']([10], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, 10')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_number_parse_int(self):
@@ -1250,17 +1655,33 @@ a,b, c
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1234.45 asdf'], None))
 
         # Non-string value
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt']([10], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberParseInt']([10], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, 10')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number radix
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberParseInt'](['10', 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer radix
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 2.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberParseInt'](['10', 2.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, 2.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Invalid radix
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['10', 37], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberParseInt'](['10', 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, 1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberParseInt'](['10', 37], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, 37')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_number_to_fixed(self):
@@ -1277,16 +1698,28 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1, 1, True], None), '1')
 
         # Non-number value
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([None, 1], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToFixed']([None, 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number digits
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToFixed']([1.125, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "digits" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer digits
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "digits" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative digits
-        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1.125, -1], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToFixed']([1.125, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "digits" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -1302,21 +1735,45 @@ a,b, c
 
         # Null inputs
         obj = {'a': 1, 'b': 2}
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([None, obj], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([obj, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectAssign']([None, obj], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectAssign']([obj, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object2" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
 
         # Number inputs
         obj = {'a': 1, 'b': 2}
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([0, obj], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([obj, 0], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectAssign']([0, obj], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectAssign']([obj, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object2" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
 
         # Array inputs
         obj = {'a': 1, 'b': 2}
         array = ['c', 'd']
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([obj, array], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectAssign']([array, obj], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectAssign']([obj, array], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object2" argument value, ["c","d"]')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectAssign']([array, obj], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["c","d"]')
+        self.assertIsNone(cm_exc.exception.return_value)
+
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
         self.assertListEqual(array, ['c', 'd'])
 
@@ -1328,13 +1785,22 @@ a,b, c
         self.assertIsNot(obj_copy, obj)
 
         # Null input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectCopy']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectCopy']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Number input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectCopy']([0], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectCopy']([0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Array input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectCopy']([['a', 'b']], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectCopy']([['a', 'b']], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_object_delete(self):
@@ -1348,16 +1814,28 @@ a,b, c
         self.assertDictEqual(obj, {'b': 2})
 
         # Null input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([None, 'a'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectDelete']([None, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Number input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([0, 'a'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectDelete']([0, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Array input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([['a', 'b'], 'a'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectDelete']([['a', 'b'], 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string key
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectDelete']([obj, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectDelete']([obj, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "key" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_object_get(self):
@@ -1370,21 +1848,49 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, 'a', 1], None), 1)
 
         # Null input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([None, 'a'], None))
-        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([None, 'a', 1], None), 1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([None, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([None, 'a', 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, 1)
 
         # Number input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([0, 'a'], None))
-        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([0, 'a', 1], None), 1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([0, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([0, 'a', 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertEqual(cm_exc.exception.return_value, 1)
 
         # Array input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([['a', 'b'], 'a'], None))
-        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([['a', 'b'], 'a', 1], None), 1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([['a', 'b'], 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([['a', 'b'], 'a', 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertEqual(cm_exc.exception.return_value, 1)
 
         # Non-string key
         obj = {'a': 1, 'b': 2}
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, None], None))
-        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, None, 1], None), 1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([obj, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "key" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectGet']([obj, None, 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "key" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, 1)
 
 
     def test_object_has(self):
@@ -1395,16 +1901,28 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([obj, 'd'], None), False)
 
         # Null input
-        self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([None, 'a'], None), False)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectHas']([None, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, False)
 
         # Number input
-        self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([0, 'a'], None), False)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectHas']([0, 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertEqual(cm_exc.exception.return_value, False)
 
         # Array input
-        self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([['a', 'b'], 'a'], None), False)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectHas']([['a', 'b'], 'a'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertEqual(cm_exc.exception.return_value, False)
 
         # Non-string key
-        self.assertEqual(SCRIPT_FUNCTIONS['objectHas']([obj, None], None), False)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectHas']([obj, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "key" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, False)
 
 
     def test_object_keys(self):
@@ -1412,13 +1930,22 @@ a,b, c
         self.assertListEqual(SCRIPT_FUNCTIONS['objectKeys']([obj], None), ['a', 'b'])
 
         # Null input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectKeys']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectKeys']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Number input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectKeys']([0], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectKeys']([0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Array input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectKeys']([['a', 'b']], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectKeys']([['a', 'b']], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_object_new(self):
@@ -1431,7 +1958,10 @@ a,b, c
         self.assertDictEqual(SCRIPT_FUNCTIONS['objectNew'](['a', 1, 'b'], None), {'a': 1, 'b': None})
 
         # Non-string key
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectNew']([0, 1, 'b'], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectNew']([0, 1, 'b'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "keyValues" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_object_set(self):
@@ -1440,19 +1970,31 @@ a,b, c
         self.assertDictEqual(obj, {'a': 1, 'b': 2, 'c': 3})
 
         # Null input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectSet']([None, 'c', 3], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectSet']([None, 'c', 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Number input
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectSet']([0, 'c', 3], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectSet']([0, 'c', 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Array input
-        array = ['a', 'b']
-        self.assertIsNone(SCRIPT_FUNCTIONS['objectSet']([array, 'c', 3], None))
-        self.assertListEqual(array, ['a', 'b'])
+        obj = ['a', 'b']
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectSet']([obj, 'c', 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "object" argument value, ["a","b"]')
+        self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(obj, ['a', 'b'])
 
         # Non-string key
         obj = {'a': 1, 'b': 2}
-        self.assertEqual(SCRIPT_FUNCTIONS['objectSet']([obj, None, 3], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['objectSet']([obj, None, 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "key" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
         self.assertDictEqual(obj, {'a': 1, 'b': 2})
 
 
@@ -1465,7 +2007,10 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['regexEscape'](['a*b'], None), 'a\\*b')
 
         # Non-string
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexEscape']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexEscape']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_regex_match(self):
@@ -1492,10 +2037,16 @@ a,b, c
         self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), 'boo bar'], None))
 
         # Non-regex
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([None, 'foo bar'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexMatch']([None, 'foo bar'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "regex" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_regex_match_all(self):
@@ -1522,10 +2073,16 @@ a,b, c
         )
 
         # Non-regex
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatchAll']([None, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexMatchAll']([None, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "regex" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexMatchAll']([re.compile('foo'), None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_regex_new(self):
@@ -1561,14 +2118,17 @@ a,b, c
         # Flag - unknown
         self.assertIsNone(SCRIPT_FUNCTIONS['regexNew'](['a*b', 'iz'], None))
 
-        # Non-regex
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew']([None], None))
-
         # Non-string pattern
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexNew']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "pattern" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string flags
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexNew'](['a*b', 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexNew'](['a*b', 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "flags" argument value, 5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_regex_replace(self):
@@ -1599,23 +2159,38 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2\\$1'], None), 'b\\a')
 
         # Non-regex
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexReplace']([None, 'ab', '$2$1'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexReplace']([None, 'ab', '$2$1'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "regex" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexReplace']([re.compile('(a*)(b)'), None, '$2$1'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexReplace']([re.compile('(a*)(b)'), None, '$2$1'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string substr
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexReplace']([re.compile('(a*)(b)'), 'ab', None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexReplace']([re.compile('(a*)(b)'), 'ab', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "substr" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_regex_split(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), '1,2, 3 , 4'], None), ['1', '2', '3', '4'])
 
         # Non-regex
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexSplit']([None, '1,2'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexSplit']([None, '1,2'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "regex" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string
-        self.assertIsNone(SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -1637,7 +2212,7 @@ a,b, c
 
 
     def test_schema_parse_ex(self):
-        # List input
+        # Array input
         types = SCRIPT_FUNCTIONS['schemaParseEx']([['typedef int MyType', 'typedef MyType MyType2']], None)
         self.assertDictEqual(types, {
             'MyType': {'typedef': {'name': 'MyType', 'type': {'builtin': 'int'}}},
@@ -1675,14 +2250,23 @@ a,b, c
             SCRIPT_FUNCTIONS['schemaParseEx'](['asdf', {}, 'test.smd'], None)
         self.assertEqual(str(cm_exc.exception), 'test.smd:1: error: Syntax error')
 
-        # Non-list/string input
-        self.assertIsNone(SCRIPT_FUNCTIONS['schemaParseEx']([None], None))
+        # Non-array/string input
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaParseEx']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "lines" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
-        # Non-doct types
-        self.assertIsNone(SCRIPT_FUNCTIONS['schemaParseEx'](['', None], None))
+        # Non-object types
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaParseEx'](['', 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "types" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string filename
-        self.assertIsNone(SCRIPT_FUNCTIONS['schemaParseEx'](['', {}, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaParseEx'](['', {}, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "filename" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_schema_type_model(self):
@@ -1705,11 +2289,17 @@ a,b, c
             SCRIPT_FUNCTIONS['schemaValidate']([types, 'MyStruct', {}], None)
         self.assertEqual(str(cm_exc.exception), "Required member 'a' missing")
 
-        # Non-dict types
-        self.assertIsNone(SCRIPT_FUNCTIONS['schemaValidate']([None, 'MyStruct', None], None))
+        # Non-object types
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaValidate']([None, 'MyStruct', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "types" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string type
-        self.assertIsNone(SCRIPT_FUNCTIONS['schemaValidate']([{}, None, None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaValidate']([{}, None, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "typeName" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_schema_validate_type_model(self):
@@ -1721,8 +2311,11 @@ a,b, c
             SCRIPT_FUNCTIONS['schemaValidateTypeModel']([{}], None)
         self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'dict'), expected type 'Types' [len > 0]")
 
-        # Non-dict types
-        self.assertIsNone(SCRIPT_FUNCTIONS['schemaValidateTypeModel']([None], None))
+        # Non-object types
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['schemaValidateTypeModel']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "types" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -1737,17 +2330,33 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 2], None), 99)
 
         # Invalid index
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', -1], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 4], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 4], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 4')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string value
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt']([None, 0], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharCodeAt']([None, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number index
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer index
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 1.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_ends_with(self):
@@ -1755,10 +2364,16 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringEndsWith'](['foo bar', 'foo'], None), False)
 
         # Non-string value
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringEndsWith']([None, 'bar'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringEndsWith']([None, 'bar'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string search
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringEndsWith'](['foo bar', None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringEndsWith'](['foo bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "search" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_from_char_code(self):
@@ -1766,13 +2381,22 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringFromCharCode']([97., 98., 99.], None), 'abc')
 
         # Non-number code
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringFromCharCode']([97, 'b', 99], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringFromCharCode']([97, 'b', 99], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "char_codes" argument value, "b"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer code
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringFromCharCode']([97, 98.5, 99], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringFromCharCode']([97, 98.5, 99], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "char_codes" argument value, 98.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative code
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringFromCharCode']([97, -98, 99], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringFromCharCode']([97, -98, 99], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "char_codes" argument value, -98')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_index_of(self):
@@ -1791,20 +2415,39 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 5], None), -1)
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf']([None, 'bar'], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringIndexOf']([None, 'bar'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-string search
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', None], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "search" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-number index
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', None], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-integer index
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 1.5], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Out-of-range index
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', -1], None), -1)
-        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 7], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 7], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 7')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
 
     def test_string_last_index_of(self):
@@ -1824,34 +2467,59 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 3], None), -1)
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf']([None, 'bar'], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLastIndexOf']([None, 'bar'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-string search
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', None], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "search" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-number index
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 'abc'], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, "abc"')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Non-integer index
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 5.5], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 5.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 5.5')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
         # Out-of-range index
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', -1], None), -1)
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 7], None), -1)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 7], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 7')
+        self.assertEqual(cm_exc.exception.return_value, -1)
 
 
     def test_string_length(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringLength'](['foo'], None), 3)
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLength']([None], None), 0)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLength']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, 0)
 
 
     def test_string_lower(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringLower'](['Foo'], None), 'foo')
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLower']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringLower']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_new(self):
@@ -1878,16 +2546,28 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 0], None), '')
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat']([None, 3], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringRepeat']([None, 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number count
-        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringRepeat'](['abc', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "count" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer count
-        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', 1.5], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringRepeat'](['abc', 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "count" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative count
-        self.assertEqual(SCRIPT_FUNCTIONS['stringRepeat'](['abc', -2], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringRepeat'](['abc', -2], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "count" argument value, -2')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_replace(self):
@@ -1898,13 +2578,22 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', 'abc', 'bonk'], None), 'foo bar')
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace']([None, 'bar', 'bonk'], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringReplace']([None, 'bar', 'bonk'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string search
-        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', None, 'bonk'], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringReplace'](['foo bar', None, 'bonk'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "substr" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string replacement
-        self.assertEqual(SCRIPT_FUNCTIONS['stringReplace'](['foo bar', 'bar', None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringReplace'](['foo bar', 'bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "newSubstr" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_slice(self):
@@ -1921,19 +2610,53 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1], None), 'oo bar')
 
         # Non-string value
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice']([None, 1, 5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice']([None, 1, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number begin/end
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', None, 5], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 'abc'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', None, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer begin/end
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1.5, 5], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 5.5], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1.5, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 5.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, 5.5')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Out-of-range begin/end
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', -1, 5], None))
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 8], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', -1, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 8, 5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "start" argument value, 8')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSlice'](['foo bar', 1, 8], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "end" argument value, 8')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_split(self):
@@ -1944,10 +2667,16 @@ a,b, c
         self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo', ', '], None), ['foo'])
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringSplit']([None, ', '], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSplit']([None, ', '], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string separator
-        self.assertEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo, bar', None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSplit'](['foo, bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "separator" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_starts_with(self):
@@ -1955,10 +2684,16 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', 'bar'], None), False)
 
         # Non-string value
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringStartsWith']([None, 'foo'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringStartsWith']([None, 'foo'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-string search
-        self.assertIsNone(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "search" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_trim(self):
@@ -1967,14 +2702,20 @@ a,b, c
         self.assertEqual(SCRIPT_FUNCTIONS['stringTrim'](['abc'], None), 'abc')
 
         #  Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringTrim']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringTrim']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_string_upper(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringUpper'](['Foo'], None), 'FOO')
 
         # Non-string value
-        self.assertEqual(SCRIPT_FUNCTIONS['stringUpper']([None], None), None)
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringUpper']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     #
@@ -2131,7 +2872,10 @@ a,b, c
 
         # Unexpected input type
         logs = []
-        self.assertIsNone(SCRIPT_FUNCTIONS['systemFetch']([None], {'logFn': log_fn}))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([None], {'logFn': log_fn})
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
         self.assertListEqual(logs, [])
 
 
@@ -2159,7 +2903,10 @@ a,b, c
 
         # Non-string name
         options = {'globals': {'a': 1}}
-        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet']([None], options))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemGlobalGet']([None], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "name" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_system_global_set(self):
@@ -2178,7 +2925,10 @@ a,b, c
 
         # Non-string name
         options = {'globals': {}}
-        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalSet']([None], options))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemGlobalSet']([None], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "name" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_system_is(self):
@@ -2290,10 +3040,16 @@ a,b, c
         self.assertEqual(partial_fn([1], {'debug': False}), 'test-1')
 
         # Non-function
-        self.assertIsNone(SCRIPT_FUNCTIONS['systemPartial']([None, 'test'], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemPartial']([None, 'test'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "func" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # No args
-        self.assertIsNone(SCRIPT_FUNCTIONS['systemPartial']([test_fn], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemPartial']([test_fn], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "args" argument value, []')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_system_type(self):
@@ -2337,7 +3093,10 @@ a,b, c
         )
 
         # Non-string URL
-        self.assertIsNone(SCRIPT_FUNCTIONS['urlEncode']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['urlEncode']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_url_encode_component(self):
@@ -2361,4 +3120,7 @@ a,b, c
         )
 
         # Non-string URL
-        self.assertIsNone(SCRIPT_FUNCTIONS['urlEncodeComponent']([None], None))
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['urlEncodeComponent']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)

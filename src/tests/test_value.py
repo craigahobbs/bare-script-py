@@ -9,8 +9,10 @@ import re
 import unittest
 import uuid
 
-from bare_script.value import value_boolean, value_compare, value_is, value_json, value_normalize_datetime, \
-    value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
+from schema_markdown import ValidationError
+
+from bare_script.value import ValueArgsError, value_args_model, value_args_validate, value_boolean, value_compare, value_is, value_json, \
+    value_normalize_datetime, value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
 class TestValue(unittest.TestCase):
@@ -380,6 +382,247 @@ class TestValue(unittest.TestCase):
         # string < unknown
         self.assertEqual(value_compare('abc', (1, 2, 3)), -1)
         self.assertEqual(value_compare((1, 2, 3), 'abc'), 1)
+
+
+    def test_value_args_validate(self):
+        fn_args = value_args_model([
+            {'name': 'argNumber', 'type': 'number'},
+            {'name': 'argString', 'type': 'string'},
+            {'name': 'argArray', 'type': 'array'},
+            {'name': 'argObject', 'type': 'object'},
+            {'name': 'argDatetime', 'type': 'datetime'},
+            {'name': 'argRegex', 'type': 'regex'},
+            {'name': 'argFunction', 'type': 'function'}
+        ])
+        array_value = []
+        object_value = {}
+        datetime_value = datetime.datetime.now()
+        regex_value = re.compile(r'^abc$')
+        def function_value():
+            return 'Hello'
+        args = [5, 'abc', array_value, object_value, datetime_value, regex_value, function_value]
+        args_valid = value_args_validate(fn_args, args)
+        self.assertEqual(function_value(), 'Hello')
+        self.assertIs(args_valid, args)
+        self.assertListEqual(
+            args_valid,
+            [5, 'abc', array_value, object_value, datetime_value, regex_value, function_value]
+        )
+
+        # Invalid arguments
+        for ix_arg, fn_arg in enumerate(fn_args):
+            arg_invalid = 5 if fn_arg['type'] == 'string' else 'abc'
+            args_invalid = list(args)
+            args_invalid[ix_arg] = arg_invalid
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                value_args_validate(fn_args, args_invalid)
+            self.assertEqual(str(cm_exc.exception), f'Invalid "{fn_arg["name"]}" argument value, {value_json(arg_invalid)}')
+            self.assertIsNone(cm_exc.exception.return_value)
+
+            # With return value
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                value_args_validate(fn_args, args_invalid, -1)
+            self.assertEqual(str(cm_exc.exception), f'Invalid "{fn_arg["name"]}" argument value, {value_json(arg_invalid)}')
+            self.assertEqual(cm_exc.exception.return_value, -1)
+
+        # Missing arguments
+        for ix_arg, fn_arg in enumerate(fn_args):
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                value_args_validate(fn_args, args[0:ix_arg])
+            self.assertEqual(str(cm_exc.exception), f'Invalid "{fn_arg["name"]}" argument value, null')
+            self.assertIsNone(cm_exc.exception.return_value)
+
+            # With return value
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                value_args_validate(fn_args, args[0:ix_arg], -1)
+            self.assertEqual(str(cm_exc.exception), f'Invalid "{fn_arg["name"]}" argument value, null')
+            self.assertEqual(cm_exc.exception.return_value, -1)
+
+
+    def test_value_rgs_validate_last_arg_array(self):
+        fn_args = value_args_model([
+            {'name': 'str', 'type': 'string'},
+            {'name': 'arr', 'lastArgArray': True}
+        ])
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc', 1, 2, 3]),
+            ['abc', [1, 2, 3]]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc', 1]),
+            ['abc', [1]]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc']),
+            ['abc', []]
+        )
+
+
+    def test_value_args_validate_default_and_nullable(self):
+        fn_args = value_args_model([
+            {'name': 'str', 'type': 'string', 'nullable': True},
+            {'name': 'str2', 'type': 'string', 'default': ''}
+        ])
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc', 'def']),
+            ['abc', 'def']
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc']),
+            ['abc', '']
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, [None]),
+            [None, '']
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, []),
+            [None, '']
+        )
+
+        # Non-nullable
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [None, None])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "str2" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-nullable with return value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [None, None], -1)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "str2" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+
+    def test_value_args_validate_any_and_boolean(self):
+        fn_args = value_args_model([
+            {'name': 'any'},
+            {'name': 'bool', 'type': 'boolean'}
+        ])
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc', 1]),
+            ['abc', True]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, [5, 0]),
+            [5, False]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, [None, None]),
+            [None, False]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, []),
+            [None, False]
+        )
+
+
+    def test_value_args_validate_number_constraints(self):
+        fn_args = value_args_model([
+            {'name': 'int', 'type': 'number', 'integer': True, 'gt': 0, 'lt': 5},
+            {'name': 'num', 'type': 'number', 'gte': 0, 'lte': 5},
+        ])
+        self.assertListEqual(
+            value_args_validate(fn_args, [2, 3.5]),
+            [2, 3.5]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, [2, 0]),
+            [2, 0]
+        )
+        self.assertListEqual(
+            value_args_validate(fn_args, [2, 5]),
+            [2, 5]
+        )
+
+        # Non-integer
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [2.5, 3.5])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, 2.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Greater-than error
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [0, 3.5])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, 0')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Less-than error
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [5, 3.5])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, 5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Greater-than-or-equal-to error
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [2, -1])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "num" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Less-than-or-equal-to error
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [2, 6])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "num" argument value, 6')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Number constraint with return value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [2, 6], -1)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "num" argument value, 6')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+
+    def test_value_args_validate_extra_arguments(self):
+        fn_args = value_args_model([
+            {'name': 'str', 'type': 'string'},
+            {'name': 'num', 'type': 'number'}
+        ])
+        self.assertListEqual(
+            value_args_validate(fn_args, ['abc', 1, 2, 3]),
+            ['abc', 1]
+        )
+
+
+    def test_value_args_error(self):
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            raise ValueArgsError('myArg', None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "myArg" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, None)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            raise ValueArgsError('myArg', 'abc')
+        self.assertEqual(str(cm_exc.exception), 'Invalid "myArg" argument value, "abc"')
+        self.assertEqual(cm_exc.exception.return_value, None)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            raise ValueArgsError('myArg', [1, 2, 3])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "myArg" argument value, [1,2,3]')
+        self.assertEqual(cm_exc.exception.return_value, None)
+
+        # Return value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            raise ValueArgsError('myArg', None, -1)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "myArg" argument value, null')
+        self.assertEqual(cm_exc.exception.return_value, -1)
+
+
+    def test_value_args_model(self):
+        fn_args = [
+            {'name': 'str', 'type': 'string'},
+            {'name': 'num', 'type': 'number', 'default': 0}
+        ]
+        self.assertEqual(value_args_model(fn_args), fn_args)
+
+        # Invalid function arguments model
+        with self.assertRaises(ValidationError) as cm_exc:
+            value_args_model([])
+        self.assertEqual(str(cm_exc.exception), "Invalid value [] (type 'list'), expected type 'FunctionArguments' [len > 0]")
+
+        # Null default argument value error
+        with self.assertRaises(ValueError) as cm_exc:
+            value_args_model([
+                {'name': 'num', 'type': 'number', 'default': None}
+            ])
+        self.assertEqual(str(cm_exc.exception), 'Argument "num" has default value of null - use nullable instead')
 
 
     def test_value_round_number(self):

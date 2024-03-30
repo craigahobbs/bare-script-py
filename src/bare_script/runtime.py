@@ -8,11 +8,11 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, default_args
+from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
 from .parser import BareScriptParserError, parse_script
-from .value import value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
+from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
 
 
 def execute_script(script, options=None):
@@ -212,7 +212,11 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         # "if" built-in function?
         func_name = expr['function']['name']
         if func_name == 'if':
-            value_expr, true_expr, false_expr = default_args(expr['function'].get('args', ()), (None, None, None))
+            args_expr = expr['function'].get('args', ())
+            args_expr_length = len(args_expr)
+            value_expr = args_expr[0] if args_expr_length >= 1 else None
+            true_expr = args_expr[1] if args_expr_length >= 2 else None
+            false_expr = args_expr[2] if args_expr_length >= 3 else None
             value = evaluate_expression(value_expr, options, locals_, builtins) if value_expr else False
             result_expr = true_expr if value_boolean(value) else false_expr
             return evaluate_expression(result_expr, options, locals_, builtins) if result_expr else None
@@ -238,6 +242,8 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                 # Log and return null
                 if options is not None and 'logFn' in options and options.get('debug'):
                     options['logFn'](f'BareScript: Function "{func_name}" failed with error: {error}')
+                if isinstance(error, ValueArgsError):
+                    return error.return_value
                 return None
 
         raise BareScriptRuntimeError(f'Undefined function "{func_name}"')

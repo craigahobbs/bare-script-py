@@ -11,6 +11,8 @@ import math
 import re
 import uuid
 
+from schema_markdown import parse_schema_markdown, validate_type
+
 
 def value_type(value):
     """
@@ -126,8 +128,8 @@ class _JSONEncoder(json.JSONEncoder):
 
 _JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True)
 
-_R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'.0$', re.MULTILINE)
-_R_VALUE_JSON_NUMBER_CLEANUP2 = re.compile(r'\.0([,}\]])')
+_R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'\.0*$', re.MULTILINE)
+_R_VALUE_JSON_NUMBER_CLEANUP2 = re.compile(r'\.0*([,}\]])')
 
 
 def value_boolean(value):
@@ -211,6 +213,204 @@ def value_compare(left, right):
     return -1 if type1 < type2 else (0 if type1 == type2 else 1)
 
 
+#
+# Function arguments validation
+#
+
+
+def value_args_validate(fn_args, args, error_return_value=None):
+    """
+    Validate a function's arguments
+
+    :param fn_args: The function arguments model
+    :type fn_args: list[dict]
+    :param args: The function arguments
+    :type args: list
+    :param error_return_value: The function's return value on error
+    :return: The validated function arguments
+    :rtype: list
+    """
+
+    for ix, fn_arg in enumerate(fn_args):
+        arg_type = fn_arg.get('type')
+
+        # Missing argument?
+        if ix >= len(args):
+            # Last argument array?
+            if fn_arg.get('lastArgArray', False):
+                args.append([])
+                continue
+
+            # Argument default?
+            default_value = fn_arg.get('default')
+            if default_value is not None:
+                args.append(default_value)
+                continue
+
+            # Boolean argument?
+            if arg_type == 'boolean':
+                args.append(False)
+                continue
+
+            # Argument nullable?
+            if arg_type is None or fn_arg.get('nullable'):
+                args.append(None)
+                continue
+
+            # Invalid null value...
+            raise ValueArgsError(fn_arg['name'], None, error_return_value)
+
+        # Last arg array?
+        if fn_arg.get('lastArgArray'):
+            args[ix] = args[ix:]
+            del args[ix + 1:]
+            continue
+
+        # Any type OK?
+        if arg_type is None:
+            continue
+
+        # Boolean argument?
+        arg_value = args[ix]
+        if arg_type == 'boolean':
+            args[ix] = value_boolean(arg_value)
+            continue
+
+        # Null value?
+        if arg_value is None:
+            # Argument nullable?
+            if not fn_arg.get('nullable'):
+                raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
+            continue
+
+        # Invalid value?
+        if ((arg_type == 'number' and not isinstance(arg_value, (int, float))) or
+            (arg_type == 'string' and not isinstance(arg_value, str)) or
+            (arg_type == 'array' and not isinstance(arg_value, list)) or
+            (arg_type == 'object' and not isinstance(arg_value, dict)) or
+            (arg_type == 'datetime' and not isinstance(arg_value, datetime.date)) or
+            (arg_type == 'regex' and not isinstance(arg_value, REGEX_TYPE)) or
+            (arg_type == 'function' and not callable(arg_value))):
+            raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
+
+        # Number constraints
+        if arg_type == 'number':
+            arg_lt = fn_arg.get('lt')
+            arg_lte = fn_arg.get('lte')
+            arg_gt = fn_arg.get('gt')
+            arg_gte = fn_arg.get('gte')
+            if ((fn_arg.get('integer') and int(arg_value) != arg_value) or
+                (arg_lt is not None and not (arg_value < arg_lt)) or
+                (arg_lte is not None and not (arg_value <= arg_lte)) or
+                (arg_gt is not None and not (arg_value > arg_gt)) or
+                (arg_gte is not None and not (arg_value >= arg_gte))):
+                raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
+
+    # Extra arguments?
+    if len(args) > len(fn_args):
+        del args[len(fn_args):]
+
+    return args
+
+
+class ValueArgsError(Exception):
+    """
+    A function arguments validation error
+
+    .. attribute:: return_value
+
+       The function's error return value
+
+    :param arg_name: The function argument name
+    :type arg_name: str
+    :param arg_value: The function argument value
+    :param return_value: The function's error return value
+    """
+
+    def __init__(self, arg_name, arg_value, return_value = None):
+        message = f'Invalid "{arg_name}" argument value, {value_json(arg_value)}'
+        super().__init__(message)
+        self.return_value = return_value
+
+
+def value_args_model(fn_args):
+    """
+    Validate a function arguments model
+
+    :param fn_args: The function arguments model
+    :type fn_args: list[dict]
+    :return: The validated function arguments model
+    :rtype: list[dict]
+    """
+
+    validate_type(VALUE_ARGS_TYPES, 'FunctionArguments', fn_args)
+
+    # Use nullable instead of default-null
+    for fn_arg in fn_args:
+        if 'default' in fn_arg and fn_arg['default'] is None:
+            raise ValueError(f'Argument "{fn_arg["name"]}" has default value of null - use nullable instead')
+
+    return fn_args
+
+
+# Function arguments type model
+VALUE_ARGS_TYPES = parse_schema_markdown('''\
+# A function arguments model
+typedef FunctionArgument[len > 0] FunctionArguments
+
+
+# A function argument model
+struct FunctionArgument
+
+    # The argument name
+    string name
+
+    # The argument type
+    optional FunctionArgumentType type
+
+    # If true, the argument may be null
+    optional bool nullable
+
+    # The default argument value
+    optional object default
+
+    # If true, this argument is the array of remaining arguments
+    optional object lastArgArray
+
+    # If true, the number argument must be an integer
+    optional bool integer
+
+    # The number argument must be less-than
+    optional object lt
+
+    # The number argument must be less-than-or-equal-to
+    optional object lte
+
+    # The number argument must be greater-than
+    optional object gt
+
+    # The number argument must be greater-than-or-equal-to
+    optional object gte
+
+
+# The function argument types
+enum FunctionArgumentType
+    array
+    boolean
+    datetime
+    function
+    number
+    object
+    regex
+    string
+''')
+
+
+#
+# Number value functions
+#
+
+
 def value_round_number(value, digits):
     """
     Round a number
@@ -262,6 +462,11 @@ def value_parse_integer(text, radix=10):
         return int(text, radix)
     except ValueError:
         return None
+
+
+#
+# Datetime value functions
+#
 
 
 def value_parse_datetime(text):

@@ -18,22 +18,13 @@ import urllib
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
-from .value import R_NUMBER_CLEANUP, value_boolean, value_compare, value_is, value_json, value_normalize_datetime, \
-    value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
+from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_args_validate, \
+    value_boolean, value_compare, value_is, value_json, value_normalize_datetime, value_parse_datetime, \
+    value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
 # The default maximum statements for executeScript
 DEFAULT_MAX_STATEMENTS = 1e9
-
-
-def default_args(args, defaults, last_arg_array=False):
-    """
-    Helper function to fill-in default arguments
-    """
-    len_args = len(args)
-    yield from ((args[ix] if ix < len_args else default) for ix, default in enumerate(defaults))
-    if last_arg_array:
-        yield args[len(defaults):]
 
 
 #
@@ -47,11 +38,12 @@ def default_args(args, defaults, last_arg_array=False):
 # $arg array: The array to copy
 # $return: The array copy
 def _array_copy(args, unused_options):
-    array, = default_args(args, (None,))
-    if value_type(array) != 'array':
-        return None
-
+    array, = value_args_validate(_ARRAY_COPY_ARGS, args)
     return list(array)
+
+_ARRAY_COPY_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'}
+])
 
 
 # $function: arrayExtend
@@ -61,12 +53,14 @@ def _array_copy(args, unused_options):
 # $arg array2: The array to extend with
 # $return: The extended array
 def _array_extend(args, unused_options):
-    array, array2 = default_args(args, (None, None))
-    if value_type(array) != 'array' or value_type(array2) != 'array':
-        return None
-
+    array, array2 = value_args_validate(_ARRAY_EXTEND_ARGS, args)
     array.extend(array2)
     return array
+
+_ARRAY_EXTEND_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'array2', 'type': 'array'}
+])
 
 
 # $function: arrayGet
@@ -76,12 +70,16 @@ def _array_extend(args, unused_options):
 # $arg index: The array element's index
 # $return: The array element
 def _array_get(args, unused_options):
-    array, index = default_args(args, (None, None))
-    if value_type(array) != 'array' or \
-       value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
-        return None
+    array, index = value_args_validate(_ARRAY_GET_ARGS, args)
+    if index >= len(array):
+        raise ValueArgsError('index', index)
 
     return array[int(index)]
+
+_ARRAY_GET_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'index', 'type': 'number', 'integer': True, 'gte': 0}
+])
 
 
 # $function: arrayIndexOf
@@ -92,11 +90,11 @@ def _array_get(args, unused_options):
 # $arg index: Optional (default is 0). The index at which to start the search.
 # $return: The first index of the value in the array; -1 if not found.
 def _array_index_of(args, options):
-    array, value, index = default_args(args, (None, None, 0))
-    if value_type(array) != 'array' or \
-       value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
-        return -1
+    array, value, index = value_args_validate(_ARRAY_INDEX_OF_ARGS, args, -1)
+    if index >= len(array):
+        raise ValueArgsError('index', index, -1)
 
+    # Value function?
     if value_type(value) == 'function':
         for ix in range(int(index), len(array)):
             if value_boolean(value([array[ix]], options)):
@@ -108,6 +106,12 @@ def _array_index_of(args, options):
 
     return -1
 
+_ARRAY_INDEX_OF_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'value'},
+    {'name': 'index', 'type': 'number', 'default': 0, 'integer': True, 'gte': 0}
+])
+
 
 # $function: arrayJoin
 # $group: Array
@@ -116,11 +120,13 @@ def _array_index_of(args, options):
 # $arg separator: The separator string
 # $return: The joined string
 def _array_join(args, unused_options):
-    array, separator = default_args(args, (None, None))
-    if value_type(array) != 'array' or value_type(separator) != 'string':
-        return None
-
+    array, separator = value_args_validate(_ARRAY_JOIN_ARGS, args)
     return separator.join(value_string(value) for value in array)
+
+_ARRAY_JOIN_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'separator', 'type': 'string'}
+])
 
 
 # $function: arrayLastIndexOf
@@ -131,13 +137,13 @@ def _array_join(args, unused_options):
 # $arg index: Optional (default is the end of the array). The index at which to start the search.
 # $return: The last index of the value in the array; -1 if not found.
 def _array_last_index_of(args, options):
-    array, value, index = default_args(args, (None, None, None))
-    if value_type(array) == 'array' and index is None:
+    array, value, index = value_args_validate(_ARRAY_LAST_INDEX_OF_ARGS, args, -1)
+    if index is None:
         index = len(array) - 1
-    if value_type(array) != 'array' or \
-        value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
-        return -1
+    if index >= len(array):
+        raise ValueArgsError('index', index, -1)
 
+    # Value function?
     if value_type(value) == 'function':
         for ix in range(int(index), -1, -1):
             if value_boolean(value([array[ix]], options)):
@@ -149,6 +155,12 @@ def _array_last_index_of(args, options):
 
     return -1
 
+_ARRAY_LAST_INDEX_OF_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'value'},
+    {'name': 'index', 'type': 'number', 'nullable': True, 'integer': True, 'gte': 0}
+])
+
 
 # $function: arrayLength
 # $group: Array
@@ -156,11 +168,12 @@ def _array_last_index_of(args, options):
 # $arg array: The array
 # $return: The array's length; zero if not an array
 def _array_length(args, unused_options):
-    array, = default_args(args, (None,))
-    if value_type(array) != 'array':
-        return 0
-
+    array, = value_args_validate(_ARRAY_LENGTH_ARGS, args, 0)
     return len(array)
+
+_ARRAY_LENGTH_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'}
+])
 
 
 # $function: arrayNew
@@ -179,11 +192,13 @@ def _array_new(args, unused_options):
 # $arg value: Optional (default is 0). The value with which to fill the new array.
 # $return: The new array
 def _array_new_size(args, unused_options):
-    size, value = default_args(args, (0, 0))
-    if value_type(size) != 'number' or int(size) != size or size < 0:
-        return None
-
+    size, value = value_args_validate(_ARRAY_NEW_SIZE_ARGS, args)
     return list(value for _ in range(int(size)))
+
+_ARRAY_NEW_SIZE_ARGS = value_args_model([
+    {'name': 'size', 'type': 'number', 'default': 0, 'integer': True, 'gte': 0},
+    {'name': 'value', 'default': 0}
+])
 
 
 # $function: arrayPop
@@ -192,11 +207,15 @@ def _array_new_size(args, unused_options):
 # $arg array: The array
 # $return: The last element of the array; null if the array is empty.
 def _array_pop(args, unused_options):
-    array, = default_args(args, (None,))
-    if value_type(array) != 'array' or len(array) == 0:
-        return None
+    array, = value_args_validate(_ARRAY_POP_ARGS, args)
+    if len(array) == 0:
+        raise ValueArgsError('array', array)
 
     return array.pop()
+
+_ARRAY_POP_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'}
+])
 
 
 # $function: arrayPush
@@ -206,12 +225,14 @@ def _array_pop(args, unused_options):
 # $arg values...: The values to add to the end of the array
 # $return: The array
 def _array_push(args, unused_options):
-    array, values = default_args(args, (None,), True)
-    if value_type(array) != 'array':
-        return None
-
+    array, values = value_args_validate(_ARRAY_PUSH_ARGS, args)
     array.extend(values)
     return array
+
+_ARRAY_PUSH_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'values', 'lastArgArray': True}
+])
 
 
 # $function: arraySet
@@ -222,13 +243,18 @@ def _array_push(args, unused_options):
 # $arg value: The value to set
 # $return: The value
 def _array_set(args, unused_options):
-    array, index, value = default_args(args, (None, None, None))
-    if value_type(array) != 'array' or \
-       value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(array):
-        return None
+    array, index, value = value_args_validate(_ARRAY_SET_ARGS, args)
+    if index >= len(array):
+        raise ValueArgsError('index', index)
 
     array[index] = value
     return value
+
+_ARRAY_SET_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'index', 'type': 'number', 'integer': True, 'gte': 0},
+    {'name': 'value'}
+])
 
 
 # $function: arrayShift
@@ -237,13 +263,17 @@ def _array_set(args, unused_options):
 # $arg array: The array
 # $return: The first element of the array; null if the array is empty.
 def _array_shift(args, unused_options):
-    array, = default_args(args, (None,))
-    if value_type(array) != 'array' or len(array) == 0:
-        return None
+    array, = value_args_validate(_ARRAY_SHIFT_ARGS, args)
+    if len(array) == 0:
+        raise ValueArgsError('array', array)
 
     result = array[0]
     del array[0]
     return result
+
+_ARRAY_SHIFT_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'}
+])
 
 
 # $function: arraySlice
@@ -254,15 +284,21 @@ def _array_shift(args, unused_options):
 # $arg end: Optional (default is the end of the array). The end index of the slice.
 # $return: The new array slice
 def _array_slice(args, unused_options):
-    array, start, end = default_args(args, (None, 0, None))
-    if value_type(array) == 'array' and end is None:
+    array, start, end = value_args_validate(_ARRAY_SLICE_ARGS, args)
+    if end is None:
         end = len(array)
-    if value_type(array) != 'array' or \
-       value_type(start) != 'number' or int(start) != start or start < 0 or start > len(array) or \
-       value_type(end) != 'number' or int(end) != end or end < 0 or end > len(array):
-        return None
+    if start > len(array):
+        raise ValueArgsError('start', start)
+    if end > len(array):
+        raise ValueArgsError('end', end)
 
     return array[int(start):int(end)]
+
+_ARRAY_SLICE_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'start', 'type': 'number', 'default': 0, 'integer': True, 'gte': 0},
+    {'name': 'end', 'type': 'number', 'nullable': True, 'integer': True, 'gte': 0}
+])
 
 
 # $function: arraySort
@@ -272,15 +308,17 @@ def _array_slice(args, unused_options):
 # $arg compareFn: Optional (default is null). The comparison function.
 # $return: The sorted array
 def _array_sort(args, options):
-    array, compare_fn = default_args(args, (None, None))
-    if value_type(array) != 'array' or (compare_fn is not None and value_type(compare_fn) != 'function'):
-        return None
-
+    array, compare_fn = value_args_validate(_ARRAY_SORT_ARGS, args)
     if compare_fn is None:
         array.sort(key=functools.cmp_to_key(value_compare))
     else:
         array.sort(key=functools.cmp_to_key(lambda v1, v2: compare_fn([v1, v2], options)))
     return array
+
+_ARRAY_SORT_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'compareFn', 'type': 'function', 'nullable': True}
+])
 
 
 #
@@ -295,11 +333,13 @@ def _array_sort(args, options):
 # $arg aggregation: The [aggregation model](model.html#var.vName='Aggregation')
 # $return: The aggregated data array
 def _data_aggregate(args, unused_options):
-    data, aggregation = default_args(args, (None, None))
-    if value_type(data) != 'array' or (aggregation is not None and value_type(aggregation) != 'object'):
-        return None
-
+    data, aggregation = value_args_validate(_DATA_AGGREGATE_ARGS, args)
     return aggregate_data(data, aggregation)
+
+_DATA_AGGREGATE_ARGS = value_args_model([
+    {'name': 'data', 'type': 'array'},
+    {'name': 'aggregation', 'type': 'object'}
+])
 
 
 # $function: dataCalculatedField
@@ -311,12 +351,15 @@ def _data_aggregate(args, unused_options):
 # $arg variables: Optional (default is null). A variables object the expression evaluation.
 # $return: The updated data array
 def _data_calculated_field(args, options):
-    data, field_name, expr, variables = default_args(args, (None, None, None, None))
-    if value_type(data) != 'array' or value_type(field_name) != 'string' or value_type(expr) != 'string' or \
-        (variables is not None and value_type(variables) != 'object'):
-        return None
-
+    data, field_name, expr, variables = value_args_validate(_DATA_CALCULATED_FIELD_ARGS, args)
     return add_calculated_field(data, field_name, expr, variables, options)
+
+_DATA_CALCULATED_FIELD_ARGS = value_args_model([
+    {'name': 'data', 'type': 'array'},
+    {'name': 'fieldName', 'type': 'string'},
+    {'name': 'expr', 'type': 'string'},
+    {'name': 'variables', 'type': 'object', 'nullable': True}
+])
 
 
 # $function: dataFilter
@@ -327,11 +370,14 @@ def _data_calculated_field(args, options):
 # $arg variables: Optional (default is null). A variables object the expression evaluation.
 # $return: The filtered data array
 def _data_filter(args, options):
-    data, expr, variables = default_args(args, (None, None, None))
-    if value_type(data) != 'array' or value_type(expr) != 'string' or (variables is not None and value_type(variables) != 'object'):
-        return None
-
+    data, expr, variables = value_args_validate(_DATA_FILTER_ARGS, args)
     return filter_data(data, expr, variables, options)
+
+_DATA_FILTER_ARGS = value_args_model([
+    {'name': 'data', 'type': 'array'},
+    {'name': 'expr', 'type': 'string'},
+    {'name': 'variables', 'type': 'object', 'nullable': True}
+])
 
 
 # $function: dataJoin
@@ -346,12 +392,17 @@ def _data_filter(args, options):
 # $arg variables: Optional (default is null). A variables object for join expression evaluation.
 # $return: The joined data array
 def _data_join(args, options):
-    left_data, right_data, join_expr, right_expr, is_left_join, variables = default_args(args, (None, None, None, None, False, None))
-    if value_type(left_data) != 'array' or value_type(right_data) != 'array' or value_type(join_expr) != 'string' or \
-        (right_expr is not None and value_type(right_expr) != 'string') or (variables is not None and value_type(variables) != 'object'):
-        return None
-
+    left_data, right_data, join_expr, right_expr, is_left_join, variables = value_args_validate(_DATA_JOIN_ARGS, args)
     return join_data(left_data, right_data, join_expr, right_expr, is_left_join, variables, options)
+
+_DATA_JOIN_ARGS = value_args_model([
+    {'name': 'leftData', 'type': 'array'},
+    {'name': 'rightData', 'type': 'array'},
+    {'name': 'joinExpr', 'type': 'string'},
+    {'name': 'rightExpr', 'type': 'string', 'nullable': True},
+    {'name': 'isLeftJoin', 'type': 'boolean', 'default': False},
+    {'name': 'variables', 'type': 'object', 'nullable': True}
+])
 
 
 # $function: dataParseCSV
@@ -384,11 +435,13 @@ def _data_parse_csv(args, unused_options):
 # $arg sorts: The sort field-name/descending-sort tuples
 # $return: The sorted data array
 def _data_sort(args, unused_options):
-    data, sorts = default_args(args, (None, None))
-    if value_type(data) != 'array' or value_type(sorts) != 'array':
-        return None
-
+    data, sorts = value_args_validate(_DATA_SORT_ARGS, args)
     return sort_data(data, sorts)
+
+_DATA_SORT_ARGS = value_args_model([
+    {'name': 'data', 'type': 'array'},
+    {'name': 'sorts', 'type': 'array'}
+])
 
 
 # $function: dataTop
@@ -399,13 +452,14 @@ def _data_sort(args, unused_options):
 # $arg categoryFields: Optional (default is null). The category fields.
 # $return: The top data array
 def _data_top(args, unused_options):
-    data, count, category_fields = default_args(args, (None, 1, None))
-    if value_type(data) != 'array' or \
-        value_type(count) != 'number' or int(count) != count or count < 1 or \
-        (category_fields is not None and value_type(category_fields) != 'array'):
-        return None
-
+    data, count, category_fields = value_args_validate(_DATA_TOP_ARGS, args)
     return top_data(data, count, category_fields)
+
+_DATA_TOP_ARGS = value_args_model([
+    {'name': 'data', 'type': 'array'},
+    {'name': 'count', 'type': 'number', 'integer': True, 'gte': 1},
+    {'name': 'categoryFields', 'type': 'array', 'nullable': True}
+])
 
 
 # $function: dataValidate
@@ -415,12 +469,14 @@ def _data_top(args, unused_options):
 # $arg csv: Optional (default is false). If true, parse value strings.
 # $return: The validated data array
 def _data_validate(args, unused_options):
-    data, csv_ = default_args(args, (None, False))
-    if value_type(data) != 'array':
-        return None
-
-    validate_data(data, value_boolean(csv_))
+    data, csv_ = value_args_validate(_DATA_VALIDATE_ARGS, args)
+    validate_data(data, csv_)
     return data
+
+_DATA_VALIDATE_ARGS = value_args_model([
+    {'name': 'data', 'type': 'array'},
+    {'name': 'csv', 'type': 'boolean', 'default': False}
+])
 
 
 #
@@ -434,11 +490,12 @@ def _data_validate(args, unused_options):
 # $arg datetime: The datetime
 # $return: The day of the month
 def _datetime_day(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_DAY_ARGS, args)
     return value_normalize_datetime(datetime_).day
+
+_DATETIME_DAY_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 # $function: datetimeHour
@@ -447,11 +504,12 @@ def _datetime_day(args, unused_options):
 # $arg datetime: The datetime
 # $return: The hour
 def _datetime_hour(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_HOUR_ARGS, args)
     return value_normalize_datetime(datetime_).hour
+
+_DATETIME_HOUR_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 # $function: datetimeISOFormat
@@ -461,14 +519,18 @@ def _datetime_hour(args, unused_options):
 # $arg isDate: If true, format the datetime as an ISO date
 # $return: The formatted datetime string
 def _datetime_iso_format(args, unused_options):
-    datetime_arg, is_date = default_args(args, (None, False))
-    if value_type(datetime_arg) != 'datetime':
-        return None
+    datetime_arg, is_date = value_args_validate(_DATETIMEISO_FORMAT_ARGS, args)
 
     datetime_ = value_normalize_datetime(datetime_arg)
-    if value_boolean(is_date):
+    if is_date:
         return datetime.date(datetime_.year, datetime_.month, datetime_.day).isoformat()
+
     return value_string(datetime_)
+
+_DATETIMEISO_FORMAT_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'},
+    {'name': 'isDate', 'type': 'boolean', 'default': False}
+])
 
 
 # $function: datetimeISOParse
@@ -477,11 +539,12 @@ def _datetime_iso_format(args, unused_options):
 # $arg string: The ISO date/time string
 # $return: The datetime, or null if parsing fails
 def _datetime_iso_parse(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_DATETIMEISO_PARSE_ARGS, args)
     return value_parse_datetime(string)
+
+_DATETIMEISO_PARSE_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: datetimeMillisecond
@@ -490,11 +553,12 @@ def _datetime_iso_parse(args, unused_options):
 # $arg datetime: The datetime
 # $return: The millisecond
 def _datetime_millisecond(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_MILLISECOND_ARGS, args)
     return int(value_round_number(value_normalize_datetime(datetime_).microsecond / 1000, 0))
+
+_DATETIME_MILLISECOND_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 # $function: datetimeMinute
@@ -503,11 +567,12 @@ def _datetime_millisecond(args, unused_options):
 # $arg datetime: The datetime
 # $return: The minute
 def _datetime_minute(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_MINUTE_ARGS, args)
     return value_normalize_datetime(datetime_).minute
+
+_DATETIME_MINUTE_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 # $function: datetimeMonth
@@ -516,11 +581,12 @@ def _datetime_minute(args, unused_options):
 # $arg datetime: The datetime
 # $return: The month
 def _datetime_month(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_MONTH_ARGS, args)
     return value_normalize_datetime(datetime_).month
+
+_DATETIME_MONTH_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 # $function: datetimeNew
@@ -535,15 +601,7 @@ def _datetime_month(args, unused_options):
 # $arg millisecond: Optional (default is 0). The millisecond.
 # $return: The new datetime
 def _datetime_new(args, unused_options):
-    year, month, day, hour, minute, second, millisecond = default_args(args, (None, None, None, 0, 0, 0, 0))
-    if value_type(year) != 'number' or int(year) != year or year < 100 or \
-        value_type(month) != 'number' or int(month) != month or \
-        value_type(day) != 'number' or int(day) != day or day < -10000 or day > 10000 or \
-        value_type(hour) != 'number' or int(hour) != hour or \
-        value_type(minute) != 'number' or int(minute) != minute or \
-        value_type(second) != 'number' or int(second) != second or \
-        value_type(millisecond) != 'number' or int(millisecond) != millisecond:
-        return None
+    year, month, day, hour, minute, second, millisecond = value_args_validate(_DATETIME_NEW_ARGS, args)
 
     # Adjust millisecond
     if millisecond < 0 or millisecond >= 1000:
@@ -593,6 +651,16 @@ def _datetime_new(args, unused_options):
     # Return the datetime
     return datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), int(millisecond) * 1000)
 
+_DATETIME_NEW_ARGS = value_args_model([
+    {'name': 'year', 'type': 'number', 'integer': True, 'gte': 100},
+    {'name': 'month', 'type': 'number', 'integer': True},
+    {'name': 'day', 'type': 'number', 'integer': True, 'gte': -10000, 'lte': 10000},
+    {'name': 'hour', 'type': 'number', 'default': 0, 'integer': True},
+    {'name': 'minute', 'type': 'number', 'default': 0, 'integer': True},
+    {'name': 'second', 'type': 'number', 'default': 0, 'integer': True},
+    {'name': 'millisecond', 'type': 'number', 'default': 0, 'integer': True}
+])
+
 
 # $function: datetimeNow
 # $group: Datetime
@@ -608,11 +676,12 @@ def _datetime_now(unused_args, unused_options):
 # $arg datetime: The datetime
 # $return: The second
 def _datetime_second(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_SECOND_ARGS, args)
     return value_normalize_datetime(datetime_).second
+
+_DATETIME_SECOND_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 # $function: datetimeToday
@@ -630,11 +699,12 @@ def _datetime_today(unused_args, unused_options):
 # $arg datetime: The datetime
 # $return: The full year
 def _datetime_year(args, unused_options):
-    datetime_, = default_args(args, (None,))
-    if value_type(datetime_) != 'datetime':
-        return None
-
+    datetime_, = value_args_validate(_DATETIME_YEAR_ARGS, args)
     return value_normalize_datetime(datetime_).year
+
+_DATETIME_YEAR_ARGS = value_args_model([
+    {'name': 'datetime', 'type': 'datetime'}
+])
 
 
 #
@@ -648,11 +718,12 @@ def _datetime_year(args, unused_options):
 # $arg string: The JSON string
 # $return: The object
 def _json_parse(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_JSON_PARSE_ARGS, args)
     return json.loads(string)
+
+_JSON_PARSE_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: jsonStringify
@@ -662,11 +733,13 @@ def _json_parse(args, unused_options):
 # $arg indent: Optional (default is null). The indentation number.
 # $return: The JSON string
 def _json_stringify(args, unused_options):
-    value, indent = default_args(args, (None, None))
-    if indent is not None and (value_type(indent) != 'number' or int(indent) != indent or indent < 1):
-        return None
-
+    value, indent = value_args_validate(_JSON_STRINGIFY_ARGS, args)
     return value_json(value, int(indent) if indent is not None else None)
+
+_JSON_STRINGIFY_ARGS = value_args_model([
+    {'name': 'value'},
+    {'name': 'indent', 'type': 'number', 'nullable': True, 'integer': True, 'gte': 1}
+])
 
 
 #
@@ -680,11 +753,12 @@ def _json_stringify(args, unused_options):
 # $arg x: The number
 # $return: The absolute value of the number
 def _math_abs(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_ABS_ARGS, args)
     return abs(x)
+
+_MATH_ABS_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathAcos
@@ -693,11 +767,12 @@ def _math_abs(args, unused_options):
 # $arg x: The number
 # $return: The arccosine, in radians, of the number
 def _math_acos(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_ACOS_ARGS, args)
     return math.acos(x)
+
+_MATH_ACOS_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathAsin
@@ -706,11 +781,12 @@ def _math_acos(args, unused_options):
 # $arg x: The number
 # $return: The arcsine, in radians, of the number
 def _math_asin(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_ASIN_ARGS, args)
     return math.asin(x)
+
+_MATH_ASIN_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathAtan
@@ -719,11 +795,12 @@ def _math_asin(args, unused_options):
 # $arg x: The number
 # $return: The arctangent, in radians, of the number
 def _math_atan(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_ATAN_ARGS, args)
     return math.atan(x)
+
+_MATH_ATAN_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathAtan2
@@ -733,11 +810,13 @@ def _math_atan(args, unused_options):
 # $arg x: The X-coordinate of the point
 # $return: The angle, in radians
 def _math_atan2(args, unused_options):
-    y, x = default_args(args, (None, None))
-    if value_type(y) != 'number' or value_type(x) != 'number':
-        return None
-
+    y, x = value_args_validate(_MATH_ATAN2_ARGS, args)
     return math.atan2(y, x)
+
+_MATH_ATAN2_ARGS = value_args_model([
+    {'name': 'y', 'type': 'number'},
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathCeil
@@ -746,11 +825,12 @@ def _math_atan2(args, unused_options):
 # $arg x: The number
 # $return: The ceiling of the number
 def _math_ceil(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_CEIL_ARGS, args)
     return math.ceil(x)
+
+_MATH_CEIL_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathCos
@@ -759,11 +839,12 @@ def _math_ceil(args, unused_options):
 # $arg x: The angle, in radians
 # $return: The cosine of the angle
 def _math_cos(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_COS_ARGS, args)
     return math.cos(x)
+
+_MATH_COS_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathFloor
@@ -772,11 +853,12 @@ def _math_cos(args, unused_options):
 # $arg x: The number
 # $return: The floor of the number
 def _math_floor(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_FLOOR_ARGS, args)
     return math.floor(x)
+
+_MATH_FLOOR_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathLn
@@ -785,11 +867,12 @@ def _math_floor(args, unused_options):
 # $arg x: The number
 # $return: The natural logarithm of the number
 def _math_ln(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number' or x <= 0:
-        return None
-
+    x, = value_args_validate(_MATH_LN_ARGS, args)
     return math.log(x)
+
+_MATH_LN_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number', 'gt': 0}
+])
 
 
 # $function: mathLog
@@ -799,11 +882,16 @@ def _math_ln(args, unused_options):
 # $arg base: Optional (default is 10). The logarithm base.
 # $return: The logarithm of the number
 def _math_log(args, unused_options):
-    x, base = default_args(args, (None, 10))
-    if value_type(x) != 'number' or x <= 0 or value_type(base) != 'number' or base <= 0 or base == 1:
-        return None
+    x, base = value_args_validate(_MATH_LOG_ARGS, args)
+    if base == 1:
+        raise ValueArgsError('base', base)
 
     return math.log(x, base)
+
+_MATH_LOG_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number', 'gt': 0},
+    {'name': 'base', 'type': 'number', 'default': 10, 'gt': 0}
+])
 
 
 # $function: mathMax
@@ -812,10 +900,15 @@ def _math_log(args, unused_options):
 # $arg values...: The values
 # $return: The maximum value
 def _math_max(values, unused_options):
-    if any(value_type(value) != 'number' for value in values):
-        return None
-
-    return max(*values)
+    result = None
+    is_first = True
+    for value in values:
+        if is_first:
+            result = value
+            is_first = False
+        elif value_compare(value, result) > 0:
+            result = value
+    return result
 
 
 # $function: mathMin
@@ -824,10 +917,15 @@ def _math_max(values, unused_options):
 # $arg values...: The values
 # $return: The minimum value
 def _math_min(values, unused_options):
-    if any(value_type(value) != 'number' for value in values):
-        return None
-
-    return min(*values)
+    result = None
+    is_first = True
+    for value in values:
+        if is_first:
+            result = value
+            is_first = False
+        elif value_compare(value, result) < 0:
+            result = value
+    return result
 
 
 # $function: mathPi
@@ -853,11 +951,13 @@ def _math_random(unused_args, unused_options):
 # $arg digits: Optional (default is 0). The number of decimal digits to round to.
 # $return: The rounded number
 def _math_round(args, unused_options):
-    x, digits = default_args(args, (None, 0))
-    if value_type(x) != 'number' or value_type(digits) != 'number' or int(digits) != digits or digits < 0:
-        return None
-
+    x, digits = value_args_validate(_MATH_ROUND_ARGS, args)
     return value_round_number(x, digits)
+
+_MATH_ROUND_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'},
+    {'name': 'digits', 'type': 'number', 'default': 0, 'integer': True, 'gte': 0}
+])
 
 
 # $function: mathSign
@@ -866,11 +966,12 @@ def _math_round(args, unused_options):
 # $arg x: The number
 # $return: -1 for a negative number, 1 for a positive number, and 0 for zero
 def _math_sign(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_SIGN_ARGS, args)
     return -1 if x < 0 else (0 if x == 0 else 1)
+
+_MATH_SIGN_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathSin
@@ -879,11 +980,12 @@ def _math_sign(args, unused_options):
 # $arg x: The angle, in radians
 # $return: The sine of the angle
 def _math_sin(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_SIN_ARGS, args)
     return math.sin(x)
+
+_MATH_SIN_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 # $function: mathSqrt
@@ -892,11 +994,12 @@ def _math_sin(args, unused_options):
 # $arg x: The number
 # $return: The square root of the number
 def _math_sqrt(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number' or x < 0:
-        return None
-
+    x, = value_args_validate(_MATH_SQRT_ARGS, args)
     return math.sqrt(x)
+
+_MATH_SQRT_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number', 'gte': 0}
+])
 
 
 # $function: mathTan
@@ -905,11 +1008,12 @@ def _math_sqrt(args, unused_options):
 # $arg x: The angle, in radians
 # $return: The tangent of the angle
 def _math_tan(args, unused_options):
-    x, = default_args(args, (None,))
-    if value_type(x) != 'number':
-        return None
-
+    x, = value_args_validate(_MATH_TAN_ARGS, args)
     return math.tan(x)
+
+_MATH_TAN_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'}
+])
 
 
 #
@@ -923,11 +1027,12 @@ def _math_tan(args, unused_options):
 # $arg string: The string
 # $return: The number
 def _number_parse_float(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_NUMBER_PARSE_FLOAT_ARGS, args)
     return value_parse_number(string)
+
+_NUMBER_PARSE_FLOAT_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: numberParseInt
@@ -937,11 +1042,13 @@ def _number_parse_float(args, unused_options):
 # $arg radix: Optional (default is 10). The number base.
 # $return: The integer
 def _number_parse_int(args, unused_options):
-    string, radix = default_args(args, (None, 10))
-    if value_type(string) != 'string' or value_type(radix) != 'number' or int(radix) != radix or radix < 2 or radix > 36:
-        return None
-
+    string, radix = value_args_validate(_NUMBER_PARSE_INT_ARGS, args)
     return value_parse_integer(string, int(radix))
+
+_NUMBER_PARSE_INT_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'radix', 'type': 'number', 'default': 10, 'integer': True, 'gte': 2, 'lte': 36}
+])
 
 
 # $function: numberToFixed
@@ -952,14 +1059,17 @@ def _number_parse_int(args, unused_options):
 # $arg trim: Optional (default is false). If true, trim trailing zeroes and decimal point.
 # $return: The fixed-point notation string
 def _number_to_fixed(args, unused_options):
-    x, digits, trim = default_args(args, (None, 2, False))
-    if value_type(x) != 'number' or value_type(digits) != 'number' or int(digits) != digits or digits < 0:
-        return None
-
+    x, digits, trim = value_args_validate(_NUMBER_TO_FIXED_ARGS, args)
     result = f'{value_round_number(x, digits):.{int(digits)}f}'
-    if value_boolean(trim):
+    if trim:
         return R_NUMBER_CLEANUP.sub('', result)
     return result
+
+_NUMBER_TO_FIXED_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number'},
+    {'name': 'digits', 'type': 'number', 'default': 2, 'integer': True, 'gte': 0},
+    {'name': 'trim', 'type': 'boolean', 'default': False}
+])
 
 
 #
@@ -974,12 +1084,14 @@ def _number_to_fixed(args, unused_options):
 # $arg object2: The object to assign
 # $return: The updated object
 def _object_assign(args, unused_options):
-    object_, object2 = default_args(args, (None, None))
-    if value_type(object_) != 'object' or value_type(object2) != 'object':
-        return None
-
+    object_, object2 = value_args_validate(_OBJECT_ASSIGN_ARGS, args)
     object_.update(object2)
     return object_
+
+_OBJECT_ASSIGN_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'},
+    {'name': 'object2', 'type': 'object'}
+])
 
 
 # $function: objectCopy
@@ -988,11 +1100,12 @@ def _object_assign(args, unused_options):
 # $arg object: The object to copy
 # $return: The object copy
 def _object_copy(args, unused_options):
-    object_, = default_args(args, (None,))
-    if value_type(object_) != 'object':
-        return None
-
+    object_, = value_args_validate(_OBJECT_COPY_ARGS, args)
     return dict(object_)
+
+_OBJECT_COPY_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'}
+])
 
 
 # $function: objectDelete
@@ -1001,13 +1114,14 @@ def _object_copy(args, unused_options):
 # $arg object: The object
 # $arg key: The key to delete
 def _object_delete(args, unused_options):
-    object_, key = default_args(args, (None, None))
-    if value_type(object_) != 'object' or value_type(key) != 'string':
-        return None
-
+    object_, key = value_args_validate(_OBJECT_DELETE_ARGS, args)
     if key in object_:
         del object_[key]
-    return None
+
+_OBJECT_DELETE_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'},
+    {'name': 'key', 'type': 'string'}
+])
 
 
 # $function: objectGet
@@ -1018,11 +1132,15 @@ def _object_delete(args, unused_options):
 # $arg defaultValue: The default value (optional)
 # $return: The value or null if the key does not exist
 def _object_get(args, unused_options):
-    object_, key, default_value = default_args(args, (None, None, None))
-    if value_type(object_) != 'object' or value_type(key) != 'string':
-        return default_value
-
+    default_value_arg = args[2] if len(args) >= 3 else None
+    object_, key, default_value = value_args_validate(_OBJECT_GET_ARGS, args, default_value_arg)
     return object_.get(key, default_value)
+
+_OBJECT_GET_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'},
+    {'name': 'key', 'type': 'string'},
+    {'name': 'defaultValue'}
+])
 
 
 # $function: objectHas
@@ -1032,11 +1150,13 @@ def _object_get(args, unused_options):
 # $arg key: The key
 # $return: true if the object contains the key, false otherwise
 def _object_has(args, unused_options):
-    object_, key = default_args(args, (None, None))
-    if value_type(object_) != 'object' or value_type(key) != 'string':
-        return False
-
+    object_, key = value_args_validate(_OBJECT_HAS_ARGS, args, False)
     return key in object_
+
+_OBJECT_HAS_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'},
+    {'name': 'key', 'type': 'string'}
+])
 
 
 # $function: objectKeys
@@ -1045,11 +1165,12 @@ def _object_has(args, unused_options):
 # $arg object: The object
 # $return: The array of keys
 def _object_keys(args, unused_options):
-    object_, = default_args(args, (None,))
-    if value_type(object_) != 'object':
-        return None
-
+    object_, = value_args_validate(_OBJECT_KEYS_ARGS, args)
     return list(object_.keys())
+
+_OBJECT_KEYS_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'}
+])
 
 
 # $function: objectNew
@@ -1063,7 +1184,7 @@ def _object_new(args, unused_options):
         key = args[ix]
         value = args[ix + 1] if ix + 1 < len(args) else None
         if value_type(key) != 'string':
-            return None
+            raise ValueArgsError('keyValues', key)
         object_[key] = value
     return object_
 
@@ -1076,12 +1197,15 @@ def _object_new(args, unused_options):
 # $arg value: The value to set
 # $return: The value to set
 def _object_set(args, unused_options):
-    object_, key, value = default_args(args, (None, None, None))
-    if value_type(object_) != 'object' or value_type(key) != 'string':
-        return None
-
+    object_, key, value = value_args_validate(_OBJECT_SET_ARGS, args)
     object_[key] = value
     return value
+
+_OBJECT_SET_ARGS = value_args_model([
+    {'name': 'object', 'type': 'object'},
+    {'name': 'key', 'type': 'string'},
+    {'name': 'value'}
+])
 
 
 #
@@ -1095,11 +1219,12 @@ def _object_set(args, unused_options):
 # $arg string: The string to escape
 # $return: The escaped string
 def _regex_escape(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_REGEX_ESCAPE_ARGS, args)
     return re.escape(string)
+
+_REGEX_ESCAPE_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: regexMatch
@@ -1109,16 +1234,14 @@ def _regex_escape(args, unused_options):
 # $arg string: The string
 # $return: The [match object](model.html#var.vName='RegexMatch'), or null if no matches are found
 def _regex_match(args, unused_options):
-    regex, string = default_args(args, (None, None))
-    if value_type(regex) != 'regex' or value_type(string) != 'string':
-        return None
-
-    # Match?
+    regex, string = value_args_validate(_REGEX_MATCH_ARGS, args)
     match = regex.search(string)
-    if match is None:
-        return None
+    return _regex_match_groups(match) if match is not None else None
 
-    return _regex_match_groups(match)
+_REGEX_MATCH_ARGS = value_args_model([
+    {'name': 'regex', 'type': 'regex'},
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: regexMatchAll
@@ -1128,11 +1251,13 @@ def _regex_match(args, unused_options):
 # $arg string: The string
 # $return: The array of [match objects](model.html#var.vName='RegexMatch')
 def _regex_match_all(args, unused_options):
-    regex, string = default_args(args, (None, None))
-    if value_type(regex) != 'regex' or value_type(string) != 'string':
-        return None
-
+    regex, string = value_args_validate(_REGEX_MATCH_ALL_ARGS, args)
     return [_regex_match_groups(match) for match in regex.finditer(string)]
+
+_REGEX_MATCH_ALL_ARGS = value_args_model([
+    {'name': 'regex', 'type': 'regex'},
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # Helper function to create a match model from a metch object
@@ -1178,9 +1303,7 @@ struct RegexMatch
 # $arg flags: - **s** - "." matches newline characters
 # $return: The regular expression or null if the pattern is invalid
 def _regex_new(args, unused_options):
-    pattern, flags = default_args(args, (None, None))
-    if value_type(pattern) != 'string' or (flags is not None and value_type(flags) != 'string'):
-        return None
+    pattern, flags = value_args_validate(_REGEX_NEW_ARGS, args)
 
     # Translate JavaScript named group syntax to Python
     pattern = _R_REGEX_NEW_NAMED.sub(r'(?P<\1>', pattern)
@@ -1200,6 +1323,11 @@ def _regex_new(args, unused_options):
 
     return re.compile(pattern, flags_mask)
 
+_REGEX_NEW_ARGS = value_args_model([
+    {'name': 'pattern', 'type': 'string'},
+    {'name': 'flags', 'type': 'string', 'nullable': True}
+])
+
 
 _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 
@@ -1212,9 +1340,7 @@ _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 # $arg substr: The replacement string
 # $return: The updated string
 def _regex_replace(args, unused_options):
-    regex, string, substr = default_args(args, (None, None, None))
-    if value_type(regex) != 'regex' or value_type(string) != 'string' or value_type(substr) != 'string':
-        return None
+    regex, string, substr = value_args_validate(_REGEX_REPLACE_ARGS, args)
 
     # Escape Python escapes
     substr = substr.replace('\\', '\\\\')
@@ -1228,6 +1354,12 @@ def _regex_replace(args, unused_options):
 
     return regex.sub(substr, string)
 
+_REGEX_REPLACE_ARGS = value_args_model([
+    {'name': 'regex', 'type': 'regex'},
+    {'name': 'string', 'type': 'string'},
+    {'name': 'substr', 'type': 'string'}
+])
+
 
 _R_REGEX_REPLACE_INDEX = re.compile(r'\$(\d+)')
 _R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
@@ -1240,11 +1372,13 @@ _R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 # $arg string: The string
 # $return: The array of split parts
 def _regex_split(args, unused_options):
-    regex, string = default_args(args, (None, None))
-    if value_type(regex) != 'regex' or value_type(string) != 'string':
-        return None
-
+    regex, string = value_args_validate(_REGEX_SPLIT_ARGS, args)
     return regex.split(string)
+
+_REGEX_SPLIT_ARGS = value_args_model([
+    {'name': 'regex', 'type': 'regex'},
+    {'name': 'string', 'type': 'string'}
+])
 
 
 #
@@ -1271,12 +1405,19 @@ def _schema_parse(args, unused_options):
 # $arg filename: Optional (default is ""). The file name.
 # $return: The schema's [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_parse_ex(args, unused_options):
-    lines, types, filename = default_args(args, (None, {}, ''))
-    if not (value_type(lines) == 'array' or value_type(lines) == 'string') or \
-        value_type(types) != 'object' or value_type(filename) != 'string':
-        return None
+    lines, types, filename = value_args_validate(_SCHEMA_PARSE_EX_ARGS, args)
+    lines_type = value_type(lines)
+    types = types if types is not None else {}
+    if lines_type not in ('array', 'string'):
+        raise ValueArgsError('lines', lines)
 
     return parse_schema_markdown(lines, types, filename)
+
+_SCHEMA_PARSE_EX_ARGS = value_args_model([
+    {'name': 'lines'},
+    {'name': 'types', 'type': 'object', 'nullable': True},
+    {'name': 'filename', 'type': 'string', 'default': ''}
+])
 
 
 # $function: schemaTypeModel
@@ -1295,12 +1436,15 @@ def _schema_type_model(unused_args, unused_options):
 # $arg value: The object to validate
 # $return: The validated object or null if validation fails
 def _schema_validate(args, unused_options):
-    types, type_name, value = default_args(args, (None, None, None))
-    if value_type(types) != 'object' or value_type(type_name) != 'string':
-        return None
-
+    types, type_name, value = value_args_validate(_SCHEMA_VALIDATE_ARGS, args)
     validate_type_model(types)
     return validate_type(types, type_name, value)
+
+_SCHEMA_VALIDATE_ARGS = value_args_model([
+    {'name': 'types', 'type': 'object'},
+    {'name': 'typeName', 'type': 'string'},
+    {'name': 'value'}
+])
 
 
 # $function: schemaValidateTypeModel
@@ -1309,11 +1453,12 @@ def _schema_validate(args, unused_options):
 # $arg types: The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types') to validate
 # $return: The validated [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_validate_type_model(args, unused_options):
-    types, = default_args(args, (None,))
-    if value_type(types) != 'object':
-        return None
-
+    types, = value_args_validate(_SCHEMA_VALIDATE_TYPE_MODEL_ARGS, args)
     return validate_type_model(types)
+
+_SCHEMA_VALIDATE_TYPE_MODEL_ARGS = value_args_model([
+    {'name': 'types', 'type': 'object'}
+])
 
 
 #
@@ -1328,12 +1473,16 @@ def _schema_validate_type_model(args, unused_options):
 # $arg index: The character index
 # $return: The character code
 def _string_char_code_at(args, unused_options):
-    string, index = default_args(args, (None, None))
-    if value_type(string) != 'string' or \
-        value_type(index) != 'number' or int(index) != index or index < 0 or index >= len(string):
-        return None
+    string, index = value_args_validate(_STRING_CHAR_CODE_AT_ARGS, args)
+    if index >= len(string):
+        raise ValueArgsError('index', index)
 
     return ord(string[int(index)])
+
+_STRING_CHAR_CODE_AT_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'index', 'type': 'number', 'integer': True, 'gte': 0}
+])
 
 
 # $function: stringEndsWith
@@ -1343,11 +1492,13 @@ def _string_char_code_at(args, unused_options):
 # $arg search: The search string
 # $return: true if the string ends with the search string, false otherwise
 def _string_ends_with(args, unused_options):
-    string, search = default_args(args, (None, None))
-    if value_type(string) != 'string' or value_type(search) != 'string':
-        return None
-
+    string, search = value_args_validate(_STRING_ENDS_WITH_ARGS, args)
     return string.endswith(search)
+
+_STRING_ENDS_WITH_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'search', 'type': 'string'}
+])
 
 
 # $function: stringFromCharCode
@@ -1355,11 +1506,12 @@ def _string_ends_with(args, unused_options):
 # $doc: Create a string of characters from character codes
 # $arg charCodes...: The character codes
 # $return: The string of characters
-def _string_from_char_code(args, unused_options):
-    if any((value_type(code) != 'number' or int(code) != code or code < 0) for code in args):
-        return None
+def _string_from_char_code(char_codes, unused_options):
+    for code in char_codes:
+        if value_type(code) != 'number' or int(code) != code or code < 0:
+            raise ValueArgsError('char_codes', code)
 
-    return ''.join(chr(int(code)) for code in args)
+    return ''.join(chr(int(code)) for code in char_codes)
 
 
 # $function: stringIndexOf
@@ -1370,12 +1522,17 @@ def _string_from_char_code(args, unused_options):
 # $arg index: Optional (default is 0). The index at which to start the search.
 # $return: The first index of the search string; -1 if not found.
 def _string_index_of(args, unused_options):
-    string, search, index = default_args(args, (None, None, 0))
-    if value_type(string) != 'string' or value_type(search) != 'string' or \
-        value_type(index) != 'number' or int(index) != index or index < 0  or index >= len(string):
-        return -1
+    string, search, index = value_args_validate(_STRING_INDEX_OF_ARGS, args, -1)
+    if index >= len(string):
+        raise ValueArgsError('index', index, -1)
 
     return string.find(search, int(index))
+
+_STRING_INDEX_OF_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'search', 'type': 'string'},
+    {'name': 'index', 'type': 'number', 'default': 0, 'integer': True, 'gte': 0}
+])
 
 
 # $function: stringLastIndexOf
@@ -1386,14 +1543,18 @@ def _string_index_of(args, unused_options):
 # $arg index: Optional (default is the end of the string). The index at which to start the search.
 # $return: The last index of the search string; -1 if not found.
 def _string_last_index_of(args, unused_options):
-    string, search, index = default_args(args, (None, None, None))
-    if index is None and value_type(string) == 'string':
-        index = len(string) - 1
-    if value_type(string) != 'string' or value_type(search) != 'string' or \
-        value_type(index) != 'number' or int(index) != index or index < 0  or index >= len(string):
-        return -1
+    string, search, index = value_args_validate(_STRING_LAST_INDEX_OF_ARGS, args, -1)
+    index = index if index is not None else len(string) - 1
+    if index >= len(string):
+        raise ValueArgsError('index', index, -1)
 
     return string.rfind(search, 0, int(index) + len(search))
+
+_STRING_LAST_INDEX_OF_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'search', 'type': 'string'},
+    {'name': 'index', 'type': 'number', 'nullable': True, 'integer': True, 'gte': 0}
+])
 
 
 # $function: stringLength
@@ -1402,11 +1563,12 @@ def _string_last_index_of(args, unused_options):
 # $arg string: The string
 # $return: The string's length; zero if not a string
 def _string_length(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return 0
-
+    string, = value_args_validate(_STRING_LENGTH_ARGS, args, 0)
     return len(string)
+
+_STRING_LENGTH_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: stringLower
@@ -1415,11 +1577,12 @@ def _string_length(args, unused_options):
 # $arg string: The string
 # $return: The lower-case string
 def _string_lower(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_STRING_LOWER_ARGS, args)
     return string.lower()
+
+_STRING_LOWER_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: stringNew
@@ -1428,8 +1591,12 @@ def _string_lower(args, unused_options):
 # $arg value: The value
 # $return: The new string
 def _string_new(args, unused_options):
-    value, = default_args(args, (None,))
+    value, = value_args_validate(_STRING_NEW_ARGS, args)
     return value_string(value)
+
+_STRING_NEW_ARGS = value_args_model([
+    {'name': 'value'}
+])
 
 
 # $function: stringRepeat
@@ -1439,11 +1606,13 @@ def _string_new(args, unused_options):
 # $arg count: The number of times to repeat the string
 # $return: The repeated string
 def _string_repeat(args, unused_options):
-    string, count = default_args(args, (None, None))
-    if value_type(string) != 'string' or value_type(count) != 'number' or int(count) != count or count < 0:
-        return None
-
+    string, count = value_args_validate(_STRING_REPEAT_ARGS, args)
     return string * int(count)
+
+_STRING_REPEAT_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'count', 'type': 'number', 'integer': True, 'gte': 0}
+])
 
 
 # $function: stringReplace
@@ -1454,11 +1623,14 @@ def _string_repeat(args, unused_options):
 # $arg newSubstr: The replacement string
 # $return: The updated string
 def _string_replace(args, unused_options):
-    string, substr, new_substr = default_args(args, (None, None, None))
-    if value_type(string) != 'string' or value_type(substr) != 'string' or value_type(new_substr) != 'string':
-        return None
-
+    string, substr, new_substr = value_args_validate(_STRING_REPLACE_ARGS, args)
     return string.replace(substr, new_substr)
+
+_STRING_REPLACE_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'substr', 'type': 'string'},
+    {'name': 'newSubstr', 'type': 'string'}
+])
 
 
 # $function: stringSlice
@@ -1469,15 +1641,20 @@ def _string_replace(args, unused_options):
 # $arg end: Optional (default is the end of the string). The end index of the slice.
 # $return: The new string slice
 def _string_slice(args, unused_options):
-    string, begin, end = default_args(args, (None, None, None))
-    if end is None and value_type(string) == 'string':
-        end = len(string)
-    if value_type(string) != 'string' or \
-        value_type(begin) != 'number' or int(begin) != begin or begin < 0 or begin > len(string) or \
-        value_type(end) != 'number' or int(end) != end or end < 0 or end > len(string):
-        return None
+    string, start, end = value_args_validate(_STRING_SLICE_ARGS, args)
+    end = end if end is not None else len(string)
+    if start > len(string):
+        raise ValueArgsError('start', start)
+    if end > len(string):
+        raise ValueArgsError('end', end)
 
-    return string[int(begin):int(end)]
+    return string[int(start):int(end)]
+
+_STRING_SLICE_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'start', 'type': 'number', 'integer': True, 'gte': 0},
+    {'name': 'end', 'type': 'number', 'nullable': True, 'integer': True, 'gte': 0}
+])
 
 
 # $function: stringSplit
@@ -1487,11 +1664,13 @@ def _string_slice(args, unused_options):
 # $arg separator: The separator string
 # $return: The array of split-out strings
 def _string_split(args, unused_options):
-    string, separator = default_args(args, (None, None))
-    if value_type(string) != 'string' or value_type(separator) != 'string':
-        return None
-
+    string, separator = value_args_validate(_STRING_SPLIT_ARGS, args)
     return string.split(separator)
+
+_STRING_SPLIT_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'separator', 'type': 'string'}
+])
 
 
 # $function: stringStartsWith
@@ -1501,11 +1680,13 @@ def _string_split(args, unused_options):
 # $arg search: The search string
 # $return: true if the string starts with the search string, false otherwise
 def _string_starts_with(args, unused_options):
-    string, search = default_args(args, (None, None))
-    if value_type(string) != 'string' or value_type(search) != 'string':
-        return None
-
+    string, search = value_args_validate(_STRING_STARTS_WITH_ARGS, args)
     return string.startswith(search)
+
+_STRING_STARTS_WITH_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'search', 'type': 'string'}
+])
 
 
 # $function: stringTrim
@@ -1514,11 +1695,12 @@ def _string_starts_with(args, unused_options):
 # $arg string: The string
 # $return: The trimmed string
 def _string_trim(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_STRING_TRIM_ARGS, args)
     return string.strip()
+
+_STRING_TRIM_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 # $function: stringUpper
@@ -1527,11 +1709,12 @@ def _string_trim(args, unused_options):
 # $arg string: The string
 # $return: The upper-case string
 def _string_upper(args, unused_options):
-    string, = default_args(args, (None,))
-    if value_type(string) != 'string':
-        return None
-
+    string, = value_args_validate(_STRING_UPPER_ARGS, args)
     return string.upper()
+
+_STRING_UPPER_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
 
 
 #
@@ -1545,8 +1728,12 @@ def _string_upper(args, unused_options):
 # $arg value: The value
 # $return: true or false
 def _system_boolean(args, unused_options):
-    value, = default_args(args, (None,))
+    value, = value_args_validate(_SYSTEM_BOOLEAN_ARGS, args)
     return value_boolean(value)
+
+_SYSTEM_BOOLEAN_ARGS = value_args_model([
+    {'name': 'value'}
+])
 
 
 # $function: systemCompare
@@ -1556,8 +1743,13 @@ def _system_boolean(args, unused_options):
 # $arg right: The right value
 # $return: -1 if the left value is less than the right value, 0 if equal, and 1 if greater than
 def _system_compare(args, unused_options):
-    left, right = default_args(args, (None, None))
+    left, right = value_args_validate(_SYSTEM_COMPARE_ARGS, args)
     return value_compare(left, right)
+
+_SYSTEM_COMPARE_ARGS = value_args_model([
+    {'name': 'left'},
+    {'name': 'right'}
+])
 
 
 # $function: systemFetch
@@ -1567,7 +1759,7 @@ def _system_compare(args, unused_options):
 # $arg url: [request model](model.html#var.vName='SystemFetchRequest')
 # $return: The response string or array of strings; null if an error occurred
 def _system_fetch(args, options):
-    url, = default_args(args, (None,))
+    url, = value_args_validate(_SYSTEM_FETCH_ARGS, args)
 
     # Options
     fetch_fn = options.get('fetchFn') if options is not None else None
@@ -1577,11 +1769,12 @@ def _system_fetch(args, options):
     # Validate the URL argument
     requests = []
     is_response_array = False
-    if value_type(url) == 'string':
+    url_type = value_type(url)
+    if url_type == 'string':
         requests.append({'url': url})
-    elif value_type(url) == 'object':
+    elif url_type == 'object':
         requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url))
-    elif value_type(url) == 'array':
+    elif url_type == 'array':
         is_response_array = True
         for url_item in url:
             if value_type(url_item) == 'string':
@@ -1589,7 +1782,7 @@ def _system_fetch(args, options):
             else:
                 requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
     else:
-        return None
+        raise ValueArgsError('url', url)
 
     # Get each response
     responses = []
@@ -1614,6 +1807,10 @@ def _system_fetch(args, options):
             log_fn(f'BareScript: Function "systemFetch" failed for resource "{request_fetch["url"]}"')
 
     return responses if is_response_array else responses[0]
+
+_SYSTEM_FETCH_ARGS = value_args_model([
+    {'name': 'url'}
+])
 
 
 # The aggregation model
@@ -1642,12 +1839,14 @@ struct SystemFetchRequest
 # $arg defaultValue: The default value (optional)
 # $return: The global variable's value or null if it does not exist
 def _system_global_get(args, options):
-    name, default_value = default_args(args, (None, None))
-    if value_type(name) != 'string':
-        return default_value
-
+    name, default_value = value_args_validate(_SYSTEM_GLOBAL_GET_ARGS, args)
     globals_ = options.get('globals') if options is not None else None
     return globals_.get(name, default_value) if globals_ is not None else default_value
+
+_SYSTEM_GLOBAL_GET_ARGS = value_args_model([
+    {'name': 'name', 'type': 'string'},
+    {'name': 'defaultValue'}
+])
 
 
 # $function: systemGlobalSet
@@ -1657,14 +1856,16 @@ def _system_global_get(args, options):
 # $arg value: The global variable's value
 # $return: The global variable's value
 def _system_global_set(args, options):
-    name, value = default_args(args, (None, None))
-    if value_type(name) != 'string':
-        return None
-
+    name, value = value_args_validate(_SYSTEM_GLOBAL_SET_ARGS, args)
     globals_ = options.get('globals') if options is not None else None
     if globals_ is not None:
         globals_[name] = value
     return value
+
+_SYSTEM_GLOBAL_SET_ARGS = value_args_model([
+    {'name': 'name', 'type': 'string'},
+    {'name': 'value'}
+])
 
 
 # $function: systemIs
@@ -1674,8 +1875,13 @@ def _system_global_set(args, options):
 # $arg value2: The second value
 # $return: true if values are the same object, false otherwise
 def _system_is(args, unused_options):
-    value1, value2 = default_args(args, (None, None))
+    value1, value2 = value_args_validate(_SYSTEM_IS_ARGS, args)
     return value_is(value1, value2)
+
+_SYSTEM_IS_ARGS = value_args_model([
+    {'name': 'value1'},
+    {'name': 'value2'}
+])
 
 
 # $function: systemLog
@@ -1683,11 +1889,14 @@ def _system_is(args, unused_options):
 # $doc: Log a message to the console
 # $arg message: The log message
 def _system_log(args, options):
-    message, = default_args(args, (None,))
-
+    message, = value_args_validate(_SYSTEM_LOG_ARGS, args)
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None:
         log_fn(value_string(message))
+
+_SYSTEM_LOG_ARGS = value_args_model([
+    {'name': 'message'}
+])
 
 
 # $function: systemLogDebug
@@ -1695,11 +1904,14 @@ def _system_log(args, options):
 # $doc: Log a message to the console, if in debug mode
 # $arg message: The log message
 def _system_log_debug(args, options):
-    string, = default_args(args, (None,))
-
+    message, = value_args_validate(_SYSTEM_LOG_DEBUG_ARGS, args)
     log_fn = options.get('logFn') if options is not None else None
     if log_fn is not None and options.get('debug'):
-        log_fn(value_string(string))
+        log_fn(value_string(message))
+
+_SYSTEM_LOG_DEBUG_ARGS = value_args_model([
+    {'name': 'message'}
+])
 
 
 # $function: systemPartial
@@ -1710,11 +1922,16 @@ def _system_log_debug(args, options):
 # $arg args...: The function arguments
 # $return: The new function called with "args"
 def _system_partial(args, unused_options):
-    func, args = default_args(args, (None,), True)
-    if value_type(func) != 'function' or len(args) < 1:
-        return None
+    func, func_args = value_args_validate(_SYSTEM_PARTIAL_ARGS, args)
+    if len(func_args) < 1:
+        raise ValueArgsError('args', func_args)
 
-    return lambda args_extra, options: func([*args, *args_extra], options)
+    return lambda args_extra, options: func([*func_args, *args_extra], options)
+
+_SYSTEM_PARTIAL_ARGS = value_args_model([
+    {'name': 'func', 'type': 'function'},
+    {'name': 'args', 'lastArgArray': True}
+])
 
 
 # $function: systemType
@@ -1724,8 +1941,12 @@ def _system_partial(args, unused_options):
 # $return: The type string of the value.
 # $return: Valid values are: 'array', 'boolean', 'datetime', 'function', 'null', 'number', 'object', 'regex', 'string'.
 def _system_type(args, unused_options):
-    value, = default_args(args, (None,))
+    value, = value_args_validate(_SYSTEM_TYPE_ARGS, args)
     return value_type(value)
+
+_SYSTEM_TYPE_ARGS = value_args_model([
+    {'name': 'value'}
+])
 
 
 #
@@ -1740,12 +1961,14 @@ def _system_type(args, unused_options):
 # $arg extra: Optional (default is true). If true, encode extra characters for wider compatibility.
 # $return: The encoded URL string
 def _url_encode(args, unused_options):
-    url, extra = default_args(args, (None, True))
-    if value_type(url) != 'string':
-        return None
-
-    safe = "':/&(" if value_boolean(extra) else "':/&()"
+    url, extra = value_args_validate(_URL_ENCODE_ARGS, args)
+    safe = "':/&(" if extra else "':/&()"
     return urllib.parse.quote(url, safe=safe)
+
+_URL_ENCODE_ARGS = value_args_model([
+    {'name': 'url', 'type': 'string'},
+    {'name': 'extra', 'type': 'boolean', 'default': True}
+])
 
 
 # $function: urlEncodeComponent
@@ -1755,12 +1978,14 @@ def _url_encode(args, unused_options):
 # $arg extra: Optional (default is true). If true, encode extra characters for wider compatibility.
 # $return: The encoded URL component string
 def _url_encode_component(args, unused_options):
-    url, extra = default_args(args, (None, True))
-    if value_type(url) != 'string':
-        return None
-
-    safe = "'(" if value_boolean(extra) else "'()"
+    url, extra = value_args_validate(_URL_ENCODE_COMPONENT_ARGS, args)
+    safe = "'(" if extra else "'()"
     return urllib.parse.quote(url, safe=safe)
+
+_URL_ENCODE_COMPONENT_ARGS = value_args_model([
+    {'name': 'url', 'type': 'string'},
+    {'name': 'extra', 'type': 'boolean', 'default': True}
+])
 
 
 # The built-in script functions
