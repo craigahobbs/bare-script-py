@@ -413,28 +413,31 @@ def _get_variable_assignments_and_uses(statements, assigns, uses):
         statement_key = next(iter(statement.keys()))
         if statement_key == 'expr':
             if 'name' in statement['expr']:
-                assigns[statement['expr']['name']] = ix_statement
-            _get_xpression_variable_uses(statement['expr']['expr'], uses, ix_statement)
+                if statement['expr']['name'] not in assigns:
+                    assigns[statement['expr']['name']] = ix_statement
+            _get_expression_variable_uses(statement['expr']['expr'], uses, ix_statement)
         elif statement_key == 'jump' and 'expr' in statement['jump']:
-            _get_xpression_variable_uses(statement['jump']['expr'], uses, ix_statement)
+            _get_expression_variable_uses(statement['jump']['expr'], uses, ix_statement)
         elif statement_key == 'return' and 'expr' in statement['return']:
-            _get_xpression_variable_uses(statement['return']['expr'], uses, ix_statement)
+            _get_expression_variable_uses(statement['return']['expr'], uses, ix_statement)
 
 
 # Helper function to set variable uses for an expression
-def _get_xpression_variable_uses(expr, uses, ix_statement):
+def _get_expression_variable_uses(expr, uses, ix_statement):
     expr_key = next(iter(expr.keys()))
     if expr_key == 'variable':
-        uses[expr['variable']] = ix_statement
+        if expr['variable'] not in uses:
+            uses[expr['variable']] = ix_statement
     elif expr_key == 'binary':
-        _get_xpression_variable_uses(expr['binary']['left'], uses, ix_statement)
-        _get_xpression_variable_uses(expr['binary']['right'], uses, ix_statement)
+        _get_expression_variable_uses(expr['binary']['left'], uses, ix_statement)
+        _get_expression_variable_uses(expr['binary']['right'], uses, ix_statement)
     elif expr_key == 'unary':
-        _get_xpression_variable_uses(expr['unary']['expr'], uses, ix_statement)
+        _get_expression_variable_uses(expr['unary']['expr'], uses, ix_statement)
     elif expr_key == 'group':
-        _get_xpression_variable_uses(expr['group'], uses, ix_statement)
+        _get_expression_variable_uses(expr['group'], uses, ix_statement)
     elif expr_key == 'function':
-        uses[expr['function']['name']] = ix_statement
+        if expr['function']['name'] not in uses:
+            uses[expr['function']['name']] = ix_statement
         if 'args' in expr['function']:
             for arg_expr in expr['function']['args']:
-                _get_xpression_variable_uses(arg_expr, uses, ix_statement)
+                _get_expression_variable_uses(arg_expr, uses, ix_statement)

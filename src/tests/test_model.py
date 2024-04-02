@@ -56,7 +56,7 @@ class TestModel(unittest.TestCase):
         ])
 
 
-    def test__lint_script_function_duplicate_argument(self):
+    def test_lint_script_function_duplicate_argument(self):
         script = {
             'statements': [
                 {
@@ -193,6 +193,25 @@ class TestModel(unittest.TestCase):
                         'statements': [
                             {'expr': {'name': 'a', 'expr': {'variable': 'b'}}},
                             {'expr': {'name': 'b', 'expr': {'variable': 'a'}}}
+                        ]
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script)), [])
+
+
+    def test_lint_script_function_variable_used_before_assignment_reassign_ok(self):
+        script = {
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'number': 1}}},
+                            {'expr': {'expr': {'function': {'name': 'mathSqrt', 'args': [{'variable': 'a'}]}}}},
+                            {'expr': {'name': 'a', 'expr': {'number': 2}}},
+                            {'expr': {'expr': {'function': {'name': 'mathSqrt', 'args': [{'variable': 'a'}]}}}}
                         ]
                     }
                 }
