@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.9 (2024-04-02)
+
+- [cfa4488](https://github.com/craigahobbs/bare-script-py/commit/cfa4488) - fix lint_script issue
+
 ## 3.0.8 (2024-03-30)
 
 - [20e6954](https://github.com/craigahobbs/bare-script-py/commit/20e6954) - improved library function argument validation
