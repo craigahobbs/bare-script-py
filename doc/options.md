@@ -1,10 +1,9 @@
-Options
-=======
+# Options
 
 
-ExecuteScriptOptions
---------------------
+## ExecuteScriptOptions
 
+~~~ {eval-rst}
 .. class:: ExecuteScriptOptions
 
    The BareScript runtime options :class:`dict`
@@ -50,11 +49,12 @@ ExecuteScriptOptions
       :type: str, optional
 
       The system include prefix
+~~~
 
 
-Fetch Functions
----------------
+## Fetch Functions
 
+~~~ {eval-rst}
 .. function:: fetch_fn(request)
 
    The fetch function interface
@@ -63,34 +63,44 @@ Fetch Functions
    :type url: dict
    :returns: The response text
    :rtype: str
+~~~
 
 
+~~~ {eval-rst}
 .. autofunction:: bare_script.fetch_http
+~~~
 
 
+~~~ {eval-rst}
 .. autofunction:: bare_script.fetch_read_only
+~~~
 
 
+~~~ {eval-rst}
 .. autofunction:: bare_script.fetch_read_write
+~~~
 
 
-Log Functions
--------------
+## Log Functions
 
+~~~ {eval-rst}
 .. function:: log_fn(text)
 
    The log function interface
 
    :param text: The log text
    :type text: str
+~~~
 
 
+~~~ {eval-rst}
 .. autofunction:: bare_script.log_stdout
+~~~
 
 
-URL Functions
--------------
+## URL Functions
 
+~~~ {eval-rst}
 .. function:: url_fn(url)
 
    The URL function interface
@@ -99,6 +109,9 @@ URL Functions
    :type url: str
    :returns: The modified URL
    :rtype: str
+~~~
 
 
+~~~ {eval-rst}
 .. autofunction:: bare_script.url_file_relative
+~~~

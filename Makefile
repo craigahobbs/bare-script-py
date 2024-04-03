@@ -17,6 +17,9 @@ $(eval $(call WGET, https://raw.githubusercontent.com/craigahobbs/python-build/m
 # Sphinx documentation directory
 SPHINX_DOC := doc
 
+# Development dependencies
+TESTS_REQUIRE := myst-parser
+
 
 # Include python-build
 include Makefile.base

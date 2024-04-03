@@ -1,18 +1,19 @@
-Errors
-======
+# Errors
 
 
-BareScriptParserError
----------------------
+## BareScriptParserError
 
+~~~ {eval-rst}
 .. autoexception:: bare_script.BareScriptParserError
    :show-inheritance:
    :members:
+~~~
 
 
-BareScriptRuntimeError
-----------------------
+## BareScriptRuntimeError
 
+~~~ {eval-rst}
 .. autoexception:: bare_script.BareScriptRuntimeError
    :show-inheritance:
    :members:
+~~~
