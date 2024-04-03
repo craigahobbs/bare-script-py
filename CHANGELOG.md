@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.10 (2024-04-03)
+
+- [86aa06d](https://github.com/craigahobbs/bare-script-py/commit/86aa06d) - convert docs to markdown
+
 ## 3.0.9 (2024-04-02)
 
 - [cfa4488](https://github.com/craigahobbs/bare-script-py/commit/cfa4488) - fix lint_script issue
