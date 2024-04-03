@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>bare-script &#8212; bare-script 3.0.9 documentation</title>
+    <title>bare-script &#8212; bare-script 3.0.10 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=a66d8bb5" />
-    <script src="_static/documentation_options.js?v=2b2cf8e3"></script>
+    <script src="_static/documentation_options.js?v=d28a59c5"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -91,16 +91,15 @@
             
   <section id="bare-script">
 <h1>bare-script<a class="headerlink" href="#bare-script" title="Link to this heading">¶</a></h1>
-<p><a class="reference external" href="https://pypi.python.org/pypi/bare-script/"><img alt="PyPI - Status" src="https://img.shields.io/pypi/status/bare-script" /></a> <a class="reference external" href="https://pypi.python.org/pypi/bare-script/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bare-script" /></a> <a class="reference external" href="https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/craigahobbs/bare-script-py" /></a> <a class="reference external" href="https://www.python.org/downloads/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/bare-script" /></a></p>
+<p><a class="reference external" href="https://pypi.org/project/bare-script/"><img alt="PyPI - Status" src="https://img.shields.io/pypi/status/bare-script" /></a>
+<a class="reference external" href="https://pypi.org/project/bare-script/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bare-script" /></a>
+<a class="reference external" href="https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/craigahobbs/bare-script-py" /></a>
+<a class="reference external" href="https://pypi.org/project/bare-script/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/bare-script" /></a></p>
 <p><a class="reference external" href="https://craigahobbs.github.io/bare-script/language/">BareScript</a>
 is a simple, lightweight, and portable programming language. Its Pythonic syntax is influenced by
-JavaScript, C, and the Unix Shell. BareScript also has a
-<a class="reference external" href="#the-barescript-library">library of built-in functions</a>
-for common programming operations. BareScript can be
-<a class="reference external" href="#markdownup-a-markdown-viewer-with-barescript">embedded within applications</a>
-or used as a
-stand-alone programming language using the
-<a class="reference external" href="#the-barescript-command-line-interface-cli">command-line interface</a>.</p>
+JavaScript, C, and the Unix Shell. BareScript also has a library of built-in functions for common
+programming operations. BareScript can be embedded within applications or used as a stand-alone
+programming language using the command-line interface.</p>
 <p>There are two implementations of BareScript:
 <a class="reference external" href="https://github.com/craigahobbs/bare-script-py#readme">BareScript for Python</a>
 (this package) and
@@ -117,29 +116,32 @@ confident that BareScript will execute the same regardless of the underlying run
 <li><p><a class="reference external" href="https://github.com/craigahobbs/bare-script-py">Source code</a></p></li>
 </ul>
 </section>
-<section id="executing-barescript">
-<h2>Executing BareScript<a class="headerlink" href="#executing-barescript" title="Link to this heading">¶</a></h2>
+<section id="executing-barescript-scripts">
+<h2>Executing BareScript Scripts<a class="headerlink" href="#executing-barescript-scripts" title="Link to this heading">¶</a></h2>
 <p>To execute a BareScript script, parse the script using the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#parse-script">parse_script</a>
 function. Then execute the script using the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script">execute_script</a>
 function. For example:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Parse the script</span>
-<span class="gp">... </span><span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
-<span class="gp">... </span><span class="s1"># Double a number</span>
-<span class="gp">... </span><span class="s1">function double(n):</span>
-<span class="gp">... </span><span class="s1">    return n * 2</span>
-<span class="gp">... </span><span class="s1">endfunction</span>
-<span class="gp">...</span>
-<span class="gp">... </span><span class="s1">return N + &#39; times 2 is &#39; + double(N)</span>
-<span class="gp">... </span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Execute the script</span>
-<span class="gp">... </span><span class="nb">globals</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;globals&#39;</span><span class="p">:</span> <span class="nb">globals</span><span class="p">}))</span>
-<span class="go">10 times 2 is 20</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
+
+<span class="c1"># Parse the script</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="s1"># Double a number</span>
+<span class="s1">function double(n):</span>
+<span class="s1">    return n * 2</span>
+<span class="s1">endfunction</span>
+
+<span class="s1">return N + &#39; times 2 is &#39; + double(N)</span>
+<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+
+<span class="c1"># Execute the script</span>
+<span class="nb">globals</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;globals&#39;</span><span class="p">:</span> <span class="nb">globals</span><span class="p">}))</span>
+</pre></div>
+</div>
+<p>This outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">10</span> <span class="n">times</span> <span class="mi">2</span> <span class="ow">is</span> <span class="mi">20</span>
 </pre></div>
 </div>
 <section id="the-barescript-library">
@@ -148,26 +150,29 @@ function. For example:</p>
 includes a set of built-in functions for mathematical operations, object manipulation, array
 manipulation, regular expressions, HTTP fetch and more. The following example demonstrates the use
 of the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&amp;systemfetch">systemFetch</a>,
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Object'&amp;objectget">objectGet</a>, and
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Array'&amp;arraylength">arrayLength</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&amp;amp;systemfetch">systemFetch</a>,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Object'&amp;amp;objectget">objectGet</a>, and
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Array'&amp;amp;arraylength">arrayLength</a>
 functions.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">urllib.request</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span><span class="p">,</span> <span class="n">parse_script</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Parse the script</span>
-<span class="gp">... </span><span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
-<span class="gp">... </span><span class="s1"># Fetch the BareScript library documentation JSON</span>
-<span class="gp">... </span><span class="s1">docs = jsonParse(systemFetch(&#39;https://craigahobbs.github.io/bare-script-py/library/library.json&#39;))</span>
-<span class="gp">...</span>
-<span class="gp">... </span><span class="s1"># Return the number of library functions</span>
-<span class="gp">... </span><span class="s1">return &#39;The BareScript Library has &#39; + arrayLength(objectGet(docs, &#39;functions&#39;)) + &#39; functions&#39;</span>
-<span class="gp">... </span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Execute the script</span>
-<span class="gp">... </span><span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;fetchFn&#39;</span><span class="p">:</span> <span class="n">fetch_http</span><span class="p">}))</span>
-<span class="go">The BareScript Library has 105 functions</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">urllib.request</span>
+
+<span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span><span class="p">,</span> <span class="n">parse_script</span>
+
+<span class="c1"># Parse the script</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="s1"># Fetch the BareScript library documentation JSON</span>
+<span class="s1">docs = jsonParse(systemFetch(&#39;https://craigahobbs.github.io/bare-script-py/library/library.json&#39;))</span>
+
+<span class="s1"># Return the number of library functions</span>
+<span class="s1">return &#39;The BareScript Library has &#39; + arrayLength(objectGet(docs, &#39;functions&#39;)) + &#39; functions&#39;</span>
+<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+
+<span class="c1"># Execute the script</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;fetchFn&#39;</span><span class="p">:</span> <span class="n">fetch_http</span><span class="p">}))</span>
+</pre></div>
+</div>
+<p>This outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">BareScript</span> <span class="n">Library</span> <span class="n">has</span> <span class="mi">105</span> <span class="n">functions</span>
 </pre></div>
 </div>
 </section>
@@ -185,15 +190,18 @@ function.</p>
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/expression.html">BareScript Expression Library</a>,
 a set of built-in, spreadsheet-like functions.</p>
 <p>For example:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">evaluate_expression</span><span class="p">,</span> <span class="n">parse_expression</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Parse the expression</span>
-<span class="gp">... </span><span class="n">expr</span> <span class="o">=</span> <span class="n">parse_expression</span><span class="p">(</span><span class="s1">&#39;2 * max(a, b, c)&#39;</span><span class="p">)</span>
-<span class="gp">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Evaluate the expression</span>
-<span class="gp">... </span><span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">evaluate_expression</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variables</span><span class="p">))</span>
-<span class="go">6.0</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">evaluate_expression</span><span class="p">,</span> <span class="n">parse_expression</span>
+
+<span class="c1"># Parse the expression</span>
+<span class="n">expr</span> <span class="o">=</span> <span class="n">parse_expression</span><span class="p">(</span><span class="s1">&#39;2 * max(a, b, c)&#39;</span><span class="p">)</span>
+
+<span class="c1"># Evaluate the expression</span>
+<span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">evaluate_expression</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variables</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">6</span>
 </pre></div>
 </div>
 </section>
@@ -201,13 +209,13 @@ a set of built-in, spreadsheet-like functions.</p>
 <h2>The BareScript Command-Line Interface (CLI)<a class="headerlink" href="#the-barescript-command-line-interface-cli" title="Link to this heading">¶</a></h2>
 <p>You can run BareScript from the command line using the BareScript CLI, “bare”. BareScript script
 files use the “.bare” file extension.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>bare<span class="w"> </span>script.bare
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bare</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>
 </pre></div>
 </div>
 <p><strong>Note:</strong> In the BareScript CLI, import statements and the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&amp;systemfetch">systemFetch</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&amp;amp;systemfetch">systemFetch</a>
 function read non-URL paths from the local file system.
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&amp;systemfetch">systemFetch</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&amp;amp;systemfetch">systemFetch</a>
 calls with a non-URL path and a
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest'">request body</a>
 write the body to the path.</p>
@@ -216,18 +224,19 @@ write the body to the path.</p>
 <h2>MarkdownUp, a Markdown Viewer with BareScript<a class="headerlink" href="#markdownup-a-markdown-viewer-with-barescript" title="Link to this heading">¶</a></h2>
 <p><a class="reference external" href="https://craigahobbs.github.io/markdown-up/">MarkdownUp</a>
 is a Markdown Viewer that executes BareScript embedded within Markdown documents.
-<a class="reference external" href="https://craigahobbs.github.io/markdown-up/">MarkdownUp</a>
-extends its
-<a class="reference external" href="https://craigahobbs.github.io/markdown-up/library/">standard library</a>
+MarkdownUp includes the
+<a class="reference external" href="https://craigahobbs.github.io/markdown-up/library/">MarkdownUp Library</a>,
+which extends the
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/">BareScript Library</a>
 with functions for dynamically rendering Markdown text, drawing SVG images, etc.</p>
 <p>For example:</p>
-<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gh"># Markdown Application</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Markdown Application</span>
 
-This is a Markdown document with embedded BareScript:
+<span class="n">This</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">Markdown</span> <span class="n">document</span> <span class="k">with</span> <span class="n">embedded</span> <span class="n">BareScript</span><span class="p">:</span>
 
-~~~ markdown-script
-markdownPrint(&#39;Hello, Markdown!&#39;)
-~~~
+<span class="o">~~~</span> <span class="n">markdown</span><span class="o">-</span><span class="n">script</span>
+<span class="n">markdownPrint</span><span class="p">(</span><span class="s1">&#39;Hello, Markdown!&#39;</span><span class="p">)</span>
+<span class="o">~~~</span>
 </pre></div>
 </div>
 </section>
@@ -235,7 +244,7 @@ markdownPrint(&#39;Hello, Markdown!&#39;)
 <h2>Development<a class="headerlink" href="#development" title="Link to this heading">¶</a></h2>
 <p>This package is developed using <a class="reference external" href="https://github.com/craigahobbs/python-build#readme">python-build</a>.
 It was started using <a class="reference external" href="https://github.com/craigahobbs/python-template#readme">python-template</a> as follows:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>template-specialize<span class="w"> </span>python-template/template/<span class="w"> </span>bare-script-py/<span class="w"> </span>-k<span class="w"> </span>package<span class="w"> </span>bare-script<span class="w"> </span>-k<span class="w"> </span>name<span class="w"> </span><span class="s1">&#39;Craig A. Hobbs&#39;</span><span class="w"> </span>-k<span class="w"> </span>email<span class="w"> </span><span class="s1">&#39;craigahobbs@gmail.com&#39;</span><span class="w"> </span>-k<span class="w"> </span>github<span class="w"> </span><span class="s1">&#39;craigahobbs&#39;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="o">-</span><span class="n">specialize</span> <span class="n">python</span><span class="o">-</span><span class="n">template</span><span class="o">/</span><span class="n">template</span><span class="o">/</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span><span class="o">-</span><span class="n">py</span><span class="o">/</span> <span class="o">-</span><span class="n">k</span> <span class="n">package</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span> <span class="o">-</span><span class="n">k</span> <span class="n">name</span> <span class="s1">&#39;Craig A. Hobbs&#39;</span> <span class="o">-</span><span class="n">k</span> <span class="n">email</span> <span class="s1">&#39;craigahobbs@gmail.com&#39;</span> <span class="o">-</span><span class="n">k</span> <span class="n">github</span> <span class="s1">&#39;craigahobbs&#39;</span>
 </pre></div>
 </div>
 <div class="toctree-wrapper compound">
