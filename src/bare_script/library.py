@@ -330,7 +330,7 @@ _ARRAY_SORT_ARGS = value_args_model([
 # $group: Data
 # $doc: Aggregate a data array
 # $arg data: The data array
-# $arg aggregation: The [aggregation model](model.html#var.vName='Aggregation')
+# $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='Aggregation')
 # $return: The aggregated data array
 def _data_aggregate(args, unused_options):
     data, aggregation = value_args_validate(_DATA_AGGREGATE_ARGS, args)
@@ -1232,7 +1232,8 @@ _REGEX_ESCAPE_ARGS = value_args_model([
 # $doc: Find the first match of a regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The [match object](model.html#var.vName='RegexMatch'), or null if no matches are found
+# $return: The [match object](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='RegexMatch'),
+# $return: or null if no matches are found
 def _regex_match(args, unused_options):
     regex, string = value_args_validate(_REGEX_MATCH_ARGS, args)
     match = regex.search(string)
@@ -1249,7 +1250,7 @@ _REGEX_MATCH_ARGS = value_args_model([
 # $doc: Find all matches of regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The array of [match objects](model.html#var.vName='RegexMatch')
+# $return: The array of [match objects](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='RegexMatch')
 def _regex_match_all(args, unused_options):
     regex, string = value_args_validate(_REGEX_MATCH_ALL_ARGS, args)
     return [_regex_match_groups(match) for match in regex.finditer(string)]
@@ -1755,8 +1756,10 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 # $function: systemFetch
 # $group: System
 # $doc: Retrieve a URL resource
-# $arg url: The resource URL, [request model](model.html#var.vName='SystemFetchRequest'), or array of URL and
-# $arg url: [request model](model.html#var.vName='SystemFetchRequest')
+# $arg url: The resource URL,
+# $arg url: [request model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest'),
+# $arg url: or array of URL and
+# $arg url: [request model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest')
 # $return: The response string or array of strings; null if an error occurred
 def _system_fetch(args, options):
     url, = value_args_validate(_SYSTEM_FETCH_ARGS, args)
