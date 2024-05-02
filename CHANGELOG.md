@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.11 (2024-05-02)
+
+- [022773a](https://github.com/craigahobbs/bare-script-py/commit/022773a) - all library urls are now absolute since they can be included elsewhere
+
 ## 3.0.10 (2024-04-03)
 
 - [86aa06d](https://github.com/craigahobbs/bare-script-py/commit/86aa06d) - convert docs to markdown
