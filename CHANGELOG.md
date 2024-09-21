@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.12 (2024-09-21)
+
+- [44d3074](https://github.com/craigahobbs/bare-script-py/commit/44d3074) - fix urlEncode and urlEncodeComponent for plus character
+
 ## 3.0.11 (2024-05-02)
 
 - [022773a](https://github.com/craigahobbs/bare-script-py/commit/022773a) - all library urls are now absolute since they can be included elsewhere
