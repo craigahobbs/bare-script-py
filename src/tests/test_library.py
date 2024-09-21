@@ -3092,6 +3092,12 @@ a,b, c
             'https://foo.com/this%20(&%20that)'
         )
 
+        # Plus
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this + that', False], None),
+            'https://foo.com/this%20+%20that'
+        )
+
         # Non-string URL
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['urlEncode']([None], None)
@@ -3117,6 +3123,12 @@ a,b, c
         self.assertEqual(
             SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that)', False], None),
             'https%3A%2F%2Ffoo.com%2Fthis%20(%26%20that)'
+        )
+
+        # Plus
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this + that', False], None),
+            'https%3A%2F%2Ffoo.com%2Fthis%20%2B%20that'
         )
 
         # Non-string URL

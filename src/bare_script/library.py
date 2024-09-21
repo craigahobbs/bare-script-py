@@ -1965,7 +1965,7 @@ _SYSTEM_TYPE_ARGS = value_args_model([
 # $return: The encoded URL string
 def _url_encode(args, unused_options):
     url, extra = value_args_validate(_URL_ENCODE_ARGS, args)
-    safe = "':/&(" if extra else "':/&()"
+    safe = "':/&+(" if extra else "':/&+()"
     return urllib.parse.quote(url, safe=safe)
 
 _URL_ENCODE_ARGS = value_args_model([
