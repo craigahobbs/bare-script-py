@@ -308,7 +308,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
 
     # Extra arguments?
     if len(args) > len(fn_args):
-        del args[len(fn_args):]
+        raise ValueArgsError(None, len(args), error_return_value)
 
     return args
 
@@ -321,14 +321,18 @@ class ValueArgsError(Exception):
 
        The function's error return value
 
-    :param arg_name: The function argument name
+    :param arg_name: The function argument name. If `arg_name` is None, there are too many arguments,
+        and `arg_value` is the number of arguments.
     :type arg_name: str
     :param arg_value: The function argument value
     :param return_value: The function's error return value
     """
 
     def __init__(self, arg_name, arg_value, return_value = None):
-        message = f'Invalid "{arg_name}" argument value, {value_json(arg_value)}'
+        if arg_name is None:
+            message = f'Too many arguments ({value_json(arg_value)})'
+        else:
+            message = f'Invalid "{arg_name}" argument value, {value_json(arg_value)}'
         super().__init__(message)
         self.return_value = return_value
 

@@ -1961,16 +1961,13 @@ _SYSTEM_TYPE_ARGS = value_args_model([
 # $group: URL
 # $doc: Encode a URL
 # $arg url: The URL string
-# $arg extra: Optional (default is true). If true, encode extra characters for wider compatibility.
 # $return: The encoded URL string
 def _url_encode(args, unused_options):
-    url, extra = value_args_validate(_URL_ENCODE_ARGS, args)
-    safe = "':/&+(" if extra else "':/&+()"
-    return urllib.parse.quote(url, safe=safe)
+    url, = value_args_validate(_URL_ENCODE_ARGS, args)
+    return urllib.parse.quote(url, safe="':/&+")
 
 _URL_ENCODE_ARGS = value_args_model([
-    {'name': 'url', 'type': 'string'},
-    {'name': 'extra', 'type': 'boolean', 'default': True}
+    {'name': 'url', 'type': 'string'}
 ])
 
 
@@ -1978,16 +1975,13 @@ _URL_ENCODE_ARGS = value_args_model([
 # $group: URL
 # $doc: Encode a URL component
 # $arg url: The URL component string
-# $arg extra: Optional (default is true). If true, encode extra characters for wider compatibility.
 # $return: The encoded URL component string
 def _url_encode_component(args, unused_options):
-    url, extra = value_args_validate(_URL_ENCODE_COMPONENT_ARGS, args)
-    safe = "'(" if extra else "'()"
-    return urllib.parse.quote(url, safe=safe)
+    url, = value_args_validate(_URL_ENCODE_COMPONENT_ARGS, args)
+    return urllib.parse.quote(url, safe="'")
 
 _URL_ENCODE_COMPONENT_ARGS = value_args_model([
-    {'name': 'url', 'type': 'string'},
-    {'name': 'extra', 'type': 'boolean', 'default': True}
+    {'name': 'url', 'type': 'string'}
 ])
 
 

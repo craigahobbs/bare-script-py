@@ -3074,28 +3074,12 @@ a,b, c
 
     def test_url_encode(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](["https://foo.com/this & 'that'"], None),
-            "https://foo.com/this%20&%20'that'"
+            SCRIPT_FUNCTIONS['urlEncode'](["https://foo.com/this & 'that' + 2"], None),
+            "https://foo.com/this%20&%20'that'%20+%202"
         )
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that)'], None),
-            'https://foo.com/this%20(&%20that%29'
-        )
-
-        # No extra
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this & that', False], None),
-            'https://foo.com/this%20&%20that'
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that)', False], None),
-            'https://foo.com/this%20(&%20that)'
-        )
-
-        # Plus
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this + that', False], None),
-            'https://foo.com/this%20+%20that'
+            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that) + 2'], None),
+            'https://foo.com/this%20%28&%20that%29%20+%202'
         )
 
         # Non-string URL
@@ -3107,28 +3091,12 @@ a,b, c
 
     def test_url_encode_component(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](["https://foo.com/this & 'that'"], None),
-            "https%3A%2F%2Ffoo.com%2Fthis%20%26%20'that'"
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](["https://foo.com/this & 'that' + 2"], None),
+            "https%3A%2F%2Ffoo.com%2Fthis%20%26%20'that'%20%2B%202"
         )
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that)'], None),
-            'https%3A%2F%2Ffoo.com%2Fthis%20(%26%20that%29'
-        )
-
-        # No extra
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this & that', False], None),
-            'https%3A%2F%2Ffoo.com%2Fthis%20%26%20that'
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that)', False], None),
-            'https%3A%2F%2Ffoo.com%2Fthis%20(%26%20that)'
-        )
-
-        # Plus
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this + that', False], None),
-            'https%3A%2F%2Ffoo.com%2Fthis%20%2B%20that'
+            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that) + 2'], None),
+            'https%3A%2F%2Ffoo.com%2Fthis%20%28%26%20that%29%20%2B%202'
         )
 
         # Non-string URL

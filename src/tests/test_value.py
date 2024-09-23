@@ -576,10 +576,10 @@ class TestValue(unittest.TestCase):
             {'name': 'str', 'type': 'string'},
             {'name': 'num', 'type': 'number'}
         ])
-        self.assertListEqual(
-            value_args_validate(fn_args, ['abc', 1, 2, 3]),
-            ['abc', 1]
-        )
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, ['abc', 1, 2, 3])
+        self.assertEqual(str(cm_exc.exception), 'Too many arguments (4)')
+        self.assertEqual(cm_exc.exception.return_value, None)
 
 
     def test_value_args_error(self):
