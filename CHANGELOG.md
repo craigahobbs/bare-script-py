@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.13 (2024-09-23)
+
+- [8d409b4](https://github.com/craigahobbs/bare-script-py/commit/8d409b4) - - eliminate `extra` argument from urlEncode and urlEncodeComponent - fail function calls with too many arguments
+
 ## 3.0.12 (2024-09-21)
 
 - [44d3074](https://github.com/craigahobbs/bare-script-py/commit/44d3074) - fix urlEncode and urlEncodeComponent for plus character
