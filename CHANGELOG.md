@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.14 (2024-10-02)
+
+- [249cb0b](https://github.com/craigahobbs/bare-script-py/commit/249cb0b) - add Python 3.13, remove Python 3.8 \(end-of-life\)
+
+- [65c9759](https://github.com/craigahobbs/bare-script-py/commit/65c9759) - update markdown-up stub
+
 ## 3.0.13 (2024-09-23)
 
 - [8d409b4](https://github.com/craigahobbs/bare-script-py/commit/8d409b4) - - eliminate `extra` argument from urlEncode and urlEncodeComponent - fail function calls with too many arguments
