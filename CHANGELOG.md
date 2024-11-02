@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.15 (2024-11-02)
+
+- [ddfbe0d](https://github.com/craigahobbs/bare-script-py/commit/ddfbe0d) - add arrayDelete function
+
 ## 3.0.14 (2024-10-02)
 
 - [249cb0b](https://github.com/craigahobbs/bare-script-py/commit/249cb0b) - add Python 3.13, remove Python 3.8 \(end-of-life\)
