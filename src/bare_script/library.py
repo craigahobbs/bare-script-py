@@ -46,6 +46,25 @@ _ARRAY_COPY_ARGS = value_args_model([
 ])
 
 
+# $function: arrayDelete
+# $group: Array
+# $doc: Delete an array element
+# $arg array: The array
+# $arg index: The array element's index
+# $return: The array element
+def _array_delete(args, unused_options):
+    array, index = value_args_validate(_ARRAY_DELETE_ARGS, args)
+    if index >= len(array):
+        raise ValueArgsError('index', index)
+
+    del array[int(index)]
+
+_ARRAY_DELETE_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'},
+    {'name': 'index', 'type': 'number', 'integer': True, 'gte': 0}
+])
+
+
 # $function: arrayExtend
 # $group: Array
 # $doc: Extend one array with another
@@ -1988,6 +2007,7 @@ _URL_ENCODE_COMPONENT_ARGS = value_args_model([
 # The built-in script functions
 SCRIPT_FUNCTIONS = {
     'arrayCopy': _array_copy,
+    'arrayDelete': _array_delete,
     'arrayExtend': _array_extend,
     'arrayGet': _array_get,
     'arrayIndexOf': _array_index_of,

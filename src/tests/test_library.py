@@ -89,6 +89,42 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_array_delete(self):
+        array = [1, 2, 2, 3]
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayDelete']([array, 1], None), None)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayDelete']([array, 1.0], None), None)
+        self.assertListEqual(array, [1, 3])
+
+        # Non-array
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayDelete']([None, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Index outside valid range
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayDelete']([array, -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayDelete']([array, 3], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 3')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-number index
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayDelete']([array, '1'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, "1"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-integer index
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayDelete']([array, 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
     def test_array_extend(self):
         array = [1, 2, 3]
         array2 = [4, 5, 6]
