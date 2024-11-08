@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.16 (2024-11-08)
+
+- [c882e9e](https://github.com/craigahobbs/bare-script-py/commit/c882e9e) - update schema-markdown usage
+
 ## 3.0.15 (2024-11-02)
 
 - [ddfbe0d](https://github.com/craigahobbs/bare-script-py/commit/ddfbe0d) - add arrayDelete function
