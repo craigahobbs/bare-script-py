@@ -7,6 +7,7 @@ bare-script command-line interface (CLI)
 
 import argparse
 from functools import partial
+import importlib.resources
 import sys
 import time
 
@@ -27,6 +28,7 @@ def main(argv=None):
     parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
+    parser.add_argument('-m', '--markdown-up', action='store_true', help='run with MarkdownUp stubs')
     parser.add_argument('-s', '--static', action='store_true', help='perform static analysis')
     parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'), default = [],
                         help='set a global variable to an expression value')
@@ -44,8 +46,13 @@ def main(argv=None):
         for var_name, var_expr in args.var:
             globals_[var_name] = evaluate_expression(parse_expression(var_expr))
 
+        # Get the scripts to run
+        scripts = args.scripts
+        if args.markdown_up:
+            scripts = [('code', 'include <markdownUp.bare>'), *scripts]
+
         # Parse and execute all source files in order
-        for script_type, script_value in args.scripts:
+        for script_type, script_value in scripts:
             # Get the script source
             if script_type == 'file':
                 script_name = script_value
@@ -85,10 +92,10 @@ def main(argv=None):
             time_begin = time.time()
             result = execute_script(script, {
                 'debug': args.debug or False,
-                'fetchFn': fetch_read_write,
+                'fetchFn': _fetch_include,
                 'globals': globals_,
                 'logFn': log_stdout,
-                'systemPrefix': 'https://craigahobbs.github.io/markdown-up/include/',
+                'systemPrefix': _FETCH_INCLUDE_PREFIX,
                 'urlFn': partial(url_file_relative, script_value) if script_type == 'file' else None
             })
             if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:
@@ -113,6 +120,20 @@ def main(argv=None):
 
     # Return the status code
     sys.exit(status_code)
+
+
+def _fetch_include(request):
+    # Is this a bare system include?
+    url = request['url']
+    if url.startswith(_FETCH_INCLUDE_PREFIX):
+        path = url[len(_FETCH_INCLUDE_PREFIX):]
+        with importlib.resources.files('bare_script.include').joinpath(path).open('rb') as cm_inc:
+            return cm_inc.read().decode(encoding='utf-8')
+
+    return fetch_read_write(request)
+
+
+_FETCH_INCLUDE_PREFIX = ':bare-include:/'
 
 
 class _InlineScriptAction(argparse.Action):

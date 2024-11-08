@@ -28,9 +28,15 @@ class TestBare(unittest.TestCase):
 
             self.assertEqual(cm_exc.exception.code, 0)
             if sys.version_info < (3, 9): # pragma: no cover
-                self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file [file ...]]')
+                self.assertEqual(
+                    stdout.getvalue().splitlines()[0],
+                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file [file ...]]'
+                )
             else:
-                self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file ...]')
+                self.assertEqual(
+                    stdout.getvalue().splitlines()[0],
+                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
+                )
             self.assertEqual(stderr.getvalue(), '')
 
 
@@ -43,9 +49,15 @@ class TestBare(unittest.TestCase):
 
             self.assertEqual(cm_exc.exception.code, 0)
             if sys.version_info < (3, 9): # pragma: no cover
-                self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file [file ...]]')
+                self.assertEqual(
+                    stdout.getvalue().splitlines()[0],
+                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file [file ...]]'
+                )
             else:
-                self.assertEqual(stdout.getvalue().splitlines()[0], 'usage: bare [-h] [-c CODE] [-d] [-s] [-v VAR EXPR] [file ...]')
+                self.assertEqual(
+                    stdout.getvalue().splitlines()[0],
+                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
+                )
             self.assertEqual(stderr.getvalue(), '')
 
 
@@ -90,6 +102,30 @@ class TestBare(unittest.TestCase):
             self.assertListEqual(mock_file.call_args_list, [
                 unittest.mock.call('test.txt', 'r', encoding='utf-8')
             ])
+            self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_system_include(self):
+        with unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', 'include <markdownUp.bare>', '-c', "markdownPrint('Hello')"])
+
+            self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_markdown_up(self):
+        with unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-m', '-c', "markdownPrint('Hello')"])
+
             self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)

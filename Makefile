@@ -145,3 +145,14 @@ for language, time_ms in sorted(best_timings.items(), key=lambda val: val[1]):
     print(report if language == 'BareScript' else f'{report} ({best_timings["BareScript"] / time_ms:.1f}x)')
 endef
 export PERF_PY
+
+
+# Update the MarkdownUp include library tarball
+.PHONY: markdown-up
+markdown-up:
+	mkdir -p build/
+	rm -rf build/markdown-up
+	cd build && $(call WGET_CMD, https://craigahobbs.github.io/markdown-up/markdown-up.tar.gz) && tar xzvf markdown-up.tar.gz
+	rm -rf src/bare_script/include/
+	cp -R build/markdown-up/include src/bare_script/
+	touch src/bare_script/include/__init__.py
