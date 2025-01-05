@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>bare-script &#8212; bare-script 3.0.16 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
     <script src="_static/documentation_options.js?v=bd7b4d11"></script>
@@ -123,7 +123,7 @@ confident that BareScript will execute the same regardless of the underlying run
 function. Then execute the script using the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script">execute_script</a>
 function. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
 
 <span class="c1"># Parse the script</span>
 <span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
@@ -154,9 +154,9 @@ of the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Object'&amp;amp;objectget">objectGet</a>, and
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Array'&amp;amp;arraylength">arrayLength</a>
 functions.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">urllib.request</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
 
-<span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span><span class="p">,</span> <span class="n">parse_script</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span><span class="p">,</span> <span class="n">parse_script</span>
 
 <span class="c1"># Parse the script</span>
 <span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
@@ -190,7 +190,7 @@ function.</p>
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/expression.html">BareScript Expression Library</a>,
 a set of built-in, spreadsheet-like functions.</p>
 <p>For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bare_script</span> <span class="kn">import</span> <span class="n">evaluate_expression</span><span class="p">,</span> <span class="n">parse_expression</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">evaluate_expression</span><span class="p">,</span> <span class="n">parse_expression</span>
 
 <span class="c1"># Parse the expression</span>
 <span class="n">expr</span> <span class="o">=</span> <span class="n">parse_expression</span><span class="p">(</span><span class="s1">&#39;2 * max(a, b, c)&#39;</span><span class="p">)</span>
