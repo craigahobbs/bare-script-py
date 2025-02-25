@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0 (2025-02-25)
+
+- [8448018](https://github.com/craigahobbs/bare-script-py/commit/8448018) - include MarkdownUp include library in package and add -m argument
+
 ## 3.0.16 (2024-11-08)
 
 - [c882e9e](https://github.com/craigahobbs/bare-script-py/commit/c882e9e) - update schema-markdown usage
