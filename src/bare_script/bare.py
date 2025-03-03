@@ -8,6 +8,7 @@ bare-script command-line interface (CLI)
 import argparse
 from functools import partial
 import importlib.resources
+import os
 import sys
 import time
 
@@ -133,7 +134,7 @@ def _fetch_include(request):
     return fetch_read_write(request)
 
 
-_FETCH_INCLUDE_PREFIX = ':bare-include:/'
+_FETCH_INCLUDE_PREFIX = f':bare-include:{os.sep}'
 
 
 class _InlineScriptAction(argparse.Action):
