@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1 (2025-03-03)
+
+- [2da0ae8](https://github.com/craigahobbs/bare-script-py/commit/2da0ae8) - fix system bare CLI system includes on Windows
+
 ## 3.1.0 (2025-02-25)
 
 - [8448018](https://github.com/craigahobbs/bare-script-py/commit/8448018) - include MarkdownUp include library in package and add -m argument
