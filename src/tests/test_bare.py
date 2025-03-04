@@ -5,7 +5,6 @@
 
 from io import StringIO
 import os
-import sys
 import unittest
 import unittest.mock
 
@@ -27,16 +26,10 @@ class TestBare(unittest.TestCase):
                 main(['-h'])
 
             self.assertEqual(cm_exc.exception.code, 0)
-            if sys.version_info < (3, 9): # pragma: no cover
-                self.assertEqual(
-                    stdout.getvalue().splitlines()[0],
-                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file [file ...]]'
-                )
-            else:
-                self.assertEqual(
-                    stdout.getvalue().splitlines()[0],
-                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
-                )
+            self.assertEqual(
+                stdout.getvalue().splitlines()[0],
+                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
+            )
             self.assertEqual(stderr.getvalue(), '')
 
 
@@ -48,16 +41,10 @@ class TestBare(unittest.TestCase):
                 main([])
 
             self.assertEqual(cm_exc.exception.code, 0)
-            if sys.version_info < (3, 9): # pragma: no cover
-                self.assertEqual(
-                    stdout.getvalue().splitlines()[0],
-                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file [file ...]]'
-                )
-            else:
-                self.assertEqual(
-                    stdout.getvalue().splitlines()[0],
-                    'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
-                )
+            self.assertEqual(
+                stdout.getvalue().splitlines()[0],
+                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
+            )
             self.assertEqual(stderr.getvalue(), '')
 
 
