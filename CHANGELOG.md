@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.0 (2025-03-20)
+
+- [b31f4d9](https://github.com/craigahobbs/bare-script-py/commit/b31f4d9) - JSON-serialize function values
+
+- [3ace90b](https://github.com/craigahobbs/bare-script-py/commit/3ace90b) - deep compare for object values
+
 ## 3.1.1 (2025-03-03)
 
 - [2da0ae8](https://github.com/craigahobbs/bare-script-py/commit/2da0ae8) - fix system bare CLI system includes on Windows
