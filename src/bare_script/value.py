@@ -206,6 +206,17 @@ def value_compare(left, right):
             if item_compare != 0:
                 return item_compare
         return -1 if len(left) < len(right) else (0 if len(left) == len(right) else 1)
+    elif isinstance(left, dict) and isinstance(right, dict):
+        left_key_values = sorted(left.items())
+        right_key_values = sorted(right.items())
+        for ix in range(min(len(left_key_values), len(right_key_values))):
+            key_compare = value_compare(left_key_values[ix][0], right_key_values[ix][0])
+            if key_compare != 0:
+                return key_compare
+            val_compare = value_compare(left_key_values[ix][1], right_key_values[ix][1])
+            if val_compare != 0:
+                return val_compare
+        return -1 if len(left_key_values) < len(right_key_values) else (0 if len(left_key_values) == len(right_key_values) else 1)
 
     # Invalid comparison - compare by type name
     type1 = value_type(left) or 'unknown'

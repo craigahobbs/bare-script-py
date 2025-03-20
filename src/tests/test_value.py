@@ -313,8 +313,12 @@ class TestValue(unittest.TestCase):
 
         # object
         self.assertEqual(value_compare({'value': 1}, {'value': 1}), 0)
-        self.assertEqual(value_compare({'value': 1}, {'value': 2}), 0)
-        self.assertEqual(value_compare({'value': 2}, {'value': 1}), 0)
+        self.assertEqual(value_compare({'value': 1}, {'value': 2}), -1)
+        self.assertEqual(value_compare({'value': 2}, {'value': 1}), 1)
+        self.assertEqual(value_compare({'a': 1}, {'b': 1}), -1)
+        self.assertEqual(value_compare({'b': 1}, {'a': 1}), 1)
+        self.assertEqual(value_compare({'a': 1}, {'b': 2, 'a': 1}), -1)
+        self.assertEqual(value_compare({'b': 2, 'a': 1}, {'a': 1}), 1)
 
         # array
         self.assertEqual(value_compare([1, 2, 3], [1, 2, 3]), 0)
@@ -331,6 +335,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare(re.compile('^test1'), re.compile('^test1')), 0)
         self.assertEqual(value_compare(re.compile('^test1'), re.compile('^test2')), 0)
         self.assertEqual(value_compare(re.compile('^test2'), re.compile('^test1')), 0)
+
+        # Nested
+        self.assertEqual(value_compare({'a': [{'d': 1}]}, {'a': [{'d': 1}]}), 0)
+        self.assertEqual(value_compare({'a': [{'d': 1}]}, {'a': [{'d': 2}]}), -1)
+        self.assertEqual(value_compare({'a': [{'d': 2}]}, {'a': [{'d': 1}]}), 1)
 
 
     def test_value_compare_invalid(self):
