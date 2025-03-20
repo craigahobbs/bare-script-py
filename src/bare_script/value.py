@@ -123,6 +123,8 @@ class _JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.date):
             return value_string(o)
+        elif callable(o):
+            return value_string(o)
         return None
 
 

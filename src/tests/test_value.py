@@ -155,6 +155,9 @@ class TestValue(unittest.TestCase):
     "b": 6
 }''')
 
+        # Function
+        self.assertEqual(value_json(value_boolean), '"<function>"')
+
         # Invalid
         self.assertEqual(value_json({'A': 1, 'B': re.compile('^$')}), '{"A":1,"B":null}')
         self.assertEqual(value_json(re.compile('^$')), 'null')
