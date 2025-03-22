@@ -153,7 +153,10 @@ export PERF_PY
 markdown-up:
 	mkdir -p build/
 	rm -rf build/markdown-up
-	cd build && $(call WGET_CMD, https://craigahobbs.github.io/markdown-up/markdown-up.tar.gz) && tar xzvf markdown-up.tar.gz
+	cd build && \
+		rm -f markdown-up.tar.gz && \
+		$(call WGET_CMD, https://craigahobbs.github.io/markdown-up/markdown-up.tar.gz) && \
+		tar xzvf markdown-up.tar.gz
 	rm -rf src/bare_script/include/
 	cp -R build/markdown-up/include src/bare_script/
 	touch src/bare_script/include/__init__.py
