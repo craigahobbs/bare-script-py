@@ -4,5 +4,6 @@
 /dist/
 /pylintrc
 /src/*.egg-info/
+/src/**/*.so
 __pycache__/
 .DS_Store

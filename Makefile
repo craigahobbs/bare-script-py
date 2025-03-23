@@ -28,7 +28,7 @@ help:
 
 
 clean:
-	rm -rf Makefile.base pylintrc
+	rm -rf Makefile.base pylintrc $$(find src -name '*.so')
 
 
 doc:
