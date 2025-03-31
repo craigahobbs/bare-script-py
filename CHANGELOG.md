@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.3.0 (2025-03-31)
+
+- [c0a1c85](https://github.com/craigahobbs/bare-script-py/commit/c0a1c85) - eliminate use of .mds
+
 ## 3.2.1 (2025-03-31)
 
 - [b0d0ed4](https://github.com/craigahobbs/bare-script-py/commit/b0d0ed4) - update markdown-up include
