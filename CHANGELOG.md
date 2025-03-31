@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.1 (2025-03-31)
+
+- [b0d0ed4](https://github.com/craigahobbs/bare-script-py/commit/b0d0ed4) - update markdown-up include
+
+- [2b18a9a](https://github.com/craigahobbs/bare-script-py/commit/2b18a9a) - remove setup.cfg license classifier
+
 ## 3.2.0 (2025-03-20)
 
 - [b31f4d9](https://github.com/craigahobbs/bare-script-py/commit/b31f4d9) - JSON-serialize function values
