@@ -381,15 +381,15 @@ class TestExecuteScript(unittest.TestCase):
     def test_include(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url in ('test.mds', 'test2.mds'), True)
-            return 'b = 2' if url == 'test2.mds' else '''\
-include 'test2.mds'
+            self.assertEqual(url in ('test.bare', 'test2.bare'), True)
+            return 'b = 2' if url == 'test2.bare' else '''\
+include 'test2.bare'
 a = 1
 '''
 
@@ -402,26 +402,26 @@ a = 1
     def test_include_no_fetch_fn(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         options = {}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             self.assertIsNone(execute_script(script, options))
-        self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
+        self.assertEqual(str(cm_exc.exception), 'Include of "test.bare" failed')
 
 
     def test_include_system(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds', 'system': True}]}}
+                {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, os.path.join('system', 'test.mds'))
+            self.assertEqual(url, os.path.join('system', 'test.bare'))
             return 'a = 1'
 
         options = {'globals': {}, 'fetchFn': fetch_fn, 'systemPrefix': 'system' + os.sep}
@@ -432,13 +432,13 @@ a = 1
     def test_include_system_no_prefix(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds', 'system': True}]}}
+                {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'test.mds')
+            self.assertEqual(url, 'test.bare')
             return 'a = 1'
 
         options = {'globals': {}, 'fetchFn': fetch_fn}
@@ -449,14 +449,14 @@ a = 1
     def test_include_multiple(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds', 'system': True}, {'url': 'test2.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare', 'system': True}, {'url': 'test2.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url in ('test.mds', 'test2.mds'), True)
-            return 'b = a + 1' if url.endswith('test2.mds') else 'a = 1'
+            self.assertEqual(url in ('test.bare', 'test2.bare'), True)
+            return 'b = a + 1' if url.endswith('test2.bare') else 'a = 1'
 
         options = {'globals': {}, 'fetchFn': fetch_fn}
         self.assertIsNone(execute_script(script, options))
@@ -467,15 +467,15 @@ a = 1
     def test_include_subdir(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'lib/test.mds'}]}}
+                {'include': {'includes': [{'url': 'lib/test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url in ('lib/test.mds', os.path.join('lib', 'test2.mds')), True)
-            return 'b = 2' if url.endswith('test2.mds') else '''\
-include 'test2.mds'
+            self.assertEqual(url in ('lib/test.bare', os.path.join('lib', 'test2.bare')), True)
+            return 'b = 2' if url.endswith('test2.bare') else '''\
+include 'test2.bare'
 a = 1
 '''
 
@@ -488,15 +488,15 @@ a = 1
     def test_include_absolute(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url in ('test.mds', 'http://foo.local/test2.mds'), True)
-            return 'b = 2' if url.endswith('test2.mds') else '''\
-include 'http://foo.local/test2.mds'
+            self.assertEqual(url in ('test.bare', 'http://foo.local/test2.bare'), True)
+            return 'b = 2' if url.endswith('test2.bare') else '''\
+include 'http://foo.local/test2.bare'
 a = 1
 '''
 
@@ -509,13 +509,13 @@ a = 1
     def test_include_lint(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'test.mds')
+            self.assertEqual(url, 'test.bare')
             return '''\
 function test(a):
 endfunction
@@ -528,7 +528,7 @@ endfunction
         options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [
-            'BareScript: Include "test.mds" static analysis... 1 warning:',
+            'BareScript: Include "test.bare" static analysis... 1 warning:',
             'BareScript:     Unused argument "a" of function "test" (index 0)'
         ])
 
@@ -536,13 +536,13 @@ endfunction
     def test_include_lint_multiple(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'test.mds')
+            self.assertEqual(url, 'test.bare')
             return '''\
 function test(a, b):
 endfunction
@@ -555,7 +555,7 @@ endfunction
         options = {'debug': True, 'globals': {}, 'fetchFn': fetch_fn, 'logFn': log_fn}
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [
-            'BareScript: Include "test.mds" static analysis... 2 warnings:',
+            'BareScript: Include "test.bare" static analysis... 2 warnings:',
             'BareScript:     Unused argument "a" of function "test" (index 0)',
             'BareScript:     Unused argument "b" of function "test" (index 0)'
         ])
@@ -564,13 +564,13 @@ endfunction
     def test_include_lint_ok(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'test.mds')
+            self.assertEqual(url, 'test.bare')
             return '''\
 function test():
 endfunction
@@ -589,38 +589,38 @@ endfunction
     def test_include_fetch_fn_error(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'test.mds')
+            self.assertEqual(url, 'test.bare')
             raise Exception('response error') # pylint: disable=broad-exception-raised
 
         options = {'fetchFn': fetch_fn}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             execute_script(script, options)
-        self.assertEqual(str(cm_exc.exception), 'Include of "test.mds" failed')
+        self.assertEqual(str(cm_exc.exception), 'Include of "test.bare" failed')
 
 
     def test_include_parser_error(self):
         script = validate_script({
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
         })
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url, 'test.mds')
+            self.assertEqual(url, 'test.bare')
             return 'foo bar'
 
         options = {'fetchFn': fetch_fn}
         with self.assertRaises(BareScriptParserError) as cm_exc:
             execute_script(script, options)
         self.assertEqual(str(cm_exc.exception), '''\
-Included from "test.mds"
+Included from "test.bare"
 Syntax error, line number 1:
 foo bar
    ^

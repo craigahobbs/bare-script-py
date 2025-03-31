@@ -1151,22 +1151,22 @@ Continue statement outside of loop, line number 2:
 
     def test_include_statement(self):
         script = validate_script(parse_script('''\
-include 'fi\\'le.mds'
+include 'fi\\'le.bare'
 '''))
         self.assertDictEqual(script, {
             'statements': [
-                {'include': {'includes': [{'url': "fi'le.mds"}]}}
+                {'include': {'includes': [{'url': "fi'le.bare"}]}}
             ]
         })
 
 
     def test_include_statement_system(self):
         script = validate_script(parse_script('''\
-include <file.mds>
+include <file.bare>
 '''))
         self.assertDictEqual(script, {
             'statements': [
-                {'include': {'includes': [{'url': 'file.mds', 'system': True}]}}
+                {'include': {'includes': [{'url': 'file.bare', 'system': True}]}}
             ]
         })
 
@@ -1174,11 +1174,11 @@ include <file.mds>
     def test_include_statement_double_quotes(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\
-include "file.mds"
+include "file.bare"
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
 Syntax error, line number 1:
-include "file.mds"
+include "file.bare"
        ^
 ''')
         self.assertEqual(cm_exc.exception.column_number, 8)
@@ -1187,13 +1187,13 @@ include "file.mds"
 
     def test_include_statement_multiple(self):
         script = validate_script(parse_script('''\
-include 'test.mds'
-include <test2.mds>
-include 'test3.mds'
+include 'test.bare'
+include <test2.bare>
+include 'test3.bare'
 '''))
         self.assertDictEqual(script, {
             'statements': [
-                {'include': {'includes': [{'url': 'test.mds'}, {'url': 'test2.mds', 'system': True}, {'url': 'test3.mds'}]}}
+                {'include': {'includes': [{'url': 'test.bare'}, {'url': 'test2.bare', 'system': True}, {'url': 'test3.bare'}]}}
             ]
         })
 
