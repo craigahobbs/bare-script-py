@@ -56,7 +56,7 @@ def _execute_script_helper(statements, options, locals_):
         statement_key = next(iter(statement.keys()))
 
         # Increment the statement counter
-        options['statementCount'] += 1
+        options['statementCount'] = options.get('statementCount', 0) + 1
         max_statements = options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
         if max_statements > 0 and options['statementCount'] > max_statements:
             raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')

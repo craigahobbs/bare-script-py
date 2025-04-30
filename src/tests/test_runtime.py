@@ -304,6 +304,30 @@ class TestExecuteScript(unittest.TestCase):
         self.assertListEqual(logs, ['empty'])
 
 
+    def test_function_native_call(self):
+        script = validate_script({
+            'statements': [
+                {
+                    'function': {
+                        'name': 'multiplyNumbers',
+                        'args': ['a', 'b'],
+                        'statements': [
+                            {'expr': {'name': 'c', 'expr': {'variable': 'b'}}},
+                            {'return': {
+                                'expr': {'binary': {'op': '*', 'left': {'variable': 'a'}, 'right': {'variable': 'c'}}}
+                            }}
+                        ]
+                    }
+                }
+            ]
+        })
+        globals_ = {}
+        execute_script(script, {'globals': globals_})
+        options = {'globals': globals_}
+        self.assertEqual(globals_['multiplyNumbers']([2, 3], options), 6)
+        self.assertEqual(options['statementCount'], 2)
+
+
     def test_jump(self):
         script = validate_script({
             'statements': [
