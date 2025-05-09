@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.3.2 (2025-05-09)
+
+- [a4b27dc](https://github.com/craigahobbs/bare-script-py/commit/a4b27dc) - add Python 3.14
+
 ## 3.3.1 (2025-04-30)
 
 - [fffd45e](https://github.com/craigahobbs/bare-script-py/commit/fffd45e) - simplify native function calls
