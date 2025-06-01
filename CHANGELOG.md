@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.3.3 (2025-06-01)
+
+- [1c1071a](https://github.com/craigahobbs/bare-script-py/commit/1c1071a) - eliminate include library .mds files
+
 ## 3.3.2 (2025-05-09)
 
 - [a4b27dc](https://github.com/craigahobbs/bare-script-py/commit/a4b27dc) - add Python 3.14
