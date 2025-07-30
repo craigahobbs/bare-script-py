@@ -60,7 +60,7 @@ def main(argv=None):
                 script_source = None
                 try:
                     script_source = fetch_read_write({'url': script_value})
-                except: # pylint: disable=bare-except
+                except:
                     pass
                 if script_source is None:
                     raise ValueError(f'Failed to load "{script_value}"')
@@ -113,10 +113,10 @@ def main(argv=None):
             if status_code != 0:
                 break
 
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as exc:
         if error_name is not None:
             print(f'{error_name}:')
-        print(str(e).strip())
+        print(str(exc).strip())
         status_code = 1
 
     # Return the status code

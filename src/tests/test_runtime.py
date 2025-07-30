@@ -620,7 +620,7 @@ endfunction
         def fetch_fn(request):
             url = request['url']
             self.assertEqual(url, 'test.bare')
-            raise Exception('response error') # pylint: disable=broad-exception-raised
+            raise Exception('response error')
 
         options = {'fetchFn': fetch_fn}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:

@@ -2808,7 +2808,7 @@ a,b, c
             if url.startswith('fail'):
                 return None
             if url.startswith('raise'):
-                raise Exception(url) # pylint: disable=broad-exception-raised
+                raise Exception(url)
 
             body = request.get('body')
             headers = request.get('headers')

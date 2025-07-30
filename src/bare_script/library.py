@@ -1316,7 +1316,6 @@ struct RegexMatch
 # $doc: Create a regular expression
 # pylint: disable=line-too-long
 # $arg pattern: The [regular expression pattern string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#writing_a_regular_expression_pattern)
-# pylint: enable=line-too-long
 # $arg flags: The regular expression flags. The string may contain the following characters:
 # $arg flags: - **i** - case-insensitive search
 # $arg flags: - **m** - multi-line search - "^" and "$" matches next to newline characters
@@ -1820,7 +1819,7 @@ def _system_fetch(args, options):
         if fetch_fn is not None:
             try:
                 response = fetch_fn(request_fetch)
-            except: # pylint: disable=bare-except
+            except:
                 pass
         responses.append(response)
 

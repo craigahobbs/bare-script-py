@@ -32,7 +32,7 @@ def main(argv=None):
         try:
             with open(file_, 'r', encoding='utf-8') as fh:
                 source = fh.read()
-        except: # pylint: disable=bare-except
+        except:
             pass
         if source is None:
             errors.append(f'Failed to load "{file_}"')
@@ -163,7 +163,7 @@ def main(argv=None):
             with open(args.output, 'w', encoding='utf-8') as fh:
                 fh.write(library_json)
             success = True
-        except: # pylint: disable=bare-except
+        except:
             pass
         if not success:
             print(f'error: Failed to write "{args.output}"')

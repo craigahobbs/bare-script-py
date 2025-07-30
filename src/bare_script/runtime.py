@@ -116,7 +116,7 @@ def _execute_script_helper(statements, options, locals_):
                 # Fetch the URL
                 try:
                     script_text = fetch_fn({'url': url}) if fetch_fn is not None else None
-                except: # pylint: disable=bare-except
+                except:
                     script_text = None
                 if script_text is None:
                     raise BareScriptRuntimeError(f'Include of "{url}" failed')
@@ -238,7 +238,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                 return func_value(func_args, options)
             except BareScriptRuntimeError:
                 raise
-            except Exception as error: # pylint: disable=broad-exception-caught
+            except Exception as error:
                 # Log and return null
                 if options is not None and 'logFn' in options and options.get('debug'):
                     options['logFn'](f'BareScript: Function "{func_name}" failed with error: {error}')
