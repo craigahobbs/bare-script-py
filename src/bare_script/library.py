@@ -1314,7 +1314,7 @@ struct RegexMatch
 # $function: regexNew
 # $group: Regex
 # $doc: Create a regular expression
-# pylint: disable=line-too-long
+# pylint: disable-next=line-too-long
 # $arg pattern: The [regular expression pattern string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#writing_a_regular_expression_pattern)
 # $arg flags: The regular expression flags. The string may contain the following characters:
 # $arg flags: - **i** - case-insensitive search
