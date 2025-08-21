@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.0 (2025-08-21)
+
+- [87bf278](https://github.com/craigahobbs/bare-script-py/commit/87bf278) - use urllib3 connection pool in builtin fetch functions
+
 ## 3.3.3 (2025-06-01)
 
 - [1c1071a](https://github.com/craigahobbs/bare-script-py/commit/1c1071a) - eliminate include library .mds files
