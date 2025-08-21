@@ -6,95 +6,80 @@
 import os
 import unittest
 import unittest.mock
-import urllib.request
+
+import urllib3
 
 from bare_script import fetch_http, fetch_read_only, fetch_read_write, log_stdout, url_file_relative
-
-
-class MockResponse:
-    def __init__(self, read_data):
-        self.read_data = read_data
-
-    def read(self):
-        return self.read_data
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
 
 
 class TestOptions(unittest.TestCase):
 
     def test_fetch_http(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_http({'url': 'http://example.com'})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertIsNone(request.data)
-            self.assertDictEqual(request.headers, {})
+            mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
+
+
+    def test_fetch_http_status(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=500, data=b'BAD')
+            with self.assertRaises(urllib3.exceptions.HTTPError) as cm_exc:
+                fetch_http({'url': 'http://example.com'})
+            self.assertEqual(str(cm_exc.exception), 'Fetch "GET" "http://example.com" failed (500)')
 
 
     def test_fetch_http_post(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_http({'url': 'http://example.com', 'body': 'Post me!'})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertEqual(request.data, b'Post me!')
-            self.assertDictEqual(request.headers, {})
+            mock_pool_manager.request.assert_called_once_with(
+                'POST', 'http://example.com', body='Post me!', headers={}, retries=0
+            )
 
 
     def test_fetch_http_headers(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_http({'url': 'http://example.com', 'headers': {
                 'Accept': 'application/json, application/xml'
             }})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertIsNone(request.data)
-            self.assertDictEqual(request.headers, {'Accept': 'application/json, application/xml'})
+            mock_pool_manager.request.assert_called_once_with(
+                'GET', 'http://example.com', body=None, headers={'Accept': 'application/json, application/xml'}, retries=0
+            )
 
 
     def test_fetch_read_only(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_read_only({'url': 'http://example.com'})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertIsNone(request.data)
-            self.assertDictEqual(request.headers, {})
+            mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
 
 
     def test_fetch_read_only_post(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_read_only({'url': 'http://example.com', 'body': 'Post me!'})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertEqual(request.data, b'Post me!')
-            self.assertDictEqual(request.headers, {})
+            mock_pool_manager.request.assert_called_once_with(
+                'POST', 'http://example.com', body='Post me!', headers={}, retries=0
+            )
 
 
     def test_fetch_read_only_headers(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_read_only({'url': 'http://example.com', 'headers': {
                 'Accept': 'application/json, application/xml'
             }})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertIsNone(request.data)
-            self.assertDictEqual(request.headers, {'Accept': 'application/json, application/xml'})
+            mock_pool_manager.request.assert_called_once_with(
+                'GET', 'http://example.com', body=None, headers={'Accept': 'application/json, application/xml'}, retries=0
+            )
 
 
     def test_fetch_read_only_relative(self):
@@ -112,38 +97,33 @@ class TestOptions(unittest.TestCase):
 
 
     def test_fetch_read_write(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_read_write({'url': 'http://example.com'})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertIsNone(request.data)
-            self.assertDictEqual(request.headers, {})
+            mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
 
 
     def test_fetch_read_write_post(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_read_write({'url': 'http://example.com', 'body': 'Post me!'})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertEqual(request.data, b'Post me!')
-            self.assertDictEqual(request.headers, {})
+            mock_pool_manager.request.assert_called_once_with(
+                'POST', 'http://example.com', body='Post me!', headers={}, retries=0
+            )
 
 
     def test_fetch_read_write_headers(self):
-        with unittest.mock.patch('urllib.request.urlopen', return_value=MockResponse(b'Hello!')) as mock_urlopen:
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
             result = fetch_read_write({'url': 'http://example.com', 'headers': {
                 'Accept': 'application/json, application/xml'
             }})
             self.assertEqual(result, 'Hello!')
-            request = mock_urlopen.call_args[0][0]
-            self.assertIsInstance(request, urllib.request.Request)
-            self.assertEqual(request.full_url, 'http://example.com')
-            self.assertIsNone(request.data)
-            self.assertDictEqual(request.headers, {'Accept': 'application/json, application/xml'})
+            mock_pool_manager.request.assert_called_once_with(
+                'GET', 'http://example.com', body=None, headers={'Accept': 'application/json, application/xml'}, retries=0
+            )
 
 
     def test_fetch_read_write_relative(self):

@@ -8,7 +8,14 @@ BareScript runtime option function implementations
 import os
 from pathlib import Path
 import re
-import urllib.request
+
+import urllib3
+
+
+# The fetch connection pool
+FETCH_POOL_COUNT = int(os.getenv('BARESCRIPT_FETCH_POOL_COUNT', '10'))
+FETCH_POOL_SIZE = int(os.getenv('BARESCRIPT_FETCH_POOL_SIZE', '10'))
+FETCH_POOL_MANAGER = urllib3.PoolManager(num_pools=FETCH_POOL_COUNT, maxsize=FETCH_POOL_SIZE)
 
 
 def fetch_http(request):
@@ -16,14 +23,18 @@ def fetch_http(request):
     A :func:`fetch function <fetch_fn>` implementation that fetches resources using HTTP GET and POST
     """
 
+    url = request['url']
     body = request.get('body')
-    req = urllib.request.Request(
-        request['url'],
-        data=body.encode('utf-8') if body is not None else None,
-        headers=request.get('headers', {})
-    )
-    with urllib.request.urlopen(req) as response:
-        return response.read().decode('utf-8')
+    headers = request.get('headers') or {}
+    method = 'GET' if body is None else 'POST'
+    try:
+        response = FETCH_POOL_MANAGER.request(method, url, body=body, headers=headers, retries=0)
+        if response.status != 200:
+            raise urllib3.exceptions.HTTPError(f'Fetch "{method}" "{url}" failed ({response.status})')
+        response_text = response.data.decode('utf-8')
+    finally:
+        response.close()
+    return response_text
 
 
 def fetch_read_only(request):
