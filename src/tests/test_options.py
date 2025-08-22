@@ -16,33 +16,38 @@ class TestOptions(unittest.TestCase):
 
     def test_fetch_http(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_http({'url': 'http://example.com'})
             self.assertEqual(result, 'Hello!')
             mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
+            response.close.assert_called_once_with()
 
 
     def test_fetch_http_status(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=500, data=b'BAD')
+            response = unittest.mock.MagicMock(status=500, data=b'BAD')
+            mock_pool_manager.request.return_value = response
             with self.assertRaises(urllib3.exceptions.HTTPError) as cm_exc:
                 fetch_http({'url': 'http://example.com'})
             self.assertEqual(str(cm_exc.exception), 'Fetch "GET" "http://example.com" failed (500)')
+            response.close.assert_called_once_with()
 
 
     def test_fetch_http_post(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_http({'url': 'http://example.com', 'body': 'Post me!'})
             self.assertEqual(result, 'Hello!')
-            mock_pool_manager.request.assert_called_once_with(
-                'POST', 'http://example.com', body='Post me!', headers={}, retries=0
-            )
+            mock_pool_manager.request.assert_called_once_with('POST', 'http://example.com', body='Post me!', headers={}, retries=0)
+            response.close.assert_called_once_with()
 
 
     def test_fetch_http_headers(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_http({'url': 'http://example.com', 'headers': {
                 'Accept': 'application/json, application/xml'
             }})
@@ -50,29 +55,33 @@ class TestOptions(unittest.TestCase):
             mock_pool_manager.request.assert_called_once_with(
                 'GET', 'http://example.com', body=None, headers={'Accept': 'application/json, application/xml'}, retries=0
             )
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_only(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_read_only({'url': 'http://example.com'})
             self.assertEqual(result, 'Hello!')
             mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_only_post(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_read_only({'url': 'http://example.com', 'body': 'Post me!'})
             self.assertEqual(result, 'Hello!')
-            mock_pool_manager.request.assert_called_once_with(
-                'POST', 'http://example.com', body='Post me!', headers={}, retries=0
-            )
+            mock_pool_manager.request.assert_called_once_with('POST', 'http://example.com', body='Post me!', headers={}, retries=0)
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_only_headers(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_read_only({'url': 'http://example.com', 'headers': {
                 'Accept': 'application/json, application/xml'
             }})
@@ -80,6 +89,8 @@ class TestOptions(unittest.TestCase):
             mock_pool_manager.request.assert_called_once_with(
                 'GET', 'http://example.com', body=None, headers={'Accept': 'application/json, application/xml'}, retries=0
             )
+
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_only_relative(self):
@@ -98,25 +109,28 @@ class TestOptions(unittest.TestCase):
 
     def test_fetch_read_write(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_read_write({'url': 'http://example.com'})
             self.assertEqual(result, 'Hello!')
             mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_write_post(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_read_write({'url': 'http://example.com', 'body': 'Post me!'})
             self.assertEqual(result, 'Hello!')
-            mock_pool_manager.request.assert_called_once_with(
-                'POST', 'http://example.com', body='Post me!', headers={}, retries=0
-            )
+            mock_pool_manager.request.assert_called_once_with('POST', 'http://example.com', body='Post me!', headers={}, retries=0)
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_write_headers(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
-            mock_pool_manager.request.return_value = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            response = unittest.mock.MagicMock(status=200, data=b'Hello!')
+            mock_pool_manager.request.return_value = response
             result = fetch_read_write({'url': 'http://example.com', 'headers': {
                 'Accept': 'application/json, application/xml'
             }})
@@ -124,6 +138,7 @@ class TestOptions(unittest.TestCase):
             mock_pool_manager.request.assert_called_once_with(
                 'GET', 'http://example.com', body=None, headers={'Accept': 'application/json, application/xml'}, retries=0
             )
+            response.close.assert_called_once_with()
 
 
     def test_fetch_read_write_relative(self):
