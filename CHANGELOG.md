@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.1 (2025-09-24)
+
+- [c4fa94e](https://github.com/craigahobbs/bare-script-py/commit/c4fa94e) - update include library
+
 ## 3.5.0 (2025-09-24)
 
 - [b32ee00](https://github.com/craigahobbs/bare-script-py/commit/b32ee00) - sync with bare-script-js
