@@ -546,6 +546,18 @@ class TestValue(unittest.TestCase):
             [2, 5]
         )
 
+        # Bool integer
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [True, 3.5])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, true')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Bool float
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [2, False])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "num" argument value, false')
+        self.assertIsNone(cm_exc.exception.return_value)
+
         # Non-integer
         with self.assertRaises(ValueArgsError) as cm_exc:
             value_args_validate(fn_args, [2.5, 3.5])

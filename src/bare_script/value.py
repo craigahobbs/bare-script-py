@@ -297,7 +297,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
             continue
 
         # Invalid value?
-        if ((arg_type == 'number' and not isinstance(arg_value, (int, float))) or
+        if ((arg_type == 'number' and (not isinstance(arg_value, (int, float)) or isinstance(arg_value, bool))) or
             (arg_type == 'string' and not isinstance(arg_value, str)) or
             (arg_type == 'array' and not isinstance(arg_value, list)) or
             (arg_type == 'object' and not isinstance(arg_value, dict)) or

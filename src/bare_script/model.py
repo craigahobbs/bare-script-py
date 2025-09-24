@@ -163,6 +163,12 @@ enum BinaryExpressionOperator
     # Subtraction
     "-"
 
+    # Bitwise left shift
+    "<<"
+
+    # Bitwise right shift
+    ">>"
+
     # Less than or equal
     "<="
 
@@ -180,6 +186,15 @@ enum BinaryExpressionOperator
 
     # Not equal
     "!="
+
+    # Bitwise AND
+    "&"
+
+    # Bitwise XOR
+    "^"
+
+    # Bitwise OR
+    "|"
 
     # Logical AND
     "&&"
@@ -206,6 +221,9 @@ enum UnaryExpressionOperator
 
     # Logical NOT
     "!"
+
+    # Bitwise NOT
+    "~"
 
 
 # A function expression

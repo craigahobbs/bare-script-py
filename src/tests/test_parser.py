@@ -1342,6 +1342,15 @@ class TestParseExpression(unittest.TestCase):
             }
         })
 
+        # Bitwise NOT
+        expr = parse_expression('~a')
+        self.assertDictEqual(validate_expression(expr), {
+            'unary': {
+                'op': '~',
+                'expr': {'variable': 'a'}
+            }
+        })
+
 
     def test_syntax_error(self):
         expr_text = ' @#$'
@@ -1606,6 +1615,109 @@ Syntax error:
         })
 
 
+    def test_bitwise_operators(self):
+        expr = parse_expression('1 & 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '&',
+                'left': {'number': 1},
+                'right': {'number': 3}
+            }
+        })
+
+        expr = parse_expression('1 | 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '|',
+                'left': {'number': 1},
+                'right': {'number': 3}
+            }
+        })
+
+        expr = parse_expression('1 ^ 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '^',
+                'left': {'number': 1},
+                'right': {'number': 3}
+            }
+        })
+
+        expr = parse_expression('1 << 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '<<',
+                'left': {'number': 1},
+                'right': {'number': 3}
+            }
+        })
+
+        expr = parse_expression('1 >> 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '>>',
+                'left': {'number': 1},
+                'right': {'number': 3}
+            }
+        })
+
+
+    def test_bitwise_precedence(self):
+        # Shift operators after additive, before relational
+        expr = parse_expression('1 + 2 << 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '<<',
+                'left': {
+                    'binary': {
+                        'op': '+',
+                        'left': {'number': 1.0},
+                        'right': {'number': 2.0}
+                    }
+                },
+                'right': {'number': 3.0}
+            }
+        })
+
+        # Bitwise after equality
+        expr = parse_expression('1 == 2 & 3')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '&',
+                'left': {
+                    'binary': {
+                        'op': '==',
+                        'left': {'number': 1},
+                        'right': {'number': 2}
+                    }
+                },
+                'right': {'number': 3}
+            }
+        })
+
+        # Bitwise AND before XOR and OR
+        expr = parse_expression('1 & 2 ^ 3 | 4')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '|',
+                'left': {
+                    'binary': {
+                        'op': '^',
+                        'left': {
+                            'binary': {
+                                'op': '&',
+                                'left': {'number': 1},
+                                'right': {'number': 2}
+                            }
+                        },
+                        'right': {'number': 3}
+                    }
+                },
+                'right': {'number': 4}
+            }
+        })
+
+
     def test_group(self):
         expr = parse_expression('(7 + 3) * 5')
         self.assertDictEqual(validate_expression(expr), {
@@ -1636,6 +1748,31 @@ Syntax error:
                 }
             }
         })
+
+
+    def test_number_literal(self):
+        expr = parse_expression("1")
+        self.assertDictEqual(validate_expression(expr), {'number': 1.0})
+        expr = parse_expression("-1")
+        self.assertDictEqual(validate_expression(expr), {'number': -1.0})
+
+        expr = parse_expression("1.1")
+        self.assertDictEqual(validate_expression(expr), {'number': 1.1})
+
+        expr = parse_expression("-1.1")
+        self.assertDictEqual(validate_expression(expr), {'number': -1.1})
+
+        expr = parse_expression("1e3")
+        self.assertDictEqual(validate_expression(expr), {'number': 1000})
+
+        expr = parse_expression("1e+3")
+        self.assertDictEqual(validate_expression(expr), {'number': 1000})
+
+        expr = parse_expression("1e-3")
+        self.assertDictEqual(validate_expression(expr), {'number': .001})
+
+        expr = parse_expression("0x1fF")
+        self.assertDictEqual(validate_expression(expr), {'number': 511})
 
 
     def test_string_literal(self):

@@ -488,18 +488,23 @@ def _parse_binary_expression(expr_text, bin_left_expr=None):
 
 # Binary operator re-order map
 BINARY_REORDER = {
-    '**': {'*', '/', '%', '+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '*': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '/': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '%': {'+', '-', '<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '+': {'<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '-': {'<=', '<', '>=', '>', '==', '!=', '&&', '||'},
-    '<=': {'==', '!=', '&&', '||'},
-    '<': {'==', '!=', '&&', '||'},
-    '>=': {'==', '!=', '&&', '||'},
-    '>': {'==', '!=', '&&', '||'},
-    '==': {'&&', '||'},
-    '!=': {'&&', '||'},
+    '**': {'*', '/', '%', '+', '-', '<<', '>>', '<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '*': {'+', '-', '<<', '>>', '<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '/': {'+', '-', '<<', '>>', '<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '%': {'+', '-', '<<', '>>', '<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '+': {'<<', '>>', '<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '-': {'<<', '>>', '<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '<<': {'<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '>>': {'<=', '<', '>=', '>', '==', '!=', '&', '^', '|', '&&', '||'},
+    '<=': {'==', '!=', '&', '^', '|', '&&', '||'},
+    '<': {'==', '!=', '&', '^', '|', '&&', '||'},
+    '>=': {'==', '!=', '&', '^', '|', '&&', '||'},
+    '>': {'==', '!=', '&', '^', '|', '&&', '||'},
+    '==': {'&', '^', '|', '&&', '||'},
+    '!=': {'&', '^', '|', '&&', '||'},
+    '&': {'^', '|', '&&', '||'},
+    '^': {'|', '&&', '||'},
+    '|': {'&&', '||'},
     '&&': {'||'},
     '||': set()
 }
@@ -516,6 +521,28 @@ def _parse_unary_expression(expr_text):
         if match_group_close is None:
             raise BareScriptParserError('Unmatched parenthesis', expr_text)
         return [{'group': expr}, next_text[len(match_group_close.group(0)):]]
+
+    # Number?
+    match_number = _R_EXPR_NUMBER.match(expr_text)
+    if match_number:
+        number_str = match_number.group(1)
+        number = float(int(number_str, base=16)) if number_str.startswith('0x') else float(number_str)
+        expr = {'number': number}
+        return [expr, expr_text[len(match_number.group(0)):]]
+
+    # String?
+    match_string = _R_EXPR_STRING.match(expr_text)
+    if match_string:
+        string = _R_EXPR_STRING_ESCAPE.sub('\\1', match_string.group(1))
+        expr = {'string': string}
+        return [expr, expr_text[len(match_string.group(0)):]]
+
+    # String (double quotes)?
+    match_string_double = _R_EXPR_STRING_DOUBLE.match(expr_text)
+    if match_string_double:
+        string = _R_EXPR_STRING_DOUBLE_ESCAPE.sub('\\1', match_string_double.group(1))
+        expr = {'string': string}
+        return [expr, expr_text[len(match_string_double.group(0)):]]
 
     # Unary operator?
     match_unary = _R_EXPR_UNARY_OP.match(expr_text)
@@ -552,27 +579,6 @@ def _parse_unary_expression(expr_text):
         fn_expr = {'function': {'name': match_function_open.group(1), 'args': args}}
         return [fn_expr, arg_text]
 
-    # Number?
-    match_number = _R_EXPR_NUMBER.match(expr_text)
-    if match_number:
-        number = float(match_number.group(1))
-        expr = {'number': number}
-        return [expr, expr_text[len(match_number.group(0)):]]
-
-    # String?
-    match_string = _R_EXPR_STRING.match(expr_text)
-    if match_string:
-        string = _R_EXPR_STRING_ESCAPE.sub('\\1', match_string.group(1))
-        expr = {'string': string}
-        return [expr, expr_text[len(match_string.group(0)):]]
-
-    # String (double quotes)?
-    match_string_double = _R_EXPR_STRING_DOUBLE.match(expr_text)
-    if match_string_double:
-        string = _R_EXPR_STRING_DOUBLE_ESCAPE.sub('\\1', match_string_double.group(1))
-        expr = {'string': string}
-        return [expr, expr_text[len(match_string_double.group(0)):]]
-
     # Variable?
     match_variable = _R_EXPR_VARIABLE.match(expr_text)
     if match_variable:
@@ -590,14 +596,14 @@ def _parse_unary_expression(expr_text):
 
 
 # BareScript expression regex
-_R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<=|<|>=|>|==|!=|&&|\|\|)')
-_R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-)')
+_R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<<|>>|<=|<|>=|>|==|!=|&&|\|\||&|\^|\|)')
+_R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-|~)')
 _R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
 _R_EXPR_FUNCTION_SEPARATOR = re.compile(r'^\s*,')
 _R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
 _R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')
 _R_EXPR_GROUP_CLOSE = re.compile(r'^\s*\)')
-_R_EXPR_NUMBER = re.compile(r'^\s*([+-]?\d+(?:\.\d*)?(?:e[+-]\d+)?)')
+_R_EXPR_NUMBER = re.compile(r'^\s*(0x[A-Fa-f0-9]+|[+-]?\d+(?:\.\d*)?(?:e[+-]?\d+)?)')
 _R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
 _R_EXPR_STRING_ESCAPE = re.compile(r'\\([\\\'])')
 _R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')

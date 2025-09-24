@@ -269,7 +269,8 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins)
         if bin_op == '+':
             # number + number
-            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 return left_value + right_value
 
             # string + string
@@ -283,16 +284,19 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                 return value_string(left_value) + right_value
 
             # datetime + number
-            elif isinstance(left_value, datetime.date) and isinstance(right_value, (int, float)):
+            elif (isinstance(left_value, datetime.date) and
+                  isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 left_dt = value_normalize_datetime(left_value)
                 return left_dt + datetime.timedelta(milliseconds=right_value)
-            elif isinstance(left_value, (int, float)) and isinstance(right_value, datetime.date):
+            elif (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                  isinstance(right_value, datetime.date)):
                 right_dt = value_normalize_datetime(right_value)
                 return right_dt + datetime.timedelta(milliseconds=left_value)
 
         elif bin_op == '-':
             # number - number
-            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 return left_value - right_value
 
             # datetime - datetime
@@ -303,12 +307,14 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
         elif bin_op == '*':
             # number * number
-            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 return left_value * right_value
 
         elif bin_op == '/':
             # number / number
-            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 return left_value / right_value
 
         elif bin_op == '==':
@@ -331,13 +337,45 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
         elif bin_op == '%':
             # number % number
-            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 return left_value % right_value
 
-        else: # bin_op == '**'
+        elif bin_op == '**':
             # number ** number
-            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool)):
                 return left_value ** right_value
+
+        elif bin_op == '&':
+            # int & int
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and int(left_value) == left_value and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool) and int(right_value) == right_value):
+                return int(left_value) & int(right_value)
+
+        elif bin_op == '|':
+            # int & int
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and int(left_value) == left_value and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool) and int(right_value) == right_value):
+                return int(left_value) | int(right_value)
+
+        elif bin_op == '^':
+            # int & int
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and int(left_value) == left_value and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool) and int(right_value) == right_value):
+                return int(left_value) ^ int(right_value)
+
+        elif bin_op == '<<':
+            # int & int
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and int(left_value) == left_value and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool) and int(right_value) == right_value):
+                return int(left_value) << int(right_value)
+
+        else: # bin_op == '>>':
+            # int & int
+            if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and int(left_value) == left_value and
+                isinstance(right_value, (int, float)) and not isinstance(right_value, bool) and int(right_value) == right_value):
+                return int(left_value) >> int(right_value)
 
         # Invalid operation values
         return None
@@ -348,8 +386,12 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
         value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins)
         if unary_op == '!':
             return not value_boolean(value)
-        elif unary_op == '-' and isinstance(value, (int, float)):
-            return -value
+        elif unary_op == '-':
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                return -value
+        else: # unary_op == '~':
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and int(value) == value:
+                return ~int(value)
 
         # Invalid operation value
         return None
