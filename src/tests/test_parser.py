@@ -1751,27 +1751,27 @@ Syntax error:
 
 
     def test_number_literal(self):
-        expr = parse_expression("1")
+        expr = parse_expression('1')
         self.assertDictEqual(validate_expression(expr), {'number': 1.0})
-        expr = parse_expression("-1")
+        expr = parse_expression('-1')
         self.assertDictEqual(validate_expression(expr), {'number': -1.0})
 
-        expr = parse_expression("1.1")
+        expr = parse_expression('1.1')
         self.assertDictEqual(validate_expression(expr), {'number': 1.1})
 
-        expr = parse_expression("-1.1")
+        expr = parse_expression('-1.1')
         self.assertDictEqual(validate_expression(expr), {'number': -1.1})
 
-        expr = parse_expression("1e3")
+        expr = parse_expression('1e3')
         self.assertDictEqual(validate_expression(expr), {'number': 1000})
 
-        expr = parse_expression("1e+3")
+        expr = parse_expression('1e+3')
         self.assertDictEqual(validate_expression(expr), {'number': 1000})
 
-        expr = parse_expression("1e-3")
+        expr = parse_expression('1e-3')
         self.assertDictEqual(validate_expression(expr), {'number': .001})
 
-        expr = parse_expression("0x1fF")
+        expr = parse_expression('0x1fF')
         self.assertDictEqual(validate_expression(expr), {'number': 511})
 
 

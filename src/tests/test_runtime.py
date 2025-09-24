@@ -1113,11 +1113,11 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 5))
 
         # Invalid - bool + number
-        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number + bool
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - datetime + bool
@@ -1160,11 +1160,11 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), -86400000)
 
         # Invalid - bool - number
-        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number - bool
-        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '-', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
@@ -1180,11 +1180,11 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 20)
 
         # Invalid - bool * number
-        expr = validate_expression({'binary': {'op': '*', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '*', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number * bool
-        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '*', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
@@ -1200,11 +1200,11 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 5)
 
         # Invalid - bool / number
-        expr = validate_expression({'binary': {'op': '/', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '/', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number / bool
-        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '/', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
@@ -1256,11 +1256,11 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 0)
 
         # Invalid - bool % number
-        expr = validate_expression({'binary': {'op': '%', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '%', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number % bool
-        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '%', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
@@ -1276,11 +1276,11 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 100)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '**', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '**', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '**', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
@@ -1292,35 +1292,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number & number
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10.}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10}, 'right': {'number': 2.}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 6.}}})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10.5}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10}, 'right': {'number': 2.5}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '&', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 2}, 'right': {'variable': 'null'}}})
+        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -1328,35 +1328,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number | number
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 10)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10.}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 10)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10}, 'right': {'number': 2.}}})
-        self.assertEqual(evaluate_expression(expr, options), 10)
+        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 6.}}})
+        self.assertEqual(evaluate_expression(expr, options), 6)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10.5}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10}, 'right': {'number': 2.5}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '|', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 2}, 'right': {'variable': 'null'}}})
+        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -1364,35 +1364,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number ^ number
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 8)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10.}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 8)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10}, 'right': {'number': 2.}}})
-        self.assertEqual(evaluate_expression(expr, options), 8)
+        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 6.}}})
+        self.assertEqual(evaluate_expression(expr, options), 4)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10.5}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10}, 'right': {'number': 2.5}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '^', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 2}, 'right': {'variable': 'null'}}})
+        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -1400,35 +1400,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number << number
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 40)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10.}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 40)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10}, 'right': {'number': 2.}}})
-        self.assertEqual(evaluate_expression(expr, options), 40)
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.}}})
+        self.assertEqual(evaluate_expression(expr, options), 8)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10.5}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10}, 'right': {'number': 2.5}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 2}, 'right': {'variable': 'null'}}})
+        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -1436,35 +1436,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number >> number
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10.}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'number': 2.}}})
-        self.assertEqual(evaluate_expression(expr, options), 2)
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 1.}}})
+        self.assertEqual(evaluate_expression(expr, options), 1)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10.5}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'number': 2.5}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'variable': 'true'}, 'right': {'number': 2}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'variable': 'true'}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'variable': 'null'}}})
+        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -1490,7 +1490,7 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number, 'testString': _test_string}}
 
         # ~ number
-        expr = validate_expression({'unary': {'op': '~', 'expr': {'number': 2}}})
+        expr = validate_expression({'unary': {'op': '~', 'expr': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), -3)
 
         # Float

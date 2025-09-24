@@ -552,7 +552,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, true')
         self.assertIsNone(cm_exc.exception.return_value)
 
-        # Bool float
+        # Bool num
         with self.assertRaises(ValueArgsError) as cm_exc:
             value_args_validate(fn_args, [2, False])
         self.assertEqual(str(cm_exc.exception), 'Invalid "num" argument value, false')
