@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.5.0 (2025-09-24)
+
+- [b32ee00](https://github.com/craigahobbs/bare-script-py/commit/b32ee00) - sync with bare-script-js
+
+- [cd2f4d6](https://github.com/craigahobbs/bare-script-py/commit/cd2f4d6) - add bitwise operators, add hex numeric literals, fix bugs
+
 ## 3.4.0 (2025-08-21)
 
 - [87bf278](https://github.com/craigahobbs/bare-script-py/commit/87bf278) - use urllib3 connection pool in builtin fetch functions
