@@ -68,6 +68,8 @@ while true:  # Forever?
         continue  # Silly
     endif
 endwhile  # Keep doing it
+
+return  # Bye!
 '''))
         self.assertDictEqual(script, {
             'statements': [
@@ -192,7 +194,8 @@ endwhile  # Keep doing it
                 {'jump': {'label': '__bareScriptLoop3'}},
                 {'label': '__bareScriptDone5'},
                 {'jump': {'label': '__bareScriptLoop3', 'expr': {'variable': 'true'}}},
-                {'label': '__bareScriptDone3'}
+                {'label': '__bareScriptDone3'},
+                {'return': {}}
             ]
         })
 
