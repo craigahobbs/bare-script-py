@@ -408,27 +408,30 @@ _R_SCRIPT_LINE_SPLIT = re.compile(r'\r?\n')
 _R_SCRIPT_CONTINUATION = re.compile(r'\\\s*$')
 _R_SCRIPT_COMMENT = re.compile(r'^\s*(?:#.*)?$')
 _R_SCRIPT_ASSIGNMENT = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*=\s*(?P<expr>.+)$')
+_R_PART_COMMENT = r'\s*(#.*)?$'
 _R_SCRIPT_FUNCTION_BEGIN = re.compile(
     r'^(?P<async>\s*async)?\s*function\s+(?P<name>[A-Za-z_]\w*)\s*\('
-    r'\s*(?P<args>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)?(?P<lastArgArray>\s*\.\.\.)?\s*\)\s*:\s*$'
+    r'\s*(?P<args>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)?(?P<lastArgArray>\s*\.\.\.)?\s*\)\s*:' + _R_PART_COMMENT
 )
 _R_SCRIPT_FUNCTION_ARG_SPLIT = re.compile(r'\s*,\s*')
-_R_SCRIPT_FUNCTION_END = re.compile(r'^\s*endfunction\s*$')
-_R_SCRIPT_LABEL = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*:\s*$')
-_R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s+(?P<name>[A-Za-z_]\w*)\s*$')
-_R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>.+))?)\s*$')
-_R_SCRIPT_INCLUDE = re.compile(r'^\s*include\s+(?P<delim>\')(?P<url>(?:\\\'|[^\'])*)\'\s*$')
-_R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>\s*$')
-_R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:\s*$')
-_R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:\s*$')
-_R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:\s*$')
-_R_SCRIPT_IF_END = re.compile(r'^\s*endif\s*$')
-_R_SCRIPT_FOR_BEGIN = re.compile(r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:\s*$')
-_R_SCRIPT_FOR_END = re.compile(r'^\s*endfor\s*$')
-_R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:\s*$')
-_R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile\s*$')
-_R_SCRIPT_BREAK = re.compile(r'^\s*break\s*$')
-_R_SCRIPT_CONTINUE = re.compile(r'^\s*continue\s*$')
+_R_SCRIPT_FUNCTION_END = re.compile(r'^\s*endfunction' + _R_PART_COMMENT)
+_R_SCRIPT_LABEL = re.compile(r'^\s*(?P<name>[A-Za-z_]\w*)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s+(?P<name>[A-Za-z_]\w*)' + _R_PART_COMMENT)
+_R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>.+))?)' + _R_PART_COMMENT)
+_R_SCRIPT_INCLUDE = re.compile(r"^\s*include\s+(?P<delim>')(?P<url>(?:\\'|[^'])*)'" + _R_PART_COMMENT)
+_R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>' + _R_PART_COMMENT)
+_R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_IF_END = re.compile(r'^\s*endif' + _R_PART_COMMENT)
+_R_SCRIPT_FOR_BEGIN = re.compile(
+    r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:' + _R_PART_COMMENT
+)
+_R_SCRIPT_FOR_END = re.compile(r'^\s*endfor' + _R_PART_COMMENT)
+_R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile' + _R_PART_COMMENT)
+_R_SCRIPT_BREAK = re.compile(r'^\s*break' + _R_PART_COMMENT)
+_R_SCRIPT_CONTINUE = re.compile(r'^\s*continue' + _R_PART_COMMENT)
 
 
 def parse_expression(expr_text):
@@ -463,6 +466,10 @@ def _parse_binary_expression(expr_text, bin_left_expr=None):
     # Match a binary operator - if not found, return the left expression
     match_binary_op = _R_EXPR_BINARY_OP.match(bin_text)
     if match_binary_op is None:
+        # End-of-line comment?
+        if _R_EXPR_COMMENT.match(bin_text):
+            bin_text = ''
+
         return [left_expr, bin_text]
     bin_op = match_binary_op.group(1)
     right_text = bin_text[len(match_binary_op.group(0)):]
@@ -596,6 +603,7 @@ def _parse_unary_expression(expr_text):
 
 
 # BareScript expression regex
+_R_EXPR_COMMENT = re.compile(r'^\s*#.*$')
 _R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<<|>>|<=|<|>=|>|==|!=|&&|\|\||&|\^|\|)')
 _R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-|~)')
 _R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
