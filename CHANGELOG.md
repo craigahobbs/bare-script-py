@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.4 (2025-09-25)
+
+- [69c8d50](https://github.com/craigahobbs/bare-script-py/commit/69c8d50) - fix blank return statement end-of-line comments
+
 ## 3.5.3 (2025-09-25)
 
 - [260c1bc](https://github.com/craigahobbs/bare-script-py/commit/260c1bc) - allow end-of-line comments
