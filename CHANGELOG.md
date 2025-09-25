@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.3 (2025-09-25)
+
+- [260c1bc](https://github.com/craigahobbs/bare-script-py/commit/260c1bc) - allow end-of-line comments
+
 ## 3.5.2 (2025-09-25)
 
 - [9ff49b5](https://github.com/craigahobbs/bare-script-py/commit/9ff49b5) - update include library \(pager.bare keyboard commands\)
