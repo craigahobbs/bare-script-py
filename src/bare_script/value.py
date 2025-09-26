@@ -477,7 +477,7 @@ def value_parse_integer(text, radix=10):
 
     try:
         return int(text, radix)
-    except ValueError:
+    except:
         return None
 
 

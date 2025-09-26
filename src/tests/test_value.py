@@ -687,6 +687,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_parse_integer('-123'), -123)
         self.assertEqual(value_parse_integer('0'), 0)
 
+        # Non-default radix
+        self.assertEqual(value_parse_integer('101', 2), 5)
+        self.assertEqual(value_parse_integer('707', 8), 455)
+        self.assertEqual(value_parse_integer('ff', 16), 255)
+
         # Padding
         self.assertEqual(value_parse_integer('  123  '), 123)
 
@@ -707,6 +712,13 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_parse_integer('invalid'), None)
         self.assertEqual(value_parse_integer('123asdf'), None)
         self.assertEqual(value_parse_integer('123 asdf'), None)
+
+        # Bad radix
+        self.assertEqual(value_parse_integer('10', '2'), None)
+        self.assertEqual(value_parse_integer('10', 2.5), None)
+        self.assertEqual(value_parse_integer('10', 1), None)
+        self.assertEqual(value_parse_integer('10', 37), None)
+        self.assertEqual(value_parse_integer('12', 2), None)
 
 
     def test_value_normalize_datetime(self):
