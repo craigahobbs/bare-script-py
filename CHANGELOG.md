@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.5 (2025-09-26)
+
+- [e15620b](https://github.com/craigahobbs/bare-script-py/commit/e15620b) - fix numberParseInt issue
+
 ## 3.5.4 (2025-09-25)
 
 - [69c8d50](https://github.com/craigahobbs/bare-script-py/commit/69c8d50) - fix blank return statement end-of-line comments
