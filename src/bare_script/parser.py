@@ -166,7 +166,7 @@ def parse_script(script_text, start_line_number=1):
             # Add the if-then else statements
             statements.extend([
                 {'jump': {'label': ifthen['done']}},
-                {'label': prev_label},
+                {'label': {'name': prev_label}},
                 {'jump': ifthen['jump']}
             ])
             continue
@@ -188,7 +188,7 @@ def parse_script(script_text, start_line_number=1):
             # Add the if-then else statements
             statements.extend([
                 {'jump': {'label': ifthen['done']}},
-                {'label': ifthen['jump']['label']}
+                {'label': {'name': ifthen['jump']['label']}}
             ])
             continue
 
@@ -206,7 +206,7 @@ def parse_script(script_text, start_line_number=1):
                 ifthen['jump']['label'] = ifthen['done']
 
             # Add the if-then footer statement
-            statements.append({'label': ifthen['done']})
+            statements.append({'label': {'name': ifthen['done']}})
             continue
 
         # While-do begin?
@@ -226,7 +226,7 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the while-do header statements
             statements.append({'jump': {'label': whiledo['done'], 'expr': {'unary': {'op': '!', 'expr': whiledo['expr']}}}})
-            statements.append({'label': whiledo['loop']})
+            statements.append({'label': {'name': whiledo['loop']}})
             continue
 
         # While-do end?
@@ -243,7 +243,7 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the while-do footer statements
             statements.append({'jump': {'label': whiledo['loop'], 'expr': whiledo['expr']}})
-            statements.append({'label': whiledo['done']})
+            statements.append({'label': {'name': whiledo['done']}})
             continue
 
         # For-each begin?
@@ -273,7 +273,7 @@ def parse_script(script_text, start_line_number=1):
                 }},
                 {'jump': {'label': foreach['done'], 'expr': {'unary': {'op': '!', 'expr': {'variable': foreach['length']}}}}},
                 {'expr': {'name': foreach['index'], 'expr': {'number': 0}}},
-                {'label': foreach['loop']},
+                {'label': {'name': foreach['loop']}},
                 {'expr': {
                     'name': foreach['value'],
                     'expr': {'function': {'name': 'arrayGet', 'args': [{'variable': foreach['values']}, {'variable': foreach['index']}]}}
@@ -295,7 +295,7 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the for-each footer statements
             if foreach.get('hasContinue'):
-                statements.append({'label': foreach['continue']})
+                statements.append({'label': {'name': foreach['continue']}})
             statements.extend([
                 {'expr': {
                     'name': foreach['index'],
@@ -305,7 +305,7 @@ def parse_script(script_text, start_line_number=1):
                     'label': foreach['loop'],
                     'expr': {'binary': {'op': '<', 'left': {'variable': foreach['index']}, 'right': {'variable': foreach['length']}}}
                 }},
-                {'label': foreach['done']}
+                {'label': {'name': foreach['done']}}
             ])
             continue
 
@@ -345,7 +345,7 @@ def parse_script(script_text, start_line_number=1):
         # Label definition?
         match_label = _R_SCRIPT_LABEL.match(line)
         if match_label:
-            statements.append({'label': match_label.group('name')})
+            statements.append({'label': {'name': match_label.group('name')}})
             continue
 
         # Jump definition?

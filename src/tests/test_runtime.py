@@ -333,13 +333,13 @@ class TestExecuteScript(unittest.TestCase):
             'statements': [
                 {'expr': {'name': 'a', 'expr': {'number': 5}}},
                 {'jump': {'label': 'lab2'}},
-                {'label': 'lab'},
+                {'label': {'name': 'lab'}},
                 {'expr': {'name': 'a', 'expr': {'number': 6}}},
                 {'jump': {'label': 'lab3'}},
-                {'label': 'lab2'},
+                {'label': {'name': 'lab2'}},
                 {'expr': {'name': 'a', 'expr': {'number': 7}}},
                 {'jump': {'label': 'lab'}},
-                {'label': 'lab3'},
+                {'label': {'name': 'lab3'}},
                 {'return': {'expr': {'variable': 'a'}}}
             ]
         })
@@ -353,7 +353,7 @@ class TestExecuteScript(unittest.TestCase):
                 {'expr': {'name': 'i', 'expr': {'number': 0}}},
                 {'expr': {'name': 'a', 'expr': {'number': 0}}},
                 {'expr': {'name': 'b', 'expr': {'number': 1}}},
-                {'label': 'fib'},
+                {'label': {'name': 'fib'}},
                 {'jump': {
                     'label': 'fibend',
                     'expr': {'binary': {'op': '>=', 'left': {'variable': 'i'}, 'right': {'variable': 'n'}}}
@@ -366,7 +366,7 @@ class TestExecuteScript(unittest.TestCase):
                 {'expr': {'name': 'a', 'expr': {'variable': 'tmp'}}},
                 {'expr': {'name': 'i', 'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}}},
                 {'jump': {'label': 'fib'}},
-                {'label': 'fibend'},
+                {'label': {'name': 'fibend'}},
                 {'return': {'expr': {'variable': 'a'}}}
             ]
         })

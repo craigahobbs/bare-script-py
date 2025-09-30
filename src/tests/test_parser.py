@@ -91,7 +91,7 @@ return  # Bye!
                     }
                 },
                 {'jump': {'label': 'label'}},
-                {'label': 'label'},
+                {'label': {'name': 'label'}},
                 {
                     'jump': {
                         'label': '__bareScriptIf0',
@@ -100,7 +100,7 @@ return  # Bye!
                 },
                 {'expr': {'name': 'ix', 'expr': {'number': 0.0}}},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptIf0'},
+                {'label': {'name': '__bareScriptIf0'}},
                 {
                     'jump': {
                         'label': '__bareScriptIf1',
@@ -109,9 +109,9 @@ return  # Bye!
                 },
                 {'expr': {'name': 'ix', 'expr': {'number': 1.0}}},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptIf1'},
+                {'label': {'name': '__bareScriptIf1'}},
                 {'expr': {'name': 'ix', 'expr': {'number': 2.0}}},
-                {'label': '__bareScriptDone0'},
+                {'label': {'name': '__bareScriptDone0'}},
                 {
                     'expr': {
                         'name': '__bareScriptValues2',
@@ -131,7 +131,7 @@ return  # Bye!
                     }
                 },
                 {'expr': {'name': '__bareScriptIndex2', 'expr': {'number': 0.0}}},
-                {'label': '__bareScriptLoop2'},
+                {'label': {'name': '__bareScriptLoop2'}},
                 {
                     'expr': {
                         'name': 'num',
@@ -158,7 +158,7 @@ return  # Bye!
                         }
                     }
                 },
-                {'label': '__bareScriptDone2'},
+                {'label': {'name': '__bareScriptDone2'}},
                 {'expr': {'name': 'ix', 'expr': {'number': 0.0}}},
                 {
                     'jump': {
@@ -166,7 +166,7 @@ return  # Bye!
                         'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}
                     }
                 },
-                {'label': '__bareScriptLoop3'},
+                {'label': {'name': '__bareScriptLoop3'}},
                 {
                     'jump': {
                         'label': '__bareScriptDone4',
@@ -176,7 +176,7 @@ return  # Bye!
                     }
                 },
                 {'jump': {'label': '__bareScriptDone3'}},
-                {'label': '__bareScriptDone4'},
+                {'label': {'name': '__bareScriptDone4'}},
                 {
                     'expr': {
                         'name': 'ix',
@@ -192,9 +192,9 @@ return  # Bye!
                     }
                 },
                 {'jump': {'label': '__bareScriptLoop3'}},
-                {'label': '__bareScriptDone5'},
+                {'label': {'name': '__bareScriptDone5'}},
                 {'jump': {'label': '__bareScriptLoop3', 'expr': {'variable': 'true'}}},
-                {'label': '__bareScriptDone3'},
+                {'label': {'name': '__bareScriptDone3'}},
                 {'return': {}}
             ]
         })
@@ -351,7 +351,7 @@ return a
                 {'expr': {'name': 'i', 'expr': {'number': 0}}},
                 {'expr': {'name': 'a', 'expr': {'number': 0}}},
                 {'expr': {'name': 'b', 'expr': {'number': 1}}},
-                {'label': 'fib'},
+                {'label': {'name': 'fib'}},
                 {
                     'jump': {
                         'label': 'fibend',
@@ -373,7 +373,7 @@ return a
                     }
                 },
                 {'jump': {'label': 'fib'}},
-                {'label': 'fibend'},
+                {'label': {'name': 'fibend'}},
                 {'return': {'expr': {'variable': 'a'}}}
             ]
         })
@@ -543,16 +543,16 @@ endif
                 }},
                 {'expr': {'name': 'a', 'expr': {'number': 1}}},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptIf0'},
+                {'label': {'name': '__bareScriptIf0'}},
                 {'jump': {
                     'label': '__bareScriptIf1',
                     'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}}
                  },
                 {'expr': {'name': 'a', 'expr': {'number': 2}}},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptIf1'},
+                {'label': {'name': '__bareScriptIf1'}},
                 {'expr': {'name': 'a', 'expr': {'number': 3}}},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -570,7 +570,7 @@ endif
                     'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
                 }},
                 {'expr': {'name': 'a', 'expr': {'number': 1}}},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -591,13 +591,13 @@ endif
                 }},
                 {'expr': {'name': 'a', 'expr': {'number': 1}}},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptIf0'},
+                {'label': {'name': '__bareScriptIf0'}},
                 {'jump': {
                     'label': '__bareScriptDone0',
                     'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
                 }},
                 {'expr': {'name': 'a', 'expr': {'number': 2}}},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -618,9 +618,9 @@ endif
                 }},
                 {'expr': {'name': 'a', 'expr': {'number': 1}}},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptIf0'},
+                {'label': {'name': '__bareScriptIf0'}},
                 {'expr': {'name': 'a', 'expr': {'number': 2}}},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -842,7 +842,7 @@ endwhile
                         }}
                     }}
                 }},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'expr': {'name': 'i', 'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}}},
                 {'jump': {
                     'label': '__bareScriptLoop0',
@@ -852,7 +852,7 @@ endwhile
                         'right': {'function': {'name': 'arrayLength', 'args': [{'variable': 'values'}]}}
                     }}
                 }},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -866,10 +866,10 @@ endwhile
         self.assertDictEqual(script, {
             'statements': [
                 {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}}},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'jump': {'label': '__bareScriptDone0'}},
                 {'jump': {'label': '__bareScriptLoop0', 'expr': {'variable': 'true'}}},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -883,10 +883,10 @@ endwhile
         self.assertDictEqual(script, {
             'statements': [
                 {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}}},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'jump': {'label': '__bareScriptLoop0'}},
                 {'jump': {'label': '__bareScriptLoop0', 'expr': {'variable': 'true'}}},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -1012,7 +1012,7 @@ endfor
                 }},
                 {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
                 {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}}},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
@@ -1034,7 +1034,7 @@ endfor
                         'binary': {'op': '<', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'variable': '__bareScriptLength0'}}
                     }
                 }},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -1053,7 +1053,7 @@ endfor
                 }},
                 {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
                 {'expr': {'name': 'ixValue', 'expr': {'number': 0}}},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
@@ -1069,7 +1069,7 @@ endfor
                     'label': '__bareScriptLoop0',
                     'expr': {'binary': {'op': '<', 'left': {'variable': 'ixValue'}, 'right': {'variable': '__bareScriptLength0'}}}
                 }},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -1091,7 +1091,7 @@ endfor
                 }},
                 {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
                 {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}}},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
@@ -1104,7 +1104,7 @@ endfor
                     'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
                 }},
                 {'jump': {'label': '__bareScriptDone0'}},
-                {'label': '__bareScriptDone1'},
+                {'label': {'name': '__bareScriptDone1'}},
                 {'expr': {
                     'name': '__bareScriptIndex0',
                     'expr': {'binary': {'op': '+', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'number': 1}}}
@@ -1115,7 +1115,7 @@ endfor
                         'binary': {'op': '<', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'variable': '__bareScriptLength0'}}
                     }
                 }},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 
@@ -1137,7 +1137,7 @@ endfor
                 }},
                 {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
                 {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}}},
-                {'label': '__bareScriptLoop0'},
+                {'label': {'name': '__bareScriptLoop0'}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
@@ -1150,8 +1150,8 @@ endfor
                     'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
                 }},
                 {'jump': {'label': '__bareScriptContinue0'}},
-                {'label': '__bareScriptDone1'},
-                {'label': '__bareScriptContinue0'},
+                {'label': {'name': '__bareScriptDone1'}},
+                {'label': {'name': '__bareScriptContinue0'}},
                 {'expr': {
                     'name': '__bareScriptIndex0',
                     'expr': {'binary': {'op': '+', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'number': 1}}}
@@ -1162,7 +1162,7 @@ endfor
                         'binary': {'op': '<', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'variable': '__bareScriptLength0'}}
                     }
                 }},
-                {'label': '__bareScriptDone0'}
+                {'label': {'name': '__bareScriptDone0'}}
             ]
         })
 

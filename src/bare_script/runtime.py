@@ -80,7 +80,10 @@ def _execute_script_helper(statements, options, locals_):
                     ix_statement = label_indexes[statement['jump']['label']]
                 else:
                     jump_label = statement['jump']['label']
-                    ix_label = next((ix_stmt for ix_stmt, stmt in enumerate(statements) if stmt.get('label') == jump_label), -1)
+                    ix_label = next(
+                        (ix_stmt for ix_stmt, stmt in enumerate(statements) if 'label' in stmt and stmt['label']['name'] == jump_label),
+                        -1
+                    )
                     if ix_label == -1:
                         raise BareScriptRuntimeError(f"Unknown jump label \"{statement['jump']['label']}\"")
                     if label_indexes is None:
