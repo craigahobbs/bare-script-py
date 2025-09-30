@@ -41,10 +41,14 @@ def execute_script(script, options=None):
 
     # Execute the script
     options['statementCount'] = 0
-    return _execute_script_helper(script['statements'], options, None)
+    return _execute_script_helper(script, script['statements'], options, None)
 
 
-def _execute_script_helper(statements, options, locals_):
+# Special runtime global variables
+BARESCRIPT_GLOBAL_COVERAGE = 'barescriptCoverage'
+
+
+def _execute_script_helper(script, statements, options, locals_):
     globals_ = options['globals']
 
     # Iterate each script statement
@@ -60,6 +64,22 @@ def _execute_script_helper(statements, options, locals_):
         max_statements = options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
         if max_statements > 0 and options['statementCount'] > max_statements:
             raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
+
+        # Increate the statement coverage count
+        coverage = globals_.get(BARESCRIPT_GLOBAL_COVERAGE)
+        if coverage and coverage['enabled']:
+            scripts = coverage.get('scripts')
+            if scripts is None:
+                scripts = coverage['scripts'] = {}
+            script_name = script['scriptName']
+            script_coverage = scripts.get(script_name)
+            if script_coverage is None:
+                script_coverage = scripts[script_name] = {'script': script, 'statements': {}}
+            ix_str = str(statement['lineNumber'])
+            statement_coverage = scripts.get(ix_str)
+            if statement_coverage is None:
+                statement_coverage = script[ix_str] = {'statement': statement, 'count': 0}
+            statement_coverage['count'] += 1
 
         # Expression?
         if statement_key == 'expr':
@@ -99,7 +119,7 @@ def _execute_script_helper(statements, options, locals_):
 
         # Function?
         elif statement_key == 'function':
-            globals_[statement['function']['name']] = functools.partial(_script_function, statement['function'])
+            globals_[statement['function']['name']] = functools.partial(_script_function, script, statement['function'])
 
         # Include?
         elif statement_key == 'include':
@@ -142,7 +162,7 @@ def _execute_script_helper(statements, options, locals_):
                 # Execute the include script
                 include_options = options.copy()
                 include_options['urlFn'] = functools.partial(url_file_relative, url)
-                _execute_script_helper(script['statements'], include_options, None)
+                _execute_script_helper(script, script['statements'], include_options, None)
 
         # Increment the statement counter
         ix_statement += 1
@@ -151,7 +171,7 @@ def _execute_script_helper(statements, options, locals_):
 
 
 # Runtime script function implementation
-def _script_function(function, args, options):
+def _script_function(script, function, args, options):
     func_locals = {}
     func_args = function.get('args')
     if func_args is not None:
@@ -164,7 +184,7 @@ def _script_function(function, args, options):
                 func_locals[arg_name] = args[ix_arg] if ix_arg != ix_arg_last else args[ix_arg:]
             else:
                 func_locals[arg_name] = [] if ix_arg == ix_arg_last else None
-    return _execute_script_helper(function['statements'], options, func_locals)
+    return _execute_script_helper(script, function['statements'], options, func_locals)
 
 
 def evaluate_expression(expr, options=None, locals_=None, builtins=True):

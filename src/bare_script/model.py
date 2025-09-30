@@ -50,17 +50,11 @@ union ScriptStatement
 # Script statement base struct
 struct BaseStatement
 
-    # The script name
-    optional string scriptName
-
-    # The script's lines
-    optional string[] scriptLines
-
     # The script statement's line number
     optional int lineNumber
 
-    # The script statement's end line number (if multiline)
-    optional int endLineNumber
+    # The number of lines in the script statement (default is 1)
+    optional int lineCount
 
 
 # An expression statement
