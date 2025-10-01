@@ -43,6 +43,69 @@ class TestExecuteScript(unittest.TestCase):
         self.assertEqual(execute_script(script, options), 'Hello, the-url!')
 
 
+    def test_execute_script_coverage(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'jump (true) label',
+                'b = 0',
+                'label:',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
+                {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 4}},
+                {'label': {'name': 'label', 'lineNumber': 5}},
+                {'return': {
+                    'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}},
+                    'lineNumber': 6
+                }}
+            ]
+        })
+        options = {'globals': {'barescriptCoverage': {'enabled': True}}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.maxDiff = None
+        self.assertDictEqual(options['globals']['barescriptCoverage'], {
+            'enabled': True,
+            'scripts': {
+                'test.bare': {
+                    'script': script,
+                    'coveredStatements': {
+                        '1': {
+                            'statement': {'expr': {'name': 'a', 'expr': {'number': 5.0}, 'lineNumber': 1}},
+                            'count': 1
+                        },
+                        '2': {
+                            'statement': {'expr': {'name': 'b', 'expr': {'number': 7.0}, 'lineNumber': 2}},
+                            'count': 1
+                        },
+                        '3': {
+                            'statement': {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
+                            'count': 1
+                        },
+                        '5': {
+                            'statement': {'label': {'name': 'label', 'lineNumber': 5}},
+                            'count': 1
+                        },
+                        '6': {
+                            'statement': {
+                                'return': {
+                                    'expr': {'binary': {'left': {'variable': 'a'}, 'op': '+', 'right': {'variable': 'b'}}},
+                                    'lineNumber': 6
+                                }
+                            },
+                            'count': 1
+                        }
+                    }
+                }
+            }
+        })
+
+
     def test_function(self):
         script = validate_script({
             'statements': [
