@@ -68,18 +68,21 @@ def _execute_script_helper(script, statements, options, locals_):
         # Increate the statement coverage count
         coverage = globals_.get(BARESCRIPT_GLOBAL_COVERAGE)
         if coverage and coverage['enabled']:
-            scripts = coverage.get('scripts')
-            if scripts is None:
-                scripts = coverage['scripts'] = {}
-            script_name = script['scriptName']
-            script_coverage = scripts.get(script_name)
-            if script_coverage is None:
-                script_coverage = scripts[script_name] = {'script': script, 'statements': {}}
-            ix_str = str(statement['lineNumber'])
-            statement_coverage = scripts.get(ix_str)
-            if statement_coverage is None:
-                statement_coverage = script[ix_str] = {'statement': statement, 'count': 0}
-            statement_coverage['count'] += 1
+            script_name = script.get('scriptName')
+            if script_name is not None:
+                scripts = coverage.get('scripts')
+                if scripts is None:
+                    scripts = coverage['scripts'] = {}
+                    script_coverage = scripts.get(script_name)
+                    if script_coverage is None:
+                        script_coverage = scripts[script_name] = {'script': script, 'statements': {}}
+                    lineno = statement.get('lineNumber')
+                    if lineno is not None:
+                        lineno_str = str(lineno)
+                        statement_coverage = scripts.get(lineno_str)
+                        if statement_coverage is None:
+                            statement_coverage = script[lineno_str] = {'statement': statement, 'count': 0}
+                        statement_coverage['count'] += 1
 
         # Expression?
         if statement_key == 'expr':

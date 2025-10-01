@@ -882,11 +882,17 @@ endwhile
 '''))
         self.assertDictEqual(script, {
             'statements': [
-                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}}},
-                {'label': {'name': '__bareScriptLoop0'}},
-                {'jump': {'label': '__bareScriptLoop0'}},
-                {'jump': {'label': '__bareScriptLoop0', 'expr': {'variable': 'true'}}},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}, 'lineNumber': 1}},
+                {'label': {'name': '__bareScriptLoop0', 'lineNumber': 1}},
+                {'jump': {'label': '__bareScriptLoop0', 'lineNumber': 2}},
+                {'jump': {'label': '__bareScriptLoop0', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 3}}
+            ],
+            'scriptLines': [
+                'while true:',
+                '    continue',
+                'endwhile',
+                ''
             ]
         })
 

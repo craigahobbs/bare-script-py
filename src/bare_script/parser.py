@@ -8,7 +8,7 @@ The BareScript language parser
 import re
 
 
-def parse_script(script_text, start_line_number=1):
+def parse_script(script_text, start_line_number=1, script_name=None):
     """
     Parse a BareScript script
 
@@ -21,10 +21,12 @@ def parse_script(script_text, start_line_number=1):
     :raises BareScriptParserError: A parsing error occurred
     """
 
-    script = {'statements': []}
+    lines = []
+    script = {'statements': [], 'scriptLines': lines}
+    if script_name is not None:
+        script['scriptName'] = script_name
 
     # Line-split all script text
-    lines = []
     if isinstance(script_text, str):
         lines.extend(_R_SCRIPT_LINE_SPLIT.split(script_text))
     else:
@@ -64,6 +66,11 @@ def parse_script(script_text, start_line_number=1):
         else:
             line = line_part
 
+        # Base statement members
+        statement_base = {'lineNumber': ix_line + 1}
+        if ix_line != ix_line_part:
+            statement_base['lineCount'] = (ix_line_part - ix_line) + 1
+
         # Assignment?
         match_assignment = _R_SCRIPT_ASSIGNMENT.match(line)
         if match_assignment:
@@ -71,7 +78,8 @@ def parse_script(script_text, start_line_number=1):
                 expr_statement = {
                     'expr': {
                         'name': match_assignment.group('name'),
-                        'expr': parse_expression(match_assignment.group('expr'))
+                        'expr': parse_expression(match_assignment.group('expr')),
+                        **statement_base
                     }
                 }
                 statements.append(expr_statement)
@@ -92,7 +100,8 @@ def parse_script(script_text, start_line_number=1):
             function_def = {
                 'function': {
                     'name': match_function_begin.group('name'),
-                    'statements': []
+                    'statements': [],
+                    **statement_base
                 }
             }
             if match_function_begin.group('args') is not None:
@@ -128,7 +137,8 @@ def parse_script(script_text, start_line_number=1):
             ifthen = {
                 'jump': {
                     'label': f"__bareScriptIf{label_index}",
-                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'))}}
+                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'))}},
+                    **statement_base
                 },
                 'done': f"__bareScriptDone{label_index}",
                 'hasElse': False,
@@ -159,14 +169,15 @@ def parse_script(script_text, start_line_number=1):
             prev_label = ifthen['jump']['label']
             ifthen['jump'] = {
                 'label': f"__bareScriptIf{label_index}",
-                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'))}}
+                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'))}},
+                **statement_base
             }
             label_index += 1
 
             # Add the if-then else statements
             statements.extend([
-                {'jump': {'label': ifthen['done']}},
-                {'label': {'name': prev_label}},
+                {'jump': {'label': ifthen['done'], **statement_base}},
+                {'label': {'name': prev_label, **statement_base}},
                 {'jump': ifthen['jump']}
             ])
             continue
@@ -187,8 +198,8 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the if-then else statements
             statements.extend([
-                {'jump': {'label': ifthen['done']}},
-                {'label': {'name': ifthen['jump']['label']}}
+                {'jump': {'label': ifthen['done'], **statement_base}},
+                {'label': {'name': ifthen['jump']['label'], **statement_base}}
             ])
             continue
 
@@ -206,7 +217,7 @@ def parse_script(script_text, start_line_number=1):
                 ifthen['jump']['label'] = ifthen['done']
 
             # Add the if-then footer statement
-            statements.append({'label': {'name': ifthen['done']}})
+            statements.append({'label': {'name': ifthen['done'], **statement_base}})
             continue
 
         # While-do begin?
@@ -225,8 +236,10 @@ def parse_script(script_text, start_line_number=1):
             label_index += 1
 
             # Add the while-do header statements
-            statements.append({'jump': {'label': whiledo['done'], 'expr': {'unary': {'op': '!', 'expr': whiledo['expr']}}}})
-            statements.append({'label': {'name': whiledo['loop']}})
+            statements.extend([
+                {'jump': {'label': whiledo['done'], 'expr': {'unary': {'op': '!', 'expr': whiledo['expr']}}, **statement_base}},
+                {'label': {'name': whiledo['loop'], **statement_base}}
+            ])
             continue
 
         # While-do end?
@@ -242,8 +255,10 @@ def parse_script(script_text, start_line_number=1):
                 raise BareScriptParserError('No matching while statement', line, 1, start_line_number + ix_line)
 
             # Add the while-do footer statements
-            statements.append({'jump': {'label': whiledo['loop'], 'expr': whiledo['expr']}})
-            statements.append({'label': {'name': whiledo['done']}})
+            statements.extend([
+                {'jump': {'label': whiledo['loop'], 'expr': whiledo['expr'], **statement_base}},
+                {'label': {'name': whiledo['done'], **statement_base}}
+            ])
             continue
 
         # For-each begin?
@@ -266,17 +281,23 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the for-each header statements
             statements.extend([
-                {'expr': {'name': foreach['values'], 'expr': parse_expression(match_for_begin.group('values'))}},
+                {'expr': {'name': foreach['values'], 'expr': parse_expression(match_for_begin.group('values')), **statement_base}},
                 {'expr': {
                     'name': foreach['length'],
-                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': foreach['values']}]}}
+                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': foreach['values']}]}},
+                    **statement_base
                 }},
-                {'jump': {'label': foreach['done'], 'expr': {'unary': {'op': '!', 'expr': {'variable': foreach['length']}}}}},
-                {'expr': {'name': foreach['index'], 'expr': {'number': 0}}},
-                {'label': {'name': foreach['loop']}},
+                {'jump': {
+                    'label': foreach['done'],
+                    'expr': {'unary': {'op': '!', 'expr': {'variable': foreach['length']}}},
+                    **statement_base
+                }},
+                {'expr': {'name': foreach['index'], 'expr': {'number': 0}, **statement_base}},
+                {'label': {'name': foreach['loop'], **statement_base}},
                 {'expr': {
                     'name': foreach['value'],
-                    'expr': {'function': {'name': 'arrayGet', 'args': [{'variable': foreach['values']}, {'variable': foreach['index']}]}}
+                    'expr': {'function': {'name': 'arrayGet', 'args': [{'variable': foreach['values']}, {'variable': foreach['index']}]}},
+                    **statement_base
                 }}
             ])
             continue
@@ -295,17 +316,19 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the for-each footer statements
             if foreach.get('hasContinue'):
-                statements.append({'label': {'name': foreach['continue']}})
+                statements.append({'label': {'name': foreach['continue'], **statement_base}})
             statements.extend([
                 {'expr': {
                     'name': foreach['index'],
-                    'expr': {'binary': {'op': '+', 'left': {'variable': foreach['index']}, 'right': {'number': 1}}}
+                    'expr': {'binary': {'op': '+', 'left': {'variable': foreach['index']}, 'right': {'number': 1}}},
+                    **statement_base
                 }},
                 {'jump': {
                     'label': foreach['loop'],
-                    'expr': {'binary': {'op': '<', 'left': {'variable': foreach['index']}, 'right': {'variable': foreach['length']}}}
+                    'expr': {'binary': {'op': '<', 'left': {'variable': foreach['index']}, 'right': {'variable': foreach['length']}}},
+                    **statement_base
                 }},
-                {'label': {'name': foreach['done']}}
+                {'label': {'name': foreach['done'], **statement_base}}
             ])
             continue
 
@@ -322,7 +345,7 @@ def parse_script(script_text, start_line_number=1):
             loop_def = label_def[label_key]
 
             # Add the break jump statement
-            statements.append({'jump': {'label': loop_def['done']}})
+            statements.append({'jump': {'label': loop_def['done'], **statement_base}})
             continue
 
         # Continue statement?
@@ -339,19 +362,19 @@ def parse_script(script_text, start_line_number=1):
 
             # Add the continue jump statement
             loop_def['hasContinue'] = True
-            statements.append({'jump': {'label': loop_def['continue']}})
+            statements.append({'jump': {'label': loop_def['continue'], **statement_base}})
             continue
 
         # Label definition?
         match_label = _R_SCRIPT_LABEL.match(line)
         if match_label:
-            statements.append({'label': {'name': match_label.group('name')}})
+            statements.append({'label': {'name': match_label.group('name'), **statement_base}})
             continue
 
         # Jump definition?
         match_jump = _R_SCRIPT_JUMP.match(line)
         if match_jump:
-            jump_statement = {'jump': {'label': match_jump.group('name')}}
+            jump_statement = {'jump': {'label': match_jump.group('name'), **statement_base}}
             if match_jump.group('expr'):
                 try:
                     jump_statement['jump']['expr'] = parse_expression(match_jump.group('expr'))
@@ -364,7 +387,7 @@ def parse_script(script_text, start_line_number=1):
         # Return definition?
         match_return = _R_SCRIPT_RETURN.match(line)
         if match_return:
-            return_statement = {'return': {}}
+            return_statement = {'return': {**statement_base}}
             if match_return.group('expr'):
                 try:
                     return_statement['return']['expr'] = parse_expression(match_return.group('expr'))
@@ -381,14 +404,14 @@ def parse_script(script_text, start_line_number=1):
             url = match_include.group('url') if delim == '<' else _R_EXPR_STRING_ESCAPE.sub('\\1', match_include.group('url'))
             include_statement = statements[-1] if statements else None
             if include_statement is None or 'include' not in include_statement:
-                include_statement = {'include': {'includes': []}}
+                include_statement = {'include': {'includes': [], **statement_base}}
                 statements.append(include_statement)
             include_statement['include']['includes'].append({'url': url, 'system': True} if delim == '<' else {'url': url})
             continue
 
         # Expression
         try:
-            expr_statement = {'expr': {'expr': parse_expression(line)}}
+            expr_statement = {'expr': {'expr': parse_expression(line), **statement_base}}
             statements.append(expr_statement)
         except BareScriptParserError as error:
             raise BareScriptParserError(error.error, line, error.column_number, start_line_number + ix_line)
