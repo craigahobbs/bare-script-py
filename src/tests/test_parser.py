@@ -227,18 +227,22 @@ return  # Bye!
 
 
     def test_line_continuation(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 a = arrayNew( \\
     1, \\
     2 \\
  )
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'expr': {
                         'name': 'a',
-                        'expr': {'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}}
+                        'expr': {'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}},
+                        'lineNumber': 1,
+                        'lineCount': 4
                     }
                 }
             ]
@@ -246,7 +250,7 @@ a = arrayNew( \\
 
 
     def test_line_continuation_comments(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 # Comments don't continue \\
 a = arrayNew( \\
     # Comments are OK within a continuation...
@@ -254,13 +258,17 @@ a = arrayNew( \\
     # ...with or without a continuation backslash \\
     2 \\
 )
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'expr': {
                         'name': 'a',
-                        'expr': {'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}}
+                        'expr': {'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}},
+                        'lineNumber': 2,
+                        'lineCount': 6
                     }
                 }
             ]
@@ -354,7 +362,7 @@ Syntax error, line number 1:
 
 
     def test_jumpif_statement(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 n = 10
 i = 0
 a = 0
@@ -370,37 +378,42 @@ fib:
 fibend:
 
 return a
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'expr': {'name': 'n', 'expr': {'number': 10}}},
-                {'expr': {'name': 'i', 'expr': {'number': 0}}},
-                {'expr': {'name': 'a', 'expr': {'number': 0}}},
-                {'expr': {'name': 'b', 'expr': {'number': 1}}},
-                {'label': {'name': 'fib'}},
+                {'expr': {'name': 'n', 'expr': {'number': 10}, 'lineNumber': 1}},
+                {'expr': {'name': 'i', 'expr': {'number': 0}, 'lineNumber': 2}},
+                {'expr': {'name': 'a', 'expr': {'number': 0}, 'lineNumber': 3}},
+                {'expr': {'name': 'b', 'expr': {'number': 1}, 'lineNumber': 4}},
+                {'label': {'name': 'fib', 'lineNumber': 6}},
                 {
                     'jump': {
                         'label': 'fibend',
-                        'expr': {'binary': {'op': '>=', 'left': {'variable': 'i'}, 'right': {'variable': 'n'}}}
+                        'expr': {'binary': {'op': '>=', 'left': {'variable': 'i'}, 'right': {'variable': 'n'}}},
+                        'lineNumber': 7
                     }
                 },
-                {'expr': {'name': 'tmp', 'expr': {'variable': 'b'}}},
+                {'expr': {'name': 'tmp', 'expr': {'variable': 'b'}, 'lineNumber': 8}},
                 {
                     'expr': {
                         'name': 'b',
-                        'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}
+                        'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}},
+                        'lineNumber': 9
                     }
                 },
-                {'expr': {'name': 'a', 'expr': {'variable': 'tmp'}}},
+                {'expr': {'name': 'a', 'expr': {'variable': 'tmp'}, 'lineNumber': 10}},
                 {
                     'expr': {
                         'name': 'i',
-                        'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}
+                        'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}},
+                        'lineNumber': 11
                     }
                 },
-                {'jump': {'label': 'fib'}},
-                {'label': {'name': 'fibend'}},
-                {'return': {'expr': {'variable': 'a'}}}
+                {'jump': {'label': 'fib', 'lineNumber': 12}},
+                {'label': {'name': 'fibend', 'lineNumber': 13}},
+                {'return': {'expr': {'variable': 'a'}, 'lineNumber': 15}}
             ]
         })
 
@@ -607,19 +620,22 @@ endif
 
 
     def test_if_then_statement_only(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 if i > 0:
     a = 1
 endif
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {'jump': {
                     'label': '__bareScriptDone0',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 1
                 }},
-                {'expr': {'name': 'a', 'expr': {'number': 1}}},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'expr': {'name': 'a', 'expr': {'number': 1}, 'lineNumber': 2}},
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 3}}
             ]
         })
 
@@ -878,15 +894,17 @@ No matching if statement, line number 3:
 
 
     def test_while_do_statement(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 i = 0
 while i < arrayLength(values):
     i = i + 1
 endwhile
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'expr': {'name': 'i', 'expr': {'number': 0}}},
+                {'expr': {'name': 'i', 'expr': {'number': 0}, 'lineNumber': 1}},
                 {'jump': {
                     'label': '__bareScriptDone0',
                     'expr': {'unary': {
@@ -896,36 +914,44 @@ endwhile
                             'left': {'variable': 'i'},
                             'right': {'function': {'name': 'arrayLength', 'args': [{'variable': 'values'}]}}
                         }}
-                    }}
+                    }},
+                    'lineNumber': 2
                 }},
-                {'label': {'name': '__bareScriptLoop0'}},
-                {'expr': {'name': 'i', 'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}}},
+                {'label': {'name': '__bareScriptLoop0', 'lineNumber': 2}},
+                {'expr': {
+                    'name': 'i',
+                    'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}},
+                    'lineNumber': 3
+                }},
                 {'jump': {
                     'label': '__bareScriptLoop0',
                     'expr': {'binary': {
                         'op': '<',
                         'left': {'variable': 'i'},
                         'right': {'function': {'name': 'arrayLength', 'args': [{'variable': 'values'}]}}
-                    }}
+                    }},
+                    'lineNumber': 4
                 }},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 4}}
             ]
         })
 
 
     def test_while_do_statement_break(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 while true:
     break
 endwhile
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}}},
-                {'label': {'name': '__bareScriptLoop0'}},
-                {'jump': {'label': '__bareScriptDone0'}},
-                {'jump': {'label': '__bareScriptLoop0', 'expr': {'variable': 'true'}}},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': 'true'}}}, 'lineNumber': 1}},
+                {'label': {'name': '__bareScriptLoop0', 'lineNumber': 1}},
+                {'jump': {'label': '__bareScriptDone0', 'lineNumber': 2}},
+                {'jump': {'label': '__bareScriptLoop0', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 3}}
             ]
         })
 
@@ -1421,23 +1447,27 @@ Continue statement outside of loop, line number 2:
 
 
     def test_include_statement(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 include 'fi\\'le.bare'
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'include': {'includes': [{'url': "fi'le.bare"}]}}
+                {'include': {'includes': [{'url': "fi'le.bare"}], 'lineNumber': 1}}
             ]
         })
 
 
     def test_include_statement_system(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 include <file.bare>
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'include': {'includes': [{'url': 'file.bare', 'system': True}]}}
+                {'include': {'includes': [{'url': 'file.bare', 'system': True}], 'lineNumber': 1}}
             ]
         })
 
@@ -1457,14 +1487,20 @@ include "file.bare"
 
 
     def test_include_statement_multiple(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 include 'test.bare'
 include <test2.bare>
 include 'test3.bare'
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'include': {'includes': [{'url': 'test.bare'}, {'url': 'test2.bare', 'system': True}, {'url': 'test3.bare'}]}}
+                {'include': {
+                    'includes': [{'url': 'test.bare'}, {'url': 'test2.bare', 'system': True}, {'url': 'test3.bare'}],
+                    'lineNumber': 1,
+                    'lineCount': 3
+                }}
             ]
         })
 
