@@ -406,12 +406,14 @@ return a
 
 
     def test_function_statement(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 function addNumbers(a, b):
     return a + b
 endfunction
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'function': {
@@ -420,10 +422,12 @@ endfunction
                         'statements': [
                             {
                                 'return': {
-                                    'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}
+                                    'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}},
+                                    'lineNumber': 2
                                 }
                             }
-                        ]
+                        ],
+                        'lineNumber': 1
                     }
                 }
             ]
@@ -456,20 +460,23 @@ endfunction
 
 
     def test_function_statement_empty_return(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 function fetchURL(url):
     return
 endfunction
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'function': {
                         'name': 'fetchURL',
                         'args': ['url'],
                         'statements': [
-                            {'return': {}}
-                        ]
+                            {'return': {'lineNumber': 2}}
+                        ],
+                        'lineNumber': 1
                     }
                 }
             ]
@@ -477,12 +484,14 @@ endfunction
 
 
     def test_function_statement_last_arg_array(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 function argsCount(args...):
     return arrayLength(args)
 endfunction
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'function': {
@@ -490,8 +499,9 @@ endfunction
                         'args': ['args'],
                         'lastArgArray': True,
                         'statements': [
-                            {'return': {'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': 'args'}]}}}}
-                        ]
+                            {'return': {'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': 'args'}]}}, 'lineNumber': 2}}
+                        ],
+                        'lineNumber': 1
                     }
                 }
             ]
@@ -499,20 +509,23 @@ endfunction
 
 
     def test_function_statement_last_arg_array_no_args(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 function test(...):
     return 1
 endfunction
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'function': {
                         'name': 'test',
                         'lastArgArray': True,
                         'statements': [
-                            {'return': {'expr': {'number': 1}}}
-                        ]
+                            {'return': {'expr': {'number': 1}, 'lineNumber': 2}}
+                        ],
+                        'lineNumber': 1
                     }
                 }
             ]
@@ -520,12 +533,14 @@ endfunction
 
 
     def test_function_statement_last_arg_array_spaces(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 function argsCount(args ... ):
     return arrayLength(args)
 endfunction
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {
                     'function': {
@@ -533,8 +548,9 @@ endfunction
                         'args': ['args'],
                         'lastArgArray': True,
                         'statements': [
-                            {'return': {'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': 'args'}]}}}}
-                        ]
+                            {'return': {'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': 'args'}]}}, 'lineNumber': 2}}
+                        ],
+                        'lineNumber': 1
                     }
                 }
             ]
@@ -555,7 +571,7 @@ function test()
 
 
     def test_if_then_statement(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 if i > 0:
     a = 1
 elif i < 0:
@@ -563,25 +579,29 @@ elif i < 0:
 else:
     a = 3
 endif
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {'jump': {
                     'label': '__bareScriptIf0',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 1
                 }},
-                {'expr': {'name': 'a', 'expr': {'number': 1}}},
-                {'jump': {'label': '__bareScriptDone0'}},
-                {'label': {'name': '__bareScriptIf0'}},
+                {'expr': {'name': 'a', 'expr': {'number': 1}, 'lineNumber': 2}},
+                {'jump': {'label': '__bareScriptDone0', 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptIf0', 'lineNumber': 3}},
                 {'jump': {
                     'label': '__bareScriptIf1',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}}
-                 },
-                {'expr': {'name': 'a', 'expr': {'number': 2}}},
-                {'jump': {'label': '__bareScriptDone0'}},
-                {'label': {'name': '__bareScriptIf1'}},
-                {'expr': {'name': 'a', 'expr': {'number': 3}}},
-                {'label': {'name': '__bareScriptDone0'}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 3
+                }},
+                {'expr': {'name': 'a', 'expr': {'number': 2}, 'lineNumber': 4}},
+                {'jump': {'label': '__bareScriptDone0', 'lineNumber': 5}},
+                {'label': {'name': '__bareScriptIf1', 'lineNumber': 5}},
+                {'expr': {'name': 'a', 'expr': {'number': 3}, 'lineNumber': 6}},
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 7}}
             ]
         })
 
@@ -605,51 +625,58 @@ endif
 
 
     def test_if_then_statement_if_else_if(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 if i > 0:
     a = 1
 elif i < 0:
     a = 2
 endif
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {'jump': {
                     'label': '__bareScriptIf0',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 1
                 }},
-                {'expr': {'name': 'a', 'expr': {'number': 1}}},
-                {'jump': {'label': '__bareScriptDone0'}},
-                {'label': {'name': '__bareScriptIf0'}},
+                {'expr': {'name': 'a', 'expr': {'number': 1}, 'lineNumber': 2}},
+                {'jump': {'label': '__bareScriptDone0', 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptIf0', 'lineNumber': 3}},
                 {'jump': {
                     'label': '__bareScriptDone0',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 3
                 }},
-                {'expr': {'name': 'a', 'expr': {'number': 2}}},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'expr': {'name': 'a', 'expr': {'number': 2}, 'lineNumber': 4}},
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 5}}
             ]
         })
 
 
     def test_if_then_statement_if_else(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 if i > 0:
     a = 1
 else:
     a = 2
 endif
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
                 {'jump': {
                     'label': '__bareScriptIf0',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 1
                 }},
-                {'expr': {'name': 'a', 'expr': {'number': 1}}},
-                {'jump': {'label': '__bareScriptDone0'}},
-                {'label': {'name': '__bareScriptIf0'}},
-                {'expr': {'name': 'a', 'expr': {'number': 2}}},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'expr': {'name': 'a', 'expr': {'number': 1}, 'lineNumber': 2}},
+                {'jump': {'label': '__bareScriptDone0', 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptIf0', 'lineNumber': 3}},
+                {'expr': {'name': 'a', 'expr': {'number': 2}, 'lineNumber': 4}},
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 5}}
             ]
         })
 
