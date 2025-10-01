@@ -24,9 +24,18 @@ class TestParseScript(unittest.TestCase):
                 {
                     'expr': {
                         'name': 'a',
-                        'expr': {'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}}
+                        'expr': {'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}},
+                        'lineNumber': 1,
+                        'lineCount': 4
                     }
                 }
+            ],
+            'scriptLines': [
+                'a = arrayNew( \\',
+                '    1,\\',
+                '    2 \\',
+                ')',
+                ''
             ]
         })
 
@@ -418,10 +427,17 @@ endfunction
                         'name': 'fetchURL',
                         'args': ['url'],
                         'statements': [
-                            {'return': {'expr': {'function': {'name': 'systemFetch', 'args': [{'variable': 'url'}]}}}}
-                        ]
+                            {'return': {'expr': {'function': {'name': 'systemFetch', 'args': [{'variable': 'url'}]}}, 'lineNumber': 2}}
+                        ],
+                        'lineNumber': 1
                     }
                 }
+            ],
+            'scriptLines': [
+                'async function fetchURL(url):',
+                '    return systemFetch(url)',
+                'endfunction',
+                ''
             ]
         })
 

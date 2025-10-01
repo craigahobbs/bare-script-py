@@ -149,7 +149,7 @@ def _execute_script_helper(script, statements, options, locals_):
 
                 # Parse the include script
                 try:
-                    script = parse_script(script_text)
+                    script = parse_script(script_text, 1, script.get('scriptName'))
                 except BareScriptParserError as exc:
                     raise BareScriptParserError(exc.error, exc.line, exc.column_number, exc.line_number, f'Included from "{url}"')
 
