@@ -406,6 +406,8 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             if include_statement is None or 'include' not in include_statement:
                 include_statement = {'include': {'includes': [], **statement_base}}
                 statements.append(include_statement)
+            else:
+                include_statement['include']['lineCount'] = (ix_line_part - include_statement['include']['lineNumber']) + 2
             include_statement['include']['includes'].append({'url': url, 'system': True} if delim == '<' else {'url': url})
             continue
 

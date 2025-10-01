@@ -91,7 +91,7 @@ return  # Bye!
                             {'url': 'util.bare'}
                         ],
                         'lineNumber': 1,
-                        #!! 'lineCount': 3
+                        'lineCount': 3
                     }
                 },
                 {
@@ -1083,129 +1083,161 @@ endfor
 
 
     def test_foreach_statement_with_index(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 for value, ixValue in values:
 endfor
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'expr': {'name': '__bareScriptValues0', 'expr': {'variable': 'values'}}},
+                {'expr': {'name': '__bareScriptValues0', 'expr': {'variable': 'values'}, 'lineNumber': 1}},
                 {'expr': {
                     'name': '__bareScriptLength0',
-                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': '__bareScriptValues0'}]}}
+                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': '__bareScriptValues0'}]}},
+                    'lineNumber': 1
                 }},
-                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
-                {'expr': {'name': 'ixValue', 'expr': {'number': 0}}},
-                {'label': {'name': '__bareScriptLoop0'}},
+                {'jump': {
+                    'label': '__bareScriptDone0',
+                    'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}},
+                    'lineNumber': 1
+                }},
+                {'expr': {'name': 'ixValue', 'expr': {'number': 0}, 'lineNumber': 1}},
+                {'label': {'name': '__bareScriptLoop0', 'lineNumber': 1}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
                         'name': 'arrayGet',
                         'args': [{'variable': '__bareScriptValues0'}, {'variable': 'ixValue'}]
-                    }}
+                    }},
+                    'lineNumber': 1
                 }},
                 {'expr': {
                     'name': 'ixValue',
-                    'expr': {'binary': {'op': '+', 'left': {'variable': 'ixValue'}, 'right': {'number': 1}}}
+                    'expr': {'binary': {'op': '+', 'left': {'variable': 'ixValue'}, 'right': {'number': 1}}},
+                    'lineNumber': 2
                 }},
                 {'jump': {
                     'label': '__bareScriptLoop0',
-                    'expr': {'binary': {'op': '<', 'left': {'variable': 'ixValue'}, 'right': {'variable': '__bareScriptLength0'}}}
+                    'expr': {'binary': {'op': '<', 'left': {'variable': 'ixValue'}, 'right': {'variable': '__bareScriptLength0'}}},
+                    'lineNumber': 2
                 }},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 2}}
             ]
         })
 
 
     def test_foreach_statement_break(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 for value in values:
     if i > 0:
         break
     endif
 endfor
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'expr': {'name': '__bareScriptValues0', 'expr': {'variable': 'values'}}},
+                {'expr': {'name': '__bareScriptValues0', 'expr': {'variable': 'values'}, 'lineNumber': 1}},
                 {'expr': {
                     'name': '__bareScriptLength0',
-                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': '__bareScriptValues0'}]}}
+                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': '__bareScriptValues0'}]}},
+                    'lineNumber': 1
                 }},
-                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
-                {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}}},
-                {'label': {'name': '__bareScriptLoop0'}},
+                {'jump': {
+                    'label': '__bareScriptDone0',
+                    'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}},
+                    'lineNumber': 1
+                }},
+                {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}, 'lineNumber': 1}},
+                {'label': {'name': '__bareScriptLoop0', 'lineNumber': 1}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
                         'name': 'arrayGet',
                         'args': [{'variable': '__bareScriptValues0'}, {'variable': '__bareScriptIndex0'}]
-                    }}
+                    }},
+                    'lineNumber': 1
                 }},
                 {'jump': {
                     'label': '__bareScriptDone1',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 2
                 }},
-                {'jump': {'label': '__bareScriptDone0'}},
-                {'label': {'name': '__bareScriptDone1'}},
+                {'jump': {'label': '__bareScriptDone0', 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptDone1', 'lineNumber': 4}},
                 {'expr': {
                     'name': '__bareScriptIndex0',
-                    'expr': {'binary': {'op': '+', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'number': 1}}}
+                    'expr': {'binary': {'op': '+', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'number': 1}}},
+                    'lineNumber': 5
                 }},
                 {'jump': {
                     'label': '__bareScriptLoop0',
                     'expr': {
                         'binary': {'op': '<', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'variable': '__bareScriptLength0'}}
-                    }
+                    },
+                    'lineNumber': 5
                 }},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 5}}
             ]
         })
 
 
     def test_foreach_statement_continue(self):
-        script = validate_script(parse_script('''\
+        script_str = '''\
 for value in values:
     if i > 0:
         continue
     endif
 endfor
-'''))
+'''
+        script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
+            'scriptLines': [*script_str.splitlines(), ''],
             'statements': [
-                {'expr': {'name': '__bareScriptValues0', 'expr': {'variable': 'values'}}},
+                {'expr': {'name': '__bareScriptValues0', 'expr': {'variable': 'values'}, 'lineNumber': 1}},
                 {'expr': {
                     'name': '__bareScriptLength0',
-                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': '__bareScriptValues0'}]}}
+                    'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': '__bareScriptValues0'}]}},
+                    'lineNumber': 1
                 }},
-                {'jump': {'label': '__bareScriptDone0', 'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}}}},
-                {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}}},
-                {'label': {'name': '__bareScriptLoop0'}},
+                {'jump': {
+                    'label': '__bareScriptDone0',
+                    'expr': {'unary': {'op': '!', 'expr': {'variable': '__bareScriptLength0'}}},
+                    'lineNumber': 1
+                }},
+                {'expr': {'name': '__bareScriptIndex0', 'expr': {'number': 0}, 'lineNumber': 1}},
+                {'label': {'name': '__bareScriptLoop0', 'lineNumber': 1}},
                 {'expr': {
                     'name': 'value',
                     'expr': {'function': {
                         'name': 'arrayGet',
                         'args': [{'variable': '__bareScriptValues0'}, {'variable': '__bareScriptIndex0'}]
-                    }}
+                    }},
+                    'lineNumber': 1
                 }},
                 {'jump': {
                     'label': '__bareScriptDone1',
-                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}}
+                    'expr': {'unary': {'op': '!', 'expr': {'binary': {'op': '>', 'left': {'variable': 'i'}, 'right': {'number': 0}}}}},
+                    'lineNumber': 2
                 }},
-                {'jump': {'label': '__bareScriptContinue0'}},
-                {'label': {'name': '__bareScriptDone1'}},
-                {'label': {'name': '__bareScriptContinue0'}},
+                {'jump': {'label': '__bareScriptContinue0', 'lineNumber': 3}},
+                {'label': {'name': '__bareScriptDone1', 'lineNumber': 4}},
+                {'label': {'name': '__bareScriptContinue0', 'lineNumber': 5}},
                 {'expr': {
                     'name': '__bareScriptIndex0',
-                    'expr': {'binary': {'op': '+', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'number': 1}}}
+                    'expr': {'binary': {'op': '+', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'number': 1}}},
+                    'lineNumber': 5
                 }},
                 {'jump': {
                     'label': '__bareScriptLoop0',
                     'expr': {
                         'binary': {'op': '<', 'left': {'variable': '__bareScriptIndex0'}, 'right': {'variable': '__bareScriptLength0'}}
-                    }
+                    },
+                    'lineNumber': 5
                 }},
-                {'label': {'name': '__bareScriptDone0'}}
+                {'label': {'name': '__bareScriptDone0', 'lineNumber': 5}}
             ]
         })
 
