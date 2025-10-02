@@ -44,10 +44,6 @@ def execute_script(script, options=None):
     return _execute_script_helper(script, script['statements'], options, None)
 
 
-# Special runtime global variables
-BARESCRIPT_GLOBAL_COVERAGE = 'barescriptCoverage'
-
-
 def _execute_script_helper(script, statements, options, locals_):
     globals_ = options['globals']
 
@@ -66,7 +62,7 @@ def _execute_script_helper(script, statements, options, locals_):
             raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
-        if BARESCRIPT_GLOBAL_COVERAGE in globals_:
+        if BARESCRIPT_COVERAGE_GLOBAL in globals_:
             _record_statement_coverage(script, statement, globals_)
 
         # Expression?
@@ -100,7 +96,7 @@ def _execute_script_helper(script, statements, options, locals_):
                     ix_statement = ix_label
 
                 # Record the label statement coverage
-                if BARESCRIPT_GLOBAL_COVERAGE in globals_:
+                if BARESCRIPT_COVERAGE_GLOBAL in globals_:
                     _record_statement_coverage(script, statements[ix_label], globals_)
 
         # Return?
@@ -162,9 +158,10 @@ def _execute_script_helper(script, statements, options, locals_):
     return None
 
 
+# Helper function to record statement coverage
 def _record_statement_coverage(script, statement, globals_):
     # Coverage enabled?
-    coverage_global = globals_[BARESCRIPT_GLOBAL_COVERAGE]
+    coverage_global = globals_[BARESCRIPT_COVERAGE_GLOBAL]
     if not coverage_global.get('enabled'):
         return
 
@@ -188,6 +185,10 @@ def _record_statement_coverage(script, statement, globals_):
     if covered_statement is None:
         covered_statement = covered_statements[lineno_str] = {'statement': statement, 'count': 0}
     covered_statement['count'] += 1
+
+
+# Coverage configuration object global variable name
+BARESCRIPT_COVERAGE_GLOBAL = '__bareScriptCoverage'
 
 
 # Runtime script function implementation

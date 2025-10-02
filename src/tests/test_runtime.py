@@ -9,6 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
+from bare_script.runtime import BARESCRIPT_COVERAGE_GLOBAL
 from bare_script.value import ValueArgsError
 
 
@@ -66,9 +67,9 @@ class TestExecuteScript(unittest.TestCase):
                 }}
             ]
         })
-        options = {'globals': {'barescriptCoverage': {'enabled': True}}}
+        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals']['barescriptCoverage'], {
+        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
