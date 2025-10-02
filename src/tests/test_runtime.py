@@ -48,43 +48,225 @@ class TestExecuteScript(unittest.TestCase):
         script = validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
-                'a = 5',
-                'b = 7',
-                'jump (true) label',
-                'b = 0',
-                'label:',
-                'return a + b'
+                'function main():',
+                '    jump label',
+                '    label:',
+                '',
+                '    if false:',
+                '        ix = 0',
+                '    elif false:',
+                '        ix = 1',
+                '    else:',
+                '        ix = 2',
+                '    endif',
+                '',
+                '    for num in '
+                'arrayNew(1, 2, 3):',
+                '        systemLog(num)',
+                '    endfor  # Numbers '
+                'done',
+                '',
+                '    ix = 0',
+                '    while true:',
+                '        if ix == 5:',
+                '            break',
+                '        endif',
+                '        ix = ix + 1',
+                '        if ix == 3:',
+                '            continue',
+                '        endif',
+                '    endwhile',
+                '',
+                '    return true',
+                'endfunction',
+                '',
+                'return main()'
             ],
             'statements': [
-                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
-                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
-                {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
-                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 4}},
-                {'label': {'name': 'label', 'lineNumber': 5}},
-                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 6}}
+                {'function': {
+                    'name': 'main',
+                    'lineNumber': 1,
+                    'statements': [
+                        {'jump': {'label': 'label', 'lineNumber': 2}},
+                        {'label': {'lineNumber': 3, 'name': 'label'}},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'false'}, 'op': '!'}},
+                            'label': '__bareScriptIf0',
+                            'lineNumber': 5
+                        }},
+                        {'expr': {'expr': {'number': 0.0}, 'lineNumber': 6, 'name': 'ix'}},
+                        {'jump': {'label': '__bareScriptDone0', 'lineNumber': 7}},
+                        {'label': {'lineNumber': 7, 'name': '__bareScriptIf0'}},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'false'},'op': '!'}},
+                            'label': '__bareScriptIf1',
+                            'lineNumber': 7
+                        }},
+                        {'expr': {'expr': {'number': 1.0}, 'lineNumber': 8, 'name': 'ix'}},
+                        {'jump': {'label': '__bareScriptDone0', 'lineNumber': 9}},
+                        {'label': {'lineNumber': 9, 'name': '__bareScriptIf1'}},
+                        {'expr': {'expr': {'number': 2.0}, 'lineNumber': 10, 'name': 'ix'}},
+                        {'label': {'lineNumber': 11, 'name': '__bareScriptDone0'}},
+                        {'expr': {
+                            'expr': {'function': {'args': [{'number': 1.0}, {'number': 2.0}, {'number': 3.0}], 'name': 'arrayNew'}},
+                            'lineNumber': 13,
+                            'name': '__bareScriptValues2'
+                        }},
+                        {'expr': {
+                            'expr': {'function': {'args': [{'variable': '__bareScriptValues2'}], 'name': 'arrayLength'}},
+                            'lineNumber': 13,
+                            'name': '__bareScriptLength2'
+                        }},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': '__bareScriptLength2'}, 'op': '!'}},
+                            'label': '__bareScriptDone2',
+                            'lineNumber': 13
+                        }},
+                        {'expr': {'expr': {'number': 0.0}, 'lineNumber': 13, 'name': '__bareScriptIndex2'}},
+                        {'label': {'lineNumber': 13, 'name': '__bareScriptLoop2'}},
+                        {'expr': {
+                            'expr': {
+                                'function': {
+                                    'args': [{'variable': '__bareScriptValues2'}, {'variable': '__bareScriptIndex2'}],
+                                    'name': 'arrayGet'
+                                }
+                            },
+                            'lineNumber': 13,
+                            'name': 'num'
+                        }},
+                        {'expr': {'expr': {'function': {'args': [{'variable': 'num'}], 'name': 'systemLog'}}, 'lineNumber': 14}},
+                        {'expr': {
+                            'expr': {'binary': {'left': {'variable': '__bareScriptIndex2'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 15,
+                            'name': '__bareScriptIndex2'
+                        }},
+                        {'jump': {
+                            'expr': {
+                                'binary': {
+                                    'left': {'variable': '__bareScriptIndex2'},
+                                    'op': '<',
+                                    'right': {'variable': '__bareScriptLength2'}}
+                            },
+                            'label': '__bareScriptLoop2',
+                            'lineNumber': 15
+                        }},
+                        {'label': {'lineNumber': 15, 'name': '__bareScriptDone2'}},
+                        {'expr': {'expr': {'number': 0.0}, 'lineNumber': 17, 'name': 'ix'}},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'true'}, 'op': '!'}},
+                            'label': '__bareScriptDone3',
+                            'lineNumber': 18
+                        }},
+                        {'label': {'lineNumber': 18, 'name': '__bareScriptLoop3'}},
+                        {'jump': {
+                            'expr': {
+                                'unary': {
+                                    'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 5.0}}},
+                                    'op': '!'
+                                }},
+                            'label': '__bareScriptDone4',
+                            'lineNumber': 19
+                        }},
+                        {'jump': {'label': '__bareScriptDone3', 'lineNumber': 20}},
+                        {'label': {'lineNumber': 21, 'name': '__bareScriptDone4'}},
+                        {'expr': {
+                            'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 22,
+                            'name': 'ix'
+                        }},
+                        {'jump': {
+                            'expr': {
+                                'unary': {
+                                    'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 3.0}}},
+                                    'op': '!'
+                                }
+                            },
+                            'label': '__bareScriptDone5',
+                            'lineNumber': 23
+                        }},
+                        {'jump': {'label': '__bareScriptLoop3', 'lineNumber': 24}},
+                        {'label': {'lineNumber': 25, 'name': '__bareScriptDone5'}},
+                        {'jump': {'expr': {'variable': 'true'}, 'label': '__bareScriptLoop3', 'lineNumber': 26}},
+                        {'label': {'lineNumber': 26, 'name': '__bareScriptDone3'}},
+                        {'return': {'expr': {'variable': 'true'}, 'lineNumber': 28}}
+                    ]
+                }},
+                {'return': {'expr': {'function': {'args': [], 'name': 'main'}}, 'lineNumber': 31}}
             ]
         })
         options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
-        self.assertEqual(execute_script(script, options), 12)
+        self.assertEqual(execute_script(script, options), True)
+        main_statement = script['statements'][0]
         self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
                     'script': script,
                     'covered': {
-                        '1': {'statement': {'expr': {'name': 'a', 'expr': {'number': 5.0}, 'lineNumber': 1}}, 'count': 1},
-                        '2': {'statement': {'expr': {'name': 'b', 'expr': {'number': 7.0}, 'lineNumber': 2}}, 'count': 1},
-                        '3': {'statement': {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}}, 'count': 1},
-                        '5': {'statement': {'label': {'name': 'label', 'lineNumber': 5}}, 'count': 1},
-                        '6': {
-                            'statement': {
-                                'return': {
-                                    'expr': {'binary': {'left': {'variable': 'a'}, 'op': '+', 'right': {'variable': 'b'}}},
-                                    'lineNumber': 6
-                                }
-                            },
-                            'count': 1
-                        }
+                        '1': {'count': 1, 'statement': main_statement},
+                        '2': {'count': 1, 'statement': {'jump': {'label': 'label', 'lineNumber': 2}}},
+                        '3': {'count': 1, 'statement': {'label': {'lineNumber': 3, 'name': 'label'}}},
+                        '5': {'count': 1, 'statement': {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'false'}, 'op': '!'}},
+                            'label': '__bareScriptIf0',
+                            'lineNumber': 5
+                        }}},
+                        '7': {'count': 2, 'statement': {'label': {'lineNumber': 7, 'name': '__bareScriptIf0'}}},
+                        '9': {'count': 1, 'statement': {'label': {'lineNumber': 9, 'name': '__bareScriptIf1'}}},
+                        '10': {'count': 1, 'statement': {'expr': {'expr': {'number': 2.0}, 'lineNumber': 10, 'name': 'ix'}}},
+                        '11': {'count': 1, 'statement': {'label': {'lineNumber': 11, 'name': '__bareScriptDone0'}}},
+                        '13': {'count': 10, 'statement': {'expr': {
+                            'expr': {'function': {'args': [{'number': 1.0}, {'number': 2.0}, {'number': 3.0}], 'name': 'arrayNew'}},
+                            'lineNumber': 13,
+                            'name': '__bareScriptValues2'
+                        }}},
+                        '14': {'count': 3, 'statement': {'expr': {
+                            'expr': {'function': {'args': [{'variable': 'num'}], 'name': 'systemLog'}},
+                            'lineNumber': 14
+                        }}},
+                        '15': {'count': 7, 'statement': {'expr': {
+                            'expr': {'binary': {'left': {'variable': '__bareScriptIndex2'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 15,
+                            'name': '__bareScriptIndex2'
+                        }}},
+                        '17': {'count': 1, 'statement': {'expr': {'expr': {'number': 0.0}, 'lineNumber': 17, 'name': 'ix'}}},
+                        '18': {'count': 14, 'statement': {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'true'}, 'op': '!'}},
+                            'label': '__bareScriptDone3',
+                            'lineNumber': 18
+                        }}},
+                        '19': {'count': 6, 'statement': {'jump': {
+                            'expr': {'unary': {
+                                'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 5.0}}},
+                                'op': '!'
+                            }},
+                            'label': '__bareScriptDone4',
+                            'lineNumber': 19
+                        }}},
+                        '20': {'count': 1, 'statement': {'jump': {'label': '__bareScriptDone3', 'lineNumber': 20}}},
+                        '21': {'count': 1, 'statement': {'label': {'lineNumber': 21, 'name': '__bareScriptDone4'}}},
+                        '22': {'count': 5, 'statement': {'expr': {
+                            'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 22,
+                            'name': 'ix'
+                        }}},
+                        '23': {'count': 5, 'statement': {'jump': {
+                            'expr': {'unary': {
+                                'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 3.0}}},
+                                'op': '!'
+                            }},
+                            'label': '__bareScriptDone5',
+                            'lineNumber': 23
+                        }}},
+                        '24': {'count': 1, 'statement': {'jump': {'label': '__bareScriptLoop3', 'lineNumber': 24}}},
+                        '25': {'count': 1, 'statement': {'label': {'lineNumber': 25, 'name': '__bareScriptDone5'}}},
+                        '26': {'count': 5, 'statement': {'jump': {
+                            'expr': {'variable': 'true'},
+                            'label': '__bareScriptLoop3',
+                            'lineNumber': 26
+                        }}},
+                        '28': {'count': 1, 'statement': {'return': {'expr': {'variable': 'true'}, 'lineNumber': 28}}},
+                        '31': {'count': 1, 'statement': {'return': {'expr': {'function': {'args': [], 'name': 'main'}}, 'lineNumber': 31}}}
                     }
                 }
             }
