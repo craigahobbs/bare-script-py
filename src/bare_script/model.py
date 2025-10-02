@@ -128,27 +128,27 @@ struct IncludeScript
 
 
 # The coverage global configuration
-struct GlobalCoverage
+struct CoverageGlobal
 
     # If true, coverage is enabled
     optional bool enabled
 
     # The map of script name to script coverage
-    optional GlobalCoverageScript{} scripts
+    optional CoverageGlobalScript{} scripts
 
 
 # The script coverage
-struct GlobalCoverageScript
+struct CoverageGlobalScript
 
     # The script
     BareScript script
 
     # The map of script line number string to script statement coverage
-    GlobalCoveredStatement{} coveredStatements
+    CoverageGlobalStatement{} covered
 
 
 # The script statement coverage
-struct GlobalCoveredStatement
+struct CoverageGlobalStatement
 
     # The script statement
     ScriptStatement statement
@@ -301,19 +301,6 @@ def validate_script(script):
     :raises ~schema_markdown.ValidationError: A validation error occurred
     """
     return validate_type(BARE_SCRIPT_TYPES, 'BareScript', script)
-
-
-def validate_coverage_global(global_coverage):
-    """
-    Validate a BareScript global coverage configuration model
-
-    :param script: The `Global Coverage Configuration model <./model/#var.vName='GlobalCoverage'>`__
-    :type script: dict
-    :return: The validated Global Coverage Configuration model
-    :rtype: dict
-    :raises ~schema_markdown.ValidationError: A validation error occurred
-    """
-    return validate_type(BARE_SCRIPT_TYPES, 'GlobalCoverage', global_coverage)
 
 
 def validate_expression(expr):

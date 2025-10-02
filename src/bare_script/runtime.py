@@ -9,10 +9,10 @@ import datetime
 import functools
 
 from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
-from .model import lint_script, validate_coverage_global
+from .model import lint_script
 from .options import url_file_relative
 from .parser import BareScriptParserError, parse_script
-from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
+from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string, value_type
 
 
 def execute_script(script, options=None):
@@ -65,31 +65,9 @@ def _execute_script_helper(script, statements, options, locals_):
         if max_statements > 0 and options['statementCount'] > max_statements:
             raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
 
-        # Increate the statement coverage count
-        coverage_global = globals_.get(BARESCRIPT_GLOBAL_COVERAGE)
-        if coverage_global is not None:
-            # Validate the coverage global
-            try:
-                validate_coverage_global(coverage_global)
-            except:
-                coverage_global = None
-
-            # Coverage enabled?
-            script_name = script.get('scriptName')
-            lineno = statement[statement_key].get('lineNumber')
-            if coverage_global is not None and coverage_global.get('enabled') and script_name is not None and lineno is not None:
-                scripts = coverage_global.get('scripts')
-                if scripts is None:
-                    scripts = coverage_global['scripts'] = {}
-                script_coverage = scripts.get(script_name)
-                if script_coverage is None:
-                    script_coverage = scripts[script_name] = {'script': script, 'coveredStatements': {}}
-                lineno_str = str(lineno)
-                covered_statements = script_coverage['coveredStatements']
-                covered_statement = covered_statements.get(lineno_str)
-                if covered_statement is None:
-                    covered_statement = covered_statements[lineno_str] = {'statement': statement, 'count': 0}
-                covered_statement['count'] += 1
+        # Record the statement coverage
+        if BARESCRIPT_GLOBAL_COVERAGE in globals_:
+            _record_statement_coverage(script, statement, globals_)
 
         # Expression?
         if statement_key == 'expr':
@@ -120,6 +98,10 @@ def _execute_script_helper(script, statements, options, locals_):
                         label_indexes = {}
                     label_indexes[statement['jump']['label']] = ix_label
                     ix_statement = ix_label
+
+                # Record the label statement coverage
+                if BARESCRIPT_GLOBAL_COVERAGE in globals_:
+                    _record_statement_coverage(script, statements[ix_label], globals_)
 
         # Return?
         elif statement_key == 'return':
@@ -178,6 +160,34 @@ def _execute_script_helper(script, statements, options, locals_):
         ix_statement += 1
 
     return None
+
+
+def _record_statement_coverage(script, statement, globals_):
+    # Coverage enabled?
+    coverage_global = globals_[BARESCRIPT_GLOBAL_COVERAGE]
+    if not coverage_global.get('enabled'):
+        return
+
+    # Get the script name and statement line number
+    script_name = script.get('scriptName')
+    statement_key = next(iter(statement.keys()))
+    lineno = statement[statement_key].get('lineNumber')
+    if script_name is None or lineno is None:
+        return
+
+    # Record the statement/lineno coverage
+    scripts = coverage_global.get('scripts')
+    if scripts is None or value_type(scripts) != 'object':
+        scripts = coverage_global['scripts'] = {}
+    script_coverage = scripts.get(script_name)
+    if script_coverage is None or value_type(script_coverage) != 'object':
+        script_coverage = scripts[script_name] = {'script': script, 'covered': {}}
+    lineno_str = str(lineno)
+    covered_statements = script_coverage['covered']
+    covered_statement = covered_statements.get(lineno_str)
+    if covered_statement is None:
+        covered_statement = covered_statements[lineno_str] = {'statement': statement, 'count': 0}
+    covered_statement['count'] += 1
 
 
 # Runtime script function implementation

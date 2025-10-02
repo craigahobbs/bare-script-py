@@ -68,13 +68,12 @@ class TestExecuteScript(unittest.TestCase):
         })
         options = {'globals': {'barescriptCoverage': {'enabled': True}}}
         self.assertEqual(execute_script(script, options), 12)
-        self.maxDiff = None
         self.assertDictEqual(options['globals']['barescriptCoverage'], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
                     'script': script,
-                    'coveredStatements': {
+                    'covered': {
                         '1': {
                             'statement': {'expr': {'name': 'a', 'expr': {'number': 5.0}, 'lineNumber': 1}},
                             'count': 1
