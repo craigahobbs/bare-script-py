@@ -62,7 +62,8 @@ def _execute_script_helper(script, statements, options, locals_):
             raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
-        if BARESCRIPT_COVERAGE_GLOBAL in globals_:
+        has_coverage = BARESCRIPT_COVERAGE_GLOBAL in globals_
+        if has_coverage:
             _record_statement_coverage(script, statement, globals_)
 
         # Expression?
@@ -96,7 +97,7 @@ def _execute_script_helper(script, statements, options, locals_):
                     ix_statement = ix_label
 
                 # Record the label statement coverage
-                if BARESCRIPT_COVERAGE_GLOBAL in globals_:
+                if has_coverage:
                     _record_statement_coverage(script, statements[ix_label], globals_)
 
         # Return?
