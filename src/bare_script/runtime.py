@@ -162,7 +162,7 @@ def _execute_script_helper(script, statements, options, locals_):
 def _record_statement_coverage(script, statement, globals_):
     # Coverage enabled?
     coverage_global = globals_[BARESCRIPT_COVERAGE_GLOBAL]
-    if not coverage_global.get('enabled'):
+    if value_type(coverage_global) != 'object' or not coverage_global.get('enabled'):
         return
 
     # Get the script name and statement line number
@@ -177,7 +177,7 @@ def _record_statement_coverage(script, statement, globals_):
     if scripts is None or value_type(scripts) != 'object':
         scripts = coverage_global['scripts'] = {}
     script_coverage = scripts.get(script_name)
-    if script_coverage is None or value_type(script_coverage) != 'object':
+    if script_coverage is None:
         script_coverage = scripts[script_name] = {'script': script, 'covered': {}}
     lineno_str = str(lineno)
     covered_statements = script_coverage['covered']

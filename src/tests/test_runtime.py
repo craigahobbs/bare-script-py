@@ -61,10 +61,7 @@ class TestExecuteScript(unittest.TestCase):
                 {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
                 {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 4}},
                 {'label': {'name': 'label', 'lineNumber': 5}},
-                {'return': {
-                    'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}},
-                    'lineNumber': 6
-                }}
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 6}}
             ]
         })
         options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
@@ -75,22 +72,10 @@ class TestExecuteScript(unittest.TestCase):
                 'test.bare': {
                     'script': script,
                     'covered': {
-                        '1': {
-                            'statement': {'expr': {'name': 'a', 'expr': {'number': 5.0}, 'lineNumber': 1}},
-                            'count': 1
-                        },
-                        '2': {
-                            'statement': {'expr': {'name': 'b', 'expr': {'number': 7.0}, 'lineNumber': 2}},
-                            'count': 1
-                        },
-                        '3': {
-                            'statement': {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}},
-                            'count': 1
-                        },
-                        '5': {
-                            'statement': {'label': {'name': 'label', 'lineNumber': 5}},
-                            'count': 1
-                        },
+                        '1': {'statement': {'expr': {'name': 'a', 'expr': {'number': 5.0}, 'lineNumber': 1}}, 'count': 1},
+                        '2': {'statement': {'expr': {'name': 'b', 'expr': {'number': 7.0}, 'lineNumber': 2}}, 'count': 1},
+                        '3': {'statement': {'jump': {'label': 'label', 'expr': {'variable': 'true'}, 'lineNumber': 3}}, 'count': 1},
+                        '5': {'statement': {'label': {'name': 'label', 'lineNumber': 5}}, 'count': 1},
                         '6': {
                             'statement': {
                                 'return': {
@@ -104,6 +89,81 @@ class TestExecuteScript(unittest.TestCase):
                 }
             }
         })
+
+
+    def test_execute_script_coverage_disabled(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
+            ]
+        })
+        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': False}}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': False})
+
+
+    def test_execute_script_coverage_non_object(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
+            ]
+        })
+        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: 42}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], 42)
+
+
+    def test_execute_script_coverage_no_name(self):
+        script = validate_script({
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
+            ]
+        })
+        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': True})
+
+
+    def test_execute_script_coverage_no_linenos(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
+            ]
+        })
+        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': True})
 
 
     def test_function(self):

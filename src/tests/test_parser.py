@@ -20,6 +20,13 @@ class TestParseScript(unittest.TestCase):
 '''
         ]))
         self.assertDictEqual(script, {
+            'scriptLines': [
+                'a = arrayNew( \\',
+                '    1,\\',
+                '    2 \\',
+                ')',
+                ''
+            ],
             'statements': [
                 {
                     'expr': {
@@ -29,13 +36,23 @@ class TestParseScript(unittest.TestCase):
                         'lineCount': 4
                     }
                 }
-            ],
-            'scriptLines': [
-                'a = arrayNew( \\',
-                '    1,\\',
-                '    2 \\',
-                ')',
-                ''
+            ]
+        })
+
+
+    def test_script_name(self):
+        script_str = 'return 1 + 2'
+        script = validate_script(parse_script(script_str, 1, 'test.bare'))
+        self.assertDictEqual(script, {
+            'scriptName': 'test.bare',
+            'scriptLines': [*script_str.splitlines()],
+            'statements': [
+                {
+                    'return': {
+                        'expr': {'binary': {'op': '+', 'left': {'number': 1.0}, 'right': {'number': 2.0}}},
+                        'lineNumber': 1
+                    }
+                }
             ]
         })
 
