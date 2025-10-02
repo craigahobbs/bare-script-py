@@ -174,7 +174,7 @@ def _record_statement_coverage(script, statement, globals_):
 
     # Record the statement/lineno coverage
     scripts = coverage_global.get('scripts')
-    if scripts is None or value_type(scripts) != 'object':
+    if scripts is None:
         scripts = coverage_global['scripts'] = {}
     script_coverage = scripts.get(script_name)
     if script_coverage is None:
