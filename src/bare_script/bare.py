@@ -40,7 +40,6 @@ def main(argv=None):
 
     status_code = 0
     inline_count = 0
-    error_name = None
     try:
         # Evaluate the global variable expression arguments
         globals_ = {}
@@ -66,21 +65,19 @@ def main(argv=None):
                     raise ValueError(f'Failed to load "{script_value}"')
             else:
                 inline_count += 1
-                script_name = f'-c {inline_count}'
+                script_name = f'<string{inline_count if inline_count > 1 else ""}>'
                 script_source = script_value
 
             # Parse the script source
-            error_name = script_name
-            script = parse_script(script_source)
+            script = parse_script(script_source, 1, script_name)
 
             # Run the bare-script linter?
             if args.static or args.debug:
                 warnings = lint_script(script)
-                warning_prefix = f'BareScript: Static analysis "{script_name}" ...'
                 if not warnings:
-                    print(f'{warning_prefix} OK')
+                    print(f'BareScript: Static analysis "{script_name}" ... OK')
                 else:
-                    print(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
+                    print(f'BareScript: Static analysis "{script_name}" ... {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                     for warning in warnings:
                         print(f'BareScript:     {warning}')
                     if args.static:
@@ -114,8 +111,6 @@ def main(argv=None):
                 break
 
     except Exception as exc:
-        if error_name is not None:
-            print(f'{error_name}:')
         print(str(exc).strip())
         status_code = 1
 

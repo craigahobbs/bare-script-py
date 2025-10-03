@@ -57,6 +57,20 @@ class TestParseScript(unittest.TestCase):
         })
 
 
+    def test_script_name_error(self):
+        script_str = '''\
+a = 1
+return a + 1 asdf
+'''
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script(script_str, 1, 'test.bare'))
+        self.assertEqual(str(cm_exc.exception), '''\
+test.bare:2: Syntax error
+return a + 1 asdf
+            ^
+''')
+
+
     def test_comments(self):
         script_str = '''\
 include <args.bare>  # Application arguments
@@ -300,7 +314,7 @@ a = arrayNew( \\
     null))
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
     fn1(arg1, fn2(),
                     ^
 ''')
@@ -324,7 +338,7 @@ Syntax error, line number 1:
    )
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
 ...  + value20, value21 + value22 + value23 + value24 + value25, @#$, value26 + value27 + value28 + value29 + value30, value ...
                                                                 ^
 ''')
@@ -348,7 +362,7 @@ Syntax error, line number 1:
    )
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
     reallyLongFunctionName( @#$, value1 + value2 + value3 + value4 + value5, value6 + value7 + value8 + value9 + value10 ...
                            ^
 ''')
@@ -372,7 +386,7 @@ Syntax error, line number 1:
    )
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
 ... alue39 + value40, value41 + value42 + value43 + value44 + value45, value46 + value47 + value48 + value49 + value50 @#$ )
                                                                                                                       ^
 ''')
@@ -594,7 +608,7 @@ function test()
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
 function test()
         ^
 ''')
@@ -722,7 +736,7 @@ elif i < 0:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 1:
+:1: No matching if statement
 elif i < 0:
 ^
 ''')
@@ -738,7 +752,7 @@ while true:
 endwhile
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 2:
+:2: No matching if statement
     elif i < 0:
 ^
 ''')
@@ -752,7 +766,7 @@ else:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 1:
+:1: No matching if statement
 else:
 ^
 ''')
@@ -768,7 +782,7 @@ while true:
 endwhile
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 2:
+:2: No matching if statement
     else:
 ^
 ''')
@@ -780,7 +794,7 @@ No matching if statement, line number 2:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 1:
+:1: No matching if statement
 endif
 ^
 ''')
@@ -794,7 +808,7 @@ while true:
 endwhile
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 2:
+:2: No matching if statement
     endif
 ^
 ''')
@@ -812,7 +826,7 @@ elif i < 0:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Elif statement following else statement, line number 5:
+:5: Elif statement following else statement
 elif i < 0:
 ^
 ''')
@@ -830,7 +844,7 @@ else:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Multiple else statements, line number 5:
+:5: Multiple else statements
 else:
 ^
 ''')
@@ -842,7 +856,7 @@ else:
 if i > 0:
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Missing endif statement, line number 1:
+:1: Missing endif statement
 if i > 0:
 ^
 ''')
@@ -857,7 +871,7 @@ endfunction
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Missing endif statement, line number 2:
+:2: Missing endif statement
     if i > 0:
 ^
 ''')
@@ -872,7 +886,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 3:
+:3: No matching if statement
     endif
 ^
 ''')
@@ -888,7 +902,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 3:
+:3: No matching if statement
     elif i == 1:
 ^
 ''')
@@ -904,7 +918,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching if statement, line number 3:
+:3: No matching if statement
     else:
 ^
 ''')
@@ -998,7 +1012,7 @@ endwhile
 endwhile
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching while statement, line number 1:
+:1: No matching while statement
 endwhile
 ^
 ''')
@@ -1011,7 +1025,7 @@ for value in values:
 endwhile
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching while statement, line number 2:
+:2: No matching while statement
 endwhile
 ^
 ''')
@@ -1023,7 +1037,7 @@ endwhile
 while true:
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Missing endwhile statement, line number 1:
+:1: Missing endwhile statement
 while true:
 ^
 ''')
@@ -1038,7 +1052,7 @@ endfunction
 endwhile
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Missing endwhile statement, line number 2:
+:2: Missing endwhile statement
     while i > 0:
 ^
 ''')
@@ -1053,7 +1067,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching while statement, line number 3:
+:3: No matching while statement
     endwhile
 ^
 ''')
@@ -1069,7 +1083,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Break statement outside of loop, line number 3:
+:3: Break statement outside of loop
         break
 ^
 ''')
@@ -1085,7 +1099,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Continue statement outside of loop, line number 3:
+:3: Continue statement outside of loop
         continue
 ^
 ''')
@@ -1318,7 +1332,7 @@ endfor
 endfor
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching for statement, line number 1:
+:1: No matching for statement
 endfor
 ^
 ''')
@@ -1331,7 +1345,7 @@ while true:
 endfor
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching for statement, line number 2:
+:2: No matching for statement
 endfor
 ^
 ''')
@@ -1343,7 +1357,7 @@ endfor
 for value in values:
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Missing endfor statement, line number 1:
+:1: Missing endfor statement
 for value in values:
 ^
 ''')
@@ -1358,7 +1372,7 @@ endfunction
 endfor
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Missing endfor statement, line number 2:
+:2: Missing endfor statement
     for value in values:
 ^
 ''')
@@ -1373,7 +1387,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching for statement, line number 3:
+:3: No matching for statement
     endfor
 ^
 ''')
@@ -1389,7 +1403,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Break statement outside of loop, line number 3:
+:3: Break statement outside of loop
         break
 ^
 ''')
@@ -1405,7 +1419,7 @@ function test():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Continue statement outside of loop, line number 3:
+:3: Continue statement outside of loop
         continue
 ^
 ''')
@@ -1417,7 +1431,7 @@ Continue statement outside of loop, line number 3:
 break
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Break statement outside of loop, line number 1:
+:1: Break statement outside of loop
 break
 ^
 ''')
@@ -1431,7 +1445,7 @@ if i > 0:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Break statement outside of loop, line number 2:
+:2: Break statement outside of loop
     break
 ^
 ''')
@@ -1443,7 +1457,7 @@ Break statement outside of loop, line number 2:
 continue
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Continue statement outside of loop, line number 1:
+:1: Continue statement outside of loop
 continue
 ^
 ''')
@@ -1457,7 +1471,7 @@ if i > 0:
 endif
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Continue statement outside of loop, line number 2:
+:2: Continue statement outside of loop
     continue
 ^
 ''')
@@ -1495,7 +1509,7 @@ include <file.bare>
 include "file.bare"
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
 include "file.bare"
        ^
 ''')
@@ -1545,7 +1559,7 @@ bar
 c = 2
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 3:
+:3: Syntax error
 foo bar
    ^
 ''')
@@ -1562,7 +1576,7 @@ a = 0
 b = 1 + foo bar
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 2:
+:2: Syntax error
 b = 1 + foo bar
            ^
 ''')
@@ -1578,7 +1592,7 @@ b = 1 + foo bar
 jumpif (@#$) label
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
 jumpif (@#$) label
         ^
 ''')
@@ -1594,7 +1608,7 @@ jumpif (@#$) label
 return @#$
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Syntax error, line number 1:
+:1: Syntax error
 return @#$
        ^
 ''')
@@ -1613,7 +1627,7 @@ function foo():
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-Nested function definition, line number 2:
+:2: Nested function definition
     function bar():
 ^
 ''')
@@ -1630,7 +1644,7 @@ a = 1
 endfunction
 ''')
         self.assertEqual(str(cm_exc.exception), '''\
-No matching function definition, line number 2:
+:2: No matching function definition
 endfunction
 ^
 ''')
@@ -1683,7 +1697,7 @@ class TestParseExpression(unittest.TestCase):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_expression(expr_text)
         self.assertEqual(str(cm_exc.exception), f'''\
-Syntax error:
+Syntax error
 {expr_text}
 ^
 ''')
@@ -1698,7 +1712,7 @@ Syntax error:
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_expression(expr_text)
         self.assertEqual(str(cm_exc.exception), f'''\
-Syntax error:
+Syntax error
 {expr_text}
    ^
 ''')
@@ -1714,7 +1728,7 @@ Syntax error:
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_expression(expr_text)
         self.assertEqual(str(cm_exc.exception), f'''\
-Unmatched parenthesis:
+Unmatched parenthesis
 {expr_text}
     ^
 ''')
@@ -1729,7 +1743,7 @@ Unmatched parenthesis:
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_expression(expr_text)
         self.assertEqual(str(cm_exc.exception), f'''\
-Syntax error:
+Syntax error
 {expr_text}
         ^
 ''')

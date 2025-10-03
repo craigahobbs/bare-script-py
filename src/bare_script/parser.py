@@ -67,7 +67,8 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             line = line_part
 
         # Base statement members
-        statement_base = {'lineNumber': ix_line + 1}
+        line_number = ix_line + 1
+        statement_base = {'lineNumber': line_number}
         if ix_line != ix_line_part:
             statement_base['lineCount'] = (ix_line_part - ix_line) + 1
 
@@ -78,7 +79,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
                 expr_statement = {
                     'expr': {
                         'name': match_assignment.group('name'),
-                        'expr': parse_expression(match_assignment.group('expr')),
+                        'expr': parse_expression(match_assignment.group('expr'), line_number, script_name),
                         **statement_base
                     }
                 }
@@ -86,14 +87,14 @@ def parse_script(script_text, start_line_number=1, script_name=None):
                 continue
             except BareScriptParserError as error:
                 column_number = len(line) - len(match_assignment.group('expr')) + error.column_number
-                raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line)
+                raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
 
         # Function definition begin?
         match_function_begin = _R_SCRIPT_FUNCTION_BEGIN.match(line)
         if match_function_begin:
             # Nested function definitions are not allowed
             if function_def is not None:
-                raise BareScriptParserError('Nested function definition', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('Nested function definition', line, 1, start_line_number + ix_line, script_name)
 
             # Add the function definition statement
             function_label_def_depth = len(label_defs)
@@ -117,14 +118,14 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         match_function_end = _R_SCRIPT_FUNCTION_END.match(line)
         if match_function_end:
             if function_def is None:
-                raise BareScriptParserError('No matching function definition', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching function definition', line, 1, start_line_number + ix_line, script_name)
 
             # Check for un-matched label definitions
             if len(label_defs) > function_label_def_depth:
                 label_def = label_defs.pop()
                 def_key = next(iter(label_def))
                 def_ = label_def[def_key]
-                raise BareScriptParserError(f"Missing end{def_key} statement", def_['line'], 1, def_['lineNumber'])
+                raise BareScriptParserError(f"Missing end{def_key} statement", def_['line'], 1, def_['lineNumber'], script_name)
 
             function_def = None
             function_label_def_depth = None
@@ -137,7 +138,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             ifthen = {
                 'jump': {
                     'label': f"__bareScriptIf{label_index}",
-                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'))}},
+                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'), line_number, script_name)}},
                     **statement_base
                 },
                 'done': f"__bareScriptDone{label_index}",
@@ -159,17 +160,17 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             label_def_depth = function_label_def_depth if function_def is not None else 0
             ifthen = label_defs[len(label_defs) - 1].get('if') if len(label_defs) > label_def_depth else None
             if ifthen is None:
-                raise BareScriptParserError('No matching if statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching if statement', line, 1, start_line_number + ix_line, script_name)
 
             # Cannot come after the else-then statement
             if ifthen['hasElse']:
-                raise BareScriptParserError('Elif statement following else statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('Elif statement following else statement', line, 1, start_line_number + ix_line, script_name)
 
             # Generate the next if-then jump statement
             prev_label = ifthen['jump']['label']
             ifthen['jump'] = {
                 'label': f"__bareScriptIf{label_index}",
-                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'))}},
+                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'), line_number, script_name)}},
                 **statement_base
             }
             label_index += 1
@@ -189,11 +190,11 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             label_def_depth = function_label_def_depth if function_def is not None else 0
             ifthen = label_defs[len(label_defs) - 1].get('if') if len(label_defs) > label_def_depth else None
             if ifthen is None:
-                raise BareScriptParserError('No matching if statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching if statement', line, 1, start_line_number + ix_line, script_name)
 
             # Cannot have multiple else-then statements
             if ifthen['hasElse']:
-                raise BareScriptParserError('Multiple else statements', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('Multiple else statements', line, 1, start_line_number + ix_line, script_name)
             ifthen['hasElse'] = True
 
             # Add the if-then else statements
@@ -210,7 +211,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             label_def_depth = function_label_def_depth if function_def is not None else 0
             ifthen = label_defs.pop().get('if') if len(label_defs) > label_def_depth else None
             if ifthen is None:
-                raise BareScriptParserError('No matching if statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching if statement', line, 1, start_line_number + ix_line, script_name)
 
             # Update the previous jump statement's label, if necessary
             if not ifthen['hasElse']:
@@ -228,7 +229,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
                 'loop': f'__bareScriptLoop{label_index}',
                 'continue': f'__bareScriptLoop{label_index}',
                 'done': f'__bareScriptDone{label_index}',
-                'expr': parse_expression(match_while_begin.group('expr')),
+                'expr': parse_expression(match_while_begin.group('expr'), line_number, script_name),
                 'line': line,
                 'lineNumber': start_line_number + ix_line
             }
@@ -248,11 +249,11 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             # Pop the while-do definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
             if len(label_defs) <= label_def_depth:
-                raise BareScriptParserError('No matching while statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching while statement', line, 1, start_line_number + ix_line, script_name)
 
             whiledo = label_defs.pop().get('while')
             if not whiledo:
-                raise BareScriptParserError('No matching while statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching while statement', line, 1, start_line_number + ix_line, script_name)
 
             # Add the while-do footer statements
             statements.extend([
@@ -281,7 +282,11 @@ def parse_script(script_text, start_line_number=1, script_name=None):
 
             # Add the for-each header statements
             statements.extend([
-                {'expr': {'name': foreach['values'], 'expr': parse_expression(match_for_begin.group('values')), **statement_base}},
+                {'expr': {
+                    'name': foreach['values'],
+                    'expr': parse_expression(match_for_begin.group('values'), line_number, script_name),
+                    **statement_base
+                }},
                 {'expr': {
                     'name': foreach['length'],
                     'expr': {'function': {'name': 'arrayLength', 'args': [{'variable': foreach['values']}]}},
@@ -308,11 +313,11 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             # Pop the foreach definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
             if len(label_defs) <= label_def_depth:
-                raise BareScriptParserError('No matching for statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching for statement', line, 1, start_line_number + ix_line, script_name)
 
             foreach = label_defs.pop().get('for')
             if not foreach:
-                raise BareScriptParserError('No matching for statement', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('No matching for statement', line, 1, start_line_number + ix_line, script_name)
 
             # Add the for-each footer statements
             if foreach.get('hasContinue'):
@@ -339,7 +344,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             label_def_depth = function_label_def_depth if function_def is not None else 0
             ix_label_def = next((i for i, d in reversed(list(enumerate(label_defs))) if 'if' not in d), -1)
             if ix_label_def < label_def_depth:
-                raise BareScriptParserError('Break statement outside of loop', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('Break statement outside of loop', line, 1, start_line_number + ix_line, script_name)
             label_def = label_defs[ix_label_def]
             label_key = next(iter(label_def))
             loop_def = label_def[label_key]
@@ -355,7 +360,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             label_def_depth = function_label_def_depth if function_def is not None else 0
             ix_label_def = next((i for i, d in reversed(list(enumerate(label_defs))) if 'if' not in d), -1)
             if ix_label_def < label_def_depth:
-                raise BareScriptParserError('Continue statement outside of loop', line, 1, start_line_number + ix_line)
+                raise BareScriptParserError('Continue statement outside of loop', line, 1, start_line_number + ix_line, script_name)
             label_def = label_defs[ix_label_def]
             label_key = next(iter(label_def))
             loop_def = label_def[label_key]
@@ -377,10 +382,10 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             jump_statement = {'jump': {'label': match_jump.group('name'), **statement_base}}
             if match_jump.group('expr'):
                 try:
-                    jump_statement['jump']['expr'] = parse_expression(match_jump.group('expr'))
+                    jump_statement['jump']['expr'] = parse_expression(match_jump.group('expr'), line_number, script_name)
                 except BareScriptParserError as error:
                     column_number = len(match_jump.group('jump')) - len(match_jump.group('expr')) - 1 + error.column_number
-                    raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line)
+                    raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
             statements.append(jump_statement)
             continue
 
@@ -390,10 +395,10 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             return_statement = {'return': {**statement_base}}
             if match_return.group('expr'):
                 try:
-                    return_statement['return']['expr'] = parse_expression(match_return.group('expr'))
+                    return_statement['return']['expr'] = parse_expression(match_return.group('expr'), line_number, script_name)
                 except BareScriptParserError as error:
                     column_number = len(match_return.group('return')) - len(match_return.group('expr')) + error.column_number
-                    raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line)
+                    raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
             statements.append(return_statement)
             continue
 
@@ -413,17 +418,17 @@ def parse_script(script_text, start_line_number=1, script_name=None):
 
         # Expression
         try:
-            expr_statement = {'expr': {'expr': parse_expression(line), **statement_base}}
+            expr_statement = {'expr': {'expr': parse_expression(line, line_number, script_name), **statement_base}}
             statements.append(expr_statement)
         except BareScriptParserError as error:
-            raise BareScriptParserError(error.error, line, error.column_number, start_line_number + ix_line)
+            raise BareScriptParserError(error.error, line, error.column_number, start_line_number + ix_line, script_name)
 
     # Dangling label definitions?
     if label_defs:
         label_def = label_defs.pop()
         def_key = next(iter(label_def))
         def_ = label_def[def_key]
-        raise BareScriptParserError(f"Missing end{def_key} statement", def_['line'], 1, def_['lineNumber'])
+        raise BareScriptParserError(f"Missing end{def_key} statement", def_['line'], 1, def_['lineNumber'], script_name)
 
     return script
 
@@ -459,7 +464,7 @@ _R_SCRIPT_BREAK = re.compile(r'^\s*break' + _R_PART_COMMENT)
 _R_SCRIPT_CONTINUE = re.compile(r'^\s*continue' + _R_PART_COMMENT)
 
 
-def parse_expression(expr_text):
+def parse_expression(expr_text, line_number=None, script_name=None):
     """
     Parse a BareScript expression
 
@@ -470,17 +475,17 @@ def parse_expression(expr_text):
     :raises BareScriptParserError: A parsing error occurred
     """
     try:
-        expr, next_text = _parse_binary_expression(expr_text)
+        expr, next_text = _parse_binary_expression(expr_text, None)
         if next_text.strip() != '':
-            raise BareScriptParserError('Syntax error', next_text)
+            raise BareScriptParserError('Syntax error', next_text, 1, line_number, script_name)
         return expr
     except BareScriptParserError as error:
         column_number = len(expr_text) - len(error.line) + 1
-        raise BareScriptParserError(error.error, expr_text, column_number)
+        raise BareScriptParserError(error.error, expr_text, column_number, line_number, script_name)
 
 
 # Helper function to parse a binary operator expression chain
-def _parse_binary_expression(expr_text, bin_left_expr=None):
+def _parse_binary_expression(expr_text, bin_left_expr):
     # Parse the binary operator's left unary expression if none was passed
     if bin_left_expr is not None:
         bin_text = expr_text
@@ -548,10 +553,10 @@ def _parse_unary_expression(expr_text):
     match_group_open = _R_EXPR_GROUP_OPEN.match(expr_text)
     if match_group_open:
         group_text = expr_text[len(match_group_open.group(0)):]
-        expr, next_text = _parse_binary_expression(group_text)
+        expr, next_text = _parse_binary_expression(group_text, None)
         match_group_close = _R_EXPR_GROUP_CLOSE.match(next_text)
         if match_group_close is None:
-            raise BareScriptParserError('Unmatched parenthesis', expr_text)
+            raise BareScriptParserError('Unmatched parenthesis', expr_text, 1, None, None)
         return [{'group': expr}, next_text[len(match_group_close.group(0)):]]
 
     # Number?
@@ -600,11 +605,11 @@ def _parse_unary_expression(expr_text):
             if args:
                 match_function_separator = _R_EXPR_FUNCTION_SEPARATOR.match(arg_text)
                 if match_function_separator is None:
-                    raise BareScriptParserError('Syntax error', arg_text)
+                    raise BareScriptParserError('Syntax error', arg_text, 1, None, None)
                 arg_text = arg_text[len(match_function_separator.group(0)):]
 
             # Get the argument
-            arg_expr, next_arg_text = _parse_binary_expression(arg_text)
+            arg_expr, next_arg_text = _parse_binary_expression(arg_text, None)
             args.append(arg_expr)
             arg_text = next_arg_text
 
@@ -624,7 +629,7 @@ def _parse_unary_expression(expr_text):
         expr = {'variable': variable_name}
         return [expr, expr_text[len(match_variable_ex.group(0)):]]
 
-    raise BareScriptParserError('Syntax error', expr_text)
+    raise BareScriptParserError('Syntax error', expr_text, 1, None, None)
 
 
 # BareScript expression regex
@@ -678,11 +683,11 @@ class BareScriptParserError(Exception):
     :type column_number: int, optional
     :param line_number: The error line number
     :type line_number: int or None, optional
-    :param prefix: The error message prefix line
-    :type prefix: str or None, optional
+    :param script_name: The script name
+    :type script_name: str or None, optional
     """
 
-    def __init__(self, error, line, column_number=1, line_number=None, prefix=None):
+    def __init__(self, error, line, column_number, line_number, script_name):
         # Parser error constants
         line_length_max = 120
         line_suffix = ' ...'
@@ -704,9 +709,9 @@ class BareScriptParserError(Exception):
                 line_column -= line_left - len(line_prefix)
 
         # Format the message
-        newline = '\n'
+        error_prefix = f'{script_name or ""}:{line_number}: ' if line_number else ''
         message = f'''\
-{(prefix + newline) if prefix is not None else ''}{error}{(', line number ' + str(line_number)) if line_number is not None else ''}:
+{error_prefix}{error}
 {line_error}
 {' ' * (line_column - 1)}^
 '''

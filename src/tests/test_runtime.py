@@ -689,6 +689,18 @@ class TestExecuteScript(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Unknown jump label "unknownLabel"')
 
 
+    def test_jump_error_unknown_label_script_name(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'statements': [
+                {'jump': {'label': 'unknownLabel', 'lineNumber': 1}}
+            ]
+        })
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            execute_script(script)
+        self.assertEqual(str(cm_exc.exception), 'test.bare:1: Unknown jump label "unknownLabel"')
+
+
     def test_return(self):
         script = validate_script({
             'statements': [
@@ -949,8 +961,7 @@ endfunction
         with self.assertRaises(BareScriptParserError) as cm_exc:
             execute_script(script, options)
         self.assertEqual(str(cm_exc.exception), '''\
-Included from "test.bare"
-Syntax error, line number 1:
+test.bare:1: Syntax error
 foo bar
    ^
 ''')
@@ -1306,7 +1317,7 @@ class TestEvaluateExpression(unittest.TestCase):
         })
 
         def test(unused_args, unused_options):
-            raise BareScriptRuntimeError('Test error')
+            raise BareScriptRuntimeError(None, None, 'Test error')
 
         options = {
             'globals': {

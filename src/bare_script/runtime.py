@@ -11,7 +11,7 @@ import functools
 from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
-from .parser import BareScriptParserError, parse_script
+from .parser import parse_script
 from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string, value_type
 
 
@@ -59,7 +59,7 @@ def _execute_script_helper(script, statements, options, locals_):
         options['statementCount'] = options.get('statementCount', 0) + 1
         max_statements = options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
         if max_statements > 0 and options['statementCount'] > max_statements:
-            raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
+            raise BareScriptRuntimeError(script, statement, f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
         has_coverage = BARESCRIPT_COVERAGE_GLOBAL in globals_
@@ -68,7 +68,7 @@ def _execute_script_helper(script, statements, options, locals_):
 
         # Expression?
         if statement_key == 'expr':
-            expr_value = evaluate_expression(statement['expr']['expr'], options, locals_, False)
+            expr_value = evaluate_expression(statement['expr']['expr'], options, locals_, False, script, statement)
             expr_name = statement['expr'].get('name')
             if expr_name is not None:
                 if locals_ is not None:
@@ -79,7 +79,8 @@ def _execute_script_helper(script, statements, options, locals_):
         # Jump?
         elif statement_key == 'jump':
             # Evaluate the expression (if any)
-            if 'expr' not in statement['jump'] or value_boolean(evaluate_expression(statement['jump']['expr'], options, locals_, False)):
+            if 'expr' not in statement['jump'] or \
+               value_boolean(evaluate_expression(statement['jump']['expr'], options, locals_, False, script, statement)):
                 # Find the label
                 if label_indexes is not None and statement['jump']['label'] in label_indexes:
                     ix_statement = label_indexes[statement['jump']['label']]
@@ -90,7 +91,7 @@ def _execute_script_helper(script, statements, options, locals_):
                         -1
                     )
                     if ix_label == -1:
-                        raise BareScriptRuntimeError(f"Unknown jump label \"{statement['jump']['label']}\"")
+                        raise BareScriptRuntimeError(script, statement, f"Unknown jump label \"{statement['jump']['label']}\"")
                     if label_indexes is None:
                         label_indexes = {}
                     label_indexes[statement['jump']['label']] = ix_label
@@ -103,7 +104,7 @@ def _execute_script_helper(script, statements, options, locals_):
         # Return?
         elif statement_key == 'return':
             if 'expr' in statement['return']:
-                return evaluate_expression(statement['return']['expr'], options, locals_, False)
+                return evaluate_expression(statement['return']['expr'], options, locals_, False, script, statement)
             return None
 
         # Function?
@@ -127,21 +128,18 @@ def _execute_script_helper(script, statements, options, locals_):
 
                 # Fetch the URL
                 try:
-                    script_text = fetch_fn({'url': url}) if fetch_fn is not None else None
+                    include_text = fetch_fn({'url': url}) if fetch_fn is not None else None
                 except:
-                    script_text = None
-                if script_text is None:
-                    raise BareScriptRuntimeError(f'Include of "{url}" failed')
+                    include_text = None
+                if include_text is None:
+                    raise BareScriptRuntimeError(script, statement, f'Include of "{url}" failed')
 
                 # Parse the include script
-                try:
-                    script = parse_script(script_text, 1, script.get('scriptName'))
-                except BareScriptParserError as exc:
-                    raise BareScriptParserError(exc.error, exc.line, exc.column_number, exc.line_number, f'Included from "{url}"')
+                include_script = parse_script(include_text, 1, url)
 
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
-                    warnings = lint_script(script)
+                    warnings = lint_script(include_script)
                     if warnings:
                         warning_prefix = f'BareScript: Include "{url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
@@ -151,7 +149,7 @@ def _execute_script_helper(script, statements, options, locals_):
                 # Execute the include script
                 include_options = options.copy()
                 include_options['urlFn'] = functools.partial(url_file_relative, url)
-                _execute_script_helper(script, script['statements'], include_options, None)
+                _execute_script_helper(include_script, include_script['statements'], include_options, None)
 
         # Increment the statement counter
         ix_statement += 1
@@ -209,7 +207,7 @@ def _script_function(script, function, args, options):
     return _execute_script_helper(script, function['statements'], options, func_locals)
 
 
-def evaluate_expression(expr, options=None, locals_=None, builtins=True):
+def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=None, statement=None):
     """
     Evaluate an expression model
 
@@ -262,12 +260,12 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
             value_expr = args_expr[0] if args_expr_length >= 1 else None
             true_expr = args_expr[1] if args_expr_length >= 2 else None
             false_expr = args_expr[2] if args_expr_length >= 3 else None
-            value = evaluate_expression(value_expr, options, locals_, builtins) if value_expr else False
+            value = evaluate_expression(value_expr, options, locals_, builtins, script, statement) if value_expr else False
             result_expr = true_expr if value_boolean(value) else false_expr
-            return evaluate_expression(result_expr, options, locals_, builtins) if result_expr else None
+            return evaluate_expression(result_expr, options, locals_, builtins, script, statement) if result_expr else None
 
         # Compute the function arguments
-        func_args = [evaluate_expression(arg, options, locals_, builtins) for arg in expr['function']['args']] \
+        func_args = [evaluate_expression(arg, options, locals_, builtins, script, statement) for arg in expr['function']['args']] \
             if 'args' in expr['function'] else None
 
         # Global/local function?
@@ -291,27 +289,27 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                     return error.return_value
                 return None
 
-        raise BareScriptRuntimeError(f'Undefined function "{func_name}"')
+        raise BareScriptRuntimeError(script, statement, f'Undefined function "{func_name}"')
 
     # Binary expression
     if expr_key == 'binary':
         bin_op = expr['binary']['op']
-        left_value = evaluate_expression(expr['binary']['left'], options, locals_, builtins)
+        left_value = evaluate_expression(expr['binary']['left'], options, locals_, builtins, script, statement)
 
         # Short-circuiting "and" binary operator
         if bin_op == '&&':
             if not value_boolean(left_value):
                 return left_value
-            return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            return evaluate_expression(expr['binary']['right'], options, locals_, builtins, script, statement)
 
         # Short-circuiting "or" binary operator
         elif bin_op == '||':
             if value_boolean(left_value):
                 return left_value
-            return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            return evaluate_expression(expr['binary']['right'], options, locals_, builtins, script, statement)
 
         # Non-short-circuiting binary operators
-        right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+        right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins, script, statement)
         if bin_op == '+':
             # number + number
             if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
@@ -428,7 +426,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
     # Unary expression
     if expr_key == 'unary':
         unary_op = expr['unary']['op']
-        value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins)
+        value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins, script, statement)
         if unary_op == '!':
             return not value_boolean(value)
         elif unary_op == '-':
@@ -443,7 +441,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
     # Expression group
     # expr_key == 'group'
-    return evaluate_expression(expr['group'], options, locals_, builtins)
+    return evaluate_expression(expr['group'], options, locals_, builtins, script, statement)
 
 
 class BareScriptRuntimeError(Exception):
@@ -454,5 +452,12 @@ class BareScriptRuntimeError(Exception):
     :type message: str
     """
 
-    def __init__(self, message):
-        super().__init__(message)
+    def __init__(self, script, statement, message):
+        if script and statement:
+            statement_key = next(iter(statement.keys()))
+            script_name = script.get('scriptName', '')
+            lineno = statement[statement_key].get('lineNumber', '')
+            message_script = f'{script_name}:{lineno}: {message}' if script_name or lineno else message
+        else:
+            message_script = message
+        super().__init__(message_script)
