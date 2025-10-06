@@ -273,21 +273,96 @@ class TestExecuteScript(unittest.TestCase):
         })
 
 
-    def test_execute_script_coverage_disabled(self):
+    def test_execute_script_coverage_include(self):
+        def fetch_fn(request):
+            url = request['url']
+            if url == os.path.join('system', 'sysutil.bare'):
+                return 'a = 1'
+            self.assertEqual(url, os.path.join('util.bare'))
+            return 'b = 2'
+
         script = validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
+                'include <sysutil.bare>',
+                '',
+                "include 'util.bare'"
+            ],
+            'statements': [
+                {'include': {'includes': [{'url': 'sysutil.bare', 'system': True}], 'lineNumber': 1}},
+                {'include': {'includes': [{'url': 'util.bare'}], 'lineNumber': 3}}
+            ]
+        })
+        options = {
+            'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}},
+            'fetchFn': fetch_fn,
+            'systemPrefix': 'system' + os.sep
+        }
+        self.assertIsNone(execute_script(script, options))
+        self.assertEqual(options['globals']['a'], 1)
+        self.assertEqual(options['globals']['b'], 2)
+        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {
+            "enabled": True,
+            "scripts": {
+                "test.bare": {
+                    "script": script,
+                    "covered": {
+                        "1": {
+                            "statement": {"include": {"lineNumber": 1, "includes": [ {"url": "sysutil.bare", "system": True}]}},
+                            "count": 1
+                        },
+                        "3": {
+                            "statement": {"include": {"lineNumber": 3, "includes": [ {"url": "util.bare"}]}},
+                            "count": 1
+                        }
+                    }
+                },
+                "util.bare": {
+                    "script": {
+                        "statements": [
+                            {"expr": {"name": "b", "expr": {"number": 2.0}, "lineNumber": 1}}
+                        ],
+                        "scriptLines": [
+                            "b = 2"
+                        ],
+                        "scriptName": "util.bare"
+                    },
+                    "covered": {
+                        "1": {
+                            "statement": {"expr": {"name": "b", "expr": {"number": 2.0}, "lineNumber": 1}},
+                            "count": 1
+                        }
+                    }
+                }
+            }
+        })
+
+
+    def test_execute_script_coverage_disabled(self):
+        def fetch_fn(request):
+            url = request['url']
+            self.assertEqual(url, os.path.join('system', 'sysutil.bare'))
+            return 'b = 7'
+
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                "include <sysutil.bare>",
                 'a = 5',
-                'b = 7',
                 'return a + b'
             ],
             'statements': [
-                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
-                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
-                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
+                {'include': {'includes': [{'url': 'sysutil.bare', 'system': True}], 'lineNumber': 1}},
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 2}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 3}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 4}}
             ]
         })
-        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': False}}}
+        options = {
+            'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': False}},
+            'fetchFn': fetch_fn,
+            'systemPrefix': 'system' + os.sep
+        }
         self.assertEqual(execute_script(script, options), 12)
         self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': False})
 
