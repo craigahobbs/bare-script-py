@@ -16,6 +16,8 @@ def parse_script(script_text, start_line_number=1, script_name=None):
     :type script_text: str or ~collections.abc.Iterable(str)
     :param start_line_number: The script's starting line number
     :type start_line_number: int, optional
+    :param script_name: The script name
+    :type script_name: str or None, optional
     :return: The `BareScript model <./model/#var.vName='BareScript'>`__
     :rtype: dict
     :raises BareScriptParserError: A parsing error occurred
@@ -675,16 +677,21 @@ class BareScriptParserError(Exception):
 
        The error line number
 
+    .. attribute:: script_name
+       :type: str or None
+
+       The script name
+
     :param error: The error description
     :type error: str
     :param line: The line text
     :type line: str
     :param column_number: The error column number
-    :type column_number: int, optional
+    :type column_number: int
     :param line_number: The error line number
-    :type line_number: int or None, optional
+    :type line_number: int or None
     :param script_name: The script name
-    :type script_name: str or None, optional
+    :type script_name: str or None
     """
 
     def __init__(self, error, line, column_number, line_number, script_name):
@@ -720,3 +727,4 @@ class BareScriptParserError(Exception):
         self.line = line
         self.column_number = column_number
         self.line_number = line_number
+        self.script_name = script_name

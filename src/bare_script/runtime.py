@@ -99,7 +99,7 @@ def _execute_script_helper(script, statements, options, locals_):
 
                 # Record the label statement coverage
                 if has_coverage:
-                    _record_statement_coverage(script, statements[ix_label], globals_)
+                    _record_statement_coverage(script, statements[ix_statement], globals_)
 
         # Return?
         elif statement_key == 'return':

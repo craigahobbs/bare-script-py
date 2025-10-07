@@ -230,7 +230,7 @@ class TestExecuteScript(unittest.TestCase):
                             'name': '__bareScriptIndex2'
                         }}},
                         '17': {'count': 1, 'statement': {'expr': {'expr': {'number': 0.0}, 'lineNumber': 17, 'name': 'ix'}}},
-                        '18': {'count': 14, 'statement': {'jump': {
+                        '18': {'count': 7, 'statement': {'jump': {
                             'expr': {'unary': {'expr': {'variable': 'true'}, 'op': '!'}},
                             'label': '__bareScriptDone3',
                             'lineNumber': 18
@@ -244,7 +244,7 @@ class TestExecuteScript(unittest.TestCase):
                             'lineNumber': 19
                         }}},
                         '20': {'count': 1, 'statement': {'jump': {'label': '__bareScriptDone3', 'lineNumber': 20}}},
-                        '21': {'count': 1, 'statement': {'label': {'lineNumber': 21, 'name': '__bareScriptDone4'}}},
+                        '21': {'count': 5, 'statement': {'label': {'lineNumber': 21, 'name': '__bareScriptDone4'}}},
                         '22': {'count': 5, 'statement': {'expr': {
                             'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '+', 'right': {'number': 1.0}}},
                             'lineNumber': 22,
@@ -259,7 +259,7 @@ class TestExecuteScript(unittest.TestCase):
                             'lineNumber': 23
                         }}},
                         '24': {'count': 1, 'statement': {'jump': {'label': '__bareScriptLoop3', 'lineNumber': 24}}},
-                        '25': {'count': 1, 'statement': {'label': {'lineNumber': 25, 'name': '__bareScriptDone5'}}},
+                        '25': {'count': 4, 'statement': {'label': {'lineNumber': 25, 'name': '__bareScriptDone5'}}},
                         '26': {'count': 5, 'statement': {'jump': {
                             'expr': {'variable': 'true'},
                             'label': '__bareScriptLoop3',
