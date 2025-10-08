@@ -45,7 +45,7 @@ class TestParseScript(unittest.TestCase):
         script = validate_script(parse_script(script_str, 1, 'test.bare'))
         self.assertDictEqual(script, {
             'scriptName': 'test.bare',
-            'scriptLines': [*script_str.splitlines()],
+            'scriptLines': script_str.splitlines(),
             'statements': [
                 {
                     'return': {
