@@ -60,11 +60,9 @@ class TestExecuteScript(unittest.TestCase):
                 '        ix = 2',
                 '    endif',
                 '',
-                '    for num in '
-                'arrayNew(1, 2, 3):',
+                '    for num in arrayNew(1, 2, 3):',
                 '        systemLog(num)',
-                '    endfor  # Numbers '
-                'done',
+                '    endfor  # Numbers ',
                 '',
                 '    ix = 0',
                 '    while true:',
@@ -278,7 +276,7 @@ class TestExecuteScript(unittest.TestCase):
             url = request['url']
             if url == os.path.join('system', 'sysutil.bare'):
                 return 'a = 1'
-            self.assertEqual(url, os.path.join('util.bare'))
+            self.assertEqual(url, 'util.bare')
             return 'b = 2'
 
         script = validate_script({
@@ -302,35 +300,35 @@ class TestExecuteScript(unittest.TestCase):
         self.assertEqual(options['globals']['a'], 1)
         self.assertEqual(options['globals']['b'], 2)
         self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {
-            "enabled": True,
-            "scripts": {
-                "test.bare": {
-                    "script": script,
-                    "covered": {
-                        "1": {
-                            "statement": {"include": {"lineNumber": 1, "includes": [ {"url": "sysutil.bare", "system": True}]}},
-                            "count": 1
+            'enabled': True,
+            'scripts': {
+                'test.bare': {
+                    'script': script,
+                    'covered': {
+                        '1': {
+                            'statement': {'include': {'lineNumber': 1, 'includes': [ {'url': 'sysutil.bare', 'system': True}]}},
+                            'count': 1
                         },
-                        "3": {
-                            "statement": {"include": {"lineNumber": 3, "includes": [ {"url": "util.bare"}]}},
-                            "count": 1
+                        '3': {
+                            'statement': {'include': {'lineNumber': 3, 'includes': [ {'url': 'util.bare'}]}},
+                            'count': 1
                         }
                     }
                 },
-                "util.bare": {
-                    "script": {
-                        "statements": [
-                            {"expr": {"name": "b", "expr": {"number": 2.0}, "lineNumber": 1}}
+                'util.bare': {
+                    'script': {
+                        'statements': [
+                            {'expr': {'name': 'b', 'expr': {'number': 2.0}, 'lineNumber': 1}}
                         ],
-                        "scriptLines": [
-                            "b = 2"
+                        'scriptLines': [
+                            'b = 2'
                         ],
-                        "scriptName": "util.bare"
+                        'scriptName': 'util.bare'
                     },
-                    "covered": {
-                        "1": {
-                            "statement": {"expr": {"name": "b", "expr": {"number": 2.0}, "lineNumber": 1}},
-                            "count": 1
+                    'covered': {
+                        '1': {
+                            'statement': {'expr': {'name': 'b', 'expr': {'number': 2.0}, 'lineNumber': 1}},
+                            'count': 1
                         }
                     }
                 }
@@ -347,7 +345,7 @@ class TestExecuteScript(unittest.TestCase):
         script = validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
-                "include <sysutil.bare>",
+                'include <sysutil.bare>',
                 'a = 5',
                 'return a + b'
             ],
