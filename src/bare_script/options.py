@@ -113,7 +113,7 @@ def url_file_relative(file_, url):
         return f'{file_[:file_.rfind("/") + 1]}{url}'
 
     # The relative-file is an OS path...
-    return os.path.join(os.path.dirname(file_), str(Path(url)))
+    return os.path.normpath(os.path.join(os.path.dirname(file_), str(Path(url))))
 
 
 _R_URL = re.compile(r'^[a-z]+:')

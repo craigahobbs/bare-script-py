@@ -227,3 +227,25 @@ class TestOptions(unittest.TestCase):
             url_file_relative('file.txt', 'file2.txt'),
             'file2.txt'
         )
+
+        # Normalize paths
+        self.assertEqual(
+            url_file_relative('http://craigahobbs.github.io/foo/../file.txt', 'file2.txt'),
+            'http://craigahobbs.github.io/foo/../file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.sep + os.path.join('subdir', '..', 'file.txt'), 'file2.txt'),
+            os.sep + 'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.path.join('subdir', '..', 'file.txt'), 'file2.txt'),
+            'file2.txt'
+        )
+        self.assertEqual(
+            url_file_relative(os.path.join('..', 'file.txt'), 'file2.txt'),
+            os.path.join('..', 'file2.txt')
+        )
+        self.assertEqual(
+            url_file_relative(os.path.join('.', 'file.txt'), 'file2.txt'),
+            'file2.txt'
+        )
