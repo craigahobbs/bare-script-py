@@ -17,24 +17,31 @@ unittestTests = objectNew()
 unittestWarnings = arrayNew()
 
 
+# $function: unittestCoverageStart
+# $group: unittest.bare
+# $doc: Enable coverage data collection
+function unittestCoverageStart():
+    systemGlobalSet(unittestCoverageGlobal, objectNew('enabled', true))
+endfunction
+
+
+# $function: unittestCoverageStop
+# $group: unittest.bare
+# $doc: Enable coverage data collection
+function unittestCoverageStop():
+    objectSet(systemGlobalGet(unittestCoverageGlobal), 'enabled', false)
+endfunction
+
+
+# The global coverage configuration
+unittestCoverageGlobal = '__bareScriptCoverage'
+
+
 # $function: unittestRunTest
 # $group: unittest.bare
 # $doc: Run a unit test
 # $arg testName: The test function name
-function unittestRunTest(testName):
-    testFn = unittestRunTestHelper(testName)
-    if testFn:
-        testFn()
-        systemGlobalSet('unittestTestName', null)
-    endif
-endfunction
-
-
-# $function: unittestRunTestAsync
-# $group: unittest.bare
-# $doc: Run an asyncronous unit test
-# $arg testName: The test function name
-async function unittestRunTestAsync(testName):
+async function unittestRunTest(testName):
     testFn = unittestRunTestHelper(testName)
     if testFn:
         testFn()
@@ -76,7 +83,9 @@ endfunction
 # $group: unittest.bare
 # $doc: Render the unit test report
 # $return: The number of unit test failures
-function unittestReport():
+function unittestReport(options):
+    noCover = options && objectGet(options, 'noCover', false)
+
     # Compute test statistics
     testNames = arraySort(objectKeys(unittestTests))
     testCount = arrayLength(testNames)
@@ -140,7 +149,88 @@ function unittestReport():
         endfor
     endif
 
+    # Coverage report
+    coverage = systemGlobalGet(unittestCoverageGlobal)
+    if coverage != null && !noCover:
+        markdownPrint('', '## Coverage Report')
+        coverageData = unittestCoverageData()
+        if coverageData:
+            dataTable(coverageData, objectNew( \
+                'fields', arrayNew('Script', 'Covered', 'Statement', 'Percent'), \
+                'formats', objectNew( \
+                    'Script', objectNew('markdown', true), \
+                    'Covered', objectNew('align', 'right'), \
+                    'Statement', objectNew('align', 'right'), \
+                    'Percent', objectNew('align', 'right') \
+                ) \
+            ))
+        else:
+            markdownPrint('', '*No data.*')
+        endif
+    endif
+
     return testWarningCount + testFailCount
+endfunction
+
+
+function unittestCoverageData():
+    data = arrayNew()
+    coverage = systemGlobalGet(unittestCoverageGlobal)
+    if coverage != null:
+        scripts = objectGet(coverage, 'scripts')
+        scriptNames = if(scripts != null, arraySort(objectKeys(scripts)), arrayNew())
+        totalStatement = 0
+        totalCovered = 0
+        for scriptName in scriptNames:
+            coverageScript = objectGet(scripts, scriptName)
+            script = objectGet(coverageScript, 'script')
+            covered = objectGet(coverageScript, 'covered')
+            statements = unittestScriptStatements(script)
+            statementCount = arrayLength(statements)
+            coveredCount = 0
+            for statement in statements:
+                statementKey = arrayGet(objectKeys(statement), 0)
+                lineNumber = objectGet(objectGet(statement, statementKey), 'lineNumber')
+                lineStr = stringNew(lineNumber)
+                if objectHas(covered, lineStr):
+                    coveredCount = coveredCount + 1
+                    totalCovered = totalCovered + 1
+                endif
+                totalStatement = totalStatement + 1
+            endfor
+            arrayPush(data, objectNew( \
+                'Script', scriptName, \
+                'Statement', statementCount, \
+                'Covered', coveredCount, \
+                'Percent', if(statementCount, numberToFixed(100 * coveredCount / statementCount, 1) + '%', '') \
+            ))
+        endfor
+        if totalStatement:
+            arrayPush(data, objectNew( \
+                'Script', '**Total**', \
+                'Statement', totalStatement, \
+                'Covered', totalCovered, \
+                'Percent', numberToFixed(100 * totalCovered / totalStatement, 1) + '%' \
+            ))
+        endif
+    endif
+    return data
+endfunction
+
+
+
+function unittestScriptStatements(script):
+    statements = arrayNew()
+    for statement in objectGet(script, 'statements'):
+        statementKey = arrayGet(objectKeys(statement), 0)
+        arrayPush(statements, statement)
+        if statementKey == 'function':
+            for funcStatement in objectGet(objectGet(statement, statementKey), 'statements'):
+                arrayPush(statements, funcStatement)
+            endfor
+        endif
+    endfor
+    return statements
 endfunction
 
 
