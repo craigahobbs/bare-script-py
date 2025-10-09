@@ -9,7 +9,7 @@ endif
 pagerSentinel = true
 
 
-include 'args.bare'
+include <args.bare>
 
 
 # The pager model
