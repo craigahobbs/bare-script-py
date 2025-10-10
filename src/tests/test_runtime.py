@@ -331,6 +331,23 @@ class TestExecuteScript(unittest.TestCase):
                             'count': 1
                         }
                     }
+                },
+                'system/sysutil.bare': {
+                    'script': {
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'number': 1.0}, 'lineNumber': 1}}
+                        ],
+                        'scriptLines': [
+                            'a = 1'
+                        ],
+                        'scriptName': 'system/sysutil.bare'
+                    },
+                    'covered': {
+                        '1': {
+                            'statement': {'expr': {'name': 'a', 'expr': {'number': 1.0}, 'lineNumber': 1}},
+                            'count': 1
+                        }
+                    }
                 }
             }
         })

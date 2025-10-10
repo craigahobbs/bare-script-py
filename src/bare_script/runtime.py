@@ -147,22 +147,10 @@ def _execute_script_helper(script, statements, options, locals_):
                         for warning in warnings:
                             log_fn(f'BareScript:     {warning}')
 
-                # Disable coverage for system includes
-                coverage_disabled = False
-                if has_coverage and system_include:
-                    coverage_global = globals_[BARESCRIPT_COVERAGE_GLOBAL]
-                    if value_type(coverage_global) == 'object' and coverage_global.get('enabled'):
-                        coverage_global['enabled'] = False
-                        coverage_disabled = True
-
-                try:
-                    # Execute the include script
-                    include_options = options.copy()
-                    include_options['urlFn'] = functools.partial(url_file_relative, url)
-                    _execute_script_helper(include_script, include_script['statements'], include_options, None)
-                finally:
-                    if coverage_disabled:
-                        coverage_global['enabled'] = True
+                # Execute the include script
+                include_options = options.copy()
+                include_options['urlFn'] = functools.partial(url_file_relative, url)
+                _execute_script_helper(include_script, include_script['statements'], include_options, None)
 
         # Increment the statement counter
         ix_statement += 1
