@@ -258,9 +258,9 @@ function unittestReport(options):
             '', \
             '## Passing Tests', \
             '', \
-            argsLink(unittestReportArguments, if(hidePass, 'Show', 'Hide'), objectNew('hidePass', !hidePass)) \
+            if(!testNameArg, argsLink(unittestReportArguments, if(hidePass, 'Show', 'Hide'), objectNew('hidePass', !hidePass))) \
         )
-        if !hidePass:
+        if !hidePass || testNameArg:
             for testName in testNames:
                 testFailures = objectGet(unittestTests, testName)
                 if !arrayLength(testFailures):

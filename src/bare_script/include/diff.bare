@@ -99,7 +99,6 @@ function diffLines(left, right):
             ixRight = ixRight + 1
         endwhile
         if identicalLines:
-            arrayPush(objectdiffs, objectNew('type', 'Identical', 'lines', identicalLines))
             continue
         endif
 
