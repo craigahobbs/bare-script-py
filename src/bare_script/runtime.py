@@ -12,7 +12,7 @@ from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTI
 from .model import lint_script
 from .options import url_file_relative
 from .parser import parse_script
-from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string, value_type
+from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
 
 
 def execute_script(script, options=None):
@@ -62,9 +62,10 @@ def _execute_script_helper(script, statements, options, locals_):
             raise BareScriptRuntimeError(script, statement, f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
-        has_coverage = BARESCRIPT_COVERAGE_GLOBAL in globals_
+        coverage_global = globals_.get(BARESCRIPT_COVERAGE_GLOBAL)
+        has_coverage = coverage_global is not None and isinstance(coverage_global, dict) and coverage_global.get('enabled')
         if has_coverage:
-            _record_statement_coverage(script, statement, globals_)
+            _record_statement_coverage(script, statement, statement_key, coverage_global)
 
         # Expression?
         if statement_key == 'expr':
@@ -99,7 +100,9 @@ def _execute_script_helper(script, statements, options, locals_):
 
                 # Record the label statement coverage
                 if has_coverage:
-                    _record_statement_coverage(script, statements[ix_statement], globals_)
+                    label_statement = statements[ix_statement]
+                    label_statement_key = next(iter(label_statement.keys()))
+                    _record_statement_coverage(script, label_statement, label_statement_key, coverage_global)
 
         # Return?
         elif statement_key == 'return':
@@ -159,15 +162,9 @@ def _execute_script_helper(script, statements, options, locals_):
 
 
 # Helper function to record statement coverage
-def _record_statement_coverage(script, statement, globals_):
-    # Coverage enabled?
-    coverage_global = globals_[BARESCRIPT_COVERAGE_GLOBAL]
-    if value_type(coverage_global) != 'object' or not coverage_global.get('enabled'):
-        return
-
+def _record_statement_coverage(script, statement, statement_key, coverage_global):
     # Get the script name and statement line number
     script_name = script.get('scriptName')
-    statement_key = next(iter(statement.keys()))
     lineno = statement[statement_key].get('lineNumber')
     if script_name is None or lineno is None:
         return
