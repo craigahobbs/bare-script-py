@@ -149,17 +149,19 @@ endfunction
 # $group: unittest.bare
 # $doc: Render the unit test report
 # $arg options: Optional unittest report options object. The following options are available:
-# $arg options: - **title** - the page title
+# $arg options: - **coverageExclude** - array of script names to exclude from coverage
+# $arg options: - **coverageHide** - if true, hide the coverage report
+# $arg options: - **coverageMin** - verify minimum coverage percent (0 - 100)
 # $arg options: - **links** - the array of page links
-# $arg options: - **minCoverage** - verify minimum coverage percent (0 - 100)
-# $arg options: - **noCover** - if true, hide the coverage report
+# $arg options: - **title** - the page title
 # $return: The number of unit test failures
 function unittestReport(options):
-    minCoverage = if(options, objectGet(options, 'minCoverage', 0), 0)
-    noCover = if(options, objectGet(options, 'noCover', false), false)
+    coverageMin = if(options, objectGet(options, 'coverageMin', 0), 0)
+    coverageExclude = if(options, objectGet(options, 'coverageExclude'))
+    coverageHide = if(options, objectGet(options, 'coverageHide', false), false)
+    links = if(options, objectGet(options, 'links'))
     defaultTitle = 'unittestReport'
     title = if(options, objectGet(options, 'title', defaultTitle), defaultTitle)
-    links = if(options, objectGet(options, 'links'))
 
     # Parse arguments
     args = argsParse(unittestReportArguments)
@@ -253,17 +255,19 @@ function unittestReport(options):
     # Coverage report
     coverage = coverageGlobalGet()
     coverageFailCount = 0
-    if !testNameArg && coverage && !noCover:
+    if !testNameArg && coverage && !coverageHide:
         markdownPrint('', '## Coverage Report')
-        coverageData = unittestCoverageData()
+
+        # Compute the coverage data table
+        coverageData = unittestCoverageData(coverageExclude)
         if coverageData:
             # Verify the coverage percent
             coveragePercent = objectGet(arrayGet(coverageData, arrayLength(coverageData) - 1), 'Percent')
-            if coveragePercent < minCoverage:
+            if coveragePercent < coverageMin:
                 markdownPrint( \
                     '', \
                     '**Error**: Coverage percentage, ' + numberToFixed(coveragePercent, 1, true) + \
-                        '%, is below the minimum coverage percentage of ' + numberToFixed(minCoverage, 1, true) + '%.' \
+                        '%, is below the minimum coverage percentage of ' + numberToFixed(coverageMin, 1, true) + '%.' \
                 )
                 coverageFailCount = coverageFailCount + 1
             endif
@@ -362,7 +366,7 @@ endfunction
 
 
 # Get the coverage data table - columns are "Script", "Statement", "Covered", and "Percent"
-function unittestCoverageData():
+function unittestCoverageData(coverageExclude):
     data = arrayNew()
 
     # Get the global coverage object
@@ -376,6 +380,21 @@ function unittestCoverageData():
         totalStatement = 0
         totalCovered = 0
         for scriptName in scriptNames:
+            # Excluded?
+            if coverageExclude:
+                isExcluded = false
+                for excludeScriptName in coverageExclude:
+                    if stringEndsWith(scriptName, excludeScriptName):
+                        isExcluded = true
+                        break
+                    endif
+                endfor
+                if isExcluded:
+                    continue
+                endif
+            endif
+
+            # Get the script members
             coverageScript = objectGet(scripts, scriptName)
             script = objectGet(coverageScript, 'script')
             covered = objectGet(coverageScript, 'covered')
