@@ -145,26 +145,6 @@ function unittestDeepEqual(actual, expected, description):
 endfunction
 
 
-# $function: unittestCoverageStart
-# $group: unittest.bare
-# $doc: Start coverage data collection
-function unittestCoverageStart():
-    systemGlobalSet(unittestCoverageGlobal, objectNew('enabled', true))
-endfunction
-
-
-# $function: unittestCoverageStop
-# $group: unittest.bare
-# $doc: Stop coverage data collection
-function unittestCoverageStop():
-    objectSet(systemGlobalGet(unittestCoverageGlobal), 'enabled', false)
-endfunction
-
-
-# The global coverage configuration
-unittestCoverageGlobal = '__bareScriptCoverage'
-
-
 # $function: unittestReport
 # $group: unittest.bare
 # $doc: Render the unit test report
@@ -271,7 +251,7 @@ function unittestReport(options):
     endif
 
     # Coverage report
-    coverage = systemGlobalGet(unittestCoverageGlobal)
+    coverage = coverageGlobalGet()
     coverageFailCount = 0
     if !testNameArg && coverage && !noCover:
         markdownPrint('', '## Coverage Report')
@@ -336,7 +316,7 @@ function unittestReportScript(scriptName):
 
     # Get the (line, coverageColor) tuples
     lineTuples = arrayNew()
-    coverage = systemGlobalGet(unittestCoverageGlobal)
+    coverage = coverageGlobalGet()
     if coverage:
         scripts = objectGet(coverage, 'scripts')
         coverageScript = objectGet(scripts, scriptName)
@@ -386,7 +366,7 @@ function unittestCoverageData():
     data = arrayNew()
 
     # Get the global coverage object
-    coverage = systemGlobalGet(unittestCoverageGlobal)
+    coverage = coverageGlobalGet()
     if coverage:
         # Get the script names with coverage data
         scripts = objectGet(coverage, 'scripts')
