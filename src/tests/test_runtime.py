@@ -9,7 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
-from bare_script.runtime import BARESCRIPT_COVERAGE_GLOBAL
+from bare_script.library import COVERAGE_GLOBAL_NAME
 from bare_script.value import ValueArgsError
 
 
@@ -192,10 +192,10 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'function': {'args': [], 'name': 'main'}}, 'lineNumber': 31}}
             ]
         })
-        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
+        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), True)
         main_statement = script['statements'][0]
-        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
@@ -292,14 +292,14 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         options = {
-            'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}},
+            'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}},
             'fetchFn': fetch_fn,
             'systemPrefix': 'system' + os.sep
         }
         self.assertIsNone(execute_script(script, options))
         self.assertEqual(options['globals']['a'], 1)
         self.assertEqual(options['globals']['b'], 2)
-        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
@@ -331,23 +331,6 @@ class TestExecuteScript(unittest.TestCase):
                             'count': 1
                         }
                     }
-                },
-                'system/sysutil.bare': {
-                    'script': {
-                        'statements': [
-                            {'expr': {'name': 'a', 'expr': {'number': 1.0}, 'lineNumber': 1}}
-                        ],
-                        'scriptLines': [
-                            'a = 1'
-                        ],
-                        'scriptName': 'system/sysutil.bare'
-                    },
-                    'covered': {
-                        '1': {
-                            'statement': {'expr': {'name': 'a', 'expr': {'number': 1.0}, 'lineNumber': 1}},
-                            'count': 1
-                        }
-                    }
                 }
             }
         })
@@ -374,12 +357,12 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         options = {
-            'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': False}},
+            'globals': {COVERAGE_GLOBAL_NAME: {'enabled': False}},
             'fetchFn': fetch_fn,
             'systemPrefix': 'system' + os.sep
         }
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': False})
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': False})
 
 
     def test_execute_script_coverage_non_object(self):
@@ -396,9 +379,9 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
             ]
         })
-        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: 42}}
+        options = {'globals': {COVERAGE_GLOBAL_NAME: 42}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], 42)
+        self.assertEqual(options['globals'][COVERAGE_GLOBAL_NAME], 42)
 
 
     def test_execute_script_coverage_no_name(self):
@@ -414,9 +397,9 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
             ]
         })
-        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
+        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': True})
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
 
 
     def test_execute_script_coverage_no_linenos(self):
@@ -433,9 +416,9 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
             ]
         })
-        options = {'globals': {BARESCRIPT_COVERAGE_GLOBAL: {'enabled': True}}}
+        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals'][BARESCRIPT_COVERAGE_GLOBAL], {'enabled': True})
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
 
 
     def test_function(self):

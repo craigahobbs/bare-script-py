@@ -24,6 +24,9 @@ struct BareScript
     # The script's lines
     optional string[] scriptLines
 
+    # If true, this is a system include script
+    optional bool system
+
 
 # A script statement
 union ScriptStatement

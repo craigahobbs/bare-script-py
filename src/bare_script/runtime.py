@@ -8,7 +8,7 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from .library import COVERAGE_GLOBAL_NAME, DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
 from .parser import parse_script
@@ -62,7 +62,7 @@ def _execute_script_helper(script, statements, options, locals_):
             raise BareScriptRuntimeError(script, statement, f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
-        coverage_global = globals_.get(BARESCRIPT_COVERAGE_GLOBAL)
+        coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
         has_coverage = coverage_global is not None and isinstance(coverage_global, dict) and coverage_global.get('enabled')
         if has_coverage:
             _record_statement_coverage(script, statement, statement_key, coverage_global)
@@ -121,38 +121,40 @@ def _execute_script_helper(script, statements, options, locals_):
             log_fn = options.get('logFn')
             url_fn = options.get('urlFn')
             for include in statement['include']['includes']:
-                url = include['url']
+                include_url = include['url']
 
                 # Fixup system include URL
                 system_include = include.get('system')
                 if system_include and system_prefix is not None:
-                    url = url_file_relative(system_prefix, url)
+                    include_url = url_file_relative(system_prefix, include_url)
                 elif url_fn is not None:
-                    url = url_fn(url)
+                    include_url = url_fn(include_url)
 
                 # Fetch the URL
                 try:
-                    include_text = fetch_fn({'url': url}) if fetch_fn is not None else None
+                    include_text = fetch_fn({'url': include_url}) if fetch_fn is not None else None
                 except:
                     include_text = None
                 if include_text is None:
-                    raise BareScriptRuntimeError(script, statement, f'Include of "{url}" failed')
+                    raise BareScriptRuntimeError(script, statement, f'Include of "{include_url}" failed')
 
                 # Parse the include script
-                include_script = parse_script(include_text, 1, url)
+                include_script = parse_script(include_text, 1, include_url)
+                if system_include:
+                    include_script['system'] = True
 
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
                     warnings = lint_script(include_script)
                     if warnings:
-                        warning_prefix = f'BareScript: Include "{url}" static analysis...'
+                        warning_prefix = f'BareScript: Include "{include_url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                         for warning in warnings:
                             log_fn(f'BareScript:     {warning}')
 
                 # Execute the include script
                 include_options = options.copy()
-                include_options['urlFn'] = functools.partial(url_file_relative, url)
+                include_options['urlFn'] = functools.partial(url_file_relative, include_url)
                 _execute_script_helper(include_script, include_script['statements'], include_options, None)
 
         # Increment the statement counter
@@ -163,6 +165,10 @@ def _execute_script_helper(script, statements, options, locals_):
 
 # Helper function to record statement coverage
 def _record_statement_coverage(script, statement, statement_key, coverage_global):
+    # Don't record system includes
+    if script.get('system'):
+        return
+
     # Get the script name and statement line number
     script_name = script.get('scriptName')
     lineno = statement[statement_key].get('lineNumber')
@@ -176,16 +182,14 @@ def _record_statement_coverage(script, statement, statement_key, coverage_global
     script_coverage = scripts.get(script_name)
     if script_coverage is None:
         script_coverage = scripts[script_name] = {'script': script, 'covered': {}}
+
+    # Increment the statement coverage count
     lineno_str = str(lineno)
     covered_statements = script_coverage['covered']
     covered_statement = covered_statements.get(lineno_str)
     if covered_statement is None:
         covered_statement = covered_statements[lineno_str] = {'statement': statement, 'count': 0}
     covered_statement['count'] += 1
-
-
-# Coverage configuration object global variable name
-BARESCRIPT_COVERAGE_GLOBAL = '__bareScriptCoverage'
 
 
 # Runtime script function implementation
