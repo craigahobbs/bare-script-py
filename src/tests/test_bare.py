@@ -229,8 +229,7 @@ class TestBare(unittest.TestCase):
                 main(['-c', 'asdf asdf'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
--c 1:
-Syntax error, line number 1:
+<string>:1: Syntax error
 asdf asdf
     ^
 ''')
@@ -247,8 +246,7 @@ asdf asdf
                 main(['-c', 'unknown()'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
--c 1:
-Undefined function "unknown"
+<string>:1: Undefined function "unknown"
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)
@@ -381,7 +379,7 @@ Undefined function "unknown"
                 main(['-v', 'A', 'asdf asdf', '-c', 'return A'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-Syntax error:
+Syntax error
 asdf asdf
     ^
 ''')
@@ -413,10 +411,10 @@ Undefined function "unknown"
                 main(['-d', '-c', 'systemLog("Hello")', '-c', 'systemLogDebug("Goodbye")'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... OK
+BareScript: Static analysis "<string>" ... OK
 Hello
 BareScript: Script executed in 100.0 milliseconds
-BareScript: Static analysis "-c 2" ... OK
+BareScript: Static analysis "<string2>" ... OK
 Goodbye
 BareScript: Script executed in 100.0 milliseconds
 ''')
@@ -433,7 +431,7 @@ BareScript: Script executed in 100.0 milliseconds
                 main(['-d', '-c', '0'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... 1 warning:
+BareScript: Static analysis "<string>" ... 1 warning:
 BareScript:     Pointless global statement (index 0)
 BareScript: Script executed in 100.0 milliseconds
 ''')
@@ -471,8 +469,8 @@ BareScript: Script executed in 100.0 milliseconds
                 main(['-s', '-c', 'return 0', '-c', 'return 1'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... OK
-BareScript: Static analysis "-c 2" ... OK
+BareScript: Static analysis "<string>" ... OK
+BareScript: Static analysis "<string2>" ... OK
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -487,7 +485,7 @@ BareScript: Static analysis "-c 2" ... OK
                 main(['-s', '-c', '0', '-c', '1'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "-c 1" ... 1 warning:
+BareScript: Static analysis "<string>" ... 1 warning:
 BareScript:     Pointless global statement (index 0)
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')

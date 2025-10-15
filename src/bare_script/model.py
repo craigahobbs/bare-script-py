@@ -18,6 +18,15 @@ struct BareScript
     # The script's statements
     ScriptStatement[] statements
 
+    # The script name
+    optional string scriptName
+
+    # The script's lines
+    optional string[] scriptLines
+
+    # If true, this is a system include script
+    optional bool system
+
 
 # A script statement
 union ScriptStatement
@@ -32,7 +41,7 @@ union ScriptStatement
     ReturnStatement return
 
     # A label definition
-    string label
+    LabelStatement label
 
     # A function definition
     FunctionStatement function
@@ -41,8 +50,18 @@ union ScriptStatement
     IncludeStatement include
 
 
+# Script statement base struct
+struct BaseStatement
+
+    # The script statement's line number
+    optional int lineNumber
+
+    # The number of lines in the script statement (default is 1)
+    optional int lineCount
+
+
 # An expression statement
-struct ExpressionStatement
+struct ExpressionStatement (BaseStatement)
 
     # The variable name to assign the expression value
     optional string name
@@ -52,7 +71,7 @@ struct ExpressionStatement
 
 
 # A jump statement
-struct JumpStatement
+struct JumpStatement (BaseStatement)
 
     # The label to jump to
     string label
@@ -62,14 +81,21 @@ struct JumpStatement
 
 
 # A return statement
-struct ReturnStatement
+struct ReturnStatement (BaseStatement)
 
     # The expression to return
     optional Expression expr
 
 
+# A label statement
+struct LabelStatement (BaseStatement)
+
+    # The label name
+    string name
+
+
 # A function definition statement
-struct FunctionStatement
+struct FunctionStatement (BaseStatement)
 
     # If true, the function is defined as async
     optional bool async
@@ -88,7 +114,7 @@ struct FunctionStatement
 
 
 # An include statement
-struct IncludeStatement
+struct IncludeStatement (BaseStatement)
 
     # The list of include scripts to load and execute in the global scope
     IncludeScript[len > 0] includes
@@ -102,6 +128,36 @@ struct IncludeScript
 
     # If true, this is a system include
     optional bool system
+
+
+# The coverage global configuration
+struct CoverageGlobal
+
+    # If true, coverage is enabled
+    optional bool enabled
+
+    # The map of script name to script coverage
+    optional CoverageGlobalScript{} scripts
+
+
+# The script coverage
+struct CoverageGlobalScript
+
+    # The script
+    BareScript script
+
+    # The map of script line number string to script statement coverage
+    CoverageGlobalStatement{} covered
+
+
+# The script statement coverage
+struct CoverageGlobalStatement
+
+    # The script statement
+    ScriptStatement statement
+
+    # The statement's coverage count
+    int count
 
 
 # An expression
@@ -357,7 +413,7 @@ def lint_script(script):
                 # Function label statement checks
                 elif fn_statement_key == 'label':
                     # Label redefinition?
-                    fn_statement_label = fn_statement['label']
+                    fn_statement_label = fn_statement['label']['name']
                     if fn_statement_label in fn_labels_defined:
                         warnings.append(
                             f'Redefinition of label "{fn_statement_label}" in function "{function_name}" (index {ix_fn_statement})'
@@ -388,7 +444,7 @@ def lint_script(script):
         # Global label statement checks
         elif statement_key == 'label':
             # Label redefinition?
-            statement_label = statement['label']
+            statement_label = statement['label']['name']
             if statement_label in labels_defined:
                 warnings.append(f'Redefinition of global label "{statement_label}" (index {ix_statement})')
             else:

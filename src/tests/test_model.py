@@ -123,7 +123,7 @@ class TestModel(unittest.TestCase):
                             {'expr': {'name': 'c', 'expr': {'variable': 'a'}}},
                             {'expr': {'name': 'd', 'expr': {'number': 3}}},
                             {'jump': {'label': 'testLabel', 'expr': {'variable': 'd'}}},
-                            {'label': 'testLabel'},
+                            {'label': {'name': 'testLabel'}},
                             {'expr': {'name': 'e', 'expr': {'unary': {
                                 'op': '-',
                                 'expr': {'group': {'binary': {'op': '+', 'left': {'variable': 'b'}, 'right': {'variable': 'c'}}}}
@@ -239,8 +239,8 @@ class TestModel(unittest.TestCase):
                     'function': {
                         'name': 'testFn',
                         'statements': [
-                            {'label': 'usedLabel'},
-                            {'label': 'unusedLabel'},
+                            {'label': {'name': 'usedLabel'}},
+                            {'label': {'name': 'unusedLabel'}},
                             {'jump': {'label': 'usedLabel'}}
                         ]
                     }
@@ -255,8 +255,8 @@ class TestModel(unittest.TestCase):
     def test_lint_script_global_unused_label(self):
         script = {
             'statements': [
-                {'label': 'usedLabel'},
-                {'label': 'unusedLabel'},
+                {'label': {'name': 'usedLabel'}},
+                {'label': {'name': 'unusedLabel'}},
                 {'jump': {'label': 'usedLabel'}}
             ]
         }
@@ -301,8 +301,8 @@ class TestModel(unittest.TestCase):
                     'function': {
                         'name': 'testFn',
                         'statements': [
-                            {'label': 'testLabel'},
-                            {'label': 'testLabel'},
+                            {'label': {'name': 'testLabel'}},
+                            {'label': {'name': 'testLabel'}},
                             {'jump': {'label': 'testLabel'}}
                         ]
                     }
@@ -317,8 +317,8 @@ class TestModel(unittest.TestCase):
     def test_lint_script_global_label_redefined(self):
         script = {
             'statements': [
-                {'label': 'testLabel'},
-                {'label': 'testLabel'},
+                {'label': {'name': 'testLabel'}},
+                {'label': {'name': 'testLabel'}},
                 {'jump': {'label': 'testLabel'}}
             ]
         }

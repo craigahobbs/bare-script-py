@@ -341,6 +341,53 @@ _ARRAY_SORT_ARGS = value_args_model([
 
 
 #
+# Coverage functions
+#
+
+
+# Coverage configuration object global variable name
+COVERAGE_GLOBAL_NAME = '__bareScriptCoverage'
+
+
+# $function: coverageGlobalGet
+# $group: Coverage
+# $doc: Get the coverage global object
+# $return: The [coverage global object](https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript')
+def _coverage_global_get(unused_args, options):
+    globals_ = options.get('globals') if options is not None else None
+    return globals_.get(COVERAGE_GLOBAL_NAME) if globals_ is not None else None
+
+
+# $function: coverageGlobalName
+# $group: Coverage
+# $doc: Get the coverage global variable name
+# $return: The coverage global variable name
+def _coverage_global_name(unused_args, unused_options):
+    return COVERAGE_GLOBAL_NAME
+
+
+# $function: coverageStart
+# $group: Coverage
+# $doc: Start coverage data collection
+def _coverage_start(unused_args, options):
+    globals_ = options.get('globals') if options is not None else None
+    if globals_ is not None:
+        coverage_global = {'enabled': True}
+        globals_[COVERAGE_GLOBAL_NAME] = coverage_global
+
+
+# $function: coverageStop
+# $group: Coverage
+# $doc: Stop coverage data collection
+def _coverage_stop(unused_args, options):
+    globals_ = options.get('globals') if options is not None else None
+    if globals_ is not None:
+        coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
+        if coverage_global is not None:
+            globals_[COVERAGE_GLOBAL_NAME]['enabled'] = False
+
+
+#
 # Data functions
 #
 
@@ -2021,6 +2068,10 @@ SCRIPT_FUNCTIONS = {
     'arrayShift': _array_shift,
     'arraySlice': _array_slice,
     'arraySort': _array_sort,
+    'coverageGlobalGet': _coverage_global_get,
+    'coverageGlobalName': _coverage_global_name,
+    'coverageStart': _coverage_start,
+    'coverageStop': _coverage_stop,
     'dataAggregate': _data_aggregate,
     'dataCalculatedField': _data_calculated_field,
     'dataFilter': _data_filter,

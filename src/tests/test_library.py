@@ -11,7 +11,7 @@ import unittest
 
 import schema_markdown
 
-from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from bare_script.library import COVERAGE_GLOBAL_NAME, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
 
@@ -548,6 +548,58 @@ class TestLibrary(unittest.TestCase):
             SCRIPT_FUNCTIONS['arraySort']([array, 'asdf'], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "compareFn" argument value, "asdf"')
         self.assertIsNone(cm_exc.exception.return_value)
+
+
+    #
+    # Coverage functions
+    #
+
+
+    def test_coverage_global_get(self):
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageGlobalGet']([], None))
+
+        options = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageGlobalGet']([], options))
+
+        options['globals'] = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageGlobalGet']([], options))
+
+        options['globals'][COVERAGE_GLOBAL_NAME] = {'enabled': True}
+        self.assertEqual(SCRIPT_FUNCTIONS['coverageGlobalGet']([], options), options['globals'][COVERAGE_GLOBAL_NAME])
+
+
+    def test_coverage_global_name(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['coverageGlobalName']([], None), '__bareScriptCoverage')
+
+
+    def test_coverage_start(self):
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], None))
+
+        options = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], options))
+
+        options['globals'] = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], options))
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
+
+        options['globals'] = {COVERAGE_GLOBAL_NAME: {'enabled': False}}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], options))
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
+
+
+    def test_coverage_stop(self):
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], None))
+
+        options = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], options))
+
+        options['globals'] = {}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], options))
+        self.assertIsNone(options['globals'].get(COVERAGE_GLOBAL_NAME))
+
+        options['globals'][COVERAGE_GLOBAL_NAME] = {'enabled': True}
+        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], options))
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': False})
 
 
     #

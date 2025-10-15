@@ -8,10 +8,10 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from .library import COVERAGE_GLOBAL_NAME, DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
-from .parser import BareScriptParserError, parse_script
+from .parser import parse_script
 from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
 
 
@@ -41,10 +41,10 @@ def execute_script(script, options=None):
 
     # Execute the script
     options['statementCount'] = 0
-    return _execute_script_helper(script['statements'], options, None)
+    return _execute_script_helper(script, script['statements'], options, None)
 
 
-def _execute_script_helper(statements, options, locals_):
+def _execute_script_helper(script, statements, options, locals_):
     globals_ = options['globals']
 
     # Iterate each script statement
@@ -59,11 +59,17 @@ def _execute_script_helper(statements, options, locals_):
         options['statementCount'] = options.get('statementCount', 0) + 1
         max_statements = options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
         if max_statements > 0 and options['statementCount'] > max_statements:
-            raise BareScriptRuntimeError(f'Exceeded maximum script statements ({max_statements})')
+            raise BareScriptRuntimeError(script, statement, f'Exceeded maximum script statements ({max_statements})')
+
+        # Record the statement coverage
+        coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
+        has_coverage = coverage_global is not None and isinstance(coverage_global, dict) and coverage_global.get('enabled')
+        if has_coverage:
+            _record_statement_coverage(script, statement, statement_key, coverage_global)
 
         # Expression?
         if statement_key == 'expr':
-            expr_value = evaluate_expression(statement['expr']['expr'], options, locals_, False)
+            expr_value = evaluate_expression(statement['expr']['expr'], options, locals_, False, script, statement)
             expr_name = statement['expr'].get('name')
             if expr_name is not None:
                 if locals_ is not None:
@@ -74,29 +80,39 @@ def _execute_script_helper(statements, options, locals_):
         # Jump?
         elif statement_key == 'jump':
             # Evaluate the expression (if any)
-            if 'expr' not in statement['jump'] or value_boolean(evaluate_expression(statement['jump']['expr'], options, locals_, False)):
+            if 'expr' not in statement['jump'] or \
+               value_boolean(evaluate_expression(statement['jump']['expr'], options, locals_, False, script, statement)):
                 # Find the label
                 if label_indexes is not None and statement['jump']['label'] in label_indexes:
                     ix_statement = label_indexes[statement['jump']['label']]
                 else:
                     jump_label = statement['jump']['label']
-                    ix_label = next((ix_stmt for ix_stmt, stmt in enumerate(statements) if stmt.get('label') == jump_label), -1)
+                    ix_label = next(
+                        (ix_stmt for ix_stmt, stmt in enumerate(statements) if 'label' in stmt and stmt['label']['name'] == jump_label),
+                        -1
+                    )
                     if ix_label == -1:
-                        raise BareScriptRuntimeError(f"Unknown jump label \"{statement['jump']['label']}\"")
+                        raise BareScriptRuntimeError(script, statement, f"Unknown jump label \"{statement['jump']['label']}\"")
                     if label_indexes is None:
                         label_indexes = {}
                     label_indexes[statement['jump']['label']] = ix_label
                     ix_statement = ix_label
 
+                # Record the label statement coverage
+                if has_coverage:
+                    label_statement = statements[ix_statement]
+                    label_statement_key = next(iter(label_statement.keys()))
+                    _record_statement_coverage(script, label_statement, label_statement_key, coverage_global)
+
         # Return?
         elif statement_key == 'return':
             if 'expr' in statement['return']:
-                return evaluate_expression(statement['return']['expr'], options, locals_, False)
+                return evaluate_expression(statement['return']['expr'], options, locals_, False, script, statement)
             return None
 
         # Function?
         elif statement_key == 'function':
-            globals_[statement['function']['name']] = functools.partial(_script_function, statement['function'])
+            globals_[statement['function']['name']] = functools.partial(_script_function, script, statement['function'])
 
         # Include?
         elif statement_key == 'include':
@@ -105,41 +121,41 @@ def _execute_script_helper(statements, options, locals_):
             log_fn = options.get('logFn')
             url_fn = options.get('urlFn')
             for include in statement['include']['includes']:
-                url = include['url']
+                include_url = include['url']
 
                 # Fixup system include URL
-                if include.get('system') and system_prefix is not None:
-                    url = url_file_relative(system_prefix, url)
+                system_include = include.get('system')
+                if system_include and system_prefix is not None:
+                    include_url = url_file_relative(system_prefix, include_url)
                 elif url_fn is not None:
-                    url = url_fn(url)
+                    include_url = url_fn(include_url)
 
                 # Fetch the URL
                 try:
-                    script_text = fetch_fn({'url': url}) if fetch_fn is not None else None
+                    include_text = fetch_fn({'url': include_url}) if fetch_fn is not None else None
                 except:
-                    script_text = None
-                if script_text is None:
-                    raise BareScriptRuntimeError(f'Include of "{url}" failed')
+                    include_text = None
+                if include_text is None:
+                    raise BareScriptRuntimeError(script, statement, f'Include of "{include_url}" failed')
 
                 # Parse the include script
-                try:
-                    script = parse_script(script_text)
-                except BareScriptParserError as exc:
-                    raise BareScriptParserError(exc.error, exc.line, exc.column_number, exc.line_number, f'Included from "{url}"')
+                include_script = parse_script(include_text, 1, include_url)
+                if system_include:
+                    include_script['system'] = True
 
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
-                    warnings = lint_script(script)
+                    warnings = lint_script(include_script)
                     if warnings:
-                        warning_prefix = f'BareScript: Include "{url}" static analysis...'
+                        warning_prefix = f'BareScript: Include "{include_url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                         for warning in warnings:
                             log_fn(f'BareScript:     {warning}')
 
                 # Execute the include script
                 include_options = options.copy()
-                include_options['urlFn'] = functools.partial(url_file_relative, url)
-                _execute_script_helper(script['statements'], include_options, None)
+                include_options['urlFn'] = functools.partial(url_file_relative, include_url)
+                _execute_script_helper(include_script, include_script['statements'], include_options, None)
 
         # Increment the statement counter
         ix_statement += 1
@@ -147,8 +163,37 @@ def _execute_script_helper(statements, options, locals_):
     return None
 
 
+# Helper function to record statement coverage
+def _record_statement_coverage(script, statement, statement_key, coverage_global):
+    # Don't record system includes
+    if script.get('system'):
+        return
+
+    # Get the script name and statement line number
+    script_name = script.get('scriptName')
+    lineno = statement[statement_key].get('lineNumber')
+    if script_name is None or lineno is None:
+        return
+
+    # Record the statement/lineno coverage
+    scripts = coverage_global.get('scripts')
+    if scripts is None:
+        scripts = coverage_global['scripts'] = {}
+    script_coverage = scripts.get(script_name)
+    if script_coverage is None:
+        script_coverage = scripts[script_name] = {'script': script, 'covered': {}}
+
+    # Increment the statement coverage count
+    lineno_str = str(lineno)
+    covered_statements = script_coverage['covered']
+    covered_statement = covered_statements.get(lineno_str)
+    if covered_statement is None:
+        covered_statement = covered_statements[lineno_str] = {'statement': statement, 'count': 0}
+    covered_statement['count'] += 1
+
+
 # Runtime script function implementation
-def _script_function(function, args, options):
+def _script_function(script, function, args, options):
     func_locals = {}
     func_args = function.get('args')
     if func_args is not None:
@@ -161,10 +206,10 @@ def _script_function(function, args, options):
                 func_locals[arg_name] = args[ix_arg] if ix_arg != ix_arg_last else args[ix_arg:]
             else:
                 func_locals[arg_name] = [] if ix_arg == ix_arg_last else None
-    return _execute_script_helper(function['statements'], options, func_locals)
+    return _execute_script_helper(script, function['statements'], options, func_locals)
 
 
-def evaluate_expression(expr, options=None, locals_=None, builtins=True):
+def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=None, statement=None):
     """
     Evaluate an expression model
 
@@ -217,12 +262,12 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
             value_expr = args_expr[0] if args_expr_length >= 1 else None
             true_expr = args_expr[1] if args_expr_length >= 2 else None
             false_expr = args_expr[2] if args_expr_length >= 3 else None
-            value = evaluate_expression(value_expr, options, locals_, builtins) if value_expr else False
+            value = evaluate_expression(value_expr, options, locals_, builtins, script, statement) if value_expr else False
             result_expr = true_expr if value_boolean(value) else false_expr
-            return evaluate_expression(result_expr, options, locals_, builtins) if result_expr else None
+            return evaluate_expression(result_expr, options, locals_, builtins, script, statement) if result_expr else None
 
         # Compute the function arguments
-        func_args = [evaluate_expression(arg, options, locals_, builtins) for arg in expr['function']['args']] \
+        func_args = [evaluate_expression(arg, options, locals_, builtins, script, statement) for arg in expr['function']['args']] \
             if 'args' in expr['function'] else None
 
         # Global/local function?
@@ -246,27 +291,27 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
                     return error.return_value
                 return None
 
-        raise BareScriptRuntimeError(f'Undefined function "{func_name}"')
+        raise BareScriptRuntimeError(script, statement, f'Undefined function "{func_name}"')
 
     # Binary expression
     if expr_key == 'binary':
         bin_op = expr['binary']['op']
-        left_value = evaluate_expression(expr['binary']['left'], options, locals_, builtins)
+        left_value = evaluate_expression(expr['binary']['left'], options, locals_, builtins, script, statement)
 
         # Short-circuiting "and" binary operator
         if bin_op == '&&':
             if not value_boolean(left_value):
                 return left_value
-            return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            return evaluate_expression(expr['binary']['right'], options, locals_, builtins, script, statement)
 
         # Short-circuiting "or" binary operator
         elif bin_op == '||':
             if value_boolean(left_value):
                 return left_value
-            return evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+            return evaluate_expression(expr['binary']['right'], options, locals_, builtins, script, statement)
 
         # Non-short-circuiting binary operators
-        right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins)
+        right_value = evaluate_expression(expr['binary']['right'], options, locals_, builtins, script, statement)
         if bin_op == '+':
             # number + number
             if (isinstance(left_value, (int, float)) and not isinstance(left_value, bool) and
@@ -383,7 +428,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
     # Unary expression
     if expr_key == 'unary':
         unary_op = expr['unary']['op']
-        value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins)
+        value = evaluate_expression(expr['unary']['expr'], options, locals_, builtins, script, statement)
         if unary_op == '!':
             return not value_boolean(value)
         elif unary_op == '-':
@@ -398,7 +443,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True):
 
     # Expression group
     # expr_key == 'group'
-    return evaluate_expression(expr['group'], options, locals_, builtins)
+    return evaluate_expression(expr['group'], options, locals_, builtins, script, statement)
 
 
 class BareScriptRuntimeError(Exception):
@@ -409,5 +454,12 @@ class BareScriptRuntimeError(Exception):
     :type message: str
     """
 
-    def __init__(self, message):
-        super().__init__(message)
+    def __init__(self, script, statement, message):
+        if script and statement:
+            statement_key = next(iter(statement.keys()))
+            script_name = script.get('scriptName', '')
+            lineno = statement[statement_key].get('lineNumber', '')
+            message_script = f'{script_name}:{lineno}: {message}' if script_name or lineno else message
+        else:
+            message_script = message
+        super().__init__(message_script)

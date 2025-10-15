@@ -9,6 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
+from bare_script.library import COVERAGE_GLOBAL_NAME
 from bare_script.value import ValueArgsError
 
 
@@ -41,6 +42,383 @@ class TestExecuteScript(unittest.TestCase):
             }
         }
         self.assertEqual(execute_script(script, options), 'Hello, the-url!')
+
+
+    def test_execute_script_coverage(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'function main():',
+                '    jump label',
+                '    label:',
+                '',
+                '    if false:',
+                '        ix = 0',
+                '    elif false:',
+                '        ix = 1',
+                '    else:',
+                '        ix = 2',
+                '    endif',
+                '',
+                '    for num in arrayNew(1, 2, 3):',
+                '        systemLog(num)',
+                '    endfor  # Numbers ',
+                '',
+                '    ix = 0',
+                '    while true:',
+                '        if ix == 5:',
+                '            break',
+                '        endif',
+                '        ix = ix + 1',
+                '        if ix == 3:',
+                '            continue',
+                '        endif',
+                '    endwhile',
+                '',
+                '    return true',
+                'endfunction',
+                '',
+                'return main()'
+            ],
+            'statements': [
+                {'function': {
+                    'name': 'main',
+                    'lineNumber': 1,
+                    'statements': [
+                        {'jump': {'label': 'label', 'lineNumber': 2}},
+                        {'label': {'lineNumber': 3, 'name': 'label'}},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'false'}, 'op': '!'}},
+                            'label': '__bareScriptIf0',
+                            'lineNumber': 5
+                        }},
+                        {'expr': {'expr': {'number': 0.0}, 'lineNumber': 6, 'name': 'ix'}},
+                        {'jump': {'label': '__bareScriptDone0', 'lineNumber': 7}},
+                        {'label': {'lineNumber': 7, 'name': '__bareScriptIf0'}},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'false'},'op': '!'}},
+                            'label': '__bareScriptIf1',
+                            'lineNumber': 7
+                        }},
+                        {'expr': {'expr': {'number': 1.0}, 'lineNumber': 8, 'name': 'ix'}},
+                        {'jump': {'label': '__bareScriptDone0', 'lineNumber': 9}},
+                        {'label': {'lineNumber': 9, 'name': '__bareScriptIf1'}},
+                        {'expr': {'expr': {'number': 2.0}, 'lineNumber': 10, 'name': 'ix'}},
+                        {'label': {'lineNumber': 11, 'name': '__bareScriptDone0'}},
+                        {'expr': {
+                            'expr': {'function': {'args': [{'number': 1.0}, {'number': 2.0}, {'number': 3.0}], 'name': 'arrayNew'}},
+                            'lineNumber': 13,
+                            'name': '__bareScriptValues2'
+                        }},
+                        {'expr': {
+                            'expr': {'function': {'args': [{'variable': '__bareScriptValues2'}], 'name': 'arrayLength'}},
+                            'lineNumber': 13,
+                            'name': '__bareScriptLength2'
+                        }},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': '__bareScriptLength2'}, 'op': '!'}},
+                            'label': '__bareScriptDone2',
+                            'lineNumber': 13
+                        }},
+                        {'expr': {'expr': {'number': 0.0}, 'lineNumber': 13, 'name': '__bareScriptIndex2'}},
+                        {'label': {'lineNumber': 13, 'name': '__bareScriptLoop2'}},
+                        {'expr': {
+                            'expr': {
+                                'function': {
+                                    'args': [{'variable': '__bareScriptValues2'}, {'variable': '__bareScriptIndex2'}],
+                                    'name': 'arrayGet'
+                                }
+                            },
+                            'lineNumber': 13,
+                            'name': 'num'
+                        }},
+                        {'expr': {'expr': {'function': {'args': [{'variable': 'num'}], 'name': 'systemLog'}}, 'lineNumber': 14}},
+                        {'expr': {
+                            'expr': {'binary': {'left': {'variable': '__bareScriptIndex2'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 15,
+                            'name': '__bareScriptIndex2'
+                        }},
+                        {'jump': {
+                            'expr': {
+                                'binary': {
+                                    'left': {'variable': '__bareScriptIndex2'},
+                                    'op': '<',
+                                    'right': {'variable': '__bareScriptLength2'}}
+                            },
+                            'label': '__bareScriptLoop2',
+                            'lineNumber': 15
+                        }},
+                        {'label': {'lineNumber': 15, 'name': '__bareScriptDone2'}},
+                        {'expr': {'expr': {'number': 0.0}, 'lineNumber': 17, 'name': 'ix'}},
+                        {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'true'}, 'op': '!'}},
+                            'label': '__bareScriptDone3',
+                            'lineNumber': 18
+                        }},
+                        {'label': {'lineNumber': 18, 'name': '__bareScriptLoop3'}},
+                        {'jump': {
+                            'expr': {
+                                'unary': {
+                                    'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 5.0}}},
+                                    'op': '!'
+                                }},
+                            'label': '__bareScriptDone4',
+                            'lineNumber': 19
+                        }},
+                        {'jump': {'label': '__bareScriptDone3', 'lineNumber': 20}},
+                        {'label': {'lineNumber': 21, 'name': '__bareScriptDone4'}},
+                        {'expr': {
+                            'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 22,
+                            'name': 'ix'
+                        }},
+                        {'jump': {
+                            'expr': {
+                                'unary': {
+                                    'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 3.0}}},
+                                    'op': '!'
+                                }
+                            },
+                            'label': '__bareScriptDone5',
+                            'lineNumber': 23
+                        }},
+                        {'jump': {'label': '__bareScriptLoop3', 'lineNumber': 24}},
+                        {'label': {'lineNumber': 25, 'name': '__bareScriptDone5'}},
+                        {'jump': {'expr': {'variable': 'true'}, 'label': '__bareScriptLoop3', 'lineNumber': 26}},
+                        {'label': {'lineNumber': 26, 'name': '__bareScriptDone3'}},
+                        {'return': {'expr': {'variable': 'true'}, 'lineNumber': 28}}
+                    ]
+                }},
+                {'return': {'expr': {'function': {'args': [], 'name': 'main'}}, 'lineNumber': 31}}
+            ]
+        })
+        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
+        self.assertEqual(execute_script(script, options), True)
+        main_statement = script['statements'][0]
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {
+            'enabled': True,
+            'scripts': {
+                'test.bare': {
+                    'script': script,
+                    'covered': {
+                        '1': {'count': 1, 'statement': main_statement},
+                        '2': {'count': 1, 'statement': {'jump': {'label': 'label', 'lineNumber': 2}}},
+                        '3': {'count': 1, 'statement': {'label': {'lineNumber': 3, 'name': 'label'}}},
+                        '5': {'count': 1, 'statement': {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'false'}, 'op': '!'}},
+                            'label': '__bareScriptIf0',
+                            'lineNumber': 5
+                        }}},
+                        '7': {'count': 2, 'statement': {'label': {'lineNumber': 7, 'name': '__bareScriptIf0'}}},
+                        '9': {'count': 1, 'statement': {'label': {'lineNumber': 9, 'name': '__bareScriptIf1'}}},
+                        '10': {'count': 1, 'statement': {'expr': {'expr': {'number': 2.0}, 'lineNumber': 10, 'name': 'ix'}}},
+                        '11': {'count': 1, 'statement': {'label': {'lineNumber': 11, 'name': '__bareScriptDone0'}}},
+                        '13': {'count': 10, 'statement': {'expr': {
+                            'expr': {'function': {'args': [{'number': 1.0}, {'number': 2.0}, {'number': 3.0}], 'name': 'arrayNew'}},
+                            'lineNumber': 13,
+                            'name': '__bareScriptValues2'
+                        }}},
+                        '14': {'count': 3, 'statement': {'expr': {
+                            'expr': {'function': {'args': [{'variable': 'num'}], 'name': 'systemLog'}},
+                            'lineNumber': 14
+                        }}},
+                        '15': {'count': 7, 'statement': {'expr': {
+                            'expr': {'binary': {'left': {'variable': '__bareScriptIndex2'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 15,
+                            'name': '__bareScriptIndex2'
+                        }}},
+                        '17': {'count': 1, 'statement': {'expr': {'expr': {'number': 0.0}, 'lineNumber': 17, 'name': 'ix'}}},
+                        '18': {'count': 7, 'statement': {'jump': {
+                            'expr': {'unary': {'expr': {'variable': 'true'}, 'op': '!'}},
+                            'label': '__bareScriptDone3',
+                            'lineNumber': 18
+                        }}},
+                        '19': {'count': 6, 'statement': {'jump': {
+                            'expr': {'unary': {
+                                'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 5.0}}},
+                                'op': '!'
+                            }},
+                            'label': '__bareScriptDone4',
+                            'lineNumber': 19
+                        }}},
+                        '20': {'count': 1, 'statement': {'jump': {'label': '__bareScriptDone3', 'lineNumber': 20}}},
+                        '21': {'count': 5, 'statement': {'label': {'lineNumber': 21, 'name': '__bareScriptDone4'}}},
+                        '22': {'count': 5, 'statement': {'expr': {
+                            'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '+', 'right': {'number': 1.0}}},
+                            'lineNumber': 22,
+                            'name': 'ix'
+                        }}},
+                        '23': {'count': 5, 'statement': {'jump': {
+                            'expr': {'unary': {
+                                'expr': {'binary': {'left': {'variable': 'ix'}, 'op': '==', 'right': {'number': 3.0}}},
+                                'op': '!'
+                            }},
+                            'label': '__bareScriptDone5',
+                            'lineNumber': 23
+                        }}},
+                        '24': {'count': 1, 'statement': {'jump': {'label': '__bareScriptLoop3', 'lineNumber': 24}}},
+                        '25': {'count': 4, 'statement': {'label': {'lineNumber': 25, 'name': '__bareScriptDone5'}}},
+                        '26': {'count': 5, 'statement': {'jump': {
+                            'expr': {'variable': 'true'},
+                            'label': '__bareScriptLoop3',
+                            'lineNumber': 26
+                        }}},
+                        '28': {'count': 1, 'statement': {'return': {'expr': {'variable': 'true'}, 'lineNumber': 28}}},
+                        '31': {'count': 1, 'statement': {'return': {'expr': {'function': {'args': [], 'name': 'main'}}, 'lineNumber': 31}}}
+                    }
+                }
+            }
+        })
+
+
+    def test_execute_script_coverage_include(self):
+        def fetch_fn(request):
+            url = request['url']
+            if url == os.path.join('system', 'sysutil.bare'):
+                return 'a = 1'
+            self.assertEqual(url, 'util.bare')
+            return 'b = 2'
+
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'include <sysutil.bare>',
+                '',
+                "include 'util.bare'"
+            ],
+            'statements': [
+                {'include': {'includes': [{'url': 'sysutil.bare', 'system': True}], 'lineNumber': 1}},
+                {'include': {'includes': [{'url': 'util.bare'}], 'lineNumber': 3}}
+            ]
+        })
+        options = {
+            'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}},
+            'fetchFn': fetch_fn,
+            'systemPrefix': 'system' + os.sep
+        }
+        self.assertIsNone(execute_script(script, options))
+        self.assertEqual(options['globals']['a'], 1)
+        self.assertEqual(options['globals']['b'], 2)
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {
+            'enabled': True,
+            'scripts': {
+                'test.bare': {
+                    'script': script,
+                    'covered': {
+                        '1': {
+                            'statement': {'include': {'lineNumber': 1, 'includes': [ {'url': 'sysutil.bare', 'system': True}]}},
+                            'count': 1
+                        },
+                        '3': {
+                            'statement': {'include': {'lineNumber': 3, 'includes': [ {'url': 'util.bare'}]}},
+                            'count': 1
+                        }
+                    }
+                },
+                'util.bare': {
+                    'script': {
+                        'statements': [
+                            {'expr': {'name': 'b', 'expr': {'number': 2.0}, 'lineNumber': 1}}
+                        ],
+                        'scriptLines': [
+                            'b = 2'
+                        ],
+                        'scriptName': 'util.bare'
+                    },
+                    'covered': {
+                        '1': {
+                            'statement': {'expr': {'name': 'b', 'expr': {'number': 2.0}, 'lineNumber': 1}},
+                            'count': 1
+                        }
+                    }
+                }
+            }
+        })
+
+
+    def test_execute_script_coverage_disabled(self):
+        def fetch_fn(request):
+            url = request['url']
+            self.assertEqual(url, os.path.join('system', 'sysutil.bare'))
+            return 'b = 7'
+
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'include <sysutil.bare>',
+                'a = 5',
+                'return a + b'
+            ],
+            'statements': [
+                {'include': {'includes': [{'url': 'sysutil.bare', 'system': True}], 'lineNumber': 1}},
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 2}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 3}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 4}}
+            ]
+        })
+        options = {
+            'globals': {COVERAGE_GLOBAL_NAME: {'enabled': False}},
+            'fetchFn': fetch_fn,
+            'systemPrefix': 'system' + os.sep
+        }
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': False})
+
+
+    def test_execute_script_coverage_non_object(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
+            ]
+        })
+        options = {'globals': {COVERAGE_GLOBAL_NAME: 42}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertEqual(options['globals'][COVERAGE_GLOBAL_NAME], 42)
+
+
+    def test_execute_script_coverage_no_name(self):
+        script = validate_script({
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}, 'lineNumber': 1}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}, 'lineNumber': 2}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
+            ]
+        })
+        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
+
+
+    def test_execute_script_coverage_no_linenos(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 5',
+                'b = 7',
+                'return a + b'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 5}}},
+                {'expr': {'name': 'b', 'expr': {'number': 7}}},
+                {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
+            ]
+        })
+        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
 
 
     def test_function(self):
@@ -333,13 +711,13 @@ class TestExecuteScript(unittest.TestCase):
             'statements': [
                 {'expr': {'name': 'a', 'expr': {'number': 5}}},
                 {'jump': {'label': 'lab2'}},
-                {'label': 'lab'},
+                {'label': {'name': 'lab'}},
                 {'expr': {'name': 'a', 'expr': {'number': 6}}},
                 {'jump': {'label': 'lab3'}},
-                {'label': 'lab2'},
+                {'label': {'name': 'lab2'}},
                 {'expr': {'name': 'a', 'expr': {'number': 7}}},
                 {'jump': {'label': 'lab'}},
-                {'label': 'lab3'},
+                {'label': {'name': 'lab3'}},
                 {'return': {'expr': {'variable': 'a'}}}
             ]
         })
@@ -353,7 +731,7 @@ class TestExecuteScript(unittest.TestCase):
                 {'expr': {'name': 'i', 'expr': {'number': 0}}},
                 {'expr': {'name': 'a', 'expr': {'number': 0}}},
                 {'expr': {'name': 'b', 'expr': {'number': 1}}},
-                {'label': 'fib'},
+                {'label': {'name': 'fib'}},
                 {'jump': {
                     'label': 'fibend',
                     'expr': {'binary': {'op': '>=', 'left': {'variable': 'i'}, 'right': {'variable': 'n'}}}
@@ -366,7 +744,7 @@ class TestExecuteScript(unittest.TestCase):
                 {'expr': {'name': 'a', 'expr': {'variable': 'tmp'}}},
                 {'expr': {'name': 'i', 'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}}},
                 {'jump': {'label': 'fib'}},
-                {'label': 'fibend'},
+                {'label': {'name': 'fibend'}},
                 {'return': {'expr': {'variable': 'a'}}}
             ]
         })
@@ -382,6 +760,18 @@ class TestExecuteScript(unittest.TestCase):
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             execute_script(script)
         self.assertEqual(str(cm_exc.exception), 'Unknown jump label "unknownLabel"')
+
+
+    def test_jump_error_unknown_label_script_name(self):
+        script = validate_script({
+            'scriptName': 'test.bare',
+            'statements': [
+                {'jump': {'label': 'unknownLabel', 'lineNumber': 1}}
+            ]
+        })
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            execute_script(script)
+        self.assertEqual(str(cm_exc.exception), 'test.bare:1: Unknown jump label "unknownLabel"')
 
 
     def test_return(self):
@@ -644,8 +1034,7 @@ endfunction
         with self.assertRaises(BareScriptParserError) as cm_exc:
             execute_script(script, options)
         self.assertEqual(str(cm_exc.exception), '''\
-Included from "test.bare"
-Syntax error, line number 1:
+test.bare:1: Syntax error
 foo bar
    ^
 ''')
@@ -1001,7 +1390,7 @@ class TestEvaluateExpression(unittest.TestCase):
         })
 
         def test(unused_args, unused_options):
-            raise BareScriptRuntimeError('Test error')
+            raise BareScriptRuntimeError(None, None, 'Test error')
 
         options = {
             'globals': {
