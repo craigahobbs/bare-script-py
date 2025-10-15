@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.6.0 (2025-10-15)
+
+- [17013b3](https://github.com/craigahobbs/bare-script-py/commit/17013b3) - add coverage support
+
 ## 3.5.5 (2025-09-26)
 
 - [e15620b](https://github.com/craigahobbs/bare-script-py/commit/e15620b) - fix numberParseInt issue
