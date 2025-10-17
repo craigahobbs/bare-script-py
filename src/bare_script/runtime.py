@@ -63,7 +63,8 @@ def _execute_script_helper(script, statements, options, locals_):
 
         # Record the statement coverage
         coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
-        has_coverage = coverage_global is not None and isinstance(coverage_global, dict) and coverage_global.get('enabled')
+        has_coverage = coverage_global is not None and isinstance(coverage_global, dict) and \
+            coverage_global.get('enabled') and not script.get('system')
         if has_coverage:
             _record_statement_coverage(script, statement, statement_key, coverage_global)
 
@@ -165,10 +166,6 @@ def _execute_script_helper(script, statements, options, locals_):
 
 # Helper function to record statement coverage
 def _record_statement_coverage(script, statement, statement_key, coverage_global):
-    # Don't record system includes
-    if script.get('system'):
-        return
-
     # Get the script name and statement line number
     script_name = script.get('scriptName')
     lineno = statement[statement_key].get('lineNumber')
