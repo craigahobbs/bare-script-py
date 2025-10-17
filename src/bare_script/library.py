@@ -352,7 +352,7 @@ COVERAGE_GLOBAL_NAME = '__bareScriptCoverage'
 # $function: coverageGlobalGet
 # $group: Coverage
 # $doc: Get the coverage global object
-# $return: The [coverage global object](https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript')
+# $return: The [coverage global object](https://craigahobbs.github.io/bare-script/model/#var.vName='CoverageGlobal')
 def _coverage_global_get(unused_args, options):
     globals_ = options.get('globals') if options is not None else None
     return globals_.get(COVERAGE_GLOBAL_NAME) if globals_ is not None else None
