@@ -145,6 +145,18 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_array_flat(self):
+        array = [1, [2, [3, 4], 5], 6]
+        result = SCRIPT_FUNCTIONS['arrayFlat']([array], None)
+        self.assertListEqual(result, [1, 2, 3, 4, 5, 6])
+
+        # Non-array
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayFlat']([None, None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
     def test_array_get(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arrayGet']([array, 0], None), 1)

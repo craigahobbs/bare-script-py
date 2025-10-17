@@ -82,6 +82,27 @@ _ARRAY_EXTEND_ARGS = value_args_model([
 ])
 
 
+# $function: arrayFlat
+# $group: Array
+# $doc: Flat an array hierarchy
+# $arg array: The array to flat
+# $return: The flated array
+def _array_flat(args, unused_options):
+    array, = value_args_validate(_ARRAY_FLAT_ARGS, args)
+    return list(_array_flat_helper(array))
+
+def _array_flat_helper(array):
+    for item in array:
+        if isinstance(item, list):
+            yield from _array_flat_helper(item)
+        else:
+            yield item
+
+_ARRAY_FLAT_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'}
+])
+
+
 # $function: arrayGet
 # $group: Array
 # $doc: Get an array element
@@ -2055,6 +2076,7 @@ SCRIPT_FUNCTIONS = {
     'arrayCopy': _array_copy,
     'arrayDelete': _array_delete,
     'arrayExtend': _array_extend,
+    'arrayFlat': _array_flat,
     'arrayGet': _array_get,
     'arrayIndexOf': _array_index_of,
     'arrayJoin': _array_join,
