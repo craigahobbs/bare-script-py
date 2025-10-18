@@ -2276,6 +2276,15 @@ Syntax error
         expr = parse_expression('"\\uD83D\\uDE00"')
         self.assertDictEqual(validate_expression(expr), {'string': '\ud83d\ude00'})
 
+        # Escaped
+        expr = parse_expression(
+            '"Escape me: \\\\ \\[ \\] \\( \\) \\< \\> \\\\\\" \\\\\' \\* \\_ \\~ \\` \\# \\| \\-"'
+        )
+        self.assertDictEqual(
+            validate_expression(expr),
+            {'string': "Escape me: \\ \\[ \\] \\( \\) \\< \\> \\\" \\' \\* \\_ \\~ \\` \\# \\| \\-"}
+        )
+
 
     def test_string_literal_backslash_end(self):
         expr = parse_expression("test('abc \\\\', 'def')")
@@ -2303,6 +2312,15 @@ Syntax error
         # Hex
         expr = parse_expression('"\\uD83D\\uDE00"')
         self.assertDictEqual(validate_expression(expr), {'string': '\ud83d\ude00'})
+
+        # Escaped
+        expr = parse_expression(
+            '"Escape me: \\\\ \\[ \\] \\( \\) \\< \\> \\\\\\" \\\\\' \\* \\_ \\~ \\` \\# \\| \\-"'
+        )
+        self.assertDictEqual(
+            validate_expression(expr),
+            {'string': "Escape me: \\ \\[ \\] \\( \\) \\< \\> \\\" \\' \\* \\_ \\~ \\` \\# \\| \\-"}
+        )
 
 
     def test_string_literal_double_quote_backslash_end(self):

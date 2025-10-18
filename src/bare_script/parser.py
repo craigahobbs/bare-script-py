@@ -730,7 +730,7 @@ _R_EXPR_VARIABLE_EX_ESCAPE = re.compile(r'\\([\\\]])')
 
 
 # String literal escapes
-_R_EXPR_STRING_ESCAPES = re.compile(r'(?<!\\)\\([nrtbf\'"\\]|u[0-9a-fA-F]{4})')
+_R_EXPR_STRING_ESCAPES = re.compile(r'\\([nrtbf\'"\\]|u[0-9a-fA-F]{4})')
 
 def _replace_string_escape(match):
     esc = match.group(1)
