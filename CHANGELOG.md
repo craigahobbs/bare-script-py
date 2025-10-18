@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.7.1 (2025-10-18)
+
+- [3ee7931](https://github.com/craigahobbs/bare-script-py/commit/3ee7931) - fix string escape issue
+
 ## 3.7.0 (2025-10-18)
 
 - [7358c64](https://github.com/craigahobbs/bare-script-py/commit/7358c64) - JSON object syntax, array syntax, and string escapes
