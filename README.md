@@ -36,7 +36,7 @@ function. Then execute the script using the
 [execute_script](https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script)
 function. For example:
 
-~~~ python
+``` python
 from bare_script import execute_script, parse_script
 
 # Parse the script
@@ -52,13 +52,13 @@ return N + ' times 2 is ' + double(N)
 # Execute the script
 globals = {'N': 10}
 print(execute_script(script, {'globals': globals}))
-~~~
+```
 
 This outputs:
 
-~~~
+```
 10 times 2 is 20
-~~~
+```
 
 
 ### The BareScript Library
@@ -72,7 +72,7 @@ of the
 [arrayLength](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Array'&arraylength)
 functions.
 
-~~~ python
+``` python
 import urllib.request
 
 from bare_script import execute_script, fetch_http, parse_script
@@ -88,13 +88,13 @@ return 'The BareScript Library has ' + arrayLength(objectGet(docs, 'functions'))
 
 # Execute the script
 print(execute_script(script, {'fetchFn': fetch_http}))
-~~~
+```
 
 This outputs:
 
-~~~
+```
 The BareScript Library has 105 functions
-~~~
+```
 
 
 ## Evaluating BareScript Expressions
@@ -113,7 +113,7 @@ a set of built-in, spreadsheet-like functions.
 
 For example:
 
-~~~ python
+``` python
 from bare_script import evaluate_expression, parse_expression
 
 # Parse the expression
@@ -122,13 +122,13 @@ expr = parse_expression('2 * max(a, b, c)')
 # Evaluate the expression
 variables = {'a': 1, 'b': 2, 'c': 3}
 print(evaluate_expression(expr, None, variables))
-~~~
+```
 
 This outputs:
 
-~~~
+```
 6
-~~~
+```
 
 
 ## The BareScript Command-Line Interface (CLI)
@@ -136,9 +136,9 @@ This outputs:
 You can run BareScript from the command line using the BareScript CLI, "bare". BareScript script
 files use the ".bare" file extension.
 
-~~~
+```
 bare script.bare
-~~~
+```
 
 **Note:** In the BareScript CLI, import statements and the
 [systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&systemfetch)
@@ -161,15 +161,15 @@ with functions for dynamically rendering Markdown text, drawing SVG images, etc.
 
 For example:
 
-```
+~~~
 # Markdown Application
 
 This is a Markdown document with embedded BareScript:
 
-~~~ markdown-script
+``` markdown-script
 markdownPrint('Hello, Markdown!')
-~~~
 ```
+~~~
 
 
 ## Development
@@ -177,6 +177,6 @@ markdownPrint('Hello, Markdown!')
 This package is developed using [python-build](https://github.com/craigahobbs/python-build#readme).
 It was started using [python-template](https://github.com/craigahobbs/python-template#readme) as follows:
 
-~~~
+```
 template-specialize python-template/template/ bare-script-py/ -k package bare-script -k name 'Craig A. Hobbs' -k email 'craigahobbs@gmail.com' -k github 'craigahobbs'
-~~~
+```
