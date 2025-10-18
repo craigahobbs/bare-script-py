@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.7.0 (2025-10-18)
+
+- [7358c64](https://github.com/craigahobbs/bare-script-py/commit/7358c64) - JSON object syntax, array syntax, and string escapes
+
+- [d5b8932](https://github.com/craigahobbs/bare-script-py/commit/d5b8932) - add arrayFlat library function
+
+- [4bff61c](https://github.com/craigahobbs/bare-script-py/commit/4bff61c) - minor runtime coverage optimization
+
 ## 3.6.0 (2025-10-15)
 
 - [17013b3](https://github.com/craigahobbs/bare-script-py/commit/17013b3) - add coverage support
