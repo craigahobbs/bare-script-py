@@ -81,7 +81,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
                 expr_statement = {
                     'expr': {
                         'name': match_assignment.group('name'),
-                        'expr': parse_expression(match_assignment.group('expr'), line_number, script_name),
+                        'expr': parse_expression(match_assignment.group('expr'), line_number, script_name, True),
                         **statement_base
                     }
                 }
@@ -140,7 +140,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             ifthen = {
                 'jump': {
                     'label': f"__bareScriptIf{label_index}",
-                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'), line_number, script_name)}},
+                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'), line_number, script_name, True)}},
                     **statement_base
                 },
                 'done': f"__bareScriptDone{label_index}",
@@ -172,7 +172,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             prev_label = ifthen['jump']['label']
             ifthen['jump'] = {
                 'label': f"__bareScriptIf{label_index}",
-                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'), line_number, script_name)}},
+                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'), line_number, script_name, True)}},
                 **statement_base
             }
             label_index += 1
@@ -231,7 +231,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
                 'loop': f'__bareScriptLoop{label_index}',
                 'continue': f'__bareScriptLoop{label_index}',
                 'done': f'__bareScriptDone{label_index}',
-                'expr': parse_expression(match_while_begin.group('expr'), line_number, script_name),
+                'expr': parse_expression(match_while_begin.group('expr'), line_number, script_name, True),
                 'line': line,
                 'lineNumber': start_line_number + ix_line
             }
@@ -286,7 +286,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             statements.extend([
                 {'expr': {
                     'name': foreach['values'],
-                    'expr': parse_expression(match_for_begin.group('values'), line_number, script_name),
+                    'expr': parse_expression(match_for_begin.group('values'), line_number, script_name, True),
                     **statement_base
                 }},
                 {'expr': {
@@ -384,7 +384,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             jump_statement = {'jump': {'label': match_jump.group('name'), **statement_base}}
             if match_jump.group('expr'):
                 try:
-                    jump_statement['jump']['expr'] = parse_expression(match_jump.group('expr'), line_number, script_name)
+                    jump_statement['jump']['expr'] = parse_expression(match_jump.group('expr'), line_number, script_name, True)
                 except BareScriptParserError as error:
                     column_number = len(match_jump.group('jump')) - len(match_jump.group('expr')) - 1 + error.column_number
                     raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
@@ -397,7 +397,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             return_statement = {'return': {**statement_base}}
             if match_return.group('expr'):
                 try:
-                    return_statement['return']['expr'] = parse_expression(match_return.group('expr'), line_number, script_name)
+                    return_statement['return']['expr'] = parse_expression(match_return.group('expr'), line_number, script_name, True)
                 except BareScriptParserError as error:
                     column_number = len(match_return.group('return')) - len(match_return.group('expr')) + error.column_number
                     raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
@@ -408,7 +408,8 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         match_include = _R_SCRIPT_INCLUDE.match(line) or _R_SCRIPT_INCLUDE_SYSTEM.match(line)
         if match_include:
             delim = match_include.group('delim')
-            url = match_include.group('url') if delim == '<' else _R_EXPR_STRING_ESCAPE.sub('\\1', match_include.group('url'))
+            url = match_include.group('url') if delim == '<' else \
+                _R_EXPR_STRING_ESCAPES.sub(_replace_string_escape, match_include.group('url'))
             include_statement = statements[-1] if statements else None
             if include_statement is None or 'include' not in include_statement:
                 include_statement = {'include': {'includes': [], **statement_base}}
@@ -420,7 +421,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
 
         # Expression
         try:
-            expr_statement = {'expr': {'expr': parse_expression(line, line_number, script_name), **statement_base}}
+            expr_statement = {'expr': {'expr': parse_expression(line, line_number, script_name, True), **statement_base}}
             statements.append(expr_statement)
         except BareScriptParserError as error:
             raise BareScriptParserError(error.error, line, error.column_number, start_line_number + ix_line, script_name)
@@ -466,18 +467,24 @@ _R_SCRIPT_BREAK = re.compile(r'^\s*break' + _R_PART_COMMENT)
 _R_SCRIPT_CONTINUE = re.compile(r'^\s*continue' + _R_PART_COMMENT)
 
 
-def parse_expression(expr_text, line_number=None, script_name=None):
+def parse_expression(expr_text, line_number=None, script_name=None, array_literals=False):
     """
     Parse a BareScript expression
 
     :param expr_text: The `expression text <https://craigahobbs.github.io/bare-script/language/#expressions>`__
     :type expr_text: str or ~collections.abc.Iterable(str)
+    :param line_number: The script line number
+    :type line_number: int or None, optional
+    :param script_name: The script name
+    :type script_name: str or None, optional
+    :param array_literals: If True, allow parsing of array literals
+    :type array_literals: bool, optional
     :return: The `expression model <./model/#var.vName='Expression'>`__
     :rtype: dict
     :raises BareScriptParserError: A parsing error occurred
     """
     try:
-        expr, next_text = _parse_binary_expression(expr_text, None)
+        expr, next_text = _parse_binary_expression(expr_text, None, array_literals)
         if next_text.strip() != '':
             raise BareScriptParserError('Syntax error', next_text, 1, line_number, script_name)
         return expr
@@ -487,13 +494,13 @@ def parse_expression(expr_text, line_number=None, script_name=None):
 
 
 # Helper function to parse a binary operator expression chain
-def _parse_binary_expression(expr_text, bin_left_expr):
+def _parse_binary_expression(expr_text, bin_left_expr, array_literals):
     # Parse the binary operator's left unary expression if none was passed
     if bin_left_expr is not None:
         bin_text = expr_text
         left_expr = bin_left_expr
     else:
-        left_expr, bin_text = _parse_unary_expression(expr_text)
+        left_expr, bin_text = _parse_unary_expression(expr_text, array_literals)
 
     # Match a binary operator - if not found, return the left expression
     match_binary_op = _R_EXPR_BINARY_OP.match(bin_text)
@@ -507,7 +514,7 @@ def _parse_binary_expression(expr_text, bin_left_expr):
     right_text = bin_text[len(match_binary_op.group(0)):]
 
     # Parse the right sub-expression
-    right_expr, next_text = _parse_unary_expression(right_text)
+    right_expr, next_text = _parse_unary_expression(right_text, array_literals)
 
     # Create the binary expression - re-order for binary operators as necessary
     bin_expr = None
@@ -522,7 +529,7 @@ def _parse_binary_expression(expr_text, bin_left_expr):
         bin_expr = {'binary': {'op': bin_op, 'left': left_expr, 'right': right_expr}}
 
     # Parse the next binary expression in the chain
-    return _parse_binary_expression(next_text, bin_expr)
+    return _parse_binary_expression(next_text, bin_expr, array_literals)
 
 
 # Binary operator re-order map
@@ -550,12 +557,12 @@ BINARY_REORDER = {
 
 
 # Helper function to parse a unary expression
-def _parse_unary_expression(expr_text):
+def _parse_unary_expression(expr_text, array_literals):
     # Group open?
     match_group_open = _R_EXPR_GROUP_OPEN.match(expr_text)
     if match_group_open:
         group_text = expr_text[len(match_group_open.group(0)):]
-        expr, next_text = _parse_binary_expression(group_text, None)
+        expr, next_text = _parse_binary_expression(group_text, None, array_literals)
         match_group_close = _R_EXPR_GROUP_CLOSE.match(next_text)
         if match_group_close is None:
             raise BareScriptParserError('Unmatched parenthesis', expr_text, 1, None, None)
@@ -572,14 +579,14 @@ def _parse_unary_expression(expr_text):
     # String?
     match_string = _R_EXPR_STRING.match(expr_text)
     if match_string:
-        string = _R_EXPR_STRING_ESCAPE.sub('\\1', match_string.group(1))
+        string = _R_EXPR_STRING_ESCAPES.sub(_replace_string_escape, match_string.group(1))
         expr = {'string': string}
         return [expr, expr_text[len(match_string.group(0)):]]
 
     # String (double quotes)?
     match_string_double = _R_EXPR_STRING_DOUBLE.match(expr_text)
     if match_string_double:
-        string = _R_EXPR_STRING_DOUBLE_ESCAPE.sub('\\1', match_string_double.group(1))
+        string = _R_EXPR_STRING_ESCAPES.sub(_replace_string_escape, match_string_double.group(1))
         expr = {'string': string}
         return [expr, expr_text[len(match_string_double.group(0)):]]
 
@@ -587,7 +594,7 @@ def _parse_unary_expression(expr_text):
     match_unary = _R_EXPR_UNARY_OP.match(expr_text)
     if match_unary:
         unary_text = expr_text[len(match_unary.group(0)):]
-        expr, next_text = _parse_unary_expression(unary_text)
+        expr, next_text = _parse_unary_expression(unary_text, array_literals)
         unary_expr = {'unary': {'op': match_unary.group(1), 'expr': expr}}
         return [unary_expr, next_text]
 
@@ -611,12 +618,75 @@ def _parse_unary_expression(expr_text):
                 arg_text = arg_text[len(match_function_separator.group(0)):]
 
             # Get the argument
-            arg_expr, next_arg_text = _parse_binary_expression(arg_text, None)
+            arg_expr, next_arg_text = _parse_binary_expression(arg_text, None, array_literals)
             args.append(arg_expr)
             arg_text = next_arg_text
 
         fn_expr = {'function': {'name': match_function_open.group(1), 'args': args}}
         return [fn_expr, arg_text]
+
+    # Object creation?
+    match_object_open = _R_EXPR_OBJECT_OPEN.match(expr_text)
+    if match_object_open:
+        arg_text = expr_text[len(match_object_open.group(0)):]
+        args = []
+        while True:
+            # Object close?
+            match_object_close = _R_EXPR_OBJECT_CLOSE.match(arg_text)
+            if match_object_close:
+                arg_text = arg_text[len(match_object_close.group(0)):]
+                break
+
+            # Object key separator
+            if args:
+                match_object_key_separator = _R_EXPR_OBJECT_SEPARATOR2.match(arg_text)
+                if match_object_key_separator is None:
+                    raise BareScriptParserError('Syntax error', arg_text, 1, None, None)
+                arg_text = arg_text[len(match_object_key_separator.group(0)):]
+
+            # Get the key
+            arg_key, arg_text = _parse_binary_expression(arg_text, None, array_literals)
+            args.append(arg_key)
+
+            # Value separator
+            match_object_value_separator = _R_EXPR_OBJECT_SEPARATOR.match(arg_text)
+            if match_object_value_separator is None:
+                raise BareScriptParserError('Syntax error', arg_text, 1, None, None)
+            arg_text = arg_text[len(match_object_value_separator.group(0)):]
+
+            # Get the value
+            arg_value, arg_text = _parse_binary_expression(arg_text, None, array_literals)
+            args.append(arg_value)
+
+        fn_expr = {'function': {'name': 'objectNew', 'args': args}}
+        return [fn_expr, arg_text]
+
+    # Array creation?
+    if array_literals:
+        match_array_open = _R_EXPR_ARRAY_OPEN.match(expr_text)
+        if match_array_open:
+            arg_text = expr_text[len(match_array_open.group(0)):]
+            args = []
+            while True:
+                # Array close?
+                match_array_close = _R_EXPR_ARRAY_CLOSE.match(arg_text)
+                if match_array_close:
+                    arg_text = arg_text[len(match_array_close.group(0)):]
+                    break
+
+                # Array key separator
+                if args:
+                    match_array_separator = _R_EXPR_ARRAY_SEPARATOR.match(arg_text)
+                    if match_array_separator is None:
+                        raise BareScriptParserError('Syntax error', arg_text, 1, None, None)
+                    arg_text = arg_text[len(match_array_separator.group(0)):]
+
+                # Get the value
+                arg_value, arg_text = _parse_binary_expression(arg_text, None, array_literals)
+                args.append(arg_value)
+
+            fn_expr = {'function': {'name': 'arrayNew', 'args': args}}
+            return [fn_expr, arg_text]
 
     # Variable?
     match_variable = _R_EXPR_VARIABLE.match(expr_text)
@@ -625,11 +695,12 @@ def _parse_unary_expression(expr_text):
         return [expr, expr_text[len(match_variable.group(0)):]]
 
     # Variable (brackets)?
-    match_variable_ex = _R_EXPR_VARIABLE_EX.match(expr_text)
-    if match_variable_ex:
-        variable_name = _R_EXPR_VARIABLE_EX_ESCAPE.sub('\\1', match_variable_ex.group(1))
-        expr = {'variable': variable_name}
-        return [expr, expr_text[len(match_variable_ex.group(0)):]]
+    if not array_literals:
+        match_variable_ex = _R_EXPR_VARIABLE_EX.match(expr_text)
+        if match_variable_ex:
+            variable_name = _R_EXPR_VARIABLE_EX_ESCAPE.sub('\\1', match_variable_ex.group(1))
+            expr = {'variable': variable_name}
+            return [expr, expr_text[len(match_variable_ex.group(0)):]]
 
     raise BareScriptParserError('Syntax error', expr_text, 1, None, None)
 
@@ -644,13 +715,39 @@ _R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
 _R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')
 _R_EXPR_GROUP_CLOSE = re.compile(r'^\s*\)')
 _R_EXPR_NUMBER = re.compile(r'^\s*(0x[A-Fa-f0-9]+|[+-]?\d+(?:\.\d*)?(?:e[+-]?\d+)?)')
+_R_EXPR_ARRAY_OPEN = re.compile(r'^\s*\[')
+_R_EXPR_ARRAY_SEPARATOR = re.compile(r'^\s*,')
+_R_EXPR_ARRAY_CLOSE = re.compile(r'^\s*\]')
+_R_EXPR_OBJECT_OPEN = re.compile(r'^\s*\{')
+_R_EXPR_OBJECT_SEPARATOR = re.compile(r'^\s*:')
+_R_EXPR_OBJECT_SEPARATOR2 = re.compile(r'^\s*,')
+_R_EXPR_OBJECT_CLOSE = re.compile(r'^\s*\}')
 _R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
-_R_EXPR_STRING_ESCAPE = re.compile(r'\\([\\\'])')
 _R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')
-_R_EXPR_STRING_DOUBLE_ESCAPE = re.compile(r'\\([\\"])')
 _R_EXPR_VARIABLE = re.compile(r'^\s*([A-Za-z_]\w*)')
 _R_EXPR_VARIABLE_EX = re.compile(r'^\s*\[\s*((?:\\\]|[^\]])+)\s*\]')
 _R_EXPR_VARIABLE_EX_ESCAPE = re.compile(r'\\([\\\]])')
+
+
+# String literal escapes
+_R_EXPR_STRING_ESCAPES = re.compile(r'(?<!\\)\\([nrtbf\'"\\]|u[0-9a-fA-F]{4})')
+
+def _replace_string_escape(match):
+    esc = match.group(1)
+    if esc.startswith('u'):
+        return chr(int(esc[1:], 16))
+    return _EXPR_STRING_ESCAPES[esc]
+
+_EXPR_STRING_ESCAPES = {
+    'n': '\n',
+    'r': '\r',
+    't': '\t',
+    'b': '\b',
+    'f': '\f',
+    "'": "'",
+    '"': '"',
+    '\\': '\\'
+}
 
 
 class BareScriptParserError(Exception):

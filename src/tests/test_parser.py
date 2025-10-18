@@ -12,19 +12,19 @@ class TestParseScript(unittest.TestCase):
 
     def test_array_input(self):
         script = validate_script(parse_script([
-            'a = arrayNew( \\',
+            'a = [ \\',
             '    1,\\',
             '''\
     2 \\
-)
+]
 '''
         ]))
         self.assertDictEqual(script, {
             'scriptLines': [
-                'a = arrayNew( \\',
+                'a = [ \\',
                 '    1,\\',
                 '    2 \\',
-                ')',
+                ']',
                 ''
             ],
             'statements': [
@@ -71,6 +71,142 @@ return a + 1 asdf
 ''')
 
 
+    def test_array_literals(self):
+        script_lines = [
+            'a = [1, "2", [3, null]]'
+        ]
+        script = validate_script(parse_script(script_lines, 1, 'test.bare'))
+        self.assertDictEqual(script, {
+            'scriptName': 'test.bare',
+            'scriptLines': script_lines,
+            'statements': [
+                {'expr': {
+                    'name': 'a',
+                    'expr': {'function': {
+                        'name': 'arrayNew',
+                        'args': [
+                            {'number': 1.0},
+                            {'string': '2'},
+                            {'function': {
+                                'name': 'arrayNew',
+                                'args': [
+                                    {'number': 3.0},
+                                    {'variable': 'null'}
+                                ]
+                            }}
+                        ],
+                    }},
+                    'lineNumber': 1
+                }}
+            ]
+        })
+
+        # Missing value
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = [, 2]'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = [, 2]
+     ^
+''')
+
+        # Missing separator
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = [1 2]'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = [1 2]
+      ^
+''')
+
+
+    def test_object_literals(self):
+        script_lines = [
+            'a = {"a": 1, "b": "2", "c": {"d": 3, "e": null}}',
+            'b = {}'
+        ]
+        script = validate_script(parse_script(script_lines, 1, 'test.bare'))
+        self.assertDictEqual(script, {
+            'scriptName': 'test.bare',
+            'scriptLines': script_lines,
+            'statements': [
+                {'expr': {
+                    'name': 'a',
+                    'expr': {'function': {
+                        'name': 'objectNew',
+                        'args': [
+                            {'string': 'a'},
+                            {'number': 1.0},
+                            {'string': 'b'},
+                            {'string': '2'},
+                            {'string': 'c'},
+                            {'function': {
+                                'name': 'objectNew',
+                                'args': [
+                                    {'string': 'd'},
+                                    {'number': 3.0},
+                                    {'string': 'e'},
+                                    {'variable': 'null'}
+                                ]
+                            }}
+                        ]
+                    }},
+                    'lineNumber': 1
+                }},
+                {'expr': {
+                    'name': 'b',
+                    'expr': {'function': {'name': 'objectNew', 'args': []}},
+                    'lineNumber': 2
+                }}
+            ]
+        })
+
+        # Key only
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = {"b"}'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = {"b"}
+        ^
+''')
+
+        # No keys
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = {1, 2}'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = {1, 2}
+      ^
+''')
+
+        # Key, no value
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = {"b":}'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = {"b":}
+         ^
+''')
+
+        # Missing value
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = {, "b": 2}'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = {, "b": 2}
+     ^
+''')
+
+        # Missing separator
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            validate_script(parse_script('a = {"a": 1 "b": 2}'))
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+a = {"a": 1 "b": 2}
+           ^
+''')
+
+
     def test_comments(self):
         script_str = '''\
 include <args.bare>  # Application arguments
@@ -94,7 +230,7 @@ else:        # Always happened
     ix = 2
 endif        # It happens
 
-for num in arrayNew(1, 2, 3):  # Iterate numbers
+for num in [1, 2, 3]:  # Iterate numbers
     systemLog(num)
 endfor  # Numbers done
 
@@ -259,10 +395,10 @@ return  # Bye!
 
     def test_line_continuation(self):
         script_str = '''\
-a = arrayNew( \\
+a = [ \\
     1, \\
     2 \\
- )
+ ]
 '''
         script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
@@ -283,12 +419,12 @@ a = arrayNew( \\
     def test_line_continuation_comments(self):
         script_str = '''\
 # Comments don't continue \\
-a = arrayNew( \\
+a = [ \\
     # Comments are OK within a continuation...
     1, \\
     # ...with or without a continuation backslash \\
     2 \\
-)
+]
 '''
         script = validate_script(parse_script(script_str))
         self.assertDictEqual(script, {
@@ -400,7 +536,7 @@ a = 0
 b = 1
 
 fib:
-    jumpif (i >= [n]) fibend
+    jumpif (i >= n) fibend
     tmp = b
     b = a + b
     a = tmp
@@ -1107,7 +1243,7 @@ endfunction
 
     def test_foreach_statement(self):
         script_str = '''\
-values = arrayNew(1, 2, 3)
+values = [1, 2, 3]
 sum = 0
 for value in values:
     sum = sum + value
@@ -1673,6 +1809,14 @@ class TestParseExpression(unittest.TestCase):
         })
 
 
+    def test_array_literals(self):
+        expr = parse_expression('[1, 2]')
+        self.assertDictEqual(validate_expression(expr), {'variable': '1, 2'})
+
+        expr = parse_expression('[1, 2]', array_literals=True)
+        self.assertDictEqual(validate_expression(expr), {'function': {'args': [{'number': 1.0}, {'number': 2.0}], 'name': 'arrayNew'}})
+
+
     def test_unary(self):
         expr = parse_expression('!a')
         self.assertDictEqual(validate_expression(expr), {
@@ -2121,8 +2265,16 @@ Syntax error
 
 
     def test_string_literal_escapes(self):
-        expr = parse_expression("'ab \\'c\\' d\\\\e \\f'")
+        expr = parse_expression("'ab \\'c\\' d\\\\e \\\\f'")
         self.assertDictEqual(validate_expression(expr), {'string': "ab 'c' d\\e \\f"})
+
+        # More
+        expr = parse_expression('"\\n\\r\\t\\b\\f\\\\\'\\"\\\\"')
+        self.assertDictEqual(validate_expression(expr), {'string': '\n\r\t\b\f\\\'"\\'})
+
+        # Hex
+        expr = parse_expression('"\\uD83D\\uDE00"')
+        self.assertDictEqual(validate_expression(expr), {'string': '\ud83d\ude00'})
 
 
     def test_string_literal_backslash_end(self):
@@ -2141,8 +2293,16 @@ Syntax error
 
 
     def test_string_literal_double_quote_escapes(self):
-        expr = parse_expression('"ab \\"c\\" d\\\\e \\f"')
+        expr = parse_expression('"ab \\"c\\" d\\\\e \\\\f"')
         self.assertDictEqual(validate_expression(expr), {'string': 'ab "c" d\\e \\f'})
+
+        # More
+        expr = parse_expression('"\\n\\r\\t\\b\\f\\\\\'\\"\\\\"')
+        self.assertDictEqual(validate_expression(expr), {'string': '\n\r\t\b\f\\\'"\\'})
+
+        # Hex
+        expr = parse_expression('"\\uD83D\\uDE00"')
+        self.assertDictEqual(validate_expression(expr), {'string': '\ud83d\ude00'})
 
 
     def test_string_literal_double_quote_backslash_end(self):

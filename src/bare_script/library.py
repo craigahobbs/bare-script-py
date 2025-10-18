@@ -2191,6 +2191,7 @@ SCRIPT_FUNCTIONS = {
 EXPRESSION_FUNCTION_MAP = {
     'abs': 'mathAbs',
     'acos': 'mathAcos',
+    'arrayNew': 'arrayNew',
     'asin': 'mathAsin',
     'atan': 'mathAtan',
     'atan2': 'mathAtan2',
@@ -2216,6 +2217,7 @@ EXPRESSION_FUNCTION_MAP = {
     'minute': 'datetimeMinute',
     'month': 'datetimeMonth',
     'now': 'datetimeNow',
+    'objectNew': 'objectNew',
     'parseInt': 'numberParseInt',
     'parseFloat': 'numberParseFloat',
     'pi': 'mathPi',

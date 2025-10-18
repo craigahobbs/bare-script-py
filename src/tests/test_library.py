@@ -23,6 +23,7 @@ class TestLibrary(unittest.TestCase):
             [
                 ('abs', True),
                 ('acos', True),
+                ('arrayNew', True),
                 ('asin', True),
                 ('atan', True),
                 ('atan2', True),
@@ -48,6 +49,7 @@ class TestLibrary(unittest.TestCase):
                 ('minute', True),
                 ('month', True),
                 ('now', True),
+                ('objectNew', True),
                 ('parseInt', True),
                 ('parseFloat', True),
                 ('pi', True),
