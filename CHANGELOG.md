@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.2 (2025-10-20)
+
+- [973484e](https://github.com/craigahobbs/bare-script-py/commit/973484e) - use barescript object syntax
+
+- [1a8f833](https://github.com/craigahobbs/bare-script-py/commit/1a8f833) - update include library
+
 ## 3.7.1 (2025-10-18)
 
 - [3ee7931](https://github.com/craigahobbs/bare-script-py/commit/3ee7931) - fix string escape issue
