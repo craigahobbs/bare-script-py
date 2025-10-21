@@ -37,10 +37,12 @@ class TestModel(unittest.TestCase):
 
     def test_lint_script_empty_script(self):
         script = {
-            'statements': []
+            'statements': [],
+            'scriptName': 'test.bare',
+            'scriptLines': []
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Empty script'
+            'test.bare:1: Empty script'
         ])
 
 
@@ -108,7 +110,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused argument "b" of function "testFn"'
+            ':1: Unused argument "b" of function "testFn"'
         ])
 
 
@@ -152,7 +154,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused variable "e" defined in function "testFn"'
+            ':1: Unused variable "e" defined in function "testFn"'
         ])
 
 
@@ -197,7 +199,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Variable "b" of function "testFn" used before assignment'
+            ':1: Variable "b" of function "testFn" used before assignment'
         ])
 
 
@@ -246,7 +248,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Global variable "b" used before assignment'
+            ':1: Global variable "b" used before assignment'
         ])
 
 
@@ -266,7 +268,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused label "unusedLabel" in function "testFn"'
+            ':1: Unused label "unusedLabel" in function "testFn"'
         ])
 
 
@@ -303,7 +305,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unknown label "unknownLabel" in function "testFn"'
+            ':1: Unknown label "unknownLabel" in function "testFn"'
         ])
 
 
@@ -314,7 +316,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unknown global label "unknownLabel"'
+            ':1: Unknown global label "unknownLabel"'
         ])
 
 
@@ -334,7 +336,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Redefinition of label "testLabel" in function "testFn"'
+            ':1: Redefinition of label "testLabel" in function "testFn"'
         ])
 
 
@@ -347,7 +349,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Redefinition of global label "testLabel"'
+            ':1: Redefinition of global label "testLabel"'
         ])
 
 
@@ -370,7 +372,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Pointless statement in function "testFn"'
+            ':1: Pointless statement in function "testFn"'
         ])
 
 
@@ -386,7 +388,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Pointless global statement'
+            ':1: Pointless global statement'
         ])
 
 

@@ -470,14 +470,9 @@ def lint_script(script):
 
 # Helper to format static analysis warnings
 def _lint_script_warning(warnings, script, statement, message):
-    if script and statement:
-        statement_key = next(iter(statement.keys()))
-        script_name = script.get('scriptName', '')
-        lineno = statement[statement_key].get('lineNumber', '')
-        warning = f'{script_name}:{lineno}: {message}' if script_name or lineno else message
-    else:
-        warning = message
-    warnings.append(warning)
+    script_name = script.get('scriptName', '') if script is not None else ''
+    lineno = statement[next(iter(statement.keys()))].get('lineNumber', 1) if statement is not None else 1
+    warnings.append(f'{script_name}:{lineno}: {message}')
 
 
 # Helper function to determine if an expression statement's expression is pointless
