@@ -943,7 +943,7 @@ endfunction
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [
             'BareScript: Include "test.bare" static analysis... 1 warning:',
-            'BareScript:     Unused argument "a" of function "test" (index 0)'
+            'BareScript: test.bare:1: Unused argument "a" of function "test"'
         ])
 
 
@@ -970,8 +970,8 @@ endfunction
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [
             'BareScript: Include "test.bare" static analysis... 2 warnings:',
-            'BareScript:     Unused argument "a" of function "test" (index 0)',
-            'BareScript:     Unused argument "b" of function "test" (index 0)'
+            'BareScript: test.bare:1: Unused argument "a" of function "test"',
+            'BareScript: test.bare:1: Unused argument "b" of function "test"'
         ])
 
 

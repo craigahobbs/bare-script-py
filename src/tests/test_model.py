@@ -47,12 +47,20 @@ class TestModel(unittest.TestCase):
     def test_lint_script_function_redefined(self):
         script = {
             'statements': [
-                {'function': {'name': 'testFn', 'statements': []}},
-                {'function': {'name': 'testFn', 'statements': []}}
+                {'function': {'name': 'testFn', 'statements': [], 'lineNumber': 1}},
+                {'function': {'name': 'testFn', 'statements': [], 'lineNumber': 4}}
+            ],
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'function testFn():',
+                'endfunction',
+                '',
+                'function testFn():',
+                'endfunction'
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Redefinition of function "testFn" (index 1)'
+            'test.bare:4: Redefinition of function "testFn"'
         ])
 
 
@@ -64,14 +72,24 @@ class TestModel(unittest.TestCase):
                         'name': 'testFn',
                         'args': ['a', 'b', 'a'],
                         'statements': [
-                            {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
-                        ]
+                            {'return': {
+                                'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}},
+                                'lineNumber': 2
+                            }}
+                        ],
+                        'lineNumber': 1
                     }
                 }
+            ],
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'function testFn(a, b, a):',
+                '    return a + b',
+                'endfunction'
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Duplicate argument "a" of function "testFn" (index 0)'
+            'test.bare:1: Duplicate argument "a" of function "testFn"'
         ])
 
 
@@ -90,7 +108,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused argument "b" of function "testFn" (index 0)'
+            'Unused argument "b" of function "testFn"'
         ])
 
 
@@ -134,7 +152,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused variable "e" defined in function "testFn" (index 6)'
+            'Unused variable "e" defined in function "testFn"'
         ])
 
 
@@ -179,7 +197,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Variable "b" of function "testFn" used (index 0) before assignment (index 1)'
+            'Variable "b" of function "testFn" used before assignment'
         ])
 
 
@@ -228,7 +246,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Global variable "b" used (index 0) before assignment (index 1)'
+            'Global variable "b" used before assignment'
         ])
 
 
@@ -248,20 +266,26 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused label "unusedLabel" in function "testFn" (index 1)'
+            'Unused label "unusedLabel" in function "testFn"'
         ])
 
 
     def test_lint_script_global_unused_label(self):
         script = {
             'statements': [
-                {'label': {'name': 'usedLabel'}},
-                {'label': {'name': 'unusedLabel'}},
-                {'jump': {'label': 'usedLabel'}}
+                {'label': {'name': 'usedLabel', 'lineNumber': 1}},
+                {'label': {'name': 'unusedLabel', 'lineNumber': 2}},
+                {'jump': {'label': 'usedLabel', 'lineNumber': 3}}
+            ],
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'usedlabel:',
+                'unusedLabel:',
+                'jump usedLabel'
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unused global label "unusedLabel" (index 1)'
+            'test.bare:2: Unused global label "unusedLabel"'
         ])
 
 
@@ -279,7 +303,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unknown label "unknownLabel" in function "testFn" (index 0)'
+            'Unknown label "unknownLabel" in function "testFn"'
         ])
 
 
@@ -290,7 +314,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Unknown global label "unknownLabel" (index 0)'
+            'Unknown global label "unknownLabel"'
         ])
 
 
@@ -310,7 +334,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Redefinition of label "testLabel" in function "testFn" (index 1)'
+            'Redefinition of label "testLabel" in function "testFn"'
         ])
 
 
@@ -323,7 +347,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Redefinition of global label "testLabel" (index 1)'
+            'Redefinition of global label "testLabel"'
         ])
 
 
@@ -346,7 +370,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Pointless statement in function "testFn" (index 1)'
+            'Pointless statement in function "testFn"'
         ])
 
 
@@ -362,7 +386,7 @@ class TestModel(unittest.TestCase):
             ]
         }
         self.assertListEqual(lint_script(validate_script(script)), [
-            'Pointless global statement (index 1)'
+            'Pointless global statement'
         ])
 
 

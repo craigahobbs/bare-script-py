@@ -411,12 +411,12 @@ Undefined function "unknown"
                 main(['-d', '-c', 'systemLog("Hello")', '-c', 'systemLogDebug("Goodbye")'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "<string>" ... OK
+BareScript static analysis "<string>" ... OK
 Hello
-BareScript: Script executed in 100.0 milliseconds
-BareScript: Static analysis "<string2>" ... OK
+BareScript executed in 100.0 milliseconds
+BareScript static analysis "<string2>" ... OK
 Goodbye
-BareScript: Script executed in 100.0 milliseconds
+BareScript executed in 100.0 milliseconds
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -431,9 +431,9 @@ BareScript: Script executed in 100.0 milliseconds
                 main(['-d', '-c', '0'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "<string>" ... 1 warning:
-BareScript:     Pointless global statement (index 0)
-BareScript: Script executed in 100.0 milliseconds
+BareScript static analysis "<string>" ... 1 warning:
+<string>:1: Pointless global statement
+BareScript executed in 100.0 milliseconds
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -451,10 +451,10 @@ BareScript: Script executed in 100.0 milliseconds
                 main(['-d', 'test.bare'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "test.bare" ... 2 warnings:
-BareScript:     Pointless global statement (index 0)
-BareScript:     Pointless global statement (index 1)
-BareScript: Script executed in 100.0 milliseconds
+BareScript static analysis "test.bare" ... 2 warnings:
+test.bare:1: Pointless global statement
+test.bare:2: Pointless global statement
+BareScript executed in 100.0 milliseconds
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -469,8 +469,8 @@ BareScript: Script executed in 100.0 milliseconds
                 main(['-s', '-c', 'return 0', '-c', 'return 1'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "<string>" ... OK
-BareScript: Static analysis "<string2>" ... OK
+BareScript static analysis "<string>" ... OK
+BareScript static analysis "<string2>" ... OK
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
@@ -485,8 +485,8 @@ BareScript: Static analysis "<string2>" ... OK
                 main(['-s', '-c', '0', '-c', '1'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript: Static analysis "<string>" ... 1 warning:
-BareScript:     Pointless global statement (index 0)
+BareScript static analysis "<string>" ... 1 warning:
+<string>:1: Pointless global statement
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)

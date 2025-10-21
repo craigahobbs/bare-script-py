@@ -151,7 +151,7 @@ def _execute_script_helper(script, statements, options, locals_):
                         warning_prefix = f'BareScript: Include "{include_url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                         for warning in warnings:
-                            log_fn(f'BareScript:     {warning}')
+                            log_fn(f'BareScript: {warning}')
 
                 # Execute the include script
                 include_options = options.copy()

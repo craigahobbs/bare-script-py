@@ -75,11 +75,11 @@ def main(argv=None):
             if args.static or args.debug:
                 warnings = lint_script(script)
                 if not warnings:
-                    print(f'BareScript: Static analysis "{script_name}" ... OK')
+                    print(f'BareScript static analysis "{script_name}" ... OK')
                 else:
-                    print(f'BareScript: Static analysis "{script_name}" ... {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
+                    print(f'BareScript static analysis "{script_name}" ... {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                     for warning in warnings:
-                        print(f'BareScript:     {warning}')
+                        print(warning)
                     if args.static:
                         status_code = 1
                         break
@@ -104,7 +104,7 @@ def main(argv=None):
             # Log script execution end with timing
             if args.debug:
                 time_end = time.time()
-                print(f'BareScript: Script executed in {1000 * (time_end - time_begin):.1f} milliseconds')
+                print(f'BareScript executed in {1000 * (time_end - time_begin):.1f} milliseconds')
 
             # Stop on error status code
             if status_code != 0:

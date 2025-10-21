@@ -330,10 +330,11 @@ def lint_script(script):
     """
 
     warnings = []
+    statements = script['statements']
 
     # Empty script?
     if len(script['statements']) == 0:
-        warnings.append('Empty script')
+        _lint_script_warning(warnings, script, None, 'Empty script')
 
     # Variable used before assignment?
     var_assigns = {}
@@ -341,15 +342,13 @@ def lint_script(script):
     _get_variable_assignments_and_uses(script['statements'], var_assigns, var_uses)
     for var_name in sorted(var_assigns.keys()):
         if var_name in var_uses and var_uses[var_name] <= var_assigns[var_name]:
-            warnings.append(
-                f'Global variable "{var_name}" used (index {var_uses[var_name]}) before assignment (index {var_assigns[var_name]})'
-            )
+            _lint_script_warning(warnings, script, statements[var_uses[var_name]], f'Global variable "{var_name}" used before assignment')
 
     # Iterate global statements
     functions_defined = {}
     labels_defined = {}
     labels_used = {}
-    for ix_statement, statement in enumerate(script['statements']):
+    for ix_statement, statement in enumerate(statements):
         statement_key = next(iter(statement.keys()))
 
         # Function definition checks
@@ -358,7 +357,7 @@ def lint_script(script):
 
             # Function redefinition?
             if function_name in functions_defined:
-                warnings.append(f'Redefinition of function "{function_name}" (index {ix_statement})')
+                _lint_script_warning(warnings, script, statement, f'Redefinition of function "{function_name}"')
             else:
                 functions_defined[function_name] = ix_statement
 
@@ -372,16 +371,17 @@ def lint_script(script):
                 if args is not None and var_name in args:
                     continue
                 if var_name in fn_var_uses and fn_var_uses[var_name] <= fn_var_assigns[var_name]:
-                    warnings.append(
-                        f'Variable "{var_name}" of function "{function_name}" used (index {fn_var_uses[var_name]}) ' +
-                            f'before assignment (index {fn_var_assigns[var_name]})'
+                    _lint_script_warning(
+                        warnings, script, statement,
+                        f'Variable "{var_name}" of function "{function_name}" used before assignment'
                     )
 
             # Unused variables?
             for var_name in sorted(fn_var_assigns.keys()):
                 if var_name not in fn_var_uses:
-                    warnings.append(
-                        f'Unused variable "{var_name}" defined in function "{function_name}" (index {fn_var_assigns[var_name]})'
+                    _lint_script_warning(
+                        warnings, script, statement,
+                        f'Unused variable "{var_name}" defined in function "{function_name}"'
                     )
 
             # Function argument checks
@@ -390,13 +390,13 @@ def lint_script(script):
                 for arg in args:
                     # Duplicate argument?
                     if arg in args_defined:
-                        warnings.append(f'Duplicate argument "{arg}" of function "{function_name}" (index {ix_statement})')
+                        _lint_script_warning(warnings, script, statement, f'Duplicate argument "{arg}" of function "{function_name}"')
                     else:
                         args_defined.add(arg)
 
                         # Unused argument?
                         if arg not in fn_var_uses:
-                            warnings.append(f'Unused argument "{arg}" of function "{function_name}" (index {ix_statement})')
+                            _lint_script_warning(warnings, script, statement, f'Unused argument "{arg}" of function "{function_name}"')
 
             # Iterate function statements
             fn_labels_defined = {}
@@ -408,15 +408,16 @@ def lint_script(script):
                 if fn_statement_key == 'expr':
                     # Pointless function expression statement?
                     if 'name' not in fn_statement['expr'] and _is_pointless_expression(fn_statement['expr']['expr']):
-                        warnings.append(f'Pointless statement in function "{function_name}" (index {ix_fn_statement})')
+                        _lint_script_warning(warnings, script, statement, f'Pointless statement in function "{function_name}"')
 
                 # Function label statement checks
                 elif fn_statement_key == 'label':
                     # Label redefinition?
                     fn_statement_label = fn_statement['label']['name']
                     if fn_statement_label in fn_labels_defined:
-                        warnings.append(
-                            f'Redefinition of label "{fn_statement_label}" in function "{function_name}" (index {ix_fn_statement})'
+                        _lint_script_warning(
+                            warnings, script, statement,
+                            f'Redefinition of label "{fn_statement_label}" in function "{function_name}"'
                         )
                     else:
                         fn_labels_defined[fn_statement_label] = ix_fn_statement
@@ -428,25 +429,25 @@ def lint_script(script):
             # Unused function labels?
             for label in sorted(fn_labels_defined.keys()):
                 if label not in fn_labels_used:
-                    warnings.append(f'Unused label "{label}" in function "{function_name}" (index {fn_labels_defined[label]})')
+                    _lint_script_warning(warnings, script, statement, f'Unused label "{label}" in function "{function_name}"')
 
             # Unknown function labels?
             for label in sorted(fn_labels_used.keys()):
                 if label not in fn_labels_defined:
-                    warnings.append(f'Unknown label "{label}" in function "{function_name}" (index {fn_labels_used[label]})')
+                    _lint_script_warning(warnings, script, statement, f'Unknown label "{label}" in function "{function_name}"')
 
         # Global expression statement checks
         elif statement_key == 'expr':
             # Pointless global expression statement?
             if 'name' not in statement['expr'] and _is_pointless_expression(statement['expr']['expr']):
-                warnings.append(f'Pointless global statement (index {ix_statement})')
+                _lint_script_warning(warnings, script, statement, 'Pointless global statement')
 
         # Global label statement checks
         elif statement_key == 'label':
             # Label redefinition?
             statement_label = statement['label']['name']
             if statement_label in labels_defined:
-                warnings.append(f'Redefinition of global label "{statement_label}" (index {ix_statement})')
+                _lint_script_warning(warnings, script, statement, f'Redefinition of global label "{statement_label}"')
             else:
                 labels_defined[statement_label] = ix_statement
 
@@ -457,14 +458,26 @@ def lint_script(script):
     # Unused global labels?
     for label in sorted(labels_defined.keys()):
         if label not in labels_used:
-            warnings.append(f'Unused global label "{label}" (index {labels_defined[label]})')
+            _lint_script_warning(warnings, script, statements[labels_defined[label]], f'Unused global label "{label}"')
 
     # Unknown global labels?
     for label in sorted(labels_used.keys()):
         if label not in labels_defined:
-            warnings.append(f'Unknown global label "{label}" (index {labels_used[label]})')
+            _lint_script_warning(warnings, script, statements[labels_used[label]], f'Unknown global label "{label}"')
 
     return warnings
+
+
+# Helper to format static analysis warnings
+def _lint_script_warning(warnings, script, statement, message):
+    if script and statement:
+        statement_key = next(iter(statement.keys()))
+        script_name = script.get('scriptName', '')
+        lineno = statement[statement_key].get('lineNumber', '')
+        warning = f'{script_name}:{lineno}: {message}' if script_name or lineno else message
+    else:
+        warning = message
+    warnings.append(warning)
 
 
 # Helper function to determine if an expression statement's expression is pointless
