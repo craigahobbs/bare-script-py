@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.4 (2025-10-21)
+
+- [c1a5f99](https://github.com/craigahobbs/bare-script-py/commit/c1a5f99) - remove unecessary None check
+
+- [93a9ac6](https://github.com/craigahobbs/bare-script-py/commit/93a9ac6) - improved static analysis warning messages
+
 ## 3.7.3 (2025-10-21)
 
 - [8c09a8c](https://github.com/craigahobbs/bare-script-py/commit/8c09a8c) - improved static analysis warning messages
