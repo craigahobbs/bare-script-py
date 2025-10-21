@@ -470,7 +470,7 @@ def lint_script(script):
 
 # Helper to format static analysis warnings
 def _lint_script_warning(warnings, script, statement, message):
-    script_name = script.get('scriptName', '') if script is not None else ''
+    script_name = script.get('scriptName', '')
     lineno = statement[next(iter(statement.keys()))].get('lineNumber', 1) if statement is not None else 1
     warnings.append(f'{script_name}:{lineno}: {message}')
 
