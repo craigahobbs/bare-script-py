@@ -77,19 +77,23 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         # Assignment?
         match_assignment = _R_SCRIPT_ASSIGNMENT.match(line)
         if match_assignment:
+            # Parse the expression
             try:
-                expr_statement = {
-                    'expr': {
-                        'name': match_assignment.group('name'),
-                        'expr': parse_expression(match_assignment.group('expr'), line_number, script_name, True),
-                        **statement_base
-                    }
-                }
-                statements.append(expr_statement)
-                continue
+                assignment_expr = parse_expression(match_assignment.group('expr'), line_number, script_name, True)
             except BareScriptParserError as error:
                 column_number = len(line) - len(match_assignment.group('expr')) + error.column_number
                 raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
+
+            # Add the expression statement
+            expr_statement = {
+                'expr': {
+                    'name': match_assignment.group('name'),
+                    'expr': assignment_expr,
+                    **statement_base
+                }
+            }
+            statements.append(expr_statement)
+            continue
 
         # Function definition begin?
         match_function_begin = _R_SCRIPT_FUNCTION_BEGIN.match(line)
@@ -136,11 +140,18 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         # If-then begin?
         match_if_begin = _R_SCRIPT_IF_BEGIN.match(line)
         if match_if_begin:
+            # Parse the if-then expression
+            try:
+                ifthen_expr = parse_expression(match_if_begin.group('expr'), line_number, script_name, True)
+            except BareScriptParserError as error:
+                column_number = len(match_if_begin.group('if')) + error.column_number
+                raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
+
             # Add the if-then label definition
             ifthen = {
                 'jump': {
                     'label': f"__bareScriptIf{label_index}",
-                    'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_begin.group('expr'), line_number, script_name, True)}},
+                    'expr': {'unary': {'op': '!', 'expr': ifthen_expr}},
                     **statement_base
                 },
                 'done': f"__bareScriptDone{label_index}",
@@ -158,7 +169,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         # Else-if-then?
         match_if_else_if = _R_SCRIPT_IF_ELSE_IF.match(line)
         if match_if_else_if:
-            # Get the if-then definition
+            # Get the else-if-then definition
             label_def_depth = function_label_def_depth if function_def is not None else 0
             ifthen = label_defs[len(label_defs) - 1].get('if') if len(label_defs) > label_def_depth else None
             if ifthen is None:
@@ -168,11 +179,18 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             if ifthen['hasElse']:
                 raise BareScriptParserError('Elif statement following else statement', line, 1, start_line_number + ix_line, script_name)
 
+            # Parse teh else-if-then expression
+            try:
+                if_else_if_expr = parse_expression(match_if_else_if.group('expr'), line_number, script_name, True)
+            except BareScriptParserError as error:
+                column_number = len(match_if_else_if.group('elif')) + error.column_number
+                raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
+
             # Generate the next if-then jump statement
             prev_label = ifthen['jump']['label']
             ifthen['jump'] = {
                 'label': f"__bareScriptIf{label_index}",
-                'expr': {'unary': {'op': '!', 'expr': parse_expression(match_if_else_if.group('expr'), line_number, script_name, True)}},
+                'expr': {'unary': {'op': '!', 'expr': if_else_if_expr}},
                 **statement_base
             }
             label_index += 1
@@ -226,12 +244,19 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         # While-do begin?
         match_while_begin = _R_SCRIPT_WHILE_BEGIN.match(line)
         if match_while_begin:
+            # Parse the while-do expression
+            try:
+                while_begin_expr = parse_expression(match_while_begin.group('expr'), line_number, script_name, True)
+            except BareScriptParserError as error:
+                column_number = len(match_while_begin.group('while')) + error.column_number
+                raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
+
             # Add the while-do label
             whiledo = {
                 'loop': f'__bareScriptLoop{label_index}',
                 'continue': f'__bareScriptLoop{label_index}',
                 'done': f'__bareScriptDone{label_index}',
-                'expr': parse_expression(match_while_begin.group('expr'), line_number, script_name, True),
+                'expr': while_begin_expr,
                 'line': line,
                 'lineNumber': start_line_number + ix_line
             }
@@ -282,11 +307,18 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             label_defs.append({'for': foreach})
             label_index += 1
 
+            # Parse the for-each expression
+            try:
+                for_begin_expr = parse_expression(match_for_begin.group('values'), line_number, script_name, True)
+            except BareScriptParserError as error:
+                column_number = len(match_for_begin.group('for')) + error.column_number
+                raise BareScriptParserError(error.error, line, column_number, start_line_number + ix_line, script_name)
+
             # Add the for-each header statements
             statements.extend([
                 {'expr': {
                     'name': foreach['values'],
-                    'expr': parse_expression(match_for_begin.group('values'), line_number, script_name, True),
+                    'expr': for_begin_expr,
                     **statement_base
                 }},
                 {'expr': {
@@ -453,15 +485,15 @@ _R_SCRIPT_JUMP = re.compile(r'^(?P<jump>\s*(?:jump|jumpif\s*\((?P<expr>.+)\)))\s
 _R_SCRIPT_RETURN = re.compile(r'^(?P<return>\s*return(?:\s+(?P<expr>[^#\s].*))?)' + _R_PART_COMMENT)
 _R_SCRIPT_INCLUDE = re.compile(r"^\s*include\s+(?P<delim>')(?P<url>(?:\\'|[^'])*)'" + _R_PART_COMMENT)
 _R_SCRIPT_INCLUDE_SYSTEM = re.compile(r'^\s*include\s+(?P<delim><)(?P<url>[^>]*)>' + _R_PART_COMMENT)
-_R_SCRIPT_IF_BEGIN = re.compile(r'^\s*if\s+(?P<expr>.+)\s*:' + _R_PART_COMMENT)
-_R_SCRIPT_IF_ELSE_IF = re.compile(r'^\s*elif\s+(?P<expr>.+)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_IF_BEGIN = re.compile(r'^(?P<if>\s*if\s+)(?P<expr>.+)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_IF_ELSE_IF = re.compile(r'^(?P<elif>\s*elif\s+)(?P<expr>.+)\s*:' + _R_PART_COMMENT)
 _R_SCRIPT_IF_ELSE = re.compile(r'^\s*else\s*:' + _R_PART_COMMENT)
 _R_SCRIPT_IF_END = re.compile(r'^\s*endif' + _R_PART_COMMENT)
 _R_SCRIPT_FOR_BEGIN = re.compile(
-    r'^\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+(?P<values>.+)\s*:' + _R_PART_COMMENT
+    r'^(?P<for>\s*for\s+(?P<value>[A-Za-z_]\w*)(?:\s*,\s*(?P<index>[A-Za-z_]\w*))?\s+in\s+)(?P<values>.+)\s*:' + _R_PART_COMMENT
 )
 _R_SCRIPT_FOR_END = re.compile(r'^\s*endfor' + _R_PART_COMMENT)
-_R_SCRIPT_WHILE_BEGIN = re.compile(r'^\s*while\s+(?P<expr>.+)\s*:' + _R_PART_COMMENT)
+_R_SCRIPT_WHILE_BEGIN = re.compile(r'^(?P<while>\s*while\s+)(?P<expr>.+)\s*:' + _R_PART_COMMENT)
 _R_SCRIPT_WHILE_END = re.compile(r'^\s*endwhile' + _R_PART_COMMENT)
 _R_SCRIPT_BREAK = re.compile(r'^\s*break' + _R_PART_COMMENT)
 _R_SCRIPT_CONTINUE = re.compile(r'^\s*continue' + _R_PART_COMMENT)
@@ -637,22 +669,22 @@ def _parse_unary_expression(expr_text, array_literals):
                 arg_text = arg_text[len(match_object_close.group(0)):]
                 break
 
-            # Object key separator
+            # Key/value pair separator
             if args:
-                match_object_key_separator = _R_EXPR_OBJECT_SEPARATOR2.match(arg_text)
-                if match_object_key_separator is None:
+                match_object_separator = _R_EXPR_OBJECT_SEPARATOR.match(arg_text)
+                if match_object_separator is None:
                     raise BareScriptParserError('Syntax error', arg_text, 1, None, None)
-                arg_text = arg_text[len(match_object_key_separator.group(0)):]
+                arg_text = arg_text[len(match_object_separator.group(0)):]
 
             # Get the key
             arg_key, arg_text = _parse_binary_expression(arg_text, None, array_literals)
             args.append(arg_key)
 
-            # Value separator
-            match_object_value_separator = _R_EXPR_OBJECT_SEPARATOR.match(arg_text)
-            if match_object_value_separator is None:
+            # Key/value separator
+            match_object_separator_key = _R_EXPR_OBJECT_SEPARATOR_KEY.match(arg_text)
+            if match_object_separator_key is None:
                 raise BareScriptParserError('Syntax error', arg_text, 1, None, None)
-            arg_text = arg_text[len(match_object_value_separator.group(0)):]
+            arg_text = arg_text[len(match_object_separator_key.group(0)):]
 
             # Get the value
             arg_value, arg_text = _parse_binary_expression(arg_text, None, array_literals)
@@ -719,8 +751,8 @@ _R_EXPR_ARRAY_OPEN = re.compile(r'^\s*\[')
 _R_EXPR_ARRAY_SEPARATOR = re.compile(r'^\s*,')
 _R_EXPR_ARRAY_CLOSE = re.compile(r'^\s*\]')
 _R_EXPR_OBJECT_OPEN = re.compile(r'^\s*\{')
-_R_EXPR_OBJECT_SEPARATOR = re.compile(r'^\s*:')
-_R_EXPR_OBJECT_SEPARATOR2 = re.compile(r'^\s*,')
+_R_EXPR_OBJECT_SEPARATOR_KEY = re.compile(r'^\s*:')
+_R_EXPR_OBJECT_SEPARATOR = re.compile(r'^\s*,')
 _R_EXPR_OBJECT_CLOSE = re.compile(r'^\s*\}')
 _R_EXPR_STRING = re.compile(r"^\s*'((?:\\\\|\\'|[^'])*)'")
 _R_EXPR_STRING_DOUBLE = re.compile(r'^\s*"((?:\\\\|\\"|[^"])*)"')

@@ -1060,6 +1060,33 @@ endfunction
 ''')
 
 
+    def test_if_then_statement_expression_syntax_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            parse_script('''\
+if @#$:
+endif
+''')
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+if @#$:
+   ^
+''')
+
+
+    def test_if_then_statement_elif_expression_syntax_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            parse_script('''\
+if true:
+elif @#$:
+endif
+''')
+        self.assertEqual(str(cm_exc.exception), '''\
+:2: Syntax error
+elif @#$:
+     ^
+''')
+
+
     def test_while_do_statement(self):
         script_str = '''\
 i = 0
@@ -1140,6 +1167,19 @@ endwhile
                 {'label': {'name': '__bareScriptDone0', 'lineNumber': 3}}
             ]
         })
+
+
+    def test_while_do_statement_expression_syntax_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            parse_script('''\
+while @#$:
+endwhile
+''')
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+while @#$:
+      ^
+''')
 
 
     def test_while_do_statement_error_endwhile_outside_while_do(self):
@@ -1460,6 +1500,19 @@ endfor
                 {'label': {'name': '__bareScriptDone0', 'lineNumber': 5}}
             ]
         })
+
+
+    def test_foreach_statement_expression_syntax_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            parse_script('''\
+for value in @#$:
+endfor
+''')
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+for value in @#$:
+             ^
+''')
 
 
     def test_foreach_statement_error_foreach_outside_foreach(self):
@@ -1862,8 +1915,7 @@ Syntax error
 ''')
         self.assertEqual(cm_exc.exception.error, 'Syntax error')
         self.assertEqual(cm_exc.exception.line, expr_text)
-        self.assertEqual(cm_exc.exception.column_number, 4
-)
+        self.assertEqual(cm_exc.exception.column_number, 4)
         self.assertIsNone(cm_exc.exception.line_number)
 
 
