@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.7.5 (2025-10-22)
+
+- [d26c876](https://github.com/craigahobbs/bare-script-py/commit/d26c876) - update include library
+
 ## 3.7.4 (2025-10-21)
 
 - [c1a5f99](https://github.com/craigahobbs/bare-script-py/commit/c1a5f99) - remove unecessary None check
