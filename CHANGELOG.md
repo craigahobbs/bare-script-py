@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.6 (2025-10-23)
+
+- [ec7d2ae](https://github.com/craigahobbs/bare-script-py/commit/ec7d2ae) - fix static analysis error messages
+
+- [39e979a](https://github.com/craigahobbs/bare-script-py/commit/39e979a) - use string escapes
+
 ## 3.7.5 (2025-10-22)
 
 - [d26c876](https://github.com/craigahobbs/bare-script-py/commit/d26c876) - update include library
