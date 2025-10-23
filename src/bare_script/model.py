@@ -365,14 +365,15 @@ def lint_script(script):
             fn_var_assigns = {}
             fn_var_uses = {}
             args = statement['function'].get('args')
-            _get_variable_assignments_and_uses(statement['function']['statements'], fn_var_assigns, fn_var_uses)
+            fn_statements = statement['function']['statements']
+            _get_variable_assignments_and_uses(fn_statements, fn_var_assigns, fn_var_uses)
             for var_name in sorted(fn_var_assigns.keys()):
                 # Ignore re-assigned function arguments
                 if args is not None and var_name in args:
                     continue
                 if var_name in fn_var_uses and fn_var_uses[var_name] <= fn_var_assigns[var_name]:
                     _lint_script_warning(
-                        warnings, script, statement,
+                        warnings, script, fn_statements[fn_var_uses[var_name]],
                         f'Variable "{var_name}" of function "{function_name}" used before assignment'
                     )
 
@@ -380,7 +381,7 @@ def lint_script(script):
             for var_name in sorted(fn_var_assigns.keys()):
                 if var_name not in fn_var_uses:
                     _lint_script_warning(
-                        warnings, script, statement,
+                        warnings, script, fn_statements[fn_var_assigns[var_name]],
                         f'Unused variable "{var_name}" defined in function "{function_name}"'
                     )
 
@@ -401,7 +402,7 @@ def lint_script(script):
             # Iterate function statements
             fn_labels_defined = {}
             fn_labels_used = {}
-            for ix_fn_statement, fn_statement in enumerate(statement['function']['statements']):
+            for ix_fn_statement, fn_statement in enumerate(fn_statements):
                 fn_statement_key = next(iter(fn_statement.keys()))
 
                 # Function expression statement checks
