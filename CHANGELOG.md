@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.0 (2025-10-29)
+
+- [625ee65](https://github.com/craigahobbs/bare-script-py/commit/625ee65) - add bare -x argument \(static analysis with unknown global check\)
+
 ## 3.7.6 (2025-10-23)
 
 - [ec7d2ae](https://github.com/craigahobbs/bare-script-py/commit/ec7d2ae) - fix static analysis error messages
