@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Scripts &#8212; bare-script 3.7.6 documentation</title>
+    <title>Scripts &#8212; bare-script 3.8.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=4d6daaef"></script>
+    <script src="_static/documentation_options.js?v=948f11bf"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -176,11 +176,14 @@
 <h2>lint_script<a class="headerlink" href="#lint-script" title="Link to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="bare_script.lint_script">
-<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">lint_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.lint_script" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">lint_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">globals_</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.lint_script" title="Link to this definition">¶</a></dt>
 <dd><p>Lint a BareScript script model</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>script</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The <a class="reference external" href="./model/#var.vName='BareScript'">BareScript model</a></p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>script</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The <a class="reference external" href="./model/#var.vName='BareScript'">BareScript model</a></p></li>
+<li><p><strong>globals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The script global variables</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The list of lint warnings</p>
