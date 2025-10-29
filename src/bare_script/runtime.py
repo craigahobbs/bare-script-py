@@ -8,7 +8,7 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import COVERAGE_GLOBAL_NAME, DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from .library import COVERAGE_GLOBAL_NAME, DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, SYSTEM_GLOBAL_INCLUDES_NAME
 from .model import lint_script
 from .options import url_file_relative
 from .parser import parse_script
@@ -130,6 +130,15 @@ def _execute_script_helper(script, statements, options, locals_):
                     include_url = url_file_relative(system_prefix, include_url)
                 elif url_fn is not None:
                     include_url = url_fn(include_url)
+
+                # Already included?
+                global_includes = globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME)
+                if global_includes is None or not isinstance(global_includes, dict):
+                    global_includes = {}
+                    globals_[SYSTEM_GLOBAL_INCLUDES_NAME] = global_includes
+                if global_includes.get(include_url):
+                    continue
+                global_includes[include_url] = True
 
                 # Fetch the URL
                 try:

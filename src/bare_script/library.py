@@ -287,7 +287,7 @@ def _array_set(args, unused_options):
     if index >= len(array):
         raise ValueArgsError('index', index)
 
-    array[index] = value
+    array[int(index)] = value
     return value
 
 _ARRAY_SET_ARGS = value_args_model([
@@ -1938,6 +1938,27 @@ _SYSTEM_GLOBAL_GET_ARGS = value_args_model([
 ])
 
 
+# System includes object global variable name
+SYSTEM_GLOBAL_INCLUDES_NAME = '__bareScriptIncludes'
+
+
+# $function: systemGlobalIncludesGet
+# $group: System
+# $doc: Get the global system includes object
+# $return: The global system includes object
+def _system_global_includes_get(unused_args, options):
+    globals_ = options.get('globals') if options is not None else None
+    return globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME) if globals_ is not None else None
+
+
+# $function: systemGlobalIncludesName
+# $group: System
+# $doc: Get the system includes object global variable name
+# $return: The system includes object global variable name
+def _system_global_includes_name(unused_args, unused_options):
+    return SYSTEM_GLOBAL_INCLUDES_NAME
+
+
 # $function: systemGlobalSet
 # $group: System
 # $doc: Set a global variable value
@@ -2050,7 +2071,7 @@ _SYSTEM_TYPE_ARGS = value_args_model([
 # $return: The encoded URL string
 def _url_encode(args, unused_options):
     url, = value_args_validate(_URL_ENCODE_ARGS, args)
-    return urllib.parse.quote(url, safe="':/&+")
+    return urllib.parse.quote(url, safe="':/&+!#=")
 
 _URL_ENCODE_ARGS = value_args_model([
     {'name': 'url', 'type': 'string'}
@@ -2176,6 +2197,8 @@ SCRIPT_FUNCTIONS = {
     'systemCompare': _system_compare,
     'systemFetch': _system_fetch,
     'systemGlobalGet': _system_global_get,
+    'systemGlobalIncludesGet': _system_global_includes_get,
+    'systemGlobalIncludesName': _system_global_includes_name,
     'systemGlobalSet': _system_global_set,
     'systemIs': _system_is,
     'systemLog': _system_log,

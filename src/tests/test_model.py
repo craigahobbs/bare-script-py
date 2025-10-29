@@ -261,6 +261,57 @@ class TestModel(unittest.TestCase):
         self.assertListEqual(lint_script(validate_script(script)), [])
 
 
+    def test_lint_script_function_unknown_global(self):
+        script = {
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'function testFn(b):',
+                '    a = 1',
+                '    a = a',
+                '    a = b',
+                '    a = UNKNOWN',
+                'endfunction'
+            ],
+            'statements': [
+                {
+                    'function': {
+                        'name': 'testFn',
+                        'args': ['b'],
+                        'statements': [
+                            {'expr': {'name': 'a', 'expr': {'number': 1}, 'lineNumber': 2}},
+                            {'expr': {'name': 'a', 'expr': {'variable': 'a'}, 'lineNumber': 3}},
+                            {'expr': {'name': 'a', 'expr': {'variable': 'b'}, 'lineNumber': 4}},
+                            {'expr': {'name': 'a', 'expr': {'variable': 'UNKNOWN'}, 'lineNumber': 5}}
+                        ],
+                        'lineNumber': 1
+                    }
+                }
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script), {}), [
+            'test.bare:5: Unknown global variable "UNKNOWN"'
+        ])
+
+
+    def test_lint_script_global_unknown_global(self):
+        script = {
+            'scriptName': 'test.bare',
+            'scriptLines': [
+                'a = 1',
+                'a = a',
+                'a = UNKNOWN'
+            ],
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 1}, 'lineNumber': 1}},
+                {'expr': {'name': 'a', 'expr': {'variable': 'a'}, 'lineNumber': 2}},
+                {'expr': {'name': 'a', 'expr': {'variable': 'UNKNOWN'}, 'lineNumber': 3}}
+            ]
+        }
+        self.assertListEqual(lint_script(validate_script(script), {}), [
+            'test.bare:3: Unknown global variable "UNKNOWN"'
+        ])
+
+
     def test_lint_script_global_variable_used_before_assignment(self):
         script = {
             'statements': [

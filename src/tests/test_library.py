@@ -11,7 +11,7 @@ import unittest
 
 import schema_markdown
 
-from bare_script.library import COVERAGE_GLOBAL_NAME, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from bare_script.library import COVERAGE_GLOBAL_NAME, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
 
@@ -419,6 +419,7 @@ class TestLibrary(unittest.TestCase):
     def test_array_set(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arraySet']([array, 1, 5], None), 5)
+        self.assertEqual(SCRIPT_FUNCTIONS['arraySet']([array, 1., 5], None), 5)
         self.assertListEqual(array, [1, 5, 3])
 
         # Non-array
@@ -3011,6 +3012,23 @@ a,b, c
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_system_global_includes_get(self):
+        options = {'globals': {}}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], options), None)
+
+        options = {'globals': {SYSTEM_GLOBAL_INCLUDES_NAME: {'test.bare': True}}}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], options), {'test.bare': True})
+
+        options = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], options), None)
+
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], None), None)
+
+
+    def test_system_global_includes_name(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesName']([], None), SYSTEM_GLOBAL_INCLUDES_NAME)
+
+
     def test_system_global_set(self):
         options = {'globals': {}}
         self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['a', 1], options), 1)
@@ -3176,12 +3194,18 @@ a,b, c
 
     def test_url_encode(self):
         self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](["https://foo.com/this & 'that' + 2"], None),
-            "https://foo.com/this%20&%20'that'%20+%202"
+            SCRIPT_FUNCTIONS['urlEncode'](["https://foo.com/this & 'that' + 2!"], None),
+            "https://foo.com/this%20&%20'that'%20+%202!"
         )
         self.assertEqual(
             SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that) + 2'], None),
             'https://foo.com/this%20%28&%20that%29%20+%202'
+        )
+
+        # Hash param URL
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['urlEncode'](['#url=other.md'], None),
+            '#url=other.md'
         )
 
         # Non-string URL

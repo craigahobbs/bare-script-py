@@ -9,7 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
-from bare_script.library import COVERAGE_GLOBAL_NAME
+from bare_script.library import COVERAGE_GLOBAL_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import ValueArgsError
 
 
@@ -811,6 +811,57 @@ a = 1
         self.assertIsNone(execute_script(script, options))
         self.assertEqual(options['globals']['a'], 1)
         self.assertEqual(options['globals']['b'], 2)
+
+
+    def test_include_twice(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.bare'}]}},
+                {'include': {'includes': [{'url': 'test.bare'}]}}
+            ]
+        })
+
+        def fetch_fn(request):
+            url = request['url']
+            self.assertEqual(url, 'test.bare')
+            return 'a = if(a, a + 1, 1)'
+
+        options = {'globals': {}, 'fetchFn': fetch_fn}
+        self.assertIsNone(execute_script(script, options))
+        self.assertEqual(options['globals']['a'], 1)
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'test.bare': True})
+
+
+    def test_include_nested(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.bare'}]}},
+                {'include': {'includes': [{'url': 'test2.bare'}]}},
+                {'include': {'includes': [{'url': 'test3.bare'}]}}
+            ]
+        })
+
+        def fetch_fn(request):
+            url = request['url']
+            if url == 'test3.bare':
+                return '''\
+function test3_fn():
+endfunction
+'''
+            elif url == 'test2.bare':
+                return '''\
+include 'test3.bare'
+test3_fn()
+'''
+            else: # url == 'test.bare'
+                return '''\
+include 'test2.bare'
+include 'test3.bare'
+'''
+
+        options = {'globals': {}, 'fetchFn': fetch_fn}
+        self.assertIsNone(execute_script(script, options))
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'test.bare': True, 'test2.bare': True, 'test3.bare': True})
 
 
     def test_include_no_fetch_fn(self):

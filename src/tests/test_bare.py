@@ -28,7 +28,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(
                 stdout.getvalue().splitlines()[0],
-                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
+                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
             )
             self.assertEqual(stderr.getvalue(), '')
 
@@ -43,7 +43,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(
                 stdout.getvalue().splitlines()[0],
-                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-v VAR EXPR] [file ...]'
+                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
             )
             self.assertEqual(stderr.getvalue(), '')
 
@@ -411,49 +411,9 @@ Undefined function "unknown"
                 main(['-d', '-c', 'systemLog("Hello")', '-c', 'systemLogDebug("Goodbye")'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript static analysis "<string>" ... OK
 Hello
 BareScript executed in 100.0 milliseconds
-BareScript static analysis "<string2>" ... OK
 Goodbye
-BareScript executed in 100.0 milliseconds
-''')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 0)
-
-
-    def test_main_debug_static_analysis_warnings(self):
-        with unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-d', '-c', '0'])
-
-            self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript static analysis "<string>" ... 1 warning:
-<string>:1: Pointless global statement
-BareScript executed in 100.0 milliseconds
-''')
-            self.assertEqual(mock_stderr.getvalue(), '')
-            self.assertEqual(cm_exc.exception.code, 0)
-
-
-    def test_main_debug_static_analysis_warnings_multiple(self):
-        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file, \
-             unittest.mock.patch('time.time', side_effect=[1000, 1000.1]), \
-             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
-             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
-
-            mock_file.return_value.read.side_effect = ['0\n1\n']
-
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-d', 'test.bare'])
-
-            self.assertEqual(mock_stdout.getvalue(), '''\
-BareScript static analysis "test.bare" ... 2 warnings:
-test.bare:1: Pointless global statement
-test.bare:2: Pointless global statement
 BareScript executed in 100.0 milliseconds
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
@@ -482,11 +442,96 @@ BareScript static analysis "<string2>" ... OK
              unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
 
             with self.assertRaises(SystemExit) as cm_exc:
+                main(['-s', '-c', '0'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript static analysis "<string>" ... 1 warning:
+<string>:1: Pointless global statement
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_static_analysis_multiple_warnings(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-s', '-c', 'a = b + c\nb = 1\nc = 2'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript static analysis "<string>" ... 2 warnings:
+<string>:1: Global variable "b" used before assignment
+<string>:1: Global variable "c" used before assignment
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_static_analysis_multiple_scripts(self):
+        with unittest.mock.patch('time.time', side_effect=[1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
                 main(['-s', '-c', '0', '-c', '1'])
 
             self.assertEqual(mock_stdout.getvalue(), '''\
 BareScript static analysis "<string>" ... 1 warning:
 <string>:1: Pointless global statement
+BareScript static analysis "<string2>" ... 1 warning:
+<string2>:1: Pointless global statement
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_static_analysis_include(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000, 1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-x', '-m', '-c', 'a = 1', '-c', 'b = a'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript static analysis "<string>" ... OK
+BareScript static analysis "<string2>" ... 1 warning:
+<string2>:1: Unknown global variable "a"
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_static_analysis_execute(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-x', '-c', 'a = 1\nreturn a + b'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript static analysis "<string>" ... 1 warning:
+<string>:2: Unknown global variable "b"
+''')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 1)
+
+
+    def test_main_static_analysis_execute_error_no_clear(self):
+        with unittest.mock.patch('time.time', side_effect=[1000, 1000]), \
+             unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-x', '-c', 'a = 1\nreturn a + b', '-c', 'a = 2'])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+BareScript static analysis "<string>" ... 1 warning:
+<string>:2: Unknown global variable "b"
+BareScript static analysis "<string2>" ... OK
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 1)

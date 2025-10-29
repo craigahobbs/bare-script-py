@@ -319,12 +319,14 @@ def validate_expression(expr):
     return validate_type(BARE_SCRIPT_TYPES, 'Expression', expr)
 
 
-def lint_script(script):
+def lint_script(script, globals_=None):
     """
     Lint a BareScript script model
 
     :param script: The `BareScript model <./model/#var.vName='BareScript'>`__
     :type script: dict
+    :param globals_: The script global variables
+    :type globals_: dict or None, optional
     :return: The list of lint warnings
     :rtype: list[str]
     """
@@ -343,6 +345,12 @@ def lint_script(script):
     for var_name in sorted(var_assigns.keys()):
         if var_name in var_uses and var_uses[var_name] <= var_assigns[var_name]:
             _lint_script_warning(warnings, script, statements[var_uses[var_name]], f'Global variable "{var_name}" used before assignment')
+
+    # Unknown global variable?
+    if globals_ is not None:
+        for var_name in sorted(var_uses.keys()):
+            if var_name not in var_assigns and var_name not in globals_ and var_name not in _BUILTIN_GLOBALS:
+                _lint_script_warning(warnings, script, statements[var_uses[var_name]], f'Unknown global variable "{var_name}"')
 
     # Iterate global statements
     functions_defined = {}
@@ -384,6 +392,15 @@ def lint_script(script):
                         warnings, script, fn_statements[fn_var_assigns[var_name]],
                         f'Unused variable "{var_name}" defined in function "{function_name}"'
                     )
+
+            # Unknown global variable?
+            if globals_ is not None:
+                for var_name in sorted(fn_var_uses.keys()):
+                    if var_name not in fn_var_assigns and (args is None or var_name not in args) and \
+                       var_name not in globals_ and var_name not in _BUILTIN_GLOBALS:
+                        _lint_script_warning(
+                            warnings, script, fn_statements[fn_var_uses[var_name]], f'Unknown global variable "{var_name}"'
+                        )
 
             # Function argument checks
             if args is not None:
@@ -467,6 +484,10 @@ def lint_script(script):
             _lint_script_warning(warnings, script, statements[labels_used[label]], f'Unknown global label "{label}"')
 
     return warnings
+
+
+# Builtin global variable names
+_BUILTIN_GLOBALS = set(['false', 'if', 'null', 'true'])
 
 
 # Helper to format static analysis warnings
