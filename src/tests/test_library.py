@@ -149,8 +149,20 @@ class TestLibrary(unittest.TestCase):
 
     def test_array_flat(self):
         array = [1, [2, [3, 4], 5], 6]
-        result = SCRIPT_FUNCTIONS['arrayFlat']([array], None)
-        self.assertListEqual(result, [1, 2, 3, 4, 5, 6])
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayFlat']([array], None), [1, 2, 3, 4, 5, 6])
+
+        # Cycle
+        array_deep = [1]
+        array_last = array_deep
+        for ix in range(2, 13):
+            array_last_new = [ix]
+            array_last.append(array_last_new)
+            array_last = array_last_new
+
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayFlat']([array_deep], None), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, [12]])
+
+        # Depth
+        self.assertListEqual(SCRIPT_FUNCTIONS['arrayFlat']([array_deep, 3], None), [1, 2, 3, 4, [5, [6, [7, [8, [9, [10, [11, [12]]]]]]]]])
 
         # Non-array
         with self.assertRaises(ValueArgsError) as cm_exc:

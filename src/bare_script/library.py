@@ -86,20 +86,26 @@ _ARRAY_EXTEND_ARGS = value_args_model([
 # $group: Array
 # $doc: Flat an array hierarchy
 # $arg array: The array to flat
+# $arg depth: The maximum depth of the array hierarchy
 # $return: The flated array
 def _array_flat(args, unused_options):
-    array, = value_args_validate(_ARRAY_FLAT_ARGS, args)
-    return list(_array_flat_helper(array))
+    array, depth = value_args_validate(_ARRAY_FLAT_ARGS, args)
+    return list(_array_flat_helper(array, 0, depth))
 
-def _array_flat_helper(array):
+def _array_flat_helper(array, depth, max_depth):
+    if max_depth < depth:
+        yield array
+        return
+
     for item in array:
         if isinstance(item, list):
-            yield from _array_flat_helper(item)
+            yield from _array_flat_helper(item, depth + 1, max_depth)
         else:
             yield item
 
 _ARRAY_FLAT_ARGS = value_args_model([
-    {'name': 'array', 'type': 'array'}
+    {'name': 'array', 'type': 'array'},
+    {'name': 'depth', 'type': 'number', 'integer': True, 'default': 10}
 ])
 
 
