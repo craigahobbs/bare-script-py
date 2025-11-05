@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>bare-script &#8212; bare-script 3.8.1 documentation</title>
+    <title>bare-script &#8212; bare-script 3.8.2 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=30f795a6"></script>
+    <script src="_static/documentation_options.js?v=070f1fcc"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -95,7 +95,7 @@
 <a class="reference external" href="https://pypi.org/project/bare-script/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bare-script" /></a>
 <a class="reference external" href="https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/craigahobbs/bare-script-py" /></a>
 <a class="reference external" href="https://pypi.org/project/bare-script/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/bare-script" /></a></p>
-<p><a class="reference external" href="https://craigahobbs.github.io/bare-script/language/">BareScript</a>
+<p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/">BareScript</a>
 is a simple, lightweight, and portable programming language. Its Pythonic syntax is influenced by
 JavaScript, C, and the Unix Shell. BareScript also has a library of built-in functions for common
 programming operations. BareScript can be embedded within applications or used as a stand-alone
@@ -109,7 +109,7 @@ confident that BareScript will execute the same regardless of the underlying run
 <section id="links">
 <h2>Links<a class="headerlink" href="#links" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script/language/">The BareScript Language</a></p></li>
+<li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/">The BareScript Language</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/">The BareScript Library</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/expression.html">The BareScript Expression Library</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/">API Documentation</a></p></li>
@@ -172,7 +172,7 @@ functions.</p>
 </pre></div>
 </div>
 <p>This outputs:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">BareScript</span> <span class="n">Library</span> <span class="n">has</span> <span class="mi">105</span> <span class="n">functions</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">BareScript</span> <span class="n">Library</span> <span class="n">has</span> <span class="mi">186</span> <span class="n">functions</span>
 </pre></div>
 </div>
 </section>
@@ -180,7 +180,7 @@ functions.</p>
 <section id="evaluating-barescript-expressions">
 <h2>Evaluating BareScript Expressions<a class="headerlink" href="#evaluating-barescript-expressions" title="Link to this heading">¶</a></h2>
 <p>To evaluate a
-<a class="reference external" href="https://craigahobbs.github.io/bare-script/language/#expressions">BareScript expression</a>,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/#expressions">BareScript expression</a>,
 parse the expression using the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/expressions.html#parse-expression">parse_expression</a>
 function. Then evaluate the expression using the
@@ -222,14 +222,9 @@ write the body to the path.</p>
 </section>
 <section id="markdownup-a-markdown-viewer-with-barescript">
 <h2>MarkdownUp, a Markdown Viewer with BareScript<a class="headerlink" href="#markdownup-a-markdown-viewer-with-barescript" title="Link to this heading">¶</a></h2>
-<p><a class="reference external" href="https://craigahobbs.github.io/markdown-up/">MarkdownUp</a>
-is a Markdown Viewer that executes BareScript embedded within Markdown documents.
-MarkdownUp includes the
-<a class="reference external" href="https://craigahobbs.github.io/markdown-up/library/">MarkdownUp Library</a>,
-which extends the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/">BareScript Library</a>
-with functions for dynamically rendering Markdown text, drawing SVG images, etc.</p>
-<p>For example:</p>
+<p><a class="reference external" href="https://craigahobbs.github.io/markdown-up/">MarkdownUp</a> is a Markdown Viewer that executes
+BareScript embedded within Markdown documents. The MarkdownUp runtime contains functions for
+dynamically rendering Markdown text, drawing SVG images, etc. For example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span># Markdown Application
 
 This is a Markdown document with embedded BareScript:
