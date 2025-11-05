@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>The BareScript Library</title>
+        <title>MarkdownUp Include Library Tests</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://craigahobbs.github.io/markdown-up/app.css">
@@ -38,19 +38,7 @@
     </body>
     <script type="module">
         import {MarkdownUp} from 'https://craigahobbs.github.io/markdown-up/lib/app.js';
-        const app = new MarkdownUp(window, {
-            'markdownText': `\
-~~~ markdown-script
-include <baredoc.bare>
-
-baredocMain( \\
-    'library.json', \\
-    'The BareScript Library', \\
-    null, \\
-    'libraryContent.json' \\
-)
-~~~
-`});
+        const app = new MarkdownUp(window, {'url': 'runTests.md'});
         app.run();
     </script>
 </html>

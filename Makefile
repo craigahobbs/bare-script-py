@@ -24,11 +24,25 @@ include Makefile.base
 
 
 help:
-	@echo "            [perf]"
+	@echo "            [perf|sync-include|test-include]"
 
 
 clean:
 	rm -rf Makefile.base pylintrc
+
+
+.PHONY: sync-include
+sync-include:
+	rsync -rv --delete --exclude=.git/ --exclude=__init__.py src/bare_script/include/ ../bare-script/lib/include/
+	rsync -rv --delete --exclude=.git/ static/ ../bare-script/static/
+
+
+.PHONY: test-include
+commit: test-include
+test-include: $(DEFAULT_VENV_BUILD)
+	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/*.bare
+	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
+	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 
 
 doc:
@@ -36,10 +50,24 @@ doc:
 	cp -R static/* build/doc/html
 
     # Generate the library documentation
-	$(DEFAULT_VENV_BIN)/baredoc src/bare_script/library.py -o build/doc/html/library/library.json
+	$(DEFAULT_VENV_BIN)/baredoc src/bare_script/library.py src/bare_script/include/*.bare -o build/doc/html/library/library.json
+
+     # Generate the single-page library documentation
+	cd build/doc/html/library/ && \
+	../../../../$(DEFAULT_VENV_BIN)/bare -m -c 'include <baredoc.bare>' \
+		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+		-c "baredocMain('library.json', 'The BareScript Library', null, 'libraryContent.json')" \
+		> barescript-library.md
 
     # Generate the expression library documentation
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" build/doc/html/library/library.json build/doc/html/library/expression.json
+
+     # Generate the single-page expression library documentation
+	cd build/doc/html/library/ && \
+	../../../../$(DEFAULT_VENV_BIN)/bare -m -c 'include <baredoc.bare>' \
+		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+		-c "baredocMain('expression.json', 'The BareScript Expression Library', null, 'expressionContent.json')" \
+		> barescript-expression-library.md
 
     # Generate the library model documentation
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_LIBRARY_MODEL_PY" build/doc/html/library/model.json
@@ -76,6 +104,7 @@ export DOC_EXPR_PY
 # Python to generate the library type model
 define DOC_LIBRARY_MODEL_PY
 import sys
+from bare_script import execute_script, fetch_read_write, log_stdout, parse_script
 from bare_script.data import AGGREGATION_TYPES
 from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
 from bare_script.value import value_json
@@ -85,6 +114,25 @@ _, type_model_path = sys.argv
 
 # Create the library type model
 types = {**AGGREGATION_TYPES, **REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
+
+# Create the include library type model
+script = parse_script('''\
+include 'src/bare_script/include/args.bare'
+include 'src/bare_script/include/dataLineChart.bare'
+include 'src/bare_script/include/dataTable.bare'
+include 'src/bare_script/include/diff.bare'
+include 'src/bare_script/include/pager.bare'
+
+includeTypes = {}
+objectAssign(includeTypes, argsTypes)
+objectAssign(includeTypes, dataLineChartTypes)
+objectAssign(includeTypes, dataTableTypes)
+objectAssign(includeTypes, diffTypes)
+objectAssign(includeTypes, pagerTypes)
+return includeTypes
+''')
+include_types = execute_script(script, {'fetchFn': fetch_read_write, 'logFn': log_stdout})
+types.update(include_types)
 
 # Write the library type model
 with open(type_model_path, 'w', encoding='utf-8') as fh:
@@ -146,17 +194,3 @@ for language, time_ms in sorted(best_timings.items(), key=lambda val: val[1]):
     print(report if language == 'BareScript' else f'{report} ({best_timings["BareScript"] / time_ms:.1f}x)')
 endef
 export PERF_PY
-
-
-# Update the MarkdownUp include library tarball
-.PHONY: markdown-up
-markdown-up:
-	mkdir -p build/
-	rm -rf build/markdown-up
-	cd build && \
-		rm -f markdown-up.tar.gz && \
-		$(call WGET_CMD, https://craigahobbs.github.io/markdown-up/markdown-up.tar.gz) && \
-		tar xzvf markdown-up.tar.gz
-	rm -rf src/bare_script/include/
-	cp -R build/markdown-up/include src/bare_script/
-	touch src/bare_script/include/__init__.py

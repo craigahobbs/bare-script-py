@@ -143,9 +143,9 @@ def join_data(left_data, right_data, join_expr, right_expr=None, is_left_join=Fa
     :type leftData: list[dict]
     :param rightData: The left data array
     :type rightData: list[dict]
-    :param joinExpr: The join `expression <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :param joinExpr: The join `expression <https://craigahobbs.github.io/bare-script-py/language/#expressions>`__
     :type joinExpr: str
-    :param rightExpr: The right join `expression <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :param rightExpr: The right join `expression <https://craigahobbs.github.io/bare-script-py/language/#expressions>`__
     :type rightExpr: str
     :param isLeftJoin: If true, perform a left join (always include left row)
     :type isLeftJoin: bool
@@ -264,7 +264,7 @@ def filter_data(data, expr, variables=None, options=None):
 
     :param data: The data array
     :type data: list[dict]
-    :param expr: The boolean filter `expression <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :param expr: The boolean filter `expression <https://craigahobbs.github.io/bare-script-py/language/#expressions>`__
     :type expr: str
     :param variables:  Additional variables for expression evaluation
     :type variables: dict

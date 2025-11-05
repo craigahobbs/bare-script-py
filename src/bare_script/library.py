@@ -33,7 +33,7 @@ DEFAULT_MAX_STATEMENTS = 1e9
 
 
 # $function: arrayCopy
-# $group: Array
+# $group: array
 # $doc: Create a copy of an array
 # $arg array: The array to copy
 # $return: The array copy
@@ -47,7 +47,7 @@ _ARRAY_COPY_ARGS = value_args_model([
 
 
 # $function: arrayDelete
-# $group: Array
+# $group: array
 # $doc: Delete an array element
 # $arg array: The array
 # $arg index: The array element's index
@@ -66,7 +66,7 @@ _ARRAY_DELETE_ARGS = value_args_model([
 
 
 # $function: arrayExtend
-# $group: Array
+# $group: array
 # $doc: Extend one array with another
 # $arg array: The array to extend
 # $arg array2: The array to extend with
@@ -83,7 +83,7 @@ _ARRAY_EXTEND_ARGS = value_args_model([
 
 
 # $function: arrayFlat
-# $group: Array
+# $group: array
 # $doc: Flat an array hierarchy
 # $arg array: The array to flat
 # $arg depth: The maximum depth of the array hierarchy
@@ -110,7 +110,7 @@ _ARRAY_FLAT_ARGS = value_args_model([
 
 
 # $function: arrayGet
-# $group: Array
+# $group: array
 # $doc: Get an array element
 # $arg array: The array
 # $arg index: The array element's index
@@ -129,7 +129,7 @@ _ARRAY_GET_ARGS = value_args_model([
 
 
 # $function: arrayIndexOf
-# $group: Array
+# $group: array
 # $doc: Find the index of a value in an array
 # $arg array: The array
 # $arg value: The value to find in the array, or a match function, f(value) -> bool
@@ -160,7 +160,7 @@ _ARRAY_INDEX_OF_ARGS = value_args_model([
 
 
 # $function: arrayJoin
-# $group: Array
+# $group: array
 # $doc: Join an array with a separator string
 # $arg array: The array
 # $arg separator: The separator string
@@ -176,7 +176,7 @@ _ARRAY_JOIN_ARGS = value_args_model([
 
 
 # $function: arrayLastIndexOf
-# $group: Array
+# $group: array
 # $doc: Find the last index of a value in an array
 # $arg array: The array
 # $arg value: The value to find in the array, or a match function, f(value) -> bool
@@ -209,7 +209,7 @@ _ARRAY_LAST_INDEX_OF_ARGS = value_args_model([
 
 
 # $function: arrayLength
-# $group: Array
+# $group: array
 # $doc: Get the length of an array
 # $arg array: The array
 # $return: The array's length; zero if not an array
@@ -223,7 +223,7 @@ _ARRAY_LENGTH_ARGS = value_args_model([
 
 
 # $function: arrayNew
-# $group: Array
+# $group: array
 # $doc: Create a new array
 # $arg values...: The new array's values
 # $return: The new array
@@ -232,7 +232,7 @@ def _array_new(args, unused_options):
 
 
 # $function: arrayNewSize
-# $group: Array
+# $group: array
 # $doc: Create a new array of a specific size
 # $arg size: Optional (default is 0). The new array's size.
 # $arg value: Optional (default is 0). The value with which to fill the new array.
@@ -248,7 +248,7 @@ _ARRAY_NEW_SIZE_ARGS = value_args_model([
 
 
 # $function: arrayPop
-# $group: Array
+# $group: array
 # $doc: Remove the last element of the array and return it
 # $arg array: The array
 # $return: The last element of the array; null if the array is empty.
@@ -265,7 +265,7 @@ _ARRAY_POP_ARGS = value_args_model([
 
 
 # $function: arrayPush
-# $group: Array
+# $group: array
 # $doc: Add one or more values to the end of the array
 # $arg array: The array
 # $arg values...: The values to add to the end of the array
@@ -282,7 +282,7 @@ _ARRAY_PUSH_ARGS = value_args_model([
 
 
 # $function: arraySet
-# $group: Array
+# $group: array
 # $doc: Set an array element value
 # $arg array: The array
 # $arg index: The index of the element to set
@@ -304,7 +304,7 @@ _ARRAY_SET_ARGS = value_args_model([
 
 
 # $function: arrayShift
-# $group: Array
+# $group: array
 # $doc: Remove the first element of the array and return it
 # $arg array: The array
 # $return: The first element of the array; null if the array is empty.
@@ -323,7 +323,7 @@ _ARRAY_SHIFT_ARGS = value_args_model([
 
 
 # $function: arraySlice
-# $group: Array
+# $group: array
 # $doc: Copy a portion of an array
 # $arg array: The array
 # $arg start: Optional (default is 0). The start index of the slice.
@@ -348,7 +348,7 @@ _ARRAY_SLICE_ARGS = value_args_model([
 
 
 # $function: arraySort
-# $group: Array
+# $group: array
 # $doc: Sort an array
 # $arg array: The array
 # $arg compareFn: Optional (default is null). The comparison function.
@@ -377,16 +377,16 @@ COVERAGE_GLOBAL_NAME = '__bareScriptCoverage'
 
 
 # $function: coverageGlobalGet
-# $group: Coverage
+# $group: coverage
 # $doc: Get the coverage global object
-# $return: The [coverage global object](https://craigahobbs.github.io/bare-script/model/#var.vName='CoverageGlobal')
+# $return: The [coverage global object](https://craigahobbs.github.io/bare-script-py/model/#var.vName='CoverageGlobal')
 def _coverage_global_get(unused_args, options):
     globals_ = options.get('globals') if options is not None else None
     return globals_.get(COVERAGE_GLOBAL_NAME) if globals_ is not None else None
 
 
 # $function: coverageGlobalName
-# $group: Coverage
+# $group: coverage
 # $doc: Get the coverage global variable name
 # $return: The coverage global variable name
 def _coverage_global_name(unused_args, unused_options):
@@ -394,7 +394,7 @@ def _coverage_global_name(unused_args, unused_options):
 
 
 # $function: coverageStart
-# $group: Coverage
+# $group: coverage
 # $doc: Start coverage data collection
 def _coverage_start(unused_args, options):
     globals_ = options.get('globals') if options is not None else None
@@ -404,7 +404,7 @@ def _coverage_start(unused_args, options):
 
 
 # $function: coverageStop
-# $group: Coverage
+# $group: coverage
 # $doc: Stop coverage data collection
 def _coverage_stop(unused_args, options):
     globals_ = options.get('globals') if options is not None else None
@@ -420,7 +420,7 @@ def _coverage_stop(unused_args, options):
 
 
 # $function: dataAggregate
-# $group: Data
+# $group: data
 # $doc: Aggregate a data array
 # $arg data: The data array
 # $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='Aggregation')
@@ -436,7 +436,7 @@ _DATA_AGGREGATE_ARGS = value_args_model([
 
 
 # $function: dataCalculatedField
-# $group: Data
+# $group: data
 # $doc: Add a calculated field to a data array
 # $arg data: The data array
 # $arg fieldName: The calculated field name
@@ -456,7 +456,7 @@ _DATA_CALCULATED_FIELD_ARGS = value_args_model([
 
 
 # $function: dataFilter
-# $group: Data
+# $group: data
 # $doc: Filter a data array
 # $arg data: The data array
 # $arg expr: The filter expression
@@ -474,13 +474,13 @@ _DATA_FILTER_ARGS = value_args_model([
 
 
 # $function: dataJoin
-# $group: Data
+# $group: data
 # $doc: Join two data arrays
 # $arg leftData: The left data array
 # $arg rightData: The right data array
-# $arg joinExpr: The [join expression](https://craigahobbs.github.io/bare-script/language/#expressions)
+# $arg joinExpr: The [join expression](https://craigahobbs.github.io/bare-script-py/language/#expressions)
 # $arg rightExpr: Optional (default is null).
-# $arg rightExpr: The right [join expression](https://craigahobbs.github.io/bare-script/language/#expressions)
+# $arg rightExpr: The right [join expression](https://craigahobbs.github.io/bare-script-py/language/#expressions)
 # $arg isLeftJoin: Optional (default is false). If true, perform a left join (always include left row).
 # $arg variables: Optional (default is null). A variables object for join expression evaluation.
 # $return: The joined data array
@@ -499,7 +499,7 @@ _DATA_JOIN_ARGS = value_args_model([
 
 
 # $function: dataParseCSV
-# $group: Data
+# $group: data
 # $doc: Parse CSV text to a data array
 # $arg text...: The CSV text
 # $return: The data array
@@ -522,7 +522,7 @@ def _data_parse_csv(args, unused_options):
 
 
 # $function: dataSort
-# $group: Data
+# $group: data
 # $doc: Sort a data array
 # $arg data: The data array
 # $arg sorts: The sort field-name/descending-sort tuples
@@ -538,7 +538,7 @@ _DATA_SORT_ARGS = value_args_model([
 
 
 # $function: dataTop
-# $group: Data
+# $group: data
 # $doc: Keep the top rows for each category
 # $arg data: The data array
 # $arg count: The number of rows to keep (default is 1)
@@ -556,7 +556,7 @@ _DATA_TOP_ARGS = value_args_model([
 
 
 # $function: dataValidate
-# $group: Data
+# $group: data
 # $doc: Validate a data array
 # $arg data: The data array
 # $arg csv: Optional (default is false). If true, parse value strings.
@@ -578,7 +578,7 @@ _DATA_VALIDATE_ARGS = value_args_model([
 
 
 # $function: datetimeDay
-# $group: Datetime
+# $group: datetime
 # $doc: Get the day of the month of a datetime
 # $arg datetime: The datetime
 # $return: The day of the month
@@ -592,7 +592,7 @@ _DATETIME_DAY_ARGS = value_args_model([
 
 
 # $function: datetimeHour
-# $group: Datetime
+# $group: datetime
 # $doc: Get the hour of a datetime
 # $arg datetime: The datetime
 # $return: The hour
@@ -606,7 +606,7 @@ _DATETIME_HOUR_ARGS = value_args_model([
 
 
 # $function: datetimeISOFormat
-# $group: Datetime
+# $group: datetime
 # $doc: Format the datetime as an ISO date/time string
 # $arg datetime: The datetime
 # $arg isDate: If true, format the datetime as an ISO date
@@ -627,7 +627,7 @@ _DATETIMEISO_FORMAT_ARGS = value_args_model([
 
 
 # $function: datetimeISOParse
-# $group: Datetime
+# $group: datetime
 # $doc: Parse an ISO date/time string
 # $arg string: The ISO date/time string
 # $return: The datetime, or null if parsing fails
@@ -641,7 +641,7 @@ _DATETIMEISO_PARSE_ARGS = value_args_model([
 
 
 # $function: datetimeMillisecond
-# $group: Datetime
+# $group: datetime
 # $doc: Get the millisecond of a datetime
 # $arg datetime: The datetime
 # $return: The millisecond
@@ -655,7 +655,7 @@ _DATETIME_MILLISECOND_ARGS = value_args_model([
 
 
 # $function: datetimeMinute
-# $group: Datetime
+# $group: datetime
 # $doc: Get the minute of a datetime
 # $arg datetime: The datetime
 # $return: The minute
@@ -669,7 +669,7 @@ _DATETIME_MINUTE_ARGS = value_args_model([
 
 
 # $function: datetimeMonth
-# $group: Datetime
+# $group: datetime
 # $doc: Get the month (1-12) of a datetime
 # $arg datetime: The datetime
 # $return: The month
@@ -683,7 +683,7 @@ _DATETIME_MONTH_ARGS = value_args_model([
 
 
 # $function: datetimeNew
-# $group: Datetime
+# $group: datetime
 # $doc: Create a new datetime
 # $arg year: The full year
 # $arg month: The month (1-12)
@@ -756,7 +756,7 @@ _DATETIME_NEW_ARGS = value_args_model([
 
 
 # $function: datetimeNow
-# $group: Datetime
+# $group: datetime
 # $doc: Get the current datetime
 # $return: The current datetime
 def _datetime_now(unused_args, unused_options):
@@ -764,7 +764,7 @@ def _datetime_now(unused_args, unused_options):
 
 
 # $function: datetimeSecond
-# $group: Datetime
+# $group: datetime
 # $doc: Get the second of a datetime
 # $arg datetime: The datetime
 # $return: The second
@@ -778,7 +778,7 @@ _DATETIME_SECOND_ARGS = value_args_model([
 
 
 # $function: datetimeToday
-# $group: Datetime
+# $group: datetime
 # $doc: Get today's datetime
 # $return: Today's datetime
 def _datetime_today(unused_args, unused_options):
@@ -787,7 +787,7 @@ def _datetime_today(unused_args, unused_options):
 
 
 # $function: datetimeYear
-# $group: Datetime
+# $group: datetime
 # $doc: Get the full year of a datetime
 # $arg datetime: The datetime
 # $return: The full year
@@ -806,7 +806,7 @@ _DATETIME_YEAR_ARGS = value_args_model([
 
 
 # $function: jsonParse
-# $group: JSON
+# $group: json
 # $doc: Convert a JSON string to an object
 # $arg string: The JSON string
 # $return: The object
@@ -820,7 +820,7 @@ _JSON_PARSE_ARGS = value_args_model([
 
 
 # $function: jsonStringify
-# $group: JSON
+# $group: json
 # $doc: Convert an object to a JSON string
 # $arg value: The object
 # $arg indent: Optional (default is null). The indentation number.
@@ -841,7 +841,7 @@ _JSON_STRINGIFY_ARGS = value_args_model([
 
 
 # $function: mathAbs
-# $group: Math
+# $group: math
 # $doc: Compute the absolute value of a number
 # $arg x: The number
 # $return: The absolute value of the number
@@ -855,7 +855,7 @@ _MATH_ABS_ARGS = value_args_model([
 
 
 # $function: mathAcos
-# $group: Math
+# $group: math
 # $doc: Compute the arccosine, in radians, of a number
 # $arg x: The number
 # $return: The arccosine, in radians, of the number
@@ -869,7 +869,7 @@ _MATH_ACOS_ARGS = value_args_model([
 
 
 # $function: mathAsin
-# $group: Math
+# $group: math
 # $doc: Compute the arcsine, in radians, of a number
 # $arg x: The number
 # $return: The arcsine, in radians, of the number
@@ -883,7 +883,7 @@ _MATH_ASIN_ARGS = value_args_model([
 
 
 # $function: mathAtan
-# $group: Math
+# $group: math
 # $doc: Compute the arctangent, in radians, of a number
 # $arg x: The number
 # $return: The arctangent, in radians, of the number
@@ -897,7 +897,7 @@ _MATH_ATAN_ARGS = value_args_model([
 
 
 # $function: mathAtan2
-# $group: Math
+# $group: math
 # $doc: Compute the angle, in radians, between (0, 0) and a point
 # $arg y: The Y-coordinate of the point
 # $arg x: The X-coordinate of the point
@@ -913,7 +913,7 @@ _MATH_ATAN2_ARGS = value_args_model([
 
 
 # $function: mathCeil
-# $group: Math
+# $group: math
 # $doc: Compute the ceiling of a number (round up to the next highest integer)
 # $arg x: The number
 # $return: The ceiling of the number
@@ -927,7 +927,7 @@ _MATH_CEIL_ARGS = value_args_model([
 
 
 # $function: mathCos
-# $group: Math
+# $group: math
 # $doc: Compute the cosine of an angle, in radians
 # $arg x: The angle, in radians
 # $return: The cosine of the angle
@@ -941,7 +941,7 @@ _MATH_COS_ARGS = value_args_model([
 
 
 # $function: mathFloor
-# $group: Math
+# $group: math
 # $doc: Compute the floor of a number (round down to the next lowest integer)
 # $arg x: The number
 # $return: The floor of the number
@@ -955,7 +955,7 @@ _MATH_FLOOR_ARGS = value_args_model([
 
 
 # $function: mathLn
-# $group: Math
+# $group: math
 # $doc: Compute the natural logarithm (base e) of a number
 # $arg x: The number
 # $return: The natural logarithm of the number
@@ -969,7 +969,7 @@ _MATH_LN_ARGS = value_args_model([
 
 
 # $function: mathLog
-# $group: Math
+# $group: math
 # $doc: Compute the logarithm (base 10) of a number
 # $arg x: The number
 # $arg base: Optional (default is 10). The logarithm base.
@@ -988,7 +988,7 @@ _MATH_LOG_ARGS = value_args_model([
 
 
 # $function: mathMax
-# $group: Math
+# $group: math
 # $doc: Compute the maximum value
 # $arg values...: The values
 # $return: The maximum value
@@ -1005,7 +1005,7 @@ def _math_max(values, unused_options):
 
 
 # $function: mathMin
-# $group: Math
+# $group: math
 # $doc: Compute the minimum value
 # $arg values...: The values
 # $return: The minimum value
@@ -1022,7 +1022,7 @@ def _math_min(values, unused_options):
 
 
 # $function: mathPi
-# $group: Math
+# $group: math
 # $doc: Return the number pi
 # $return: The number pi
 def _math_pi(unused_args, unused_options):
@@ -1030,7 +1030,7 @@ def _math_pi(unused_args, unused_options):
 
 
 # $function: mathRandom
-# $group: Math
+# $group: math
 # $doc: Compute a random number between 0 and 1, inclusive
 # $return: A random number
 def _math_random(unused_args, unused_options):
@@ -1038,7 +1038,7 @@ def _math_random(unused_args, unused_options):
 
 
 # $function: mathRound
-# $group: Math
+# $group: math
 # $doc: Round a number to a certain number of decimal places
 # $arg x: The number
 # $arg digits: Optional (default is 0). The number of decimal digits to round to.
@@ -1054,7 +1054,7 @@ _MATH_ROUND_ARGS = value_args_model([
 
 
 # $function: mathSign
-# $group: Math
+# $group: math
 # $doc: Compute the sign of a number
 # $arg x: The number
 # $return: -1 for a negative number, 1 for a positive number, and 0 for zero
@@ -1068,7 +1068,7 @@ _MATH_SIGN_ARGS = value_args_model([
 
 
 # $function: mathSin
-# $group: Math
+# $group: math
 # $doc: Compute the sine of an angle, in radians
 # $arg x: The angle, in radians
 # $return: The sine of the angle
@@ -1082,7 +1082,7 @@ _MATH_SIN_ARGS = value_args_model([
 
 
 # $function: mathSqrt
-# $group: Math
+# $group: math
 # $doc: Compute the square root of a number
 # $arg x: The number
 # $return: The square root of the number
@@ -1096,7 +1096,7 @@ _MATH_SQRT_ARGS = value_args_model([
 
 
 # $function: mathTan
-# $group: Math
+# $group: math
 # $doc: Compute the tangent of an angle, in radians
 # $arg x: The angle, in radians
 # $return: The tangent of the angle
@@ -1115,7 +1115,7 @@ _MATH_TAN_ARGS = value_args_model([
 
 
 # $function: numberParseFloat
-# $group: Number
+# $group: number
 # $doc: Parse a string as a floating point number
 # $arg string: The string
 # $return: The number
@@ -1129,7 +1129,7 @@ _NUMBER_PARSE_FLOAT_ARGS = value_args_model([
 
 
 # $function: numberParseInt
-# $group: Number
+# $group: number
 # $doc: Parse a string as an integer
 # $arg string: The string
 # $arg radix: Optional (default is 10). The number base.
@@ -1145,7 +1145,7 @@ _NUMBER_PARSE_INT_ARGS = value_args_model([
 
 
 # $function: numberToFixed
-# $group: Number
+# $group: number
 # $doc: Format a number using fixed-point notation
 # $arg x: The number
 # $arg digits: Optional (default is 2). The number of digits to appear after the decimal point.
@@ -1171,7 +1171,7 @@ _NUMBER_TO_FIXED_ARGS = value_args_model([
 
 
 # $function: objectAssign
-# $group: Object
+# $group: object
 # $doc: Assign the keys/values of one object to another
 # $arg object: The object to assign to
 # $arg object2: The object to assign
@@ -1188,7 +1188,7 @@ _OBJECT_ASSIGN_ARGS = value_args_model([
 
 
 # $function: objectCopy
-# $group: Object
+# $group: object
 # $doc: Create a copy of an object
 # $arg object: The object to copy
 # $return: The object copy
@@ -1202,7 +1202,7 @@ _OBJECT_COPY_ARGS = value_args_model([
 
 
 # $function: objectDelete
-# $group: Object
+# $group: object
 # $doc: Delete an object key
 # $arg object: The object
 # $arg key: The key to delete
@@ -1218,7 +1218,7 @@ _OBJECT_DELETE_ARGS = value_args_model([
 
 
 # $function: objectGet
-# $group: Object
+# $group: object
 # $doc: Get an object key's value
 # $arg object: The object
 # $arg key: The key
@@ -1237,7 +1237,7 @@ _OBJECT_GET_ARGS = value_args_model([
 
 
 # $function: objectHas
-# $group: Object
+# $group: object
 # $doc: Test if an object contains a key
 # $arg object: The object
 # $arg key: The key
@@ -1253,7 +1253,7 @@ _OBJECT_HAS_ARGS = value_args_model([
 
 
 # $function: objectKeys
-# $group: Object
+# $group: object
 # $doc: Get an object's keys
 # $arg object: The object
 # $return: The array of keys
@@ -1267,7 +1267,7 @@ _OBJECT_KEYS_ARGS = value_args_model([
 
 
 # $function: objectNew
-# $group: Object
+# $group: object
 # $doc: Create a new object
 # $arg keyValues...: The object's initial key and value pairs
 # $return: The new object
@@ -1283,7 +1283,7 @@ def _object_new(args, unused_options):
 
 
 # $function: objectSet
-# $group: Object
+# $group: object
 # $doc: Set an object key's value
 # $arg object: The object
 # $arg key: The key
@@ -1307,7 +1307,7 @@ _OBJECT_SET_ARGS = value_args_model([
 
 
 # $function: regexEscape
-# $group: Regex
+# $group: regex
 # $doc: Escape a string for use in a regular expression
 # $arg string: The string to escape
 # $return: The escaped string
@@ -1321,7 +1321,7 @@ _REGEX_ESCAPE_ARGS = value_args_model([
 
 
 # $function: regexMatch
-# $group: Regex
+# $group: regex
 # $doc: Find the first match of a regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
@@ -1339,7 +1339,7 @@ _REGEX_MATCH_ARGS = value_args_model([
 
 
 # $function: regexMatchAll
-# $group: Regex
+# $group: regex
 # $doc: Find all matches of regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
@@ -1386,7 +1386,7 @@ struct RegexMatch
 
 
 # $function: regexNew
-# $group: Regex
+# $group: regex
 # $doc: Create a regular expression
 # pylint: disable-next=line-too-long
 # $arg pattern: The [regular expression pattern string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#writing_a_regular_expression_pattern)
@@ -1426,7 +1426,7 @@ _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 
 
 # $function: regexReplace
-# $group: Regex
+# $group: regex
 # $doc: Replace regular expression matches with a string
 # $arg regex: The replacement regular expression
 # $arg string: The string
@@ -1459,7 +1459,7 @@ _R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 
 
 # $function: regexSplit
-# $group: Regex
+# $group: regex
 # $doc: Split a string with a regular expression
 # $arg regex: The regular expression
 # $arg string: The string
@@ -1480,7 +1480,7 @@ _REGEX_SPLIT_ARGS = value_args_model([
 
 
 # $function: schemaParse
-# $group: Schema
+# $group: schema
 # $doc: Parse the [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/) text
 # $arg lines...: The [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/)
 # $arg lines...: text lines (may contain nested arrays of un-split lines)
@@ -1490,7 +1490,7 @@ def _schema_parse(args, unused_options):
 
 
 # $function: schemaParseEx
-# $group: Schema
+# $group: schema
 # $doc: Parse the [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/) text with options
 # $arg lines: The array of [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/)
 # $arg lines: text lines (may contain nested arrays of un-split lines)
@@ -1514,7 +1514,7 @@ _SCHEMA_PARSE_EX_ARGS = value_args_model([
 
 
 # $function: schemaTypeModel
-# $group: Schema
+# $group: schema
 # $doc: Get the [Schema Markdown Type Model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 # $return: The [Schema Markdown Type Model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 def _schema_type_model(unused_args, unused_options):
@@ -1522,7 +1522,7 @@ def _schema_type_model(unused_args, unused_options):
 
 
 # $function: schemaValidate
-# $group: Schema
+# $group: schema
 # $doc: Validate an object to a schema type
 # $arg types: The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 # $arg typeName: The type name
@@ -1541,7 +1541,7 @@ _SCHEMA_VALIDATE_ARGS = value_args_model([
 
 
 # $function: schemaValidateTypeModel
-# $group: Schema
+# $group: schema
 # $doc: Validate a [Schema Markdown Type Model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
 # $arg types: The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types') to validate
 # $return: The validated [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
@@ -1560,7 +1560,7 @@ _SCHEMA_VALIDATE_TYPE_MODEL_ARGS = value_args_model([
 
 
 # $function: stringCharCodeAt
-# $group: String
+# $group: string
 # $doc: Get a string index's character code
 # $arg string: The string
 # $arg index: The character index
@@ -1579,7 +1579,7 @@ _STRING_CHAR_CODE_AT_ARGS = value_args_model([
 
 
 # $function: stringEndsWith
-# $group: String
+# $group: string
 # $doc: Determine if a string ends with a search string
 # $arg string: The string
 # $arg search: The search string
@@ -1595,7 +1595,7 @@ _STRING_ENDS_WITH_ARGS = value_args_model([
 
 
 # $function: stringFromCharCode
-# $group: String
+# $group: string
 # $doc: Create a string of characters from character codes
 # $arg charCodes...: The character codes
 # $return: The string of characters
@@ -1608,7 +1608,7 @@ def _string_from_char_code(char_codes, unused_options):
 
 
 # $function: stringIndexOf
-# $group: String
+# $group: string
 # $doc: Find the first index of a search string in a string
 # $arg string: The string
 # $arg search: The search string
@@ -1629,7 +1629,7 @@ _STRING_INDEX_OF_ARGS = value_args_model([
 
 
 # $function: stringLastIndexOf
-# $group: String
+# $group: string
 # $doc: Find the last index of a search string in a string
 # $arg string: The string
 # $arg search: The search string
@@ -1651,7 +1651,7 @@ _STRING_LAST_INDEX_OF_ARGS = value_args_model([
 
 
 # $function: stringLength
-# $group: String
+# $group: string
 # $doc: Get the length of a string
 # $arg string: The string
 # $return: The string's length; zero if not a string
@@ -1665,7 +1665,7 @@ _STRING_LENGTH_ARGS = value_args_model([
 
 
 # $function: stringLower
-# $group: String
+# $group: string
 # $doc: Convert a string to lower-case
 # $arg string: The string
 # $return: The lower-case string
@@ -1679,7 +1679,7 @@ _STRING_LOWER_ARGS = value_args_model([
 
 
 # $function: stringNew
-# $group: String
+# $group: string
 # $doc: Create a new string from a value
 # $arg value: The value
 # $return: The new string
@@ -1693,7 +1693,7 @@ _STRING_NEW_ARGS = value_args_model([
 
 
 # $function: stringRepeat
-# $group: String
+# $group: string
 # $doc: Repeat a string
 # $arg string: The string to repeat
 # $arg count: The number of times to repeat the string
@@ -1709,7 +1709,7 @@ _STRING_REPEAT_ARGS = value_args_model([
 
 
 # $function: stringReplace
-# $group: String
+# $group: string
 # $doc: Replace all instances of a string with another string
 # $arg string: The string to update
 # $arg substr: The string to replace
@@ -1727,7 +1727,7 @@ _STRING_REPLACE_ARGS = value_args_model([
 
 
 # $function: stringSlice
-# $group: String
+# $group: string
 # $doc: Copy a portion of a string
 # $arg string: The string
 # $arg start: The start index of the slice
@@ -1751,7 +1751,7 @@ _STRING_SLICE_ARGS = value_args_model([
 
 
 # $function: stringSplit
-# $group: String
+# $group: string
 # $doc: Split a string
 # $arg string: The string to split
 # $arg separator: The separator string
@@ -1767,7 +1767,7 @@ _STRING_SPLIT_ARGS = value_args_model([
 
 
 # $function: stringStartsWith
-# $group: String
+# $group: string
 # $doc: Determine if a string starts with a search string
 # $arg string: The string
 # $arg search: The search string
@@ -1783,7 +1783,7 @@ _STRING_STARTS_WITH_ARGS = value_args_model([
 
 
 # $function: stringTrim
-# $group: String
+# $group: string
 # $doc: Trim the whitespace from the beginning and end of a string
 # $arg string: The string
 # $return: The trimmed string
@@ -1797,7 +1797,7 @@ _STRING_TRIM_ARGS = value_args_model([
 
 
 # $function: stringUpper
-# $group: String
+# $group: string
 # $doc: Convert a string to upper-case
 # $arg string: The string
 # $return: The upper-case string
@@ -1816,7 +1816,7 @@ _STRING_UPPER_ARGS = value_args_model([
 
 
 # $function: systemBoolean
-# $group: System
+# $group: system
 # $doc: Interpret a value as a boolean
 # $arg value: The value
 # $return: true or false
@@ -1830,7 +1830,7 @@ _SYSTEM_BOOLEAN_ARGS = value_args_model([
 
 
 # $function: systemCompare
-# $group: System
+# $group: system
 # $doc: Compare two values
 # $arg left: The left value
 # $arg right: The right value
@@ -1846,7 +1846,7 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 
 
 # $function: systemFetch
-# $group: System
+# $group: system
 # $doc: Retrieve a URL resource
 # $arg url: The resource URL,
 # $arg url: [request model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest'),
@@ -1928,7 +1928,7 @@ struct SystemFetchRequest
 
 
 # $function: systemGlobalGet
-# $group: System
+# $group: system
 # $doc: Get a global variable value
 # $arg name: The global variable name
 # $arg defaultValue: The default value (optional)
@@ -1949,7 +1949,7 @@ SYSTEM_GLOBAL_INCLUDES_NAME = '__bareScriptIncludes'
 
 
 # $function: systemGlobalIncludesGet
-# $group: System
+# $group: system
 # $doc: Get the global system includes object
 # $return: The global system includes object
 def _system_global_includes_get(unused_args, options):
@@ -1958,7 +1958,7 @@ def _system_global_includes_get(unused_args, options):
 
 
 # $function: systemGlobalIncludesName
-# $group: System
+# $group: system
 # $doc: Get the system includes object global variable name
 # $return: The system includes object global variable name
 def _system_global_includes_name(unused_args, unused_options):
@@ -1966,7 +1966,7 @@ def _system_global_includes_name(unused_args, unused_options):
 
 
 # $function: systemGlobalSet
-# $group: System
+# $group: system
 # $doc: Set a global variable value
 # $arg name: The global variable name
 # $arg value: The global variable's value
@@ -1985,7 +1985,7 @@ _SYSTEM_GLOBAL_SET_ARGS = value_args_model([
 
 
 # $function: systemIs
-# $group: System
+# $group: system
 # $doc: Test if one value is the same object as another
 # $arg value1: The first value
 # $arg value2: The second value
@@ -2001,7 +2001,7 @@ _SYSTEM_IS_ARGS = value_args_model([
 
 
 # $function: systemLog
-# $group: System
+# $group: system
 # $doc: Log a message to the console
 # $arg message: The log message
 def _system_log(args, options):
@@ -2016,7 +2016,7 @@ _SYSTEM_LOG_ARGS = value_args_model([
 
 
 # $function: systemLogDebug
-# $group: System
+# $group: system
 # $doc: Log a message to the console, if in debug mode
 # $arg message: The log message
 def _system_log_debug(args, options):
@@ -2031,7 +2031,7 @@ _SYSTEM_LOG_DEBUG_ARGS = value_args_model([
 
 
 # $function: systemPartial
-# $group: System
+# $group: system
 # $doc: Return a new function which behaves like "func" called with "args".
 # $doc: If additional arguments are passed to the returned function, they are appended to "args".
 # $arg func: The function
@@ -2051,7 +2051,7 @@ _SYSTEM_PARTIAL_ARGS = value_args_model([
 
 
 # $function: systemType
-# $group: System
+# $group: system
 # $doc: Get a value's type string
 # $arg value: The value
 # $return: The type string of the value.
@@ -2071,7 +2071,7 @@ _SYSTEM_TYPE_ARGS = value_args_model([
 
 
 # $function: urlEncode
-# $group: URL
+# $group: url
 # $doc: Encode a URL
 # $arg url: The URL string
 # $return: The encoded URL string
@@ -2085,7 +2085,7 @@ _URL_ENCODE_ARGS = value_args_model([
 
 
 # $function: urlEncodeComponent
-# $group: URL
+# $group: url
 # $doc: Encode a URL component
 # $arg url: The URL component string
 # $return: The encoded URL component string

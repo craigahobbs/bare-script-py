@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/github/license/craigahobbs/bare-script-py)](https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bare-script)](https://pypi.org/project/bare-script/)
 
-[BareScript](https://craigahobbs.github.io/bare-script/language/)
+[BareScript](https://craigahobbs.github.io/bare-script-py/language/)
 is a simple, lightweight, and portable programming language. Its Pythonic syntax is influenced by
 JavaScript, C, and the Unix Shell. BareScript also has a library of built-in functions for common
 programming operations. BareScript can be embedded within applications or used as a stand-alone
@@ -21,7 +21,7 @@ confident that BareScript will execute the same regardless of the underlying run
 
 ## Links
 
-- [The BareScript Language](https://craigahobbs.github.io/bare-script/language/)
+- [The BareScript Language](https://craigahobbs.github.io/bare-script-py/language/)
 - [The BareScript Library](https://craigahobbs.github.io/bare-script-py/library/)
 - [The BareScript Expression Library](https://craigahobbs.github.io/bare-script-py/library/expression.html)
 - [API Documentation](https://craigahobbs.github.io/bare-script-py/)
@@ -93,14 +93,14 @@ print(execute_script(script, {'fetchFn': fetch_http}))
 This outputs:
 
 ```
-The BareScript Library has 105 functions
+The BareScript Library has 186 functions
 ```
 
 
 ## Evaluating BareScript Expressions
 
 To evaluate a
-[BareScript expression](https://craigahobbs.github.io/bare-script/language/#expressions),
+[BareScript expression](https://craigahobbs.github.io/bare-script-py/language/#expressions),
 parse the expression using the
 [parse_expression](https://craigahobbs.github.io/bare-script-py/expressions.html#parse-expression)
 function. Then evaluate the expression using the
@@ -151,15 +151,9 @@ write the body to the path.
 
 ## MarkdownUp, a Markdown Viewer with BareScript
 
-[MarkdownUp](https://craigahobbs.github.io/markdown-up/)
-is a Markdown Viewer that executes BareScript embedded within Markdown documents.
-MarkdownUp includes the
-[MarkdownUp Library](https://craigahobbs.github.io/markdown-up/library/),
-which extends the
-[BareScript Library](https://craigahobbs.github.io/bare-script-py/library/)
-with functions for dynamically rendering Markdown text, drawing SVG images, etc.
-
-For example:
+[MarkdownUp](https://craigahobbs.github.io/markdown-up/) is a Markdown Viewer that executes
+BareScript embedded within Markdown documents. The MarkdownUp runtime contains functions for
+dynamically rendering Markdown text, drawing SVG images, etc. For example:
 
 ~~~
 # Markdown Application

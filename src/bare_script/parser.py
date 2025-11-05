@@ -12,7 +12,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
     """
     Parse a BareScript script
 
-    :param script_text: The `script text <https://craigahobbs.github.io/bare-script/language/>`__
+    :param script_text: The `script text <https://craigahobbs.github.io/bare-script-py/language/>`__
     :type script_text: str or ~collections.abc.Iterable(str)
     :param start_line_number: The script's starting line number
     :type start_line_number: int, optional
@@ -503,7 +503,7 @@ def parse_expression(expr_text, line_number=None, script_name=None, array_litera
     """
     Parse a BareScript expression
 
-    :param expr_text: The `expression text <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :param expr_text: The `expression text <https://craigahobbs.github.io/bare-script-py/language/#expressions>`__
     :type expr_text: str or ~collections.abc.Iterable(str)
     :param line_number: The script line number
     :type line_number: int or None, optional
