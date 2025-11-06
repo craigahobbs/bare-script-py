@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.3 (2025-11-06)
+
+- [5cfa4e4](https://github.com/craigahobbs/bare-script-py/commit/5cfa4e4) - improve include debug linting
+
 ## 3.8.2 (2025-11-05)
 
 - [da991bb](https://github.com/craigahobbs/bare-script-py/commit/da991bb) - improved include library integration
