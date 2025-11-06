@@ -153,19 +153,19 @@ def _execute_script_helper(script, statements, options, locals_):
                 if system_include:
                     include_script['system'] = True
 
+                # Execute the include script
+                include_options = options.copy()
+                include_options['urlFn'] = functools.partial(url_file_relative, include_url)
+                _execute_script_helper(include_script, include_script['statements'], include_options, None)
+
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
-                    warnings = lint_script(include_script)
+                    warnings = lint_script(include_script, globals_)
                     if warnings:
                         warning_prefix = f'BareScript: Include "{include_url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
                         for warning in warnings:
                             log_fn(f'BareScript: {warning}')
-
-                # Execute the include script
-                include_options = options.copy()
-                include_options['urlFn'] = functools.partial(url_file_relative, include_url)
-                _execute_script_helper(include_script, include_script['statements'], include_options, None)
 
         # Increment the statement counter
         ix_statement += 1
