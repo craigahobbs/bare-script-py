@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.4 (2025-11-06)
+
+- [e757476](https://github.com/craigahobbs/bare-script-py/commit/e757476) - add missing include in args.bare
+
 ## 3.8.3 (2025-11-06)
 
 - [5cfa4e4](https://github.com/craigahobbs/bare-script-py/commit/5cfa4e4) - improve include debug linting
