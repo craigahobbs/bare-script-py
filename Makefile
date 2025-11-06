@@ -54,7 +54,7 @@ doc:
 
      # Generate the single-page library documentation
 	cd build/doc/html/library/ && \
-	../../../../$(DEFAULT_VENV_BIN)/bare -m -c 'include <baredoc.bare>' \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <baredoc.bare>' \
 		-v 'vSingle' 'true' -v 'vPublish' 'true' \
 		-c "baredocMain('library.json', 'The BareScript Library', null, 'libraryContent.json')" \
 		> barescript-library.md
@@ -64,7 +64,7 @@ doc:
 
      # Generate the single-page expression library documentation
 	cd build/doc/html/library/ && \
-	../../../../$(DEFAULT_VENV_BIN)/bare -m -c 'include <baredoc.bare>' \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <baredoc.bare>' \
 		-v 'vSingle' 'true' -v 'vPublish' 'true' \
 		-c "baredocMain('expression.json', 'The BareScript Expression Library', null, 'expressionContent.json')" \
 		> barescript-expression-library.md
