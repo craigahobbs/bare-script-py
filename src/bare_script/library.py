@@ -50,8 +50,7 @@ _ARRAY_COPY_ARGS = value_args_model([
 # $group: array
 # $doc: Delete an array element
 # $arg array: The array
-# $arg index: The array element's index
-# $return: The array element
+# $arg index: The index of the element to delete
 def _array_delete(args, unused_options):
     array, index = value_args_validate(_ARRAY_DELETE_ARGS, args)
     if index >= len(array):
