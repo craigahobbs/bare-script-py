@@ -318,11 +318,11 @@ Delete an array element
 The array
 
 **index -**
-The array element's index
+The index of the element to delete
 
 #### Returns
 
-The array element
+Nothing
 
 ---
 
