@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.6 (2025-11-14)
+
+- [ae70305](https://github.com/craigahobbs/bare-script-py/commit/ae70305) - improve dataTableMarkdown field value newline handling
+
 ## 3.8.5 (2025-11-06)
 
 - [9d08691](https://github.com/craigahobbs/bare-script-py/commit/9d08691) - fix include library linter warnings
