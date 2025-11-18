@@ -751,6 +751,21 @@ class TestExecuteScript(unittest.TestCase):
         self.assertEqual(execute_script(script), 55)
 
 
+    def test_jumpif_non_boolean(self):
+        script = validate_script({
+            'statements': [
+                {'jump': {
+                    'label': 'label',
+                    'expr': {'function': {'name': 'arrayNew', 'args': []}}
+                }},
+                {'return': {'expr': {'number': 2}}},
+                {'label': {'name':  'label'}},
+                {'return': {'expr': {'number': 1}}}
+            ]
+        })
+        self.assertEqual(execute_script(script), 2)
+
+
     def test_jump_error_unknown_label(self):
         script = validate_script({
             'statements': [
@@ -1251,6 +1266,20 @@ class TestEvaluateExpression(unittest.TestCase):
         options['globals']['test'] = False
         self.assertEqual(evaluate_expression(expr, options), 'abc')
         self.assertListEqual(test_values, ['a', 'abc'])
+
+
+    def test_function_if_non_boolean(self):
+        expr = validate_expression({
+            'function': {
+                'name': 'if',
+                'args': [
+                    {'function': {'name': 'arrayNew', 'args': []}},
+                    {'number': 1},
+                    {'number': 2}
+                ]
+            }
+        })
+        self.assertEqual(evaluate_expression(expr), 2)
 
 
     def test_function_if_no_value_expression(self):
