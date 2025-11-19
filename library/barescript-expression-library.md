@@ -17,8 +17,6 @@ documentation.
 
 ## array
 
-[Back to top](#var.vPublish=true&var.vSingle=true&_top)
-
 ### Function Index
 
 - [arrayNew](#var.vPublish=true&var.vSingle=true&arraynew)
@@ -41,8 +39,6 @@ The new array
 ---
 
 ## datetime
-
-[Back to top](#var.vPublish=true&var.vSingle=true&_top)
 
 ### Function Index
 
@@ -226,8 +222,6 @@ The full year
 ---
 
 ## math
-
-[Back to top](#var.vPublish=true&var.vSingle=true&_top)
 
 ### Function Index
 
@@ -547,8 +541,6 @@ The tangent of the angle
 
 ## number
 
-[Back to top](#var.vPublish=true&var.vSingle=true&_top)
-
 ### Function Index
 
 - [fixed](#var.vPublish=true&var.vSingle=true&fixed)
@@ -613,8 +605,6 @@ The integer
 
 ## object
 
-[Back to top](#var.vPublish=true&var.vSingle=true&_top)
-
 ### Function Index
 
 - [objectNew](#var.vPublish=true&var.vSingle=true&objectnew)
@@ -637,8 +627,6 @@ The new object
 ---
 
 ## string
-
-[Back to top](#var.vPublish=true&var.vSingle=true&_top)
 
 ### Function Index
 
