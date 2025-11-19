@@ -11,7 +11,7 @@ globals.
 
 - [args.bare](#var.vPublish=true&var.vSingle=true&args-bare)
 - [array](#var.vPublish=true&var.vSingle=true&array)
-- [baredocMain.bare](#var.vPublish=true&var.vSingle=true&baredocmain-bare)
+- [baredoc.bare](#var.vPublish=true&var.vSingle=true&baredoc-bare)
 - [coverage](#var.vPublish=true&var.vSingle=true&coverage)
 - [data](#var.vPublish=true&var.vSingle=true&data)
 - [dataTable.bare](#var.vPublish=true&var.vSingle=true&datatable-bare)
@@ -594,18 +594,18 @@ The sorted array
 
 ---
 
-## baredocMain.bare
+## baredoc.bare
 
-The "baredocMain.bare" include library provides the main entry point for creating BareScript library
+The "baredoc.bare" include library provides the main entry point for creating BareScript library
 documentation applications. This library is used to generate documentation websites like the
 [BareScript Library documentation](https://craigahobbs.github.io/bare-script/library/).
 
 To create a documentation application, include the library and call the
-[baredocMain](#var.vGroup='baredocMain.bare'&baredocmain) function with your library's JSON resource
+[baredocMain](#var.vGroup='baredoc.bare'&baredoc) function with your library's JSON resource
 URL:
 
 ~~~ bare-script
-include <baredocMain.bare>
+include <baredoc.bare>
 
 baredocMain( \
     'my-library.json', \
