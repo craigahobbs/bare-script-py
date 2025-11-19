@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.8 (2025-11-19)
+
+- [820f0f8](https://github.com/craigahobbs/bare-script-py/commit/820f0f8) - add schemaDoc.bare and schemaDocApp.bare
+
+- [797445b](https://github.com/craigahobbs/bare-script-py/commit/797445b) - add tests for if/jump with non-boolean expression
+
 ## 3.8.6 (2025-11-14)
 
 - [ae70305](https://github.com/craigahobbs/bare-script-py/commit/ae70305) - improve dataTableMarkdown field value newline handling
