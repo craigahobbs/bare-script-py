@@ -72,8 +72,22 @@ doc:
     # Generate the library model documentation
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_LIBRARY_MODEL_PY" build/doc/html/library/model.json
 
+    # Generate the single-page library model documentation
+	cd build/doc/html/library/ && \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <schemaDocApp.bare>' \
+		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+		-c "schemaDocAppMain('model.json', 'The BareScript Library Models')" \
+		> barescript-library-model.md
+
     # Generate the runtime model documentation
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_RUNTIME_MODEL_PY" build/doc/html/model/model.json
+
+    # Generate the single-page runtime model documentation
+	cd build/doc/html/library/ && \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <schemaDocApp.bare>' \
+		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+		-c "schemaDocAppMain('model.json', 'The BareScript Runtime Model')" \
+		> barescript-model.md
 
 
 # Python to generate the expression library documentation
