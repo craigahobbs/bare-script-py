@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.9 (2025-11-19)
+
+- [e007533](https://github.com/craigahobbs/bare-script-py/commit/e007533) - simplify schemaDocMain, combine schemaDocApp.bare with schemaDoc.bare
+
 ## 3.8.8 (2025-11-19)
 
 - [820f0f8](https://github.com/craigahobbs/bare-script-py/commit/820f0f8) - add schemaDoc.bare and schemaDocApp.bare
