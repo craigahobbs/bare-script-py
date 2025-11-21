@@ -1483,7 +1483,7 @@ _REGEX_SPLIT_ARGS = value_args_model([
 # $doc: Parse the [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/) text
 # $arg lines...: The [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/)
 # $arg lines...: text lines (may contain nested arrays of un-split lines)
-# $return: The schema's [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
+# $return: The schema's [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
 def _schema_parse(args, unused_options):
     return parse_schema_markdown(args)
 
@@ -1493,9 +1493,9 @@ def _schema_parse(args, unused_options):
 # $doc: Parse the [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/) text with options
 # $arg lines: The array of [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/)
 # $arg lines: text lines (may contain nested arrays of un-split lines)
-# $arg types: Optional. The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types').
+# $arg types: Optional. The [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='').
 # $arg filename: Optional (default is ""). The file name.
-# $return: The schema's [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
+# $return: The schema's [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
 def _schema_parse_ex(args, unused_options):
     lines, types, filename = value_args_validate(_SCHEMA_PARSE_EX_ARGS, args)
     lines_type = value_type(lines)
@@ -1514,8 +1514,8 @@ _SCHEMA_PARSE_EX_ARGS = value_args_model([
 
 # $function: schemaTypeModel
 # $group: schema
-# $doc: Get the [Schema Markdown Type Model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
-# $return: The [Schema Markdown Type Model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
+# $doc: Get the [Schema Markdown Type Model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
+# $return: The [Schema Markdown Type Model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
 def _schema_type_model(unused_args, unused_options):
     return TYPE_MODEL
 
@@ -1523,7 +1523,7 @@ def _schema_type_model(unused_args, unused_options):
 # $function: schemaValidate
 # $group: schema
 # $doc: Validate an object to a schema type
-# $arg types: The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
+# $arg types: The [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
 # $arg typeName: The type name
 # $arg value: The object to validate
 # $return: The validated object or null if validation fails
@@ -1541,9 +1541,9 @@ _SCHEMA_VALIDATE_ARGS = value_args_model([
 
 # $function: schemaValidateTypeModel
 # $group: schema
-# $doc: Validate a [Schema Markdown Type Model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
-# $arg types: The [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types') to validate
-# $return: The validated [type model](https://craigahobbs.github.io/schema-markdown-doc/doc/#var.vName='Types')
+# $doc: Validate a [Schema Markdown Type Model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
+# $arg types: The [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='') to validate
+# $return: The validated [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
 def _schema_validate_type_model(args, unused_options):
     types, = value_args_validate(_SCHEMA_VALIDATE_TYPE_MODEL_ARGS, args)
     return validate_type_model(types)
