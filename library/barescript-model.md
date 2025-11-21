@@ -3,10 +3,10 @@
 ## Table of Contents
 
 - [Aggregation](#var.vPublish=true&var.vSingle=true&aggregation)
-- [Line Chart](#var.vPublish=true&var.vSingle=true&line-chart)
 - [RegexMatch](#var.vPublish=true&var.vSingle=true&regexmatch)
 - [SystemFetch](#var.vPublish=true&var.vSingle=true&systemfetch)
 - [args.bare](#var.vPublish=true&var.vSingle=true&args-bare)
+- [data](#var.vPublish=true&var.vSingle=true&data)
 - [dataTable.bare](#var.vPublish=true&var.vSingle=true&datatable-bare)
 - [diff.bare](#var.vPublish=true&var.vSingle=true&diff-bare)
 - [pager.bare](#var.vPublish=true&var.vSingle=true&pager-bare)
@@ -46,60 +46,6 @@ An aggregation measure specification
 | field    | string                                           |            | The aggregation measure field     |
 | function | [AggregationFunction](#enum-aggregationfunction) |            | The aggregation function          |
 | name     | string                                           | optional   | The aggregated-measure field name |
-
----
-
-## Line Chart
-
-### struct LineChart
-
-A line chart model
-
-| Name       | Type                                                          | Attributes                 | Description                                     |
-|------------|---------------------------------------------------------------|----------------------------|-------------------------------------------------|
-| title      | string                                                        | optional                   | The chart title                                 |
-| width      | int                                                           | optional                   | The chart width                                 |
-| height     | int                                                           | optional                   | The chart height                                |
-| precision  | int                                                           | optional<br>value >= 0     | The numeric formatting precision (default is 2) |
-| datetime   | [LineChartDatetimeFormat](#enum-linechartdatetimeformat)      | optional                   | The datetime format                             |
-| x          | string                                                        |                            | The line chart's X-axis field                   |
-| y          | string []                                                     | len(array) > 0             | The line chart's Y-axis fields                  |
-| color      | string                                                        | optional                   | The color encoding field                        |
-| colorOrder | string []                                                     | optional<br>len(array) > 0 | The color encoding value order                  |
-| xTicks     | [LineChartAxisTicks](#struct-linechartaxisticks)              | optional                   | The X-axis tick marks                           |
-| yTicks     | [LineChartAxisTicks](#struct-linechartaxisticks)              | optional                   | The Y-axis tick marks                           |
-| xLines     | [LineChartAxisAnnotation](#struct-linechartaxisannotation) [] | optional<br>len(array) > 0 | The X-axis annotations                          |
-| yLines     | [LineChartAxisAnnotation](#struct-linechartaxisannotation) [] | optional<br>len(array) > 0 | The Y-axis annotations                          |
-
-### struct LineChartAxisAnnotation
-
-An axis annotation
-
-| Name  | Type   | Attributes | Description          |
-|-------|--------|------------|----------------------|
-| value | any    |            | The axis value       |
-| label | string | optional   | The annotation label |
-
-### struct LineChartAxisTicks
-
-The axis tick mark model
-
-| Name  | Type | Attributes             | Description                                                          |
-|-------|------|------------------------|----------------------------------------------------------------------|
-| count | int  | optional<br>value >= 0 | The count of evenly-spaced tick marks. The default is 3.             |
-| start | any  | optional               | The value of the first tick mark. Default is the minimum axis value. |
-| end   | any  | optional               | The value of the last tick mark. Default is the maximum axis value.  |
-| skip  | int  | optional<br>value > 0  | The number of tick mark labels to skip after a rendered label        |
-
-### enum LineChartDatetimeFormat
-
-A datetime format
-
-| Value | Description               |
-|-------|---------------------------|
-| year  | ISO datetime year format  |
-| month | ISO datetime month format |
-| day   | ISO datetime day format   |
 
 ---
 
@@ -166,6 +112,60 @@ An argument value type
 | float    |
 | int      |
 | string   |
+
+---
+
+## data
+
+### struct LineChart
+
+A line chart model
+
+| Name       | Type                                                          | Attributes                 | Description                                     |
+|------------|---------------------------------------------------------------|----------------------------|-------------------------------------------------|
+| title      | string                                                        | optional                   | The chart title                                 |
+| width      | int                                                           | optional                   | The chart width                                 |
+| height     | int                                                           | optional                   | The chart height                                |
+| precision  | int                                                           | optional<br>value >= 0     | The numeric formatting precision (default is 2) |
+| datetime   | [LineChartDatetimeFormat](#enum-linechartdatetimeformat)      | optional                   | The datetime format                             |
+| x          | string                                                        |                            | The line chart's X-axis field                   |
+| y          | string []                                                     | len(array) > 0             | The line chart's Y-axis fields                  |
+| color      | string                                                        | optional                   | The color encoding field                        |
+| colorOrder | string []                                                     | optional<br>len(array) > 0 | The color encoding value order                  |
+| xTicks     | [LineChartAxisTicks](#struct-linechartaxisticks)              | optional                   | The X-axis tick marks                           |
+| yTicks     | [LineChartAxisTicks](#struct-linechartaxisticks)              | optional                   | The Y-axis tick marks                           |
+| xLines     | [LineChartAxisAnnotation](#struct-linechartaxisannotation) [] | optional<br>len(array) > 0 | The X-axis annotations                          |
+| yLines     | [LineChartAxisAnnotation](#struct-linechartaxisannotation) [] | optional<br>len(array) > 0 | The Y-axis annotations                          |
+
+### struct LineChartAxisAnnotation
+
+An axis annotation
+
+| Name  | Type   | Attributes | Description          |
+|-------|--------|------------|----------------------|
+| value | any    |            | The axis value       |
+| label | string | optional   | The annotation label |
+
+### struct LineChartAxisTicks
+
+The axis tick mark model
+
+| Name  | Type | Attributes             | Description                                                          |
+|-------|------|------------------------|----------------------------------------------------------------------|
+| count | int  | optional<br>value >= 0 | The count of evenly-spaced tick marks. The default is 3.             |
+| start | any  | optional               | The value of the first tick mark. Default is the minimum axis value. |
+| end   | any  | optional               | The value of the last tick mark. Default is the maximum axis value.  |
+| skip  | int  | optional<br>value > 0  | The number of tick mark labels to skip after a rendered label        |
+
+### enum LineChartDatetimeFormat
+
+A datetime format
+
+| Value | Description               |
+|-------|---------------------------|
+| year  | ISO datetime year format  |
+| month | ISO datetime month format |
+| day   | ISO datetime day format   |
 
 ---
 
