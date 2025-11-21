@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.10 (2025-11-21)
+
+- [5762982](https://github.com/craigahobbs/bare-script-py/commit/5762982) - markdownUp.bare: remove schemaElements, add markdownElements
+
 ## 3.8.9 (2025-11-19)
 
 - [e007533](https://github.com/craigahobbs/bare-script-py/commit/e007533) - simplify schemaDocMain, combine schemaDocApp.bare with schemaDoc.bare
