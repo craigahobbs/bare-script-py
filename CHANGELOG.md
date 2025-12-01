@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.12 (2025-12-01)
+
+- [5200ca8](https://github.com/craigahobbs/bare-script-py/commit/5200ca8) - ArgumentParser color=False
+
 ## 3.8.11 (2025-11-24)
 
 - [92177aa](https://github.com/craigahobbs/bare-script-py/commit/92177aa) - improve baredoc.bare single-page load performance
