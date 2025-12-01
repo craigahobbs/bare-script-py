@@ -17,7 +17,10 @@ def main(argv=None):
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='baredoc', description='The BareScript documentation tool', color=False)
+    argument_parser_args = {'prog': 'baredoc', 'description': 'The BareScript documentation tool'}
+    if sys.version_info >= (3, 14): # pragma: no cover
+        argument_parser_args['color'] = False
+    parser = argparse.ArgumentParser(**argument_parser_args)
     parser.add_argument('files', metavar='file', nargs='+', help='files to process')
     parser.add_argument('-o', dest='output', metavar='file', default='-', help='write output to file (default is "-")')
     args = parser.parse_args(args=argv)
