@@ -26,7 +26,7 @@ def main(argv=None):
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='bare', description='The BareScript command-line interface')
+    parser = argparse.ArgumentParser(prog='bare', description='The BareScript command-line interface', color=False)
     parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
