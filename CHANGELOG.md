@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.8.12 (2025-12-01)
+## 3.8.12 (2025-12-01)
 
 - [5200ca8](https://github.com/craigahobbs/bare-script-py/commit/5200ca8) - ArgumentParser color=False
 
