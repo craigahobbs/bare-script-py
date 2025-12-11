@@ -2310,6 +2310,9 @@ Syntax error
         expr = parse_expression('0x1fF')
         self.assertDictEqual(validate_expression(expr), {'number': 511})
 
+        expr = parse_expression('0x20 + 0x01')
+        self.assertDictEqual(validate_expression(expr), {'binary': {'op': '+', 'left': {'number': 32}, 'right': {'number': 1}}})
+
 
     def test_string_literal(self):
         expr = parse_expression("'abc'")
