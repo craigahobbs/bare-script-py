@@ -1757,7 +1757,7 @@ _STRING_SLICE_ARGS = value_args_model([
 # $return: The array of split-out strings
 def _string_split(args, unused_options):
     string, separator = value_args_validate(_STRING_SPLIT_ARGS, args)
-    return string.split(separator)
+    return list(string) if separator == '' else string.split(separator)
 
 _STRING_SPLIT_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},

@@ -2781,6 +2781,9 @@ a,b, c
         # Not found
         self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo', ', '], None), ['foo'])
 
+        # Empty string separator
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplit'](['foo', ''], None), ['f', 'o', 'o'])
+
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringSplit']([None, ', '], None)
