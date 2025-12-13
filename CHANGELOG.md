@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.14 (2025-12-13)
+
+- [c486076](https://github.com/craigahobbs/bare-script-py/commit/c486076) - fix stringSplit with empty separator
+
+- [3e7f1a4](https://github.com/craigahobbs/bare-script-py/commit/3e7f1a4) - improve number parsing test
+
 ## 3.8.13 (2025-12-02)
 
 - [e88d3d4](https://github.com/craigahobbs/bare-script-py/commit/e88d3d4) - diff.bare improvements
