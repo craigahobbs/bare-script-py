@@ -280,6 +280,21 @@ _ARRAY_PUSH_ARGS = value_args_model([
 ])
 
 
+# $function: arrayReverse
+# $group: array
+# $doc: Reverse an array in place
+# $arg array: The array
+# $return: The reversed array
+def _array_reverse(args, unused_options):
+    array, = value_args_validate(_ARRAY_REVERSE_ARGS, args)
+    array.reverse()
+    return array
+
+_ARRAY_REVERSE_ARGS = value_args_model([
+    {'name': 'array', 'type': 'array'}
+])
+
+
 # $function: arraySet
 # $group: array
 # $doc: Set an array element value
@@ -348,7 +363,7 @@ _ARRAY_SLICE_ARGS = value_args_model([
 
 # $function: arraySort
 # $group: array
-# $doc: Sort an array
+# $doc: Sort an array in place
 # $arg array: The array
 # $arg compareFn: Optional (default is null). The comparison function.
 # $return: The sorted array
@@ -1164,6 +1179,29 @@ _NUMBER_TO_FIXED_ARGS = value_args_model([
 ])
 
 
+# $function: numberToString
+# $group: number
+# $doc: Convert an integer to a string
+# $arg x: The integer
+# $arg radix: Optional (default is 10). The number base.
+# $return: The integer as a string of the given base
+def _number_to_string(args, unused_options):
+    x, radix = value_args_validate(_NUMBER_TO_STRING_ARGS, args)
+    digits = []
+    while x:
+        digits.append(_NUMBER_TO_STRING_DIGITS[x % radix])
+        x = x // radix
+    digits.reverse()
+    return ''.join(digits)
+
+_NUMBER_TO_STRING_ARGS = value_args_model([
+    {'name': 'x', 'type': 'number', 'integer': True, 'gte': 0},
+    {'name': 'radix', 'type': 'number', 'default': 10, 'integer': True, 'gte': 2, 'lte': 36}
+])
+
+_NUMBER_TO_STRING_DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
+
+
 #
 # Object functions
 #
@@ -1574,6 +1612,34 @@ def _string_char_code_at(args, unused_options):
 _STRING_CHAR_CODE_AT_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
     {'name': 'index', 'type': 'number', 'integer': True, 'gte': 0}
+])
+
+
+# $function: stringDecode
+# $group: string
+# $doc: Decode a UTF-8 byte value array to a string
+# $arg bytes: The UTF-8 byte array
+# $return: The string
+def _string_decode(args, unused_options):
+    bytes_, = value_args_validate(_STRING_DECODE_ARGS, args)
+    return bytes(bytes_).decode('utf-8')
+
+_STRING_DECODE_ARGS = value_args_model([
+    {'name': 'bytes', 'type': 'array'}
+])
+
+
+# $function: stringEncode
+# $group: string
+# $doc: Encode a string as a UTF-8 byte value array
+# $arg string: The string
+# $return: The UTF-8 byte array
+def _string_encode(args, unused_options):
+    string, = value_args_validate(_STRING_ENCODE_ARGS, args)
+    return list(string.encode('utf-8'))
+
+_STRING_ENCODE_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
 ])
 
 
@@ -2112,6 +2178,7 @@ SCRIPT_FUNCTIONS = {
     'arrayNewSize': _array_new_size,
     'arrayPop': _array_pop,
     'arrayPush': _array_push,
+    'arrayReverse': _array_reverse,
     'arraySet': _array_set,
     'arrayShift': _array_shift,
     'arraySlice': _array_slice,
@@ -2164,6 +2231,7 @@ SCRIPT_FUNCTIONS = {
     'numberParseInt': _number_parse_int,
     'numberParseFloat': _number_parse_float,
     'numberToFixed': _number_to_fixed,
+    'numberToString': _number_to_string,
     'objectAssign': _object_assign,
     'objectCopy': _object_copy,
     'objectDelete': _object_delete,
@@ -2184,6 +2252,8 @@ SCRIPT_FUNCTIONS = {
     'schemaValidate': _schema_validate,
     'schemaValidateTypeModel': _schema_validate_type_model,
     'stringCharCodeAt': _string_char_code_at,
+    'stringDecode': _string_decode,
+    'stringEncode': _string_encode,
     'stringEndsWith': _string_ends_with,
     'stringFromCharCode': _string_from_char_code,
     'stringIndexOf': _string_index_of,

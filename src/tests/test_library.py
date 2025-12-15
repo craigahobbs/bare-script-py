@@ -428,6 +428,19 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_array_reverse(self):
+        array = [3, 1, 2]
+        result = SCRIPT_FUNCTIONS['arrayReverse']([array], None)
+        self.assertListEqual(result, [2, 1, 3])
+        self.assertIs(result, array)
+
+        # Non-array
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['arrayReverse']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
     def test_array_set(self):
         array = [1, 2, 3]
         self.assertEqual(SCRIPT_FUNCTIONS['arraySet']([array, 1, 5], None), 5)
@@ -552,8 +565,9 @@ class TestLibrary(unittest.TestCase):
 
     def test_array_sort(self):
         array = [3, 2, 1]
-        self.assertListEqual(SCRIPT_FUNCTIONS['arraySort']([array], None), [1, 2, 3])
-        self.assertListEqual(array, [1, 2, 3])
+        result = SCRIPT_FUNCTIONS['arraySort']([array], None)
+        self.assertListEqual(result, [1, 2, 3])
+        self.assertIs(result, array)
 
         # Compare function
         def compare_fn(args, compare_options):
@@ -1837,6 +1851,47 @@ a,b, c
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_number_to_string(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123], None), '123')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123, 2], None), '1111011')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123, 16], None), '7b')
+
+        # Non-integer value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToString']([123.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, 123.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Negative value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToString']([-123], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, -123')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-number radix
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToString']([10, 'abc'], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, "abc"')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-integer radix
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToString']([10, 2.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, 2.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Invalid radix
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToString']([10, 1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, 1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['numberToString']([10, 37], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "radix" argument value, 37')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
     #
     # Object functions
     #
@@ -2471,6 +2526,26 @@ a,b, c
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 1.5], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
+    def test_string_decode(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['stringDecode']([[102, 111, 111]], None), 'foo')
+
+        # Non-array
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringDecode']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "bytes" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
+    def test_string_encode(self):
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringEncode'](['foo'], None), [102, 111, 111])
+
+        # Non-string
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringEncode']([None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
         self.assertIsNone(cm_exc.exception.return_value)
 
 
