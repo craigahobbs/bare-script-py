@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.15 (2025-12-15)
+
+- [2cebd86](https://github.com/craigahobbs/bare-script-py/commit/2cebd86) - add arrayReverse, numberToString, stringEncode, and stringDecode library functions
+
 ## 3.8.14 (2025-12-13)
 
 - [c486076](https://github.com/craigahobbs/bare-script-py/commit/c486076) - fix stringSplit with empty separator
