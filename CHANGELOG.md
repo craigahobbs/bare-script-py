@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.16 (2025-12-18)
+
+- [c395d30](https://github.com/craigahobbs/bare-script-py/commit/c395d30) - add qrcode.bare
+
 ## 3.8.15 (2025-12-15)
 
 - [2cebd86](https://github.com/craigahobbs/bare-script-py/commit/2cebd86) - add arrayReverse, numberToString, stringEncode, and stringDecode library functions
