@@ -2493,6 +2493,42 @@ a,b, c
     #
 
 
+    def test_string_char_at(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharAt'](['abc', 0], None), 'a')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharAt'](['abc', 0.], None), 'a')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharAt'](['abc', 1], None), 'b')
+        self.assertEqual(SCRIPT_FUNCTIONS['stringCharAt'](['abc', 2], None), 'c')
+
+        # Invalid index
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharAt'](['abc', -1], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharAt'](['abc', 4], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 4')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-string value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharAt']([None, 0], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-number index
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharAt'](['abc', None], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+        # Non-integer index
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringCharAt'](['abc', 1.5], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 1.5')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
     def test_string_char_code_at(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 0], None), 97)
         self.assertEqual(SCRIPT_FUNCTIONS['stringCharCodeAt'](['abc', 0.], None), 97)
@@ -2603,6 +2639,10 @@ a,b, c
 
         # Not Found with index
         self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 5], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 7], None), -1)
+
+        # Empty string
+        self.assertEqual(SCRIPT_FUNCTIONS['stringIndexOf'](['', 'bar'], None), -1)
 
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -2635,8 +2675,8 @@ a,b, c
         self.assertEqual(cm_exc.exception.return_value, -1)
 
         with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 7], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 7')
+            SCRIPT_FUNCTIONS['stringIndexOf'](['foo bar', 'bar', 8], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 8')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
 
@@ -2645,7 +2685,7 @@ a,b, c
 
         # Index provided
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 10], None), 8)
-        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 10.], None), 8)
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 11.], None), 8)
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 9], None), 8)
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 8], None), 8)
         self.assertEqual(SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar bar', 'bar', 7], None), 4)
@@ -2687,8 +2727,8 @@ a,b, c
         self.assertEqual(cm_exc.exception.return_value, -1)
 
         with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 7], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 7')
+            SCRIPT_FUNCTIONS['stringLastIndexOf'](['foo bar', 'bar', 8], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 8')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
 

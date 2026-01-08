@@ -1596,6 +1596,25 @@ _SCHEMA_VALIDATE_TYPE_MODEL_ARGS = value_args_model([
 #
 
 
+# $function: stringCharAt
+# $group: string
+# $doc: Get a string index's character code
+# $arg string: The string
+# $arg index: The character index
+# $return: The character code
+def _string_char_at(args, unused_options):
+    string, index = value_args_validate(_STRING_CHAR_AT_ARGS, args)
+    if index >= len(string):
+        raise ValueArgsError('index', index)
+
+    return string[int(index)]
+
+_STRING_CHAR_AT_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'},
+    {'name': 'index', 'type': 'number', 'integer': True, 'gte': 0}
+])
+
+
 # $function: stringCharCodeAt
 # $group: string
 # $doc: Get a string index's character code
@@ -1681,7 +1700,7 @@ def _string_from_char_code(char_codes, unused_options):
 # $return: The first index of the search string; -1 if not found.
 def _string_index_of(args, unused_options):
     string, search, index = value_args_validate(_STRING_INDEX_OF_ARGS, args, -1)
-    if index >= len(string):
+    if index > len(string):
         raise ValueArgsError('index', index, -1)
 
     return string.find(search, int(index))
@@ -1703,7 +1722,7 @@ _STRING_INDEX_OF_ARGS = value_args_model([
 def _string_last_index_of(args, unused_options):
     string, search, index = value_args_validate(_STRING_LAST_INDEX_OF_ARGS, args, -1)
     index = index if index is not None else len(string) - 1
-    if index >= len(string):
+    if index > len(string):
         raise ValueArgsError('index', index, -1)
 
     return string.rfind(search, 0, int(index) + len(search))
@@ -2251,6 +2270,7 @@ SCRIPT_FUNCTIONS = {
     'schemaTypeModel': _schema_type_model,
     'schemaValidate': _schema_validate,
     'schemaValidateTypeModel': _schema_validate_type_model,
+    'stringCharAt': _string_char_at,
     'stringCharCodeAt': _string_char_code_at,
     'stringDecode': _string_decode,
     'stringEncode': _string_encode,
