@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.18 (2026-01-26)
+
+- [8199f75](https://github.com/craigahobbs/bare-script-py/commit/8199f75) - add mathE function
+
+- [0424908](https://github.com/craigahobbs/bare-script-py/commit/0424908) - markdownUp.bare - update windowClipboard write documentation
+
 ## 3.8.17 (2026-01-08)
 
 - [9fe60f1](https://github.com/craigahobbs/bare-script-py/commit/9fe60f1) - add elementModel.bare, qrcodeElements
