@@ -954,6 +954,14 @@ _MATH_COS_ARGS = value_args_model([
 ])
 
 
+# $function: mathE
+# $group: math
+# $doc: Return Euler's number
+# $return: Euler's number
+def _math_e(unused_args, unused_options):
+    return math.e
+
+
 # $function: mathFloor
 # $group: math
 # $doc: Compute the floor of a number (round down to the next lowest integer)
@@ -2235,6 +2243,7 @@ SCRIPT_FUNCTIONS = {
     'mathAtan2': _math_atan2,
     'mathCeil': _math_ceil,
     'mathCos': _math_cos,
+    'mathE': _math_e,
     'mathFloor': _math_floor,
     'mathLn': _math_ln,
     'mathLog': _math_log,

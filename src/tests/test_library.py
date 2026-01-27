@@ -1559,6 +1559,10 @@ a,b, c
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_math_e(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['mathE']([], None), math.e)
+
+
     def test_math_floor(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathFloor']([1.125], None), 1)
 
