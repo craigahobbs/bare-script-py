@@ -4,11 +4,11 @@
 include <args.bare>
 
 
-# $function: baredocCLI
+# $function: baredocCLIMain
 # $group: baredocCLI.bare
 # $doc: The BareScript documentation tool main entry point
 # $return: The exit status code
-async function baredocCLI():
+async function baredocCLIMain():
     # Command line arguments
     args = argsParse(baredocCLIArguments)
     if objectGet(args, 'help'):
@@ -75,7 +75,6 @@ async function baredocCLI():
                         endif
                         arrayPush(funcDoc, text)
                     endif
-
                 else:
                     # key == 'function'
                     if textTrim == '':
@@ -155,9 +154,8 @@ async function baredocCLI():
     endfor
 
     # Create the library documentation model - sort functions by name
-    funcNames = arraySort(objectKeys(funcs))
     libraryFunctions = []
-    for funcName in funcNames:
+    for funcName in arraySort(objectKeys(funcs)):
         arrayPush(libraryFunctions, objectGet(funcs, funcName))
     endfor
     library = {'functions': libraryFunctions}

@@ -32,7 +32,7 @@ async function testBaredocCLI():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -65,7 +65,7 @@ async function testBaredocCLI_help():
 
     # Run
     systemGlobalSet('vHelp', true)
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vHelp', null)
 
     # Verify
@@ -91,7 +91,7 @@ async function testBaredocCLI_invalidFilesJSON():
 
     # Run
     systemGlobalSet('vFiles', '[')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -109,7 +109,7 @@ async function testBaredocCLI_nonArrayFiles():
 
     # Run
     systemGlobalSet('vFiles', '"abc"')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -138,7 +138,7 @@ async function testBaredocCLI_stdout():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -179,7 +179,7 @@ async function testBaredocCLI_functionDocLeadingTrim():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -221,7 +221,7 @@ async function testBaredocCLI_argDocLeadingTrim():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -250,7 +250,7 @@ async function testBaredocCLI_fetchError():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -280,7 +280,7 @@ async function testBaredocCLI_writeError():
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
     systemGlobalSet('vOutput', 'test.json')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
     systemGlobalSet('vOutput', null)
 
@@ -309,7 +309,7 @@ async function testBaredocCLI_errorNoFunctions():
     unittestMockAll()
 
     # Run
-    result = baredocCLI()
+    result = baredocCLIMain()
 
     # Verify
     unittestEqual(result, 1)
@@ -335,7 +335,7 @@ async function testBaredocCLI_errorMissingFunctionMembers():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -370,7 +370,7 @@ async function testBaredocCLI_errorKeywordOutsideFunction():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -407,7 +407,7 @@ async function testBaredocCLI_errorEmptyGroup():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -445,7 +445,7 @@ async function testBaredocCLI_errorGroupRedefinition():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -481,7 +481,7 @@ async function testBaredocCLI_errorEmptyFunction():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -522,7 +522,7 @@ async function testBaredocCLI_errorFunctionRedefinition():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -556,7 +556,7 @@ async function testBaredocCLI_errorArgOutsideFunction():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -594,7 +594,7 @@ async function testBaredocCLI_errorInvalidKeyword():
 
     # Run
     systemGlobalSet('vFiles', '["test.bare"]')
-    result = baredocCLI()
+    result = baredocCLIMain()
     systemGlobalSet('vFiles', null)
 
     # Verify
@@ -618,7 +618,7 @@ async function testBaredocCLI_noArgs():
     unittestMockAll()
 
     # Run
-    result = baredocCLI()
+    result = baredocCLIMain()
 
     # Verify
     unittestEqual(result, 1)

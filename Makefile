@@ -54,7 +54,7 @@ doc:
 		-v 'vFiles' "'$$(jq -n --args '$$ARGS.positional' src/bare_script/library.py src/bare_script/include/*.bare)'" \
 		-v 'vOutput' "'build/doc/html/library/library.json'" \
 		-c 'include <baredocCLI.bare>' \
-		-c 'return baredocCLI()'
+		-c 'return baredocCLIMain()'
 
      # Generate the single-page library documentation
 	cd build/doc/html/library/ && \

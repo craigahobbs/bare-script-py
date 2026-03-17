@@ -1,5 +1,5 @@
 The "baredoc.bare" include library provides the main entry point for creating BareScript library
-documentation applications. This library is used to generate documentation websites like the
+documentation application. This library is used to generate documentation websites like the
 [BareScript Library documentation](https://craigahobbs.github.io/bare-script/library/).
 
 To create a documentation application, include the library and call the
