@@ -163,7 +163,7 @@ async function baredocCLI():
     library = {'functions': libraryFunctions}
 
     # Validate the library documentation model
-    if arrayLength(libraryFunctions) == 0:
+    if !libraryFunctions:
         arrayPush(errors, 'error: No library functions')
     endif
     for funcObj in libraryFunctions:
@@ -177,7 +177,7 @@ async function baredocCLI():
     endfor
 
     # Errors?
-    if arrayLength(errors) != 0:
+    if errors:
         markdownPrint('```', arrayJoin(errors, '\n'), '```')
         return 1
     endif
@@ -186,17 +186,17 @@ async function baredocCLI():
     libraryJSON = jsonStringify(library)
 
     # Output to stdout?
+    status = 0
     if output == '-':
         systemLog(libraryJSON)
     else:
         # Output to file
         if !systemFetch({'url': output, 'body': libraryJSON}):
             markdownPrint('**Error:** Failed to write "' + output + '"')
-            return 1
+            status = 1
         endif
     endif
-
-    return 0
+    return status
 endfunction
 
 

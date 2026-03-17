@@ -85,6 +85,42 @@ endfunction
 unittestRunTest('testBaredocCLI_help')
 
 
+async function testBaredocCLI_invalidFilesJSON():
+    # Setup mock
+    unittestMockAll()
+
+    # Run
+    systemGlobalSet('vFiles', '[')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 1)
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['markdownPrint', ['**Error:** Invalid input file list JSON']] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_invalidFilesJSON')
+
+
+async function testBaredocCLI_nonArrayFiles():
+    # Setup mock
+    unittestMockAll()
+
+    # Run
+    systemGlobalSet('vFiles', '"abc"')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 1)
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['markdownPrint', ['**Error:** Invalid input file list JSON']] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_nonArrayFiles')
+
+
 async function testBaredocCLI_stdout():
     # Setup mock
     unittestMockAll({ \
