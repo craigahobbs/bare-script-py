@@ -8,7 +8,7 @@ include <args.bare>
 # $group: baredocCLI.bare
 # $doc: The BareScript documentation tool main entry point
 # $return: The exit status code
-function baredocCLI():
+async function baredocCLI():
     # Command line arguments
     args = argsParse(baredocCLIArguments)
     if objectGet(args, 'help'):
