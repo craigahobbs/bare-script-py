@@ -23,24 +23,24 @@ async function baredocCLIMain():
     endif
 
     # Parse each source file line-by-line
-    funcs = {}
+    functions = {}
     errors = []
-    for file in files:
+    for filename in files:
         # Read the source file
-        source = systemFetch(file)
+        source = systemFetch(filename)
         if source == null:
-            arrayPush(errors, 'Failed to load "' + file + '"')
+            arrayPush(errors, 'Failed to load "' + filename + '"')
             continue
         endif
 
         # Parse documentation comments
-        arrayExtend(errors, baredocCLIParse(funcs, source, file))
+        arrayExtend(errors, baredocCLIParse(functions, source, filename))
     endfor
 
     # Create the library documentation model - sort functions by name
     libraryFunctions = []
-    for funcName in arraySort(objectKeys(funcs)):
-        arrayPush(libraryFunctions, objectGet(funcs, funcName))
+    for funcName in arraySort(objectKeys(functions)):
+        arrayPush(libraryFunctions, objectGet(functions, funcName))
     endfor
     library = {'functions': libraryFunctions}
 
@@ -98,8 +98,9 @@ baredocCLIMainArguments = argsValidate([ \
 # $arg filename: The source filename string
 # $return: The array of errors
 function baredocCLIParse(functions, source, filename):
-    # Process documentation comments line-by-line
     errors = []
+
+    # Process documentation comments line-by-line
     func = null
     for line, ixLine in stringSplitLines(source):
         # function/group/doc/return documentation keywords?
