@@ -1858,6 +1858,22 @@ _STRING_SPLIT_ARGS = value_args_model([
 ])
 
 
+# $function: stringSplitLines
+# $group: string
+# $doc: Split a string at line boundaries
+# $arg string: The string to split
+# $return: The array of line strings
+def _string_split_lines(args, unused_options):
+    string, = value_args_validate(_STRING_SPLIT_LINES_ARGS, args)
+    return _R_STRING_SPLIT_LINES.split(string)
+
+_STRING_SPLIT_LINES_ARGS = value_args_model([
+    {'name': 'string', 'type': 'string'}
+])
+
+_R_STRING_SPLIT_LINES = re.compile(r'\r?\n')
+
+
 # $function: stringStartsWith
 # $group: string
 # $doc: Determine if a string starts with a search string
@@ -2294,6 +2310,7 @@ SCRIPT_FUNCTIONS = {
     'stringReplace': _string_replace,
     'stringSlice': _string_slice,
     'stringSplit': _string_split,
+    'stringSplitLines': _string_split_lines,
     'stringStartsWith': _string_starts_with,
     'stringTrim': _string_trim,
     'stringUpper': _string_upper,
