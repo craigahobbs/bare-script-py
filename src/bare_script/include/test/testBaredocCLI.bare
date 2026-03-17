@@ -52,8 +52,8 @@ function testBaredocCLI():
         ] \
     })
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["systemLog", [expected]] \
+        ['systemFetch', ['test.bare']], \
+        ['systemLog', [expected]] \
     ])
 endfunction
 unittestRunTest('testBaredocCLI')
@@ -225,11 +225,11 @@ function testBaredocCLI_writeError():
     # Verify
     unittestEqual(result, 1)
     expected = jsonStringify({ \
-        "functions": [ \
+        'functions': [ \
             { \
-                "doc": ["This is my function."], \
-                "group": "My Group", \
-                "name": "myFunction" \
+                'doc': ['This is my function.'], \
+                'group': 'My Group', \
+                'name': 'myFunction' \
             } \
         ] \
     })
@@ -279,14 +279,14 @@ function testBaredocCLI_errorMissingFunctionMembers():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'error: Function "myFunction" missing group', \
                 'error: Function "myFunction" missing documentation' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -314,14 +314,14 @@ function testBaredocCLI_errorKeywordOutsideFunction():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'test.bare:1: group keyword outside function', \
                 'error: No library functions' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -351,14 +351,14 @@ function testBaredocCLI_errorEmptyGroup():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'test.bare:2: Invalid function group name ""', \
-                'error: Function \"myFunction\" missing group' \
+                'error: Function "myFunction" missing group' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -389,13 +389,13 @@ function testBaredocCLI_errorGroupRedefinition():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
-                'test.bare:3: Function \"myFunction\" group redefinition' \
+                'test.bare:3: Function "myFunction" group redefinition' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -425,16 +425,16 @@ function testBaredocCLI_errorEmptyFunction():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'test.bare:1: Invalid function name ""', \
                 'test.bare:2: group keyword outside function', \
                 'test.bare:3: doc keyword outside function', \
                 'error: No library functions' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -466,13 +466,13 @@ function testBaredocCLI_errorFunctionRedefinition():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'test.bare:8: Function "myFunction" redefinition' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -500,14 +500,14 @@ function testBaredocCLI_errorArgOutsideFunction():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'test.bare:1: Function argument "arg" outside function', \
                 'error: No library functions' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -538,13 +538,13 @@ function testBaredocCLI_errorInvalidKeyword():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["systemFetch", ["test.bare"]], \
-        ["markdownPrint", [ \
-            "```", \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'test.bare:4: Invalid documentation comment "returns"' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction
@@ -561,12 +561,12 @@ function testBaredocCLI_noArgs():
     # Verify
     unittestEqual(result, 1)
     unittestDeepEqual(unittestMockEnd(), [ \
-        ["markdownPrint", [ \
-            "```", \
+        ['markdownPrint', [ \
+            '```', \
             arrayJoin([ \
                 'error: No library functions' \
             ], '\n'), \
-            "```" \
+            '```' \
         ]] \
     ])
 endfunction

@@ -2928,7 +2928,7 @@ a,b, c
 
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['stringSplit']([None, ', '], None)
+            SCRIPT_FUNCTIONS['stringSplitLines']([None, ', '], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
         self.assertIsNone(cm_exc.exception.return_value)
 
