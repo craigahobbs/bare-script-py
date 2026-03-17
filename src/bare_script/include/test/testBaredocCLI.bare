@@ -1,0 +1,542 @@
+# Licensed under the MIT License
+# https://github.com/craigahobbs/bare-script/blob/main/LICENSE
+
+include '../baredocCLI.bare'
+include '../unittest.bare'
+include '../unittestMock.bare'
+
+
+function testBaredocCLI():
+    # Setup mock
+    unittestMockAll({ \
+        'systemFetch': { \
+            'test.bare': arrayJoin([ \
+                '# $function: myFunction', \
+                '# $group: My Group', \
+                '# $doc: This is my function.', \
+                '# $doc:', \
+                '# $doc: More on the function.', \
+                '# $arg arg1: The first argument', \
+                '# $arg arg2: The second argument.', \
+                '# $arg arg2:', \
+                '# $arg arg2: More on the second argument.', \
+                '# $return: The message', \
+                'function myFunction(arg1, arg2)', \
+                "    message = 'Hello'", \
+                '    systemLog(message)', \
+                '    return message', \
+                'endfunction' \
+            ], '\n') \
+        } \
+    })
+
+    # Run
+    systemGlobalSet('vFiles', '["test.bare"]')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 0)
+    expected = jsonStringify({ \
+        'functions': [ \
+            { \
+                'args': [ \
+                    {'doc': ['The first argument'], 'name': 'arg1'}, \
+                    {'doc': ['The second argument.', '', 'More on the second argument.'], 'name': 'arg2'} \
+                ], \
+                'doc': ['This is my function.', '', 'More on the function.'], \
+                'group': 'My Group', \
+                'name': 'myFunction', \
+                'return': ['The message'] \
+            } \
+        ] \
+    })
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ["systemFetch", ["test.bare"]], \
+        ["systemLog", [expected]] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI')
+
+
+function testBaredocCLI_stdout():
+    # Setup mock
+    unittestMockAll({ \
+        'systemFetch': { \
+            'test.bare': arrayJoin([ \
+                '# $function: myFunction', \
+                '# $group: My Group', \
+                '# $doc: This is my function', \
+                'function myFunction()', \
+                "    systemLog('Hello')", \
+                'endfunction' \
+            ], '\n') \
+        } \
+    })
+
+    # Run
+    systemGlobalSet('vFiles', '["test.bare"]')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 0)
+    expected = jsonStringify({ \
+        'functions': [ \
+            { \
+                'doc': ['This is my function'], \
+                'group': 'My Group', \
+                'name': 'myFunction' \
+            } \
+        ] \
+    })
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['test.bare']], \
+        ['systemLog', [expected]] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_stdout')
+
+
+function testBaredocCLI_functionDocLeadingTrim():
+    # Setup mock
+    unittestMockAll({ \
+        'systemFetch': { \
+            'test.bare': arrayJoin([ \
+                '# $function: myFunction', \
+                '# $group: My Group', \
+                '# $doc:', \
+                '# $doc: This is my function', \
+                '# $doc:', \
+                'function myFunction()', \
+                "    systemLog('Hello')", \
+                'endfunction' \
+            ], '\n') \
+        } \
+    })
+
+    # Run
+    systemGlobalSet('vFiles', '["test.bare"]')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 0)
+    expected = jsonStringify({ \
+        'functions': [ \
+            { \
+                'doc': ['This is my function', ''], \
+                'group': 'My Group', \
+                'name': 'myFunction' \
+            } \
+        ] \
+    })
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['test.bare']], \
+        ['systemLog', [expected]] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_functionDocLeadingTrim')
+
+
+function testBaredocCLI_argDocLeadingTrim():
+    # Setup mock
+    unittestMockAll({ \
+        'systemFetch': { \
+            'test.bare': arrayJoin([ \
+                '# $function: myFunction', \
+                '# $group: My Group', \
+                '# $doc: This is my function', \
+                '# $arg arg:', \
+                '# $arg arg: The first argument', \
+                '# $arg arg:', \
+                'function myFunction()', \
+                "    systemLog('Hello')", \
+                'endfunction' \
+            ], '\n') \
+        } \
+    })
+
+    # Run
+    systemGlobalSet('vFiles', '["test.bare"]')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 0)
+    expected = jsonStringify({ \
+        'functions': [ \
+            { \
+                'args': [{'doc': ['The first argument', ''], 'name': 'arg'}], \
+                'doc': ['This is my function'], \
+                'group': 'My Group', \
+                'name': 'myFunction' \
+            } \
+        ] \
+    })
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['test.bare']], \
+        ['systemLog', [expected]] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_argDocLeadingTrim')
+
+
+function testBaredocCLI_fetchError():
+    # Setup mock - systemFetch returns null for missing file
+    unittestMockAll()
+
+    # Run
+    systemGlobalSet('vFiles', '["test.bare"]')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+
+    # Verify
+    unittestEqual(result, 1)
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['test.bare']], \
+        ['markdownPrint', ['```', 'Failed to load "test.bare"\nerror: No library functions', '```']] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_fetchError')
+
+
+function testBaredocCLI_writeError():
+    # Setup mock
+    unittestMockAll({ \
+        'systemFetch': { \
+            'test.bare': arrayJoin([ \
+                '# $function: myFunction', \
+                '# $group: My Group', \
+                '# $doc: This is my function.', \
+                'function myFunction(arg1, arg2)', \
+                'endfunction' \
+            ], '\n') \
+        } \
+    })
+
+    # Run
+    systemGlobalSet('vFiles', '["test.bare"]')
+    systemGlobalSet('vOutput', 'test.json')
+    result = baredocCLI()
+    systemGlobalSet('vFiles', null)
+    systemGlobalSet('vOutput', null)
+
+    # Verify
+    unittestEqual(result, 1)
+    expected = jsonStringify({ \
+        "functions": [ \
+            { \
+                "doc": ["This is my function."], \
+                "group": "My Group", \
+                "name": "myFunction" \
+            } \
+        ] \
+    })
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['test.bare']], \
+        ['systemFetch', [{'url': 'test.json', 'body': expected}]], \
+        ['markdownPrint', ['**Error:** Failed to write "test.json"']] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_writeError')
+
+
+function testBaredocCLI_errorNoFunctions():
+    # Setup mock
+    unittestMockAll()
+
+    # Run
+    result = baredocCLI()
+
+    # Verify
+    unittestEqual(result, 1)
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['markdownPrint', ['```', 'error: No library functions', '```']] \
+    ])
+endfunction
+unittestRunTest('testBaredocCLI_errorNoFunctions')
+
+
+return
+
+
+function testBaredocCLI_errorMissingFunctionMembers():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $function: myFunction', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    expected = 'error: Function "myFunction" missing group' + stringFromCharCode(10) + \
+        'error: Function "myFunction" missing documentation'
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), expected)
+endfunction
+unittestRunTest('testBaredocCLI_errorMissingFunctionMembers')
+
+
+function testBaredocCLI_errorKeywordOutsideFunction():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $group: My Group', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    expected = 'test.bare:1: group keyword outside function' + stringFromCharCode(10) + \
+        'error: No library functions'
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), expected)
+endfunction
+unittestRunTest('testBaredocCLI_errorKeywordOutsideFunction')
+
+
+function testBaredocCLI_errorEmptyGroup():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $function: myFunction', \
+            '# $group:', \
+            '# $doc: This is my function', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    expected = 'test.bare:2: Invalid function group name ""' + stringFromCharCode(10) + \
+        'error: Function "myFunction" missing group'
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), expected)
+endfunction
+unittestRunTest('testBaredocCLI_errorEmptyGroup')
+
+
+function testBaredocCLI_errorGroupRedefinition():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $function: myFunction', \
+            '# $group: My Group', \
+            '# $group: My Other Group', \
+            '# $doc: This is my function', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), 'test.bare:3: Function "myFunction" group redefinition')
+endfunction
+unittestRunTest('testBaredocCLI_errorGroupRedefinition')
+
+
+function testBaredocCLI_errorEmptyFunction():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $function:', \
+            '# $group: My Group', \
+            '# $doc: This is my function', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    expected = 'test.bare:1: Invalid function name ""' + stringFromCharCode(10) + \
+        'test.bare:2: group keyword outside function' + stringFromCharCode(10) + \
+        'test.bare:3: doc keyword outside function' + stringFromCharCode(10) + \
+        'error: No library functions'
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), expected)
+endfunction
+unittestRunTest('testBaredocCLI_errorEmptyFunction')
+
+
+function testBaredocCLI_errorFunctionRedefinition():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $function: myFunction', \
+            '# $group: My Group', \
+            '# $doc: This is my function', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction', \
+            '', \
+            '# $function: myFunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), 'test.bare:8: Function "myFunction" redefinition')
+endfunction
+unittestRunTest('testBaredocCLI_errorFunctionRedefinition')
+
+
+function testBaredocCLI_errorArgOutsideFunction():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $arg arg: My arg', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    expected = 'test.bare:1: Function argument "arg" outside function' + stringFromCharCode(10) + \
+        'error: No library functions'
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), expected)
+endfunction
+unittestRunTest('testBaredocCLI_errorArgOutsideFunction')
+
+
+function testBaredocCLI_errorInvalidKeyword():
+    # Setup mock
+    sources = objectNew( \
+        'test.bare', arrayNew( \
+            '# $function: myFunction', \
+            '# $group: My Group', \
+            '# $doc: This is my function', \
+            '# $returns: Bad return keyword', \
+            'function myFunction()', \
+            "    systemLog('Hello')", \
+            'endfunction' \
+        ) \
+    )
+    mock = objectNew( \
+        'systemFetch', objectNew( \
+            'test.bare', arrayJoin(objectGet(sources, 'test.bare'), stringFromCharCode(10)) \
+        ) \
+    )
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew('test.bare'))
+
+    # Verify
+    unittestEqual(result, 1)
+    mockEnd = unittestMockEnd(mock)
+    logCalls = objectGet(mockEnd, 'systemLog')
+    unittestEqual(arrayLength(logCalls), 1)
+    unittestEqual(arrayGet(arrayGet(logCalls, 0), 0), 'test.bare:4: Invalid documentation comment "returns"')
+endfunction
+unittestRunTest('testBaredocCLI_errorInvalidKeyword')
+
+
+function testBaredocCLI_noArgs():
+    # Setup mock
+    mock = objectNew()
+    unittestMockAll(mock)
+
+    # Run
+    result = baredocCLI(arrayNew())
+
+    # Verify
+    unittestEqual(result, 1)
+    unittestMockEnd(mock)
+endfunction
+unittestRunTest('testBaredocCLI_noArgs')

@@ -1,0 +1,13 @@
+{
+    "items": [
+        {"message": "Here's an example of porting a JavaScript file, elementModel.js, to the BareScript file, elementModel.bare."},
+        {"file": "https://raw.githubusercontent.com/craigahobbs/element-model/refs/heads/main/lib/elementModel.js"},
+        {"file": "https://raw.githubusercontent.com/craigahobbs/bare-script-py/refs/heads/main/src/bare_script/include/elementModel.bare"},
+        {"message": "Here are the relevant bare-script-py files:"},
+        {"file": "src/bare_script/include/test/runTests.bare"},
+        {"message": "Port the fillowing Python file, {{pyfile}}, to the BareScript file, {{barefile}}."},
+        {"file": "{{pyfile}}"},
+        {"message": "Also port the unit tests, {{testfile}}."},
+        {"file": "{{testfile}}"}
+    ]
+}

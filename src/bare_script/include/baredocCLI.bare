@@ -1,0 +1,213 @@
+# Licensed under the MIT License
+# https://github.com/craigahobbs/bare-script/blob/main/LICENSE
+
+include <args.bare>
+
+
+# $function: baredocCLI
+# $group: baredocCLI.bare
+# $doc: The BareScript documentation tool main entry point
+# $return: The exit status code
+function baredocCLI():
+    # Command line arguments
+    args = argsParse(baredocCLIArguments)
+    if objectGet(args, 'help'):
+        markdownPrint(argsHelp(baredocCLIArguments))
+        return 1
+    endif
+    output = objectGet(args, 'output')
+    files = jsonParse(objectGet(args, 'files'))
+    if files == null || systemType(files) != 'array':
+        markdownPrint('**Error:** Invalid input file list JSON')
+        return 1
+    endif
+
+    # Parse each source file line-by-line
+    errors = []
+    funcs = {}
+    func = null
+    for file in files:
+        # Read the source file
+        source = systemFetch(file)
+        if source == null:
+            arrayPush(errors, 'Failed to load "' + file + '"')
+            continue
+        endif
+
+        # Split the source lines and process documentation comments
+        lines = stringSplitLines(source)
+        for line, ixLine in lines:
+            # function/group/doc/return documentation keywords?
+            matchKey = regexMatch(baredocCLIRegexKey, line)
+            if matchKey != null:
+                groupsKey = objectGet(matchKey, 'groups')
+                key = objectGet(groupsKey, 'key')
+                text = objectGet(groupsKey, 'text')
+                textTrim = stringTrim(text)
+
+                # Keyword used outside of function?
+                if key != 'function' && func == null:
+                    arrayPush(errors, file + ':' + (ixLine + 1) + ': ' + key + ' keyword outside function')
+                    continue
+                endif
+
+                # Process the keyword
+                if key == 'group':
+                    if textTrim == '':
+                        arrayPush(errors, file + ':' + (ixLine + 1) + ': Invalid function group name "' + textTrim + '"')
+                        continue
+                    endif
+                    if objectHas(func, 'group'):
+                        arrayPush(errors, file + ':' + (ixLine + 1) + ': Function "' + objectGet(func, 'name') + '" group redefinition')
+                        continue
+                    endif
+
+                    # Set the function group
+                    objectSet(func, 'group', textTrim)
+
+                elif key == 'doc' || key == 'return':
+                    # Add the documentation line - don't add leading blank lines
+                    funcDoc = objectGet(func, key)
+                    if funcDoc != null || textTrim != '':
+                        if funcDoc == null:
+                            funcDoc = []
+                            objectSet(func, key, funcDoc)
+                        endif
+                        arrayPush(funcDoc, text)
+                    endif
+
+                else:
+                    # key == 'function'
+                    if textTrim == '':
+                        arrayPush(errors, file + ':' + (ixLine + 1) + ': Invalid function name "' + textTrim + '"')
+                        continue
+                    endif
+                    if objectHas(funcs, textTrim):
+                        arrayPush(errors, file + ':' + (ixLine + 1) + ': Function "' + textTrim + '" redefinition')
+                        continue
+                    endif
+
+                    # Add the function
+                    func = {'name': textTrim}
+                    objectSet(funcs, textTrim, func)
+                endif
+
+                continue
+            endif
+
+            # arg keyword?
+            matchArg = regexMatch(baredocCLIRegexArg, line)
+            if matchArg != null:
+                groupsArg = objectGet(matchArg, 'groups')
+                name = objectGet(groupsArg, 'name')
+                text = objectGet(groupsArg, 'text')
+                textTrim = stringTrim(text)
+
+                # Keyword used outside of function?
+                if func == null:
+                    arrayPush(errors, file + ':' + (ixLine + 1) + ': Function argument "' + name + '" outside function')
+                    continue
+                endif
+
+                # Get the function argument model, if it exists
+                funcArgs = objectGet(func, 'args')
+                funcArg = null
+                if funcArgs != null:
+                    for findArg in funcArgs:
+                        if objectGet(findArg, 'name') == name:
+                            funcArg = findArg
+                            break
+                        endif
+                    endfor
+                endif
+
+                # Ignore leading argument documentation blank lines
+                if funcArg == null && textTrim == '':
+                    continue
+                endif
+
+                # Add the function model arguments member, if necessary
+                if funcArgs == null:
+                    funcArgs = []
+                    objectSet(func, 'args', funcArgs)
+                endif
+
+                # Add the function argument model, if necessary
+                if funcArg == null:
+                    funcArg = {'name': name, 'doc': []}
+                    arrayPush(funcArgs, funcArg)
+                endif
+
+                # Add the function argument documentation line
+                arrayPush(objectGet(funcArg, 'doc'), text)
+                continue
+            endif
+
+            # Unknown documentation comment?
+            matchUnknown = regexMatch(baredocCLIRegexUnknown, line)
+            if matchUnknown != null:
+                groupsUnknown = objectGet(matchUnknown, 'groups')
+                unknown = objectGet(groupsUnknown, 'unknown')
+                arrayPush(errors, file + ':' + (ixLine + 1) + ': Invalid documentation comment "' + unknown + '"')
+                continue
+            endif
+        endfor
+    endfor
+
+    # Create the library documentation model - sort functions by name
+    funcNames = arraySort(objectKeys(funcs))
+    libraryFunctions = []
+    for funcName in funcNames:
+        arrayPush(libraryFunctions, objectGet(funcs, funcName))
+    endfor
+    library = {'functions': libraryFunctions}
+
+    # Validate the library documentation model
+    if arrayLength(libraryFunctions) == 0:
+        arrayPush(errors, 'error: No library functions')
+    endif
+    for funcObj in libraryFunctions:
+        funcName = objectGet(funcObj, 'name')
+        if !objectHas(funcObj, 'group'):
+            arrayPush(errors, 'error: Function "' + funcName + '" missing group')
+        endif
+        if !objectHas(funcObj, 'doc'):
+            arrayPush(errors, 'error: Function "' + funcName + '" missing documentation')
+        endif
+    endfor
+
+    # Errors?
+    if arrayLength(errors) != 0:
+        markdownPrint('```', arrayJoin(errors, '\n'), '```')
+        return 1
+    endif
+
+    # JSON-serialize the library documentation model
+    libraryJSON = jsonStringify(library)
+
+    # Output to stdout?
+    if output == '-':
+        systemLog(libraryJSON)
+    else:
+        # Output to file
+        if !systemFetch({'url': output, 'body': libraryJSON}):
+            markdownPrint('**Error:** Failed to write "' + output + '"')
+            return 1
+        endif
+    endif
+
+    return 0
+endfunction
+
+
+# baredocCLI application arguments
+baredocCLIArguments = argsValidate([ \
+    {'name': 'files', 'type': 'string', 'default': '[]', 'description': 'The JSON-encoded list of input source code filenames'}, \
+    {'name': 'help', 'type': 'bool', 'description': 'Show argument help'}, \
+    {'name': 'output', 'type': 'string', 'default': '-', 'description': 'The output file'} \
+])
+
+# baredocCLI regular expressions
+baredocCLIRegexKey = regexNew('^\\s*(?:\\/\\/|#)\\s*\\$(?<key>function|group|doc|return):\\s?(?<text>.*)$')
+baredocCLIRegexArg = regexNew('^\\s*(?:\\/\\/|#)\\s*\\$arg\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\\.\\.\\.)?):\\s?(?<text>.*)$')
+baredocCLIRegexUnknown = regexNew('^\\s*(?:\\/\\/|#)\\s*\\$(?<unknown>[^:]+):')

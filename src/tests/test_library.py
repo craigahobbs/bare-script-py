@@ -2916,6 +2916,23 @@ a,b, c
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_string_split_lines(self):
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines'](['foo\nbar'], None), ['foo', 'bar'])
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines'](['foo\n\nbar\nbonk'], None), ['foo', '', 'bar', 'bonk'])
+
+        # Single line
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines'](['foo'], None), ['foo'])
+
+        # Empty string
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines']([''], None), [''])
+
+        # Non-string value
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['stringSplit']([None, ', '], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
+        self.assertIsNone(cm_exc.exception.return_value)
+
+
     def test_string_starts_with(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', 'foo'], None), True)
         self.assertEqual(SCRIPT_FUNCTIONS['stringStartsWith'](['foo bar', 'bar'], None), False)
