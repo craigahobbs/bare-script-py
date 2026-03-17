@@ -1,4 +1,4 @@
-# Licensed under the MIT License
+# Licensed the MIT License
 # https://github.com/craigahobbs/bare-script/blob/main/LICENSE
 
 include '../baredocCLI.bare'
@@ -6,7 +6,44 @@ include '../unittest.bare'
 include '../unittestMock.bare'
 
 
-async function testBaredocCLI():
+async function testBaredocCLIParse():
+    source = arrayJoin([ \
+        '# $function: myFunction', \
+        '# $group: My Group', \
+        '# $doc: This is my function.', \
+        '# $doc:', \
+        '# $doc: More on the function.', \
+        '# $arg arg1: The first argument', \
+        '# $arg arg2: The second argument.', \
+        '# $arg arg2:', \
+        '# $arg arg2: More on the second argument.', \
+        '# $return: The message', \
+        'function myFunction(arg1, arg2)', \
+        "    message = 'Hello'", \
+        '    systemLog(message)', \
+        '    return message', \
+        'endfunction' \
+    ], '\n')
+    functions = {}
+    errors = baredocCLIParse(functions, source)
+    unittestDeepEqual(errors, [])
+    unittestDeepEqual(functions, { \
+        'myFunction': { \
+            'args': [ \
+                {'doc': ['The first argument'], 'name': 'arg1'}, \
+                {'doc': ['The second argument.', '', 'More on the second argument.'], 'name': 'arg2'} \
+            ], \
+            'doc': ['This is my function.', '', 'More on the function.'], \
+            'group': 'My Group', \
+            'name': 'myFunction', \
+            'return': ['The message'] \
+        } \
+    })
+endfunction
+unittestRunTest('testBaredocCLIParse')
+
+
+async function testBaredocCLIMain():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -56,10 +93,10 @@ async function testBaredocCLI():
         ['systemLog', [expected]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI')
+unittestRunTest('testBaredocCLIMain')
 
 
-async function testBaredocCLI_help():
+async function testBaredocCLIMain_help():
     # Setup mock
     unittestMockAll()
 
@@ -82,10 +119,12 @@ async function testBaredocCLI_help():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_help')
+unittestRunTest('testBaredocCLIMain_help')
 
 
-async function testBaredocCLI_invalidFilesJSON():
+async function testBaredocCLIMain_invalidFilesJSON():
+    systemLogDebug('NOTICE: The following "jsonParse" error is expected:')
+
     # Setup mock
     unittestMockAll()
 
@@ -100,10 +139,10 @@ async function testBaredocCLI_invalidFilesJSON():
         ['markdownPrint', ['**Error:** Invalid input file list JSON']] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_invalidFilesJSON')
+unittestRunTest('testBaredocCLIMain_invalidFilesJSON')
 
 
-async function testBaredocCLI_nonArrayFiles():
+async function testBaredocCLIMain_nonArrayFiles():
     # Setup mock
     unittestMockAll()
 
@@ -118,10 +157,10 @@ async function testBaredocCLI_nonArrayFiles():
         ['markdownPrint', ['**Error:** Invalid input file list JSON']] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_nonArrayFiles')
+unittestRunTest('testBaredocCLIMain_nonArrayFiles')
 
 
-async function testBaredocCLI_stdout():
+async function testBaredocCLIMain_stdout():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -157,10 +196,10 @@ async function testBaredocCLI_stdout():
         ['systemLog', [expected]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_stdout')
+unittestRunTest('testBaredocCLIMain_stdout')
 
 
-async function testBaredocCLI_functionDocLeadingTrim():
+async function testBaredocCLIMain_functionDocLeadingTrim():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -198,10 +237,10 @@ async function testBaredocCLI_functionDocLeadingTrim():
         ['systemLog', [expected]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_functionDocLeadingTrim')
+unittestRunTest('testBaredocCLIMain_functionDocLeadingTrim')
 
 
-async function testBaredocCLI_argDocLeadingTrim():
+async function testBaredocCLIMain_argDocLeadingTrim():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -241,10 +280,10 @@ async function testBaredocCLI_argDocLeadingTrim():
         ['systemLog', [expected]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_argDocLeadingTrim')
+unittestRunTest('testBaredocCLIMain_argDocLeadingTrim')
 
 
-async function testBaredocCLI_fetchError():
+async function testBaredocCLIMain_fetchError():
     # Setup mock - systemFetch returns null for missing file
     unittestMockAll()
 
@@ -260,10 +299,10 @@ async function testBaredocCLI_fetchError():
         ['markdownPrint', ['```', 'Failed to load "test.bare"\nerror: No library functions', '```']] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_fetchError')
+unittestRunTest('testBaredocCLIMain_fetchError')
 
 
-async function testBaredocCLI_writeError():
+async function testBaredocCLIMain_writeError():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -301,10 +340,10 @@ async function testBaredocCLI_writeError():
         ['markdownPrint', ['**Error:** Failed to write "test.json"']] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_writeError')
+unittestRunTest('testBaredocCLIMain_writeError')
 
 
-async function testBaredocCLI_errorNoFunctions():
+async function testBaredocCLIMain_errorNoFunctions():
     # Setup mock
     unittestMockAll()
 
@@ -317,10 +356,10 @@ async function testBaredocCLI_errorNoFunctions():
         ['markdownPrint', ['```', 'error: No library functions', '```']] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorNoFunctions')
+unittestRunTest('testBaredocCLIMain_errorNoFunctions')
 
 
-async function testBaredocCLI_errorMissingFunctionMembers():
+async function testBaredocCLIMain_errorMissingFunctionMembers():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -352,10 +391,10 @@ async function testBaredocCLI_errorMissingFunctionMembers():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorMissingFunctionMembers')
+unittestRunTest('testBaredocCLIMain_errorMissingFunctionMembers')
 
 
-async function testBaredocCLI_errorKeywordOutsideFunction():
+async function testBaredocCLIMain_errorKeywordOutsideFunction():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -387,10 +426,10 @@ async function testBaredocCLI_errorKeywordOutsideFunction():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorKeywordOutsideFunction')
+unittestRunTest('testBaredocCLIMain_errorKeywordOutsideFunction')
 
 
-async function testBaredocCLI_errorEmptyGroup():
+async function testBaredocCLIMain_errorEmptyGroup():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -424,10 +463,10 @@ async function testBaredocCLI_errorEmptyGroup():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorEmptyGroup')
+unittestRunTest('testBaredocCLIMain_errorEmptyGroup')
 
 
-async function testBaredocCLI_errorGroupRedefinition():
+async function testBaredocCLIMain_errorGroupRedefinition():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -461,10 +500,10 @@ async function testBaredocCLI_errorGroupRedefinition():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorGroupRedefinition')
+unittestRunTest('testBaredocCLIMain_errorGroupRedefinition')
 
 
-async function testBaredocCLI_errorEmptyFunction():
+async function testBaredocCLIMain_errorEmptyFunction():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -500,10 +539,10 @@ async function testBaredocCLI_errorEmptyFunction():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorEmptyFunction')
+unittestRunTest('testBaredocCLIMain_errorEmptyFunction')
 
 
-async function testBaredocCLI_errorFunctionRedefinition():
+async function testBaredocCLIMain_errorFunctionRedefinition():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -538,10 +577,10 @@ async function testBaredocCLI_errorFunctionRedefinition():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorFunctionRedefinition')
+unittestRunTest('testBaredocCLIMain_errorFunctionRedefinition')
 
 
-async function testBaredocCLI_errorArgOutsideFunction():
+async function testBaredocCLIMain_errorArgOutsideFunction():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -573,10 +612,10 @@ async function testBaredocCLI_errorArgOutsideFunction():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorArgOutsideFunction')
+unittestRunTest('testBaredocCLIMain_errorArgOutsideFunction')
 
 
-async function testBaredocCLI_errorInvalidKeyword():
+async function testBaredocCLIMain_errorInvalidKeyword():
     # Setup mock
     unittestMockAll({ \
         'systemFetch': { \
@@ -610,10 +649,10 @@ async function testBaredocCLI_errorInvalidKeyword():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_errorInvalidKeyword')
+unittestRunTest('testBaredocCLIMain_errorInvalidKeyword')
 
 
-async function testBaredocCLI_noArgs():
+async function testBaredocCLIMain_noArgs():
     # Setup mock
     unittestMockAll()
 
@@ -632,4 +671,4 @@ async function testBaredocCLI_noArgs():
         ]] \
     ])
 endfunction
-unittestRunTest('testBaredocCLI_noArgs')
+unittestRunTest('testBaredocCLIMain_noArgs')
