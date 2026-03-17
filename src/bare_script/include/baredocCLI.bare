@@ -10,9 +10,9 @@ include <args.bare>
 # $return: The exit status code
 async function baredocCLIMain():
     # Command line arguments
-    args = argsParse(baredocCLIArguments)
+    args = argsParse(baredocCLIMainArguments)
     if objectGet(args, 'help'):
-        markdownPrint(argsHelp(baredocCLIArguments))
+        markdownPrint(argsHelp(baredocCLIMainArguments))
         return 1
     endif
     output = objectGet(args, 'output')
@@ -80,6 +80,14 @@ async function baredocCLIMain():
     endif
     return status
 endfunction
+
+
+# baredocCLI application arguments
+baredocCLIMainArguments = argsValidate([ \
+    {'name': 'files', 'type': 'string', 'default': '[]', 'description': 'The JSON-encoded list of input source code filenames'}, \
+    {'name': 'help', 'type': 'bool', 'description': 'Show argument help'}, \
+    {'name': 'output', 'type': 'string', 'default': '-', 'description': 'The output file'} \
+])
 
 
 # $function: baredocCLIParse
@@ -213,14 +221,7 @@ function baredocCLIParse(functions, source, filename):
 endfunction
 
 
-# baredocCLI application arguments
-baredocCLIArguments = argsValidate([ \
-    {'name': 'files', 'type': 'string', 'default': '[]', 'description': 'The JSON-encoded list of input source code filenames'}, \
-    {'name': 'help', 'type': 'bool', 'description': 'Show argument help'}, \
-    {'name': 'output', 'type': 'string', 'default': '-', 'description': 'The output file'} \
-])
-
-# baredocCLI regular expressions
+# baredocCLIParse regular expressions
 baredocCLIRegexKey = regexNew('^\\s*(?:\\/\\/|#)\\s*\\$(?<key>function|group|doc|return):\\s?(?<text>.*)$')
 baredocCLIRegexArg = regexNew('^\\s*(?:\\/\\/|#)\\s*\\$arg\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\\.\\.\\.)?):\\s?(?<text>.*)$')
 baredocCLIRegexUnknown = regexNew('^\\s*(?:\\/\\/|#)\\s*\\$(?<unknown>[^:]+):')
