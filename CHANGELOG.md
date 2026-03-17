@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.19 (2026-03-17)
+
+- [4c568eb](https://github.com/craigahobbs/bare-script-py/commit/4c568eb) - add stringSplitLines library function
+
+- [1c08c9c](https://github.com/craigahobbs/bare-script-py/commit/1c08c9c) - use stringCharAt where applicable
+
 ## 3.8.18 (2026-01-26)
 
 - [8199f75](https://github.com/craigahobbs/bare-script-py/commit/8199f75) - add mathE function
