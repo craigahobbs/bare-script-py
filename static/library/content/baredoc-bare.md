@@ -2,9 +2,8 @@ The "baredoc.bare" include library provides the main entry point for creating Ba
 documentation application. This library is used to generate documentation websites like the
 [BareScript Library documentation](https://craigahobbs.github.io/bare-script/library/).
 
-To create a documentation application, include the library and call the
-[baredocMain](#var.vGroup='baredoc.bare'&baredoc) function with your library's JSON resource
-URL:
+To create a documentation application, include the library and call the [baredocMain](#baredocmain)
+function with your library's JSON resource URL:
 
 ~~~ bare-script
 include <baredoc.bare>

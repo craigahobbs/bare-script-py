@@ -43,6 +43,7 @@ async function baredocCLIMain():
         arrayPush(libraryFunctions, objectGet(functions, funcName))
     endfor
     library = {'functions': libraryFunctions}
+    libraryJSON = jsonStringify(library)
 
     # No library functions?
     if !libraryFunctions:
@@ -54,9 +55,6 @@ async function baredocCLIMain():
         markdownPrint('```', arrayJoin(errors, '\n'), '```')
         return 1
     endif
-
-    # JSON-serialize the library documentation model
-    libraryJSON = jsonStringify(library)
 
     # Output to stdout?
     status = 0
