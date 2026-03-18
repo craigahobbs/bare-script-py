@@ -422,7 +422,7 @@ _BARESCRIPT_EVALUATE_EXPRESSION_ARGS = value_args_model([
 # $group: barescript
 # $doc: Parse a BareScript expression
 # $arg exprStr: The expression string
-# $arg arrayLiterals: Optional (default is true). If True, allow array literals.
+# $arg arrayLiterals: Optional (default is true). If true, allow array literals.
 # $return: The [BareScript expression model](../model/#var.vName='Expression')
 def _barescript_parse_expression(args, unused_options):
     expr_str, array_literals = value_args_validate(_BARESCRIPT_PARSE_EXPRESSION_ARGS, args)
