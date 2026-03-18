@@ -11,7 +11,9 @@ import unittest
 
 import schema_markdown
 
+from bare_script import BareScriptRuntimeError
 from bare_script.library import COVERAGE_GLOBAL_NAME, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, SYSTEM_GLOBAL_INCLUDES_NAME
+from bare_script.parser import BareScriptParserError
 from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
 
@@ -589,6 +591,66 @@ class TestLibrary(unittest.TestCase):
             SCRIPT_FUNCTIONS['arraySort']([array, 'asdf'], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "compareFn" argument value, "asdf"')
         self.assertIsNone(cm_exc.exception.return_value)
+
+
+    #
+    # BareScript functions
+    #
+
+
+    def test_barescript_evaluate_expression(self):
+        expr = {'function': {'args': [{'number': 5.0}, {'variable': 'true'}], 'name': 'arrayNew'}}
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None),
+            [5, True]
+        )
+
+        # Locals
+        expr = {'binary': {'left': {'number': 2.0}, 'op': '*', 'right': {'variable': 'A'}}}
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, {'A': 5}], None),
+            10
+        )
+
+        # Builtins
+        expr = {'function': {'args': [{'function': {'args': [], 'name': 'pi'}}], 'name': 'cos'}}
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, True], None),
+            -1
+        )
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, False], None)
+
+        self.assertEqual(str(cm_exc.exception), 'Undefined function "pi"')
+
+        # Invalid expression
+        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([{'foo': 'bar'}], None)
+
+        self.assertEqual(str(cm_exc.exception), "Unknown member 'foo'")
+
+
+    def test_barescript_parse_expression(self):
+        self.assertDictEqual(
+            SCRIPT_FUNCTIONS['barescriptParseExpression'](['[5, true]'], None),
+            {'function': {'args': [{'number': 5.0}, {'variable': 'true'}], 'name': 'arrayNew'}}
+        )
+
+        # No array literals
+        self.assertDictEqual(
+            SCRIPT_FUNCTIONS['barescriptParseExpression'](['[Field name]', False], None),
+            {'variable': 'Field name'}
+        )
+
+        # Invalid expression
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            SCRIPT_FUNCTIONS['barescriptParseExpression'](['foo bar', False], None)
+
+        self.assertEqual(str(cm_exc.exception), '''\
+Syntax error
+foo bar
+   ^
+''')
 
 
     #
