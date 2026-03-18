@@ -9,6 +9,7 @@ import calendar
 import csv
 import datetime
 import functools
+import importlib
 import json
 import math
 import random
@@ -18,9 +19,20 @@ import urllib
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
 from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
+from .model import validate_expression
+from .parser import parse_expression
 from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_args_validate, \
     value_boolean, value_compare, value_is, value_json, value_normalize_datetime, value_parse_datetime, \
     value_parse_integer, value_parse_number, value_round_number, value_string, value_type
+
+
+# Helper to dynamically import evaluate_expression to avoid the circular dependency
+def _import_evaluate_expression():
+    if not _EVALUATE_EXPRESSION:
+        _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
+    return _EVALUATE_EXPRESSION[0]
+
+_EVALUATE_EXPRESSION = []
 
 
 # The default maximum statements for executeScript
@@ -378,6 +390,47 @@ def _array_sort(args, options):
 _ARRAY_SORT_ARGS = value_args_model([
     {'name': 'array', 'type': 'array'},
     {'name': 'compareFn', 'type': 'function', 'nullable': True}
+])
+
+
+#
+# BareScript functions
+#
+
+
+# $function: barescriptEvaluateExpression
+# $group: barescript
+# $doc: Evaluate a [BareScript expression model](../model/#var.vName='Expression')
+# $arg expr: The [BareScript expression model](../model/#var.vName='Expression')
+# $arg locals: Optional (default is null). The local variables object.
+# $arg builtins: Optional (default is true). If true, include the [built-in expression functions](expression.html).
+# $return: The expression result
+def _barescript_evaluate_expression(args, options):
+    expr, locals_, builtins = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
+    validate_expression(expr)
+    evaluate_expression = _import_evaluate_expression()
+    return evaluate_expression(expr, options, locals_, builtins)
+
+_BARESCRIPT_EVALUATE_EXPRESSION_ARGS = value_args_model([
+    {'name': 'expr', 'type': 'object'},
+    {'name': 'locals', 'type': 'object', 'nullable': True},
+    {'name': 'builtins', 'type': 'boolean', 'default': True}
+])
+
+
+# $function: barescriptParseExpression
+# $group: barescript
+# $doc: Parse a BareScript expression
+# $arg exprStr: The expression string
+# $arg arrayLiterals: Optional (default is true). If True, allow array literals.
+# $return: The [BareScript expression model](../model/#var.vName='Expression')
+def _barescript_parse_expression(args, unused_options):
+    expr_str, array_literals = value_args_validate(_BARESCRIPT_PARSE_EXPRESSION_ARGS, args)
+    return parse_expression(expr_str, array_literals=array_literals)
+
+_BARESCRIPT_PARSE_EXPRESSION_ARGS = value_args_model([
+    {'name': 'exprStr', 'type': 'string'},
+    {'name': 'arrayLiterals', 'type': 'boolean', 'default': True}
 ])
 
 
@@ -2226,6 +2279,8 @@ SCRIPT_FUNCTIONS = {
     'arrayShift': _array_shift,
     'arraySlice': _array_slice,
     'arraySort': _array_sort,
+    'barescriptEvaluateExpression': _barescript_evaluate_expression,
+    'barescriptParseExpression': _barescript_parse_expression,
     'coverageGlobalGet': _coverage_global_get,
     'coverageGlobalName': _coverage_global_name,
     'coverageStart': _coverage_start,
