@@ -82,7 +82,7 @@ baredocCLIMainArguments = argsValidate([ \
 # $function: baredocCLIParse
 # $group: baredocCLI.bare
 # $doc: Parse source code for baredoc documentation comments
-# $arg functions: The dict of function names to function documentation models
+# $arg functions: The map of function name to [function documentation model](model.html#var.vName='BaredocFunction')
 # $arg source: The source code string
 # $arg filename: The source filename string
 # $return: The array of errors

@@ -51,18 +51,18 @@ doc:
 
     # Generate the library documentation
 	$(DEFAULT_VENV_BIN)/bare -m \
-		-c 'include <baredocCLI.bare>' \
-		-c 'return baredocCLIMain()' \
 		-v 'vFiles' "'$$(jq -n --args '$$ARGS.positional' src/bare_script/library.py src/bare_script/include/*.bare)'" \
 		-v 'vOutput' "'build/doc/html/library/library.json'"
+		-c 'include <baredocCLI.bare>' \
+		-c 'return baredocCLIMain()' \
 
      # Generate the single-page library documentation
 	cd build/doc/html/library/ && \
 	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
-		-c 'include <baredoc.bare>' \
-		-c "baredocMain('library.json', 'The BareScript Library', null, 'libraryContent.json')" \
 		-v 'vSingle' 'true' \
 		-v 'vPublish' 'true' \
+		-c 'include <baredoc.bare>' \
+		-c "baredocMain('library.json', 'The BareScript Library', null, 'libraryContent.json')" \
 		> barescript-library.md
 
     # Generate the expression library documentation
@@ -71,10 +71,10 @@ doc:
      # Generate the single-page expression library documentation
 	cd build/doc/html/library/ && \
 	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
-		-c 'include <baredoc.bare>' \
-		-c "baredocMain('expression.json', 'The BareScript Expression Library', null, 'expressionContent.json')" \
 		-v 'vSingle' 'true' \
 		-v 'vPublish' 'true' \
+		-c 'include <baredoc.bare>' \
+		-c "baredocMain('expression.json', 'The BareScript Expression Library', null, 'expressionContent.json')" \
 		> barescript-expression-library.md
 
     # Generate the library model documentation
@@ -83,10 +83,10 @@ doc:
     # Generate the single-page library model documentation
 	cd build/doc/html/library/ && \
 	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
-		-c 'include <schemaDoc.bare>' \
-		-c "schemaDocMain('model.json', 'The BareScript Library Models')" \
 		-v 'vSingle' 'true' \
 		-v 'vPublish' 'true' \
+		-c 'include <schemaDoc.bare>' \
+		-c "schemaDocMain('model.json', 'The BareScript Library Models')" \
 		> barescript-library-model.md
 
     # Generate the runtime model documentation
@@ -95,10 +95,10 @@ doc:
     # Generate the single-page runtime model documentation
 	cd build/doc/html/library/ && \
 	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
-		-c 'include <schemaDoc.bare>' \
-		-c "schemaDocMain('model.json', 'The BareScript Runtime Model')" \
 		-v 'vSingle' 'true' \
 		-v 'vPublish' 'true' \
+		-c 'include <schemaDoc.bare>' \
+		-c "schemaDocMain('model.json', 'The BareScript Runtime Model')" \
 		> barescript-model.md
 
 
@@ -144,6 +144,7 @@ types = {**AGGREGATION_TYPES, **REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
 # Create the include library type model
 script = parse_script('''\
 include 'src/bare_script/include/args.bare'
+include 'src/bare_script/include/baredoc.bare'
 include 'src/bare_script/include/dataLineChart.bare'
 include 'src/bare_script/include/dataTable.bare'
 include 'src/bare_script/include/diff.bare'
@@ -151,6 +152,7 @@ include 'src/bare_script/include/pager.bare'
 
 includeTypes = {}
 objectAssign(includeTypes, argsTypes)
+objectAssign(includeTypes, baredocTypes)
 objectAssign(includeTypes, dataLineChartTypes)
 objectAssign(includeTypes, dataTableTypes)
 objectAssign(includeTypes, diffTypes)
