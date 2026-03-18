@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.20 (2026-03-18)
+
+- [b7d889f](https://github.com/craigahobbs/bare-script-py/commit/b7d889f) - update doc comment
+
+- [3c686d8](https://github.com/craigahobbs/bare-script-py/commit/3c686d8) - add the barescriptParseExpression and barescriptEvaluateExpression functions
+
 ## 3.8.19 (2026-03-17)
 
 - [4c568eb](https://github.com/craigahobbs/bare-script-py/commit/4c568eb) - add stringSplitLines library function
