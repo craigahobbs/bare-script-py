@@ -1,13 +1,53 @@
 {
     "items": [
-        {"message": "Here's an example of porting a JavaScript file, elementModel.js, to the BareScript file, elementModel.bare."},
-        {"file": "https://raw.githubusercontent.com/craigahobbs/element-model/refs/heads/main/lib/elementModel.js"},
-        {"file": "https://raw.githubusercontent.com/craigahobbs/bare-script-py/refs/heads/main/src/bare_script/include/elementModel.bare"},
-        {"message": "Here are the relevant bare-script-py files:"},
-        {"file": "src/bare_script/include/test/runTests.bare"},
-        {"message": "Port the fillowing Python file, {{pyfile}}, to the BareScript file, {{barefile}}."},
-        {"file": "{{pyfile}}"},
-        {"message": "Also port the unit tests, {{testfile}}."},
-        {"file": "{{testfile}}"}
+        {"long": [
+            "Here is the MarkdownUp backend application readme. It contains a section titled",
+            "\"MarkdownUp Applications\" that shows how to create MarkdownUp frontend and",
+            "backend applications."
+        ]},
+        {"file": "https://craigahobbs.github.io/markdown-up-py/README.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the BareScript language reference:"
+        ]},
+        {"file": "https://craigahobbs.github.io/bare-script/language/README.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the Schema Markdown language referece:"
+        ]},
+        {"file": "https://craigahobbs.github.io/schema-markdown-js/language/README.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the Element Model readme:"
+        ]},
+        {"file": "https://raw.githubusercontent.com/craigahobbs/element-model/refs/heads/main/README.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the BareScript library documentation:"
+        ]},
+        {"file": "https://craigahobbs.github.io/bare-script/library/barescript-library.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the BareScript library model documentation:"
+        ]},
+        {"file": "https://craigahobbs.github.io/bare-script/library/barescript-library-model.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the source code for the BareScript include library and its tests:"
+        ]},
+        {"dir": {"path": "src/bare_script/include", "exts": ["bare"], "depth": 1}},
+        {"long": [
+            "==========",
+            "",
+            "Please port the following source code file, {{test}}, to the BareScript include library file, {{dst}}."
+        ]},
+        {"file": "{{src}}"},
+        {"file": "{{test}}"}
     ]
 }
