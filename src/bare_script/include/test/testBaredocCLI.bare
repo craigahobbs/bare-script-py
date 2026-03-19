@@ -6,7 +6,7 @@ include '../unittest.bare'
 include '../unittestMock.bare'
 
 
-async function testBaredocCLIParse():
+function testBaredocCLIParse():
     source = arrayJoin([ \
         '# $function: myFunction', \
         '# $group: My Group', \
