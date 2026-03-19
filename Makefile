@@ -131,7 +131,6 @@ export DOC_EXPR_PY
 define DOC_LIBRARY_MODEL_PY
 import sys
 from bare_script import execute_script, fetch_read_write, log_stdout, parse_script
-from bare_script.data import AGGREGATION_TYPES
 from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
 from bare_script.value import value_json
 
@@ -139,12 +138,13 @@ from bare_script.value import value_json
 _, type_model_path = sys.argv
 
 # Create the library type model
-types = {**AGGREGATION_TYPES, **REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
+types = {**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
 
 # Create the include library type model
 script = parse_script('''\
 include 'src/bare_script/include/args.bare'
 include 'src/bare_script/include/baredoc.bare'
+include 'src/bare_script/include/data.bare'
 include 'src/bare_script/include/dataLineChart.bare'
 include 'src/bare_script/include/dataTable.bare'
 include 'src/bare_script/include/diff.bare'
@@ -153,6 +153,7 @@ include 'src/bare_script/include/pager.bare'
 includeTypes = {}
 objectAssign(includeTypes, argsTypes)
 objectAssign(includeTypes, baredocTypes)
+objectAssign(includeTypes, dataAggregationTypes)
 objectAssign(includeTypes, dataLineChartTypes)
 objectAssign(includeTypes, dataTableTypes)
 objectAssign(includeTypes, diffTypes)

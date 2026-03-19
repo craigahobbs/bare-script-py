@@ -6,7 +6,6 @@ The BareScript library
 """
 
 import calendar
-import csv
 import datetime
 import functools
 import importlib
