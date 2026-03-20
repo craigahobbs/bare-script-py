@@ -9,15 +9,15 @@
 # $return: The data array
 function dataParseCSV(text):
     # Collect all lines from variadic text arguments
-    if systemType(text) == 'string':
-        lines = stringSplitLines(text)
-    else:
+    if systemType(text) == 'array':
         lines = []
         for textPart in text:
             if textPart != null:
                 arrayExtend(lines, stringSplitLines(textPart))
             endif
         endfor
+    else:
+        lines = stringSplitLines(text)
     endif
 
     # Filter blank lines and split into rows
@@ -33,11 +33,10 @@ function dataParseCSV(text):
         linePart = line
         while linePart != null:
             # Quoted field?
-            mQuoted = regexMatch(dataParseCSVQuotedField, linePart) || regexMatch(dataParseCSVQuotedFieldEnd, linePart)
+            mQuoted = regexMatch(dataParseCSVQuotedField, linePart)
             if mQuoted != null:
                 groups = objectGet(mQuoted, 'groups')
-                fieldVal = stringReplace(objectGet(groups, '1'), '""', '"')
-                arrayPush(row, fieldVal)
+                arrayPush(row, stringReplace(objectGet(groups, '1'), '""', '"'))
                 linePart = stringSlice(linePart, stringLength(objectGet(groups, '0')))
                 continue
             endif
@@ -82,8 +81,7 @@ function dataParseCSV(text):
 endfunction
 
 dataParseCSVBlankLine = regexNew('^\s*$')
-dataParseCSVQuotedField = regexNew('^"((?:""|[^"])*)",')
-dataParseCSVQuotedFieldEnd = regexNew('^"((?:""|[^"])*)"\s*$')
+dataParseCSVQuotedField = regexNew('^"((?:""|[^"])*)"(,|\s*$)')
 
 
 # $function: dataValidate
@@ -103,36 +101,30 @@ function dataValidate(data, csv):
     types = {}
     for row in data:
         for field in objectKeys(row):
-            # Skip fields whose type is already determined
-            if objectHas(types, field) && objectGet(types, field) != null:
-                continue
-            endif
-
-            value = objectGet(row, field)
-            valueType = systemType(value)
-
-            if valueType == 'boolean':
-                objectSet(types, field, 'boolean')
-            elif valueType == 'number':
-                objectSet(types, field, 'number')
-            elif valueType == 'datetime':
-                objectSet(types, field, 'datetime')
-            elif valueType == 'string':
-                if !csv:
-                    objectSet(types, field, 'string')
-                elif value == '' || value == 'null':
-                    # Can't determine type yet
-                    if !objectHas(types, field):
-                        objectSet(types, field, null)
-                    endif
-                elif datetimeISOParse(value) != null:
-                    objectSet(types, field, 'datetime')
-                elif value == 'true' || value == 'false':
+            if objectGet(types, field) == null:
+                value = objectGet(row, field)
+                valueType = systemType(value)
+                if valueType == 'boolean':
                     objectSet(types, field, 'boolean')
-                elif numberParseFloat(value) != null:
+                elif valueType == 'number':
                     objectSet(types, field, 'number')
-                else:
-                    objectSet(types, field, 'string')
+                elif valueType == 'datetime':
+                    objectSet(types, field, 'datetime')
+                elif valueType == 'string':
+                    if !csv:
+                        objectSet(types, field, 'string')
+                    elif value == '' || value == 'null':
+                        # Can't determine type yet
+                        objectSet(types, field, null)
+                    elif value == 'true' || value == 'false':
+                        objectSet(types, field, 'boolean')
+                    elif numberParseFloat(value) != null:
+                        objectSet(types, field, 'number')
+                    elif datetimeISOParse(value) != null:
+                        objectSet(types, field, 'datetime')
+                    else:
+                        objectSet(types, field, 'string')
+                    endif
                 endif
             endif
         endfor
@@ -148,9 +140,6 @@ function dataValidate(data, csv):
     # Validate and coerce field values
     for row in data:
         for field in objectKeys(row):
-            if !objectHas(types, field):
-                continue
-            endif
             fieldType = objectGet(types, field)
             value = objectGet(row, field)
             valueType = systemType(value)
@@ -158,10 +147,8 @@ function dataValidate(data, csv):
             # Null string in csv mode
             if csv && value == 'null':
                 objectSet(row, field, null)
-                continue
-            endif
 
-            if fieldType == 'number':
+            elif fieldType == 'number':
                 if csv && valueType == 'string':
                     if value == '':
                         objectSet(row, field, null)
