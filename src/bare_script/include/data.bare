@@ -228,24 +228,20 @@ function dataJoin(leftData, rightData, joinExpr, rightExpr, isLeftJoin, variable
     # Compute the map of right field name to joined row field name (handle collisions)
     leftNames = {}
     for leftRow in leftData:
-        if systemType(leftRow) == 'object':
-            for fieldName in objectKeys(leftRow):
-                if !objectHas(leftNames, fieldName):
-                    objectSet(leftNames, fieldName, fieldName)
-                endif
-            endfor
-        endif
+        for fieldName in objectKeys(leftRow):
+            if !objectHas(leftNames, fieldName):
+                objectSet(leftNames, fieldName, fieldName)
+            endif
+        endfor
     endfor
 
     rightNamesRaw = {}
     for rightRow in rightData:
-        if systemType(rightRow) == 'object':
-            for fieldName in objectKeys(rightRow):
-                if !objectHas(rightNamesRaw, fieldName):
-                    objectSet(rightNamesRaw, fieldName, fieldName)
-                endif
-            endfor
-        endif
+        for fieldName in objectKeys(rightRow):
+            if !objectHas(rightNamesRaw, fieldName):
+                objectSet(rightNamesRaw, fieldName, fieldName)
+            endif
+        endfor
     endfor
 
     rightNames = {}
@@ -270,19 +266,21 @@ function dataJoin(leftData, rightData, joinExpr, rightExpr, isLeftJoin, variable
     # Bucket the right rows by their expression value
     rightCategoryRows = {}
     for rightRow in rightData:
-        rowVars = if(variables != null, objectAssign(objectCopy(rightRow), variables), rightRow)
-        categoryKey = jsonStringify(barescriptEvaluateExpression(rightExprParsed, rowVars))
-        if !objectHas(rightCategoryRows, categoryKey):
-            objectSet(rightCategoryRows, categoryKey, [])
+        rightRowVars = if(variables != null, objectAssign(objectCopy(rightRow), variables), rightRow)
+        categoryKey = jsonStringify(barescriptEvaluateExpression(rightExprParsed, rightRowVars))
+        rightCategoryKeys = objectGet(rightCategoryRows, categoryKey)
+        if rightCategoryKeys == null:
+            rightCategoryKeys = []
+            objectSet(rightCategoryRows, categoryKey, rightCategoryKeys)
         endif
-        arrayPush(objectGet(rightCategoryRows, categoryKey), rightRow)
+        arrayPush(rightCategoryKeys, rightRow)
     endfor
 
     # Join the left with the right
     resultData = []
     for leftRow in leftData:
-        rowVars = if(variables != null, objectAssign(objectCopy(leftRow), variables), leftRow)
-        categoryKey = jsonStringify(barescriptEvaluateExpression(leftExprParsed, rowVars))
+        leftRowVars = if(variables != null, objectAssign(objectCopy(leftRow), variables), leftRow)
+        categoryKey = jsonStringify(barescriptEvaluateExpression(leftExprParsed, leftRowVars))
         if objectHas(rightCategoryRows, categoryKey):
             for rightRow in objectGet(rightCategoryRows, categoryKey):
                 joinRow = objectCopy(leftRow)
