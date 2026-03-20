@@ -358,13 +358,11 @@ function dataAggregate(data, aggregation):
         systemLogDebug('data: dataAggregate - invalid aggregation model')
         return null
     endif
-
     categories = objectGet(aggregation, 'categories')
     measures = objectGet(aggregation, 'measures')
 
     # Create the aggregate rows
     categoryRows = {}
-    categoryOrder = []
     for row in data:
         # Compute the category key
         if categories != null:
@@ -374,53 +372,52 @@ function dataAggregate(data, aggregation):
             endfor
             rowKey = jsonStringify(categoryValues)
         else:
+            categoryValues = null
             rowKey = ''
         endif
 
+
         # Get or create the aggregate row
-        if !objectHas(categoryRows, rowKey):
+        aggregateRow = objectGet(categoryRows, rowKey)
+        if aggregateRow == null:
             aggregateRow = {}
             objectSet(categoryRows, rowKey, aggregateRow)
-            arrayPush(categoryOrder, rowKey)
-
-            # Set category field values
             if categories != null:
                 for categoryField, ixCat in categories:
                     objectSet(aggregateRow, categoryField, arrayGet(categoryValues, ixCat))
                 endfor
             endif
         endif
-        aggregateRow = objectGet(categoryRows, rowKey)
 
         # Accumulate measure values
         for measure in measures:
             measureField = objectGet(measure, 'name', objectGet(measure, 'field'))
-            value = objectGet(row, objectGet(measure, 'field'))
-            if !objectHas(aggregateRow, measureField):
-                objectSet(aggregateRow, measureField, [])
+            measureValue = objectGet(row, objectGet(measure, 'field'))
+            measureValues = objectGet(aggregateRow, measureField)
+            if measureValues == null:
+                measureValues = []
+                objectSet(aggregateRow, measureField, measureValues)
             endif
-            if value != null:
-                arrayPush(objectGet(aggregateRow, measureField), value)
+            if measureValue != null:
+                arrayPush(measureValues, measureValue)
             endif
         endfor
     endfor
 
     # Compute the measure aggregate values
     aggregateRows = []
-    for rowKey in categoryOrder:
-        aggregateRow = objectGet(categoryRows, rowKey)
+    for categoryRowsKey in objectKeys(categoryRows):
+        aggregateRow = objectGet(categoryRows, categoryRowsKey)
         arrayPush(aggregateRows, aggregateRow)
-
         for measure in measures:
             measureField = objectGet(measure, 'name', objectGet(measure, 'field'))
-            func = objectGet(measure, 'function')
+            measureFunc = objectGet(measure, 'function')
             measureValues = objectGet(aggregateRow, measureField)
-
             if !arrayLength(measureValues):
                 objectSet(aggregateRow, measureField, null)
-            elif func == 'count':
+            elif measureFunc == 'count':
                 objectSet(aggregateRow, measureField, arrayLength(measureValues))
-            elif func == 'max':
+            elif measureFunc == 'max':
                 maxVal = arrayGet(measureValues, 0)
                 for val in measureValues:
                     if val > maxVal:
@@ -428,7 +425,7 @@ function dataAggregate(data, aggregation):
                     endif
                 endfor
                 objectSet(aggregateRow, measureField, maxVal)
-            elif func == 'min':
+            elif measureFunc == 'min':
                 minVal = arrayGet(measureValues, 0)
                 for val in measureValues:
                     if val < minVal:
@@ -436,13 +433,13 @@ function dataAggregate(data, aggregation):
                     endif
                 endfor
                 objectSet(aggregateRow, measureField, minVal)
-            elif func == 'sum':
+            elif measureFunc == 'sum':
                 sumVal = 0
                 for val in measureValues:
                     sumVal = sumVal + val
                 endfor
                 objectSet(aggregateRow, measureField, sumVal)
-            elif func == 'stddev':
+            elif measureFunc == 'stddev':
                 sumVal = 0
                 for val in measureValues:
                     sumVal = sumVal + val
@@ -454,7 +451,7 @@ function dataAggregate(data, aggregation):
                 endfor
                 objectSet(aggregateRow, measureField, mathSqrt(sumSqDiff / arrayLength(measureValues)))
             else:
-                # func == 'average'
+                # measureFunc == 'average'
                 sumVal = 0
                 for val in measureValues:
                     sumVal = sumVal + val
@@ -529,18 +526,20 @@ function dataSort(data, sorts):
     return arraySort(data, systemPartial(dataSortCompare, sorts))
 endfunction
 
+
+# Helper function for dataSort
 function dataSortCompare(sorts, row1, row2):
     result = 0
     for sort in sorts:
-        if result != 0:
-            break
-        endif
         field = arrayGet(sort, 0)
         desc = arrayGet(sort, 1)
         value1 = objectGet(row1, field)
         value2 = objectGet(row2, field)
         cmp = systemCompare(value1, value2)
         result = if(desc, -cmp, cmp)
+        if result != 0:
+            break
+        endif
     endfor
     return result
 endfunction
@@ -560,21 +559,23 @@ function dataTop(data, count, categoryFields):
     categoryRows = {}
     categoryOrder = []
     for row in data:
-        if categoryFields == null:
-            categoryKey = ''
-        else:
+        if categoryFields != null:
             categoryValues = []
             for field in categoryFields:
                 arrayPush(categoryValues, if(objectHas(row, field), objectGet(row, field), null))
             endfor
             categoryKey = jsonStringify(categoryValues)
+        else:
+            categoryKey = ''
         endif
 
-        if !objectHas(categoryRows, categoryKey):
-            objectSet(categoryRows, categoryKey, [])
+        categoryRow = objectGet(categoryRows, categoryKey)
+        if categoryRow == null:
+            categoryRow = []
+            objectSet(categoryRows, categoryKey, categoryRow)
             arrayPush(categoryOrder, categoryKey)
         endif
-        arrayPush(objectGet(categoryRows, categoryKey), row)
+        arrayPush(categoryRow, row)
     endfor
 
     # Take only the top rows per category
