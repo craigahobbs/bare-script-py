@@ -4,11 +4,11 @@
 
 # The line chart model
 dataLineChartTypes = schemaParse( \
-    'group "data"', \
+    'group "dataLineChart.bare"', \
     '', \
     '', \
     '# A line chart model', \
-    'struct LineChart', \
+    'struct DataLineChart', \
     '', \
     '    # The chart title', \
     '    optional string title', \
@@ -23,7 +23,7 @@ dataLineChartTypes = schemaParse( \
     '    optional int(>= 0) precision', \
     '', \
     '    # The datetime format', \
-    '    optional LineChartDatetimeFormat datetime', \
+    '    optional DataLineChartDatetimeFormat datetime', \
     '', \
     "    # The line chart's X-axis field", \
     '    string x', \
@@ -38,20 +38,20 @@ dataLineChartTypes = schemaParse( \
     '    optional string[len > 0] colorOrder', \
     '', \
     '    # The X-axis tick marks', \
-    '    optional LineChartAxisTicks xTicks', \
+    '    optional DataLineChartAxisTicks xTicks', \
     '', \
     '    # The Y-axis tick marks', \
-    '    optional LineChartAxisTicks yTicks', \
+    '    optional DataLineChartAxisTicks yTicks', \
     '', \
     '    # The X-axis annotations', \
-    '    optional LineChartAxisAnnotation[len > 0] xLines', \
+    '    optional DataLineChartAxisAnnotation[len > 0] xLines', \
     '', \
     '    # The Y-axis annotations', \
-    '    optional LineChartAxisAnnotation[len > 0] yLines', \
+    '    optional DataLineChartAxisAnnotation[len > 0] yLines', \
     '', \
     '', \
     '# The axis tick mark model', \
-    'struct LineChartAxisTicks', \
+    'struct DataLineChartAxisTicks', \
     '', \
     '    # The count of evenly-spaced tick marks. The default is 3.', \
     '    optional int(>= 0) count', \
@@ -67,7 +67,7 @@ dataLineChartTypes = schemaParse( \
     '', \
     '', \
     '# An axis annotation', \
-    'struct LineChartAxisAnnotation', \
+    'struct DataLineChartAxisAnnotation', \
     '', \
     '    # The axis value', \
     '    any value', \
@@ -77,7 +77,7 @@ dataLineChartTypes = schemaParse( \
     '', \
     '', \
     '# A datetime format', \
-    'enum LineChartDatetimeFormat', \
+    'enum DataLineChartDatetimeFormat', \
     '', \
     '    # ISO datetime year format', \
     '    year', \

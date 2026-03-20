@@ -3,7 +3,7 @@
 
 
 # $function: dataParseCSV
-# $group: data
+# $group: data.bare
 # $doc: Parse CSV text to a data array
 # $arg text: The CSV text
 # $return: The data array
@@ -85,7 +85,7 @@ dataParseCSVQuotedField = regexNew('^"((?:""|[^"])*)"(,|\s*$)')
 
 
 # $function: dataValidate
-# $group: data
+# $group: data.bare
 # $doc: Validate a data array
 # $arg data: The data array
 # $arg csv: Optional (default is false). If true, parse value strings.
@@ -214,7 +214,7 @@ endfunction
 
 
 # $function: dataJoin
-# $group: data
+# $group: data.bare
 # $doc: Join two data arrays
 # $arg leftData: The left data array
 # $arg rightData: The right data array
@@ -299,7 +299,7 @@ endfunction
 
 
 # $function: dataCalculatedField
-# $group: data
+# $group: data.bare
 # $doc: Add a calculated field to a data array
 # $arg data: The data array
 # $arg fieldName: The calculated field name
@@ -321,7 +321,7 @@ endfunction
 
 
 # $function: dataFilter
-# $group: data
+# $group: data.bare
 # $doc: Filter a data array
 # $arg data: The data array
 # $arg expr: The filter expression
@@ -346,14 +346,14 @@ endfunction
 
 
 # $function: dataAggregate
-# $group: data
+# $group: data.bare
 # $doc: Aggregate a data array
 # $arg data: The data array
-# $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script/library/model.html#var.vName='Aggregation')
+# $arg aggregation: The [aggregation model](model.html#var.vName='DataAggregation')
 # $return: The aggregated data array
 function dataAggregate(data, aggregation):
     # Validate the aggregation model
-    aggregation = schemaValidate(dataAggregateTypes, 'Aggregation', aggregation)
+    aggregation = schemaValidate(dataAggregationTypes, 'DataAggregation', aggregation)
     if aggregation == null:
         systemLogDebug('data: dataAggregate - invalid aggregation model')
         return null
@@ -469,35 +469,35 @@ endfunction
 
 
 # The data aggregation model
-dataAggregateTypes = schemaParse( \
-    'group "data"', \
+dataAggregationTypes = schemaParse( \
+    'group "data.bare"', \
     '', \
     '', \
-    '# A data aggregation specification', \
-    'struct Aggregation', \
+    '# The data aggregation model', \
+    'struct DataAggregation', \
     '', \
     '    # The aggregation category fields', \
     '    optional string[len > 0] categories', \
     '', \
     '    # The aggregation measures', \
-    '    AggregationMeasure[len > 0] measures', \
+    '    DataAggregationMeasure[len > 0] measures', \
     '', \
     '', \
-    '# An aggregation measure specification', \
-    'struct AggregationMeasure', \
+    '# The aggregation measure model', \
+    'struct DataAggregationMeasure', \
     '', \
     '    # The aggregation measure field', \
     '    string field', \
     '', \
     '    # The aggregation function', \
-    '    AggregationFunction function', \
+    '    DataAggregationFunction function', \
     '', \
     '    # The aggregated-measure field name', \
     '    optional string name', \
     '', \
     '', \
-    '# An aggregation function', \
-    'enum AggregationFunction', \
+    '# The aggregation function enumeration', \
+    'enum DataAggregationFunction', \
     '', \
     '    # The average of the measure values', \
     '    average', \
@@ -520,7 +520,7 @@ dataAggregateTypes = schemaParse( \
 
 
 # $function: dataSort
-# $group: data
+# $group: data.bare
 # $doc: Sort a data array
 # $arg data: The data array
 # $arg sorts: The sort field-name/descending-sort tuples
@@ -547,7 +547,7 @@ endfunction
 
 
 # $function: dataTop
-# $group: data
+# $group: data.bare
 # $doc: Keep the top rows for each category
 # $arg data: The data array
 # $arg count: The number of rows to keep (default is 1)
