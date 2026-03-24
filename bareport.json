@@ -39,15 +39,20 @@
         {"long": [
             "==========",
             "",
-            "Here is the source code for the BareScript include library and its tests:"
+            "Here are some BareScript coding tips:"
         ]},
-        {"dir": {"path": "src/bare_script/include", "exts": ["bare"], "depth": 1}},
+        {"file": "bareport-tips.md"},
         {"long": [
             "==========",
             "",
-            "Please port the following source code file, {{test}}, to the BareScript include library file, {{dst}}."
+            "Here is the source code for the BareScript include library and its tests:"
         ]},
-        {"file": "{{src}}"},
-        {"file": "{{test}}"}
+        {"dir": {"path": "src/bare_script/include", "exts": ["bare"], "depth": 2}},
+        {"long": [
+            "==========",
+            "",
+            "Please port the following source code file, {{src}}, to the BareScript include library file, {{dst}}."
+        ]},
+        {"file": "{{src}}"}
     ]
 }
