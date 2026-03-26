@@ -63,7 +63,7 @@ function testDataLineChart():
                                 'font-size': '16.000px', \
                                 'style': 'font-weight: bold', \
                                 'text-anchor': 'middle', \
-                                'transform': 'rotate(-90 16, 145.350)', \
+                                'transform': 'rotate(-90 16.000, 145.350)', \
                                 'x': '16.000', \
                                 'y': '145.350' \
                             }, \
