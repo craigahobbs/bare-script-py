@@ -33,6 +33,7 @@ def main(argv=None):
     parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
+    parser.add_argument('-l', '--headless', action='store_true', help='run with MarkdownUp headless')
     parser.add_argument('-m', '--markdown-up', action='store_true', help='run with MarkdownUp stubs')
     parser.add_argument('-s', '--static', dest='static', action='store_const', const='s', help='perform static analysis')
     parser.add_argument('-x', '--staticx', dest='static', action='store_const', const='x', help='perform static analysis with execution')
@@ -54,9 +55,22 @@ def main(argv=None):
         # Get the scripts to run
         scripts = args.scripts
         ix_user_script = 0
-        if args.markdown_up:
-            scripts = [('code', 'include <markdownUp.bare>'), *scripts]
-            ix_user_script = 1
+        if args.headless or args.markdown_up:
+            # Headless or Markdown Text render?
+            if args.headless:
+                scripts = [
+                    ('code', 'include <markdownUp.bare>'),
+                    ('code', 'markdownUpHeadlessBegin()'),
+                    *scripts,
+                    ('code', 'markdownUpHeadlessEnd()')
+                ]
+                ix_user_script = 2
+            else:
+                scripts = [
+                    ('code', 'include <markdownUp.bare>'),
+                    *scripts
+                ]
+                ix_user_script = 1
 
             # Add unittest.bare argument globals
             globals_['vUnittestReport'] = True

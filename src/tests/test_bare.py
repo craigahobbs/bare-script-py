@@ -28,7 +28,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(
                 stdout.getvalue().splitlines()[0],
-                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
+                'usage: bare [-h] [-c CODE] [-d] [-l] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
             )
             self.assertEqual(stderr.getvalue(), '')
 
@@ -43,7 +43,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(
                 stdout.getvalue().splitlines()[0],
-                'usage: bare [-h] [-c CODE] [-d] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
+                'usage: bare [-h] [-c CODE] [-d] [-l] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
             )
             self.assertEqual(stderr.getvalue(), '')
 
@@ -114,6 +114,32 @@ class TestBare(unittest.TestCase):
                 main(['-m', '-c', "markdownPrint('Hello')"])
 
             self.assertEqual(mock_stdout.getvalue(), 'Hello\n')
+            self.assertEqual(mock_stderr.getvalue(), '')
+            self.assertEqual(cm_exc.exception.code, 0)
+
+
+    def test_main_headless(self):
+        with unittest.mock.patch('sys.stdout', StringIO()) as mock_stdout, \
+             unittest.mock.patch('sys.stderr', StringIO()) as mock_stderr:
+
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-l', '-c', "markdownPrint('Hello **World**')"])
+
+            self.assertEqual(mock_stdout.getvalue(), '''\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="stylesheet" href="https://craigahobbs.github.io/markdown-up/app.css">
+</head>
+<p>
+    Hello\x20
+    <strong>
+        World
+    </strong>
+</p>
+
+</html>
+''')
             self.assertEqual(mock_stderr.getvalue(), '')
             self.assertEqual(cm_exc.exception.code, 0)
 
