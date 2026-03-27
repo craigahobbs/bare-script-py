@@ -8,11 +8,19 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import COVERAGE_GLOBAL_NAME, DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, SYSTEM_GLOBAL_INCLUDES_NAME
+from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
 from .parser import parse_script
 from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
+
+
+# Coverage configuration object global variable name
+SYSTEM_GLOBAL_COVERAGE_NAME = '__barescriptCoverage'
+
+
+# System includes object global variable name
+SYSTEM_GLOBAL_INCLUDES_NAME = '__barescriptIncludes'
 
 
 def execute_script(script, options=None):
@@ -62,7 +70,7 @@ def _execute_script_helper(script, statements, options, locals_):
             raise BareScriptRuntimeError(script, statement, f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
-        coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
+        coverage_global = globals_.get(SYSTEM_GLOBAL_COVERAGE_NAME)
         has_coverage = coverage_global is not None and isinstance(coverage_global, dict) and \
             coverage_global.get('enabled') and not script.get('system')
         if has_coverage:

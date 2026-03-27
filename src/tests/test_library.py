@@ -12,7 +12,7 @@ import unittest
 import schema_markdown
 
 from bare_script import BareScriptRuntimeError
-from bare_script.library import COVERAGE_GLOBAL_NAME, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, SYSTEM_GLOBAL_INCLUDES_NAME
+from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from bare_script.parser import BareScriptParserError
 from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
@@ -651,58 +651,6 @@ Syntax error
 foo bar
    ^
 ''')
-
-
-    #
-    # Coverage functions
-    #
-
-
-    def test_coverage_global_get(self):
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageGlobalGet']([], None))
-
-        options = {}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageGlobalGet']([], options))
-
-        options['globals'] = {}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageGlobalGet']([], options))
-
-        options['globals'][COVERAGE_GLOBAL_NAME] = {'enabled': True}
-        self.assertEqual(SCRIPT_FUNCTIONS['coverageGlobalGet']([], options), options['globals'][COVERAGE_GLOBAL_NAME])
-
-
-    def test_coverage_global_name(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['coverageGlobalName']([], None), '__barescriptCoverage')
-
-
-    def test_coverage_start(self):
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], None))
-
-        options = {}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], options))
-
-        options['globals'] = {}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], options))
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
-
-        options['globals'] = {COVERAGE_GLOBAL_NAME: {'enabled': False}}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStart']([], options))
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
-
-
-    def test_coverage_stop(self):
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], None))
-
-        options = {}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], options))
-
-        options['globals'] = {}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], options))
-        self.assertIsNone(options['globals'].get(COVERAGE_GLOBAL_NAME))
-
-        options['globals'][COVERAGE_GLOBAL_NAME] = {'enabled': True}
-        self.assertIsNone(SCRIPT_FUNCTIONS['coverageStop']([], options))
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': False})
 
 
     #
@@ -2822,23 +2770,6 @@ foo bar
             SCRIPT_FUNCTIONS['systemGlobalGet']([None], options)
         self.assertEqual(str(cm_exc.exception), 'Invalid "name" argument value, null')
         self.assertIsNone(cm_exc.exception.return_value)
-
-
-    def test_system_global_includes_get(self):
-        options = {'globals': {}}
-        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], options), None)
-
-        options = {'globals': {SYSTEM_GLOBAL_INCLUDES_NAME: {'test.bare': True}}}
-        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], options), {'test.bare': True})
-
-        options = {}
-        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], options), None)
-
-        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesGet']([], None), None)
-
-
-    def test_system_global_includes_name(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalIncludesName']([], None), SYSTEM_GLOBAL_INCLUDES_NAME)
 
 
     def test_system_global_set(self):

@@ -9,7 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
-from bare_script.library import COVERAGE_GLOBAL_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
+from bare_script.runtime import SYSTEM_GLOBAL_COVERAGE_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import ValueArgsError
 
 
@@ -192,10 +192,10 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'function': {'args': [], 'name': 'main'}}, 'lineNumber': 31}}
             ]
         })
-        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
+        options = {'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), True)
         main_statement = script['statements'][0]
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
@@ -292,14 +292,14 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         options = {
-            'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}},
+            'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': True}},
             'fetchFn': fetch_fn,
             'systemPrefix': 'system' + os.sep
         }
         self.assertIsNone(execute_script(script, options))
         self.assertEqual(options['globals']['a'], 1)
         self.assertEqual(options['globals']['b'], 2)
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {
             'enabled': True,
             'scripts': {
                 'test.bare': {
@@ -357,12 +357,12 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         options = {
-            'globals': {COVERAGE_GLOBAL_NAME: {'enabled': False}},
+            'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': False}},
             'fetchFn': fetch_fn,
             'systemPrefix': 'system' + os.sep
         }
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': False})
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {'enabled': False})
 
 
     def test_execute_script_coverage_non_object(self):
@@ -379,9 +379,9 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
             ]
         })
-        options = {'globals': {COVERAGE_GLOBAL_NAME: 42}}
+        options = {'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: 42}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertEqual(options['globals'][COVERAGE_GLOBAL_NAME], 42)
+        self.assertEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], 42)
 
 
     def test_execute_script_coverage_no_name(self):
@@ -397,9 +397,9 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}, 'lineNumber': 3}}
             ]
         })
-        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
+        options = {'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {'enabled': True})
 
 
     def test_execute_script_coverage_no_linenos(self):
@@ -416,9 +416,9 @@ class TestExecuteScript(unittest.TestCase):
                 {'return': {'expr': {'binary': {'op': '+', 'left': {'variable': 'a'}, 'right': {'variable': 'b'}}}}}
             ]
         })
-        options = {'globals': {COVERAGE_GLOBAL_NAME: {'enabled': True}}}
+        options = {'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': True}}}
         self.assertEqual(execute_script(script, options), 12)
-        self.assertDictEqual(options['globals'][COVERAGE_GLOBAL_NAME], {'enabled': True})
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {'enabled': True})
 
 
     def test_function(self):

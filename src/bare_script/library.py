@@ -433,53 +433,6 @@ _BARESCRIPT_PARSE_EXPRESSION_ARGS = value_args_model([
 
 
 #
-# Coverage functions
-#
-
-
-# Coverage configuration object global variable name
-COVERAGE_GLOBAL_NAME = '__barescriptCoverage'
-
-
-# $function: coverageGlobalGet
-# $group: coverage
-# $doc: Get the coverage global object
-# $return: The [coverage global object](https://craigahobbs.github.io/bare-script-py/model/#var.vName='CoverageGlobal')
-def _coverage_global_get(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    return globals_.get(COVERAGE_GLOBAL_NAME) if globals_ is not None else None
-
-
-# $function: coverageGlobalName
-# $group: coverage
-# $doc: Get the coverage global variable name
-# $return: The coverage global variable name
-def _coverage_global_name(unused_args, unused_options):
-    return COVERAGE_GLOBAL_NAME
-
-
-# $function: coverageStart
-# $group: coverage
-# $doc: Start coverage data collection
-def _coverage_start(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    if globals_ is not None:
-        coverage_global = {'enabled': True}
-        globals_[COVERAGE_GLOBAL_NAME] = coverage_global
-
-
-# $function: coverageStop
-# $group: coverage
-# $doc: Stop coverage data collection
-def _coverage_stop(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    if globals_ is not None:
-        coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
-        if coverage_global is not None:
-            globals_[COVERAGE_GLOBAL_NAME]['enabled'] = False
-
-
-#
 # Datetime functions
 #
 
@@ -1945,27 +1898,6 @@ _SYSTEM_GLOBAL_GET_ARGS = value_args_model([
 ])
 
 
-# System includes object global variable name
-SYSTEM_GLOBAL_INCLUDES_NAME = '__barescriptIncludes'
-
-
-# $function: systemGlobalIncludesGet
-# $group: system
-# $doc: Get the global system includes object
-# $return: The global system includes object
-def _system_global_includes_get(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    return globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME) if globals_ is not None else None
-
-
-# $function: systemGlobalIncludesName
-# $group: system
-# $doc: Get the system includes object global variable name
-# $return: The system includes object global variable name
-def _system_global_includes_name(unused_args, unused_options):
-    return SYSTEM_GLOBAL_INCLUDES_NAME
-
-
 # $function: systemGlobalSet
 # $group: system
 # $doc: Set a global variable value
@@ -2121,10 +2053,6 @@ SCRIPT_FUNCTIONS = {
     'arraySort': _array_sort,
     'barescriptEvaluateExpression': _barescript_evaluate_expression,
     'barescriptParseExpression': _barescript_parse_expression,
-    'coverageGlobalGet': _coverage_global_get,
-    'coverageGlobalName': _coverage_global_name,
-    'coverageStart': _coverage_start,
-    'coverageStop': _coverage_stop,
     'datetimeDay': _datetime_day,
     'datetimeHour': _datetime_hour,
     'datetimeISOFormat': _datetime_iso_format,
@@ -2205,8 +2133,6 @@ SCRIPT_FUNCTIONS = {
     'systemCompare': _system_compare,
     'systemFetch': _system_fetch,
     'systemGlobalGet': _system_global_get,
-    'systemGlobalIncludesGet': _system_global_includes_get,
-    'systemGlobalIncludesName': _system_global_includes_name,
     'systemGlobalSet': _system_global_set,
     'systemIs': _system_is,
     'systemLog': _system_log,

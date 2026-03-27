@@ -12,11 +12,10 @@ import os
 import sys
 import time
 
-from .library import SYSTEM_GLOBAL_INCLUDES_NAME
 from .model import lint_script
 from .options import fetch_read_write, log_stdout, url_file_relative
 from .parser import parse_expression, parse_script
-from .runtime import evaluate_expression, execute_script
+from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME, evaluate_expression, execute_script
 from .value import value_boolean
 
 
