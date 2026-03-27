@@ -672,7 +672,7 @@ foo bar
 
 
     def test_coverage_global_name(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['coverageGlobalName']([], None), '__bareScriptCoverage')
+        self.assertEqual(SCRIPT_FUNCTIONS['coverageGlobalName']([], None), '__barescriptCoverage')
 
 
     def test_coverage_start(self):

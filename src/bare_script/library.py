@@ -438,7 +438,7 @@ _BARESCRIPT_PARSE_EXPRESSION_ARGS = value_args_model([
 
 
 # Coverage configuration object global variable name
-COVERAGE_GLOBAL_NAME = '__bareScriptCoverage'
+COVERAGE_GLOBAL_NAME = '__barescriptCoverage'
 
 
 # $function: coverageGlobalGet
@@ -1946,7 +1946,7 @@ _SYSTEM_GLOBAL_GET_ARGS = value_args_model([
 
 
 # System includes object global variable name
-SYSTEM_GLOBAL_INCLUDES_NAME = '__bareScriptIncludes'
+SYSTEM_GLOBAL_INCLUDES_NAME = '__barescriptIncludes'
 
 
 # $function: systemGlobalIncludesGet
