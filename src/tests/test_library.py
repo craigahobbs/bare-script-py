@@ -599,10 +599,10 @@ class TestLibrary(unittest.TestCase):
 
 
     def test_barescript_evaluate_expression(self):
-        expr = {'function': {'args': [{'number': 5.0}, {'variable': 'true'}], 'name': 'arrayNew'}}
-        self.assertListEqual(
+        expr = {'binary': {'left': {'number': 2.0}, 'op': '*', 'right': {'number': 3}}}
+        self.assertEqual(
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None),
-            [5, True]
+            6
         )
 
         # Locals
@@ -614,12 +614,8 @@ class TestLibrary(unittest.TestCase):
 
         # Builtins
         expr = {'function': {'args': [{'function': {'args': [], 'name': 'pi'}}], 'name': 'cos'}}
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, True], None),
-            -1
-        )
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, False], None)
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None)
 
         self.assertEqual(str(cm_exc.exception), 'Undefined function "pi"')
 

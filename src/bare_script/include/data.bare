@@ -76,6 +76,8 @@ function dataParseCSV(text):
         endfor
     endif
 
+    # Validate the data (as CSV)
+    dataValidate(result, true)
     return result
 endfunction
 
@@ -270,8 +272,7 @@ function dataJoin(leftData, rightData, joinExpr, rightExpr, isLeftJoin, variable
     # Bucket the right rows by their expression value
     rightCategoryRows = {}
     for rightRow in rightData:
-        rightRowVars = if(variables != null, objectAssign(objectCopy(rightRow), variables), rightRow)
-        categoryKey = jsonStringify(barescriptEvaluateExpression(rightExprParsed, rightRowVars))
+        categoryKey = jsonStringify(barescriptEvaluateExpression(rightExprParsed, rightRow, variables))
         rightCategoryKeys = objectGet(rightCategoryRows, categoryKey)
         if rightCategoryKeys == null:
             rightCategoryKeys = []
@@ -283,8 +284,7 @@ function dataJoin(leftData, rightData, joinExpr, rightExpr, isLeftJoin, variable
     # Join the left with the right
     resultData = []
     for leftRow in leftData:
-        leftRowVars = if(variables != null, objectAssign(objectCopy(leftRow), variables), leftRow)
-        categoryKey = jsonStringify(barescriptEvaluateExpression(leftExprParsed, leftRowVars))
+        categoryKey = jsonStringify(barescriptEvaluateExpression(leftExprParsed, leftRow, variables))
         if objectHas(rightCategoryRows, categoryKey):
             for rightRow in objectGet(rightCategoryRows, categoryKey):
                 joinRow = objectCopy(leftRow)
@@ -316,8 +316,7 @@ function dataCalculatedField(data, fieldName, expr, variables):
 
     # Compute the calculated field for each row
     for row in data:
-        rowVars = if(variables != null, objectAssign(objectCopy(row), variables), row)
-        objectSet(row, fieldName, barescriptEvaluateExpression(calcExpr, rowVars))
+        objectSet(row, fieldName, barescriptEvaluateExpression(calcExpr, row, variables))
     endfor
 
     return data
@@ -339,8 +338,7 @@ function dataFilter(data, expr, variables):
 
     # Filter the data
     for row in data:
-        rowVars = if(variables != null, objectAssign(objectCopy(row), variables), row)
-        if systemBoolean(barescriptEvaluateExpression(filterExpr, rowVars)):
+        if systemBoolean(barescriptEvaluateExpression(filterExpr, row, variables)):
             arrayPush(result, row)
         endif
     endfor
@@ -424,17 +422,13 @@ function dataAggregate(data, aggregation):
             elif measureFunc == 'max':
                 maxVal = arrayGet(measureValues, 0)
                 for val in measureValues:
-                    if val > maxVal:
-                        maxVal = val
-                    endif
+                    maxVal = if(val > maxVal, val, maxVal)
                 endfor
                 objectSet(aggregateRow, measureField, maxVal)
             elif measureFunc == 'min':
                 minVal = arrayGet(measureValues, 0)
                 for val in measureValues:
-                    if val < minVal:
-                        minVal = val
-                    endif
+                    minVal = if(val < minVal, val, minVal)
                 endfor
                 objectSet(aggregateRow, measureField, minVal)
             elif measureFunc == 'sum':
@@ -536,11 +530,9 @@ function dataSortCompare(sorts, row1, row2):
     result = 0
     for sort in sorts:
         field = arrayGet(sort, 0)
-        desc = arrayGet(sort, 1)
-        value1 = objectGet(row1, field)
-        value2 = objectGet(row2, field)
-        cmp = systemCompare(value1, value2)
-        result = if(desc, -cmp, cmp)
+        result = if(arrayGet(sort, 1), \
+            systemCompare(objectGet(row2, field), objectGet(row1, field)), \
+            systemCompare(objectGet(row1, field), objectGet(row2, field)))
         if result != 0:
             break
         endif
