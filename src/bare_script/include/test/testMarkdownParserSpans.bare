@@ -71,34 +71,33 @@ unittestRunTest('testMarkdownParse_spans')
 
 
 function testMarkdownParse_nestedSpans():
-#    const markdown = markdownParse(`\
-#This is a [link **with *formatting***](https://foo.com)
-#`);
-#    validateMarkdownModel(markdown);
-#    unittestDeepEqual(
-#        markdown,
-#        {
-#            'parts': [
-#                {'paragraph': {
-#                    'spans': [
-#                        {'text': 'This is a '},
-#                        {
-#                            'link': {
-#                                'href': 'https://foo.com',
-#                                'spans': [
-#                                    {'text': 'link '},
-#                                    {'style': {'style': 'bold', 'spans': [
-#                                        {'text': 'with '},
-#                                        {'style': {'style': 'italic', 'spans': [{'text': 'formatting'}]}}
-#                                    ]}}
-#                                ]
-#                            }
-#                        }
-#                    ]
-#                }}
-#            ]
-#        }
-#    );
+    markdown = markdownParse([ \
+        'This is a [link **with *formatting***](https://foo.com)' \
+    ])
+    unittestDeepEqual( \
+        markdownValidate(markdown), \
+        { \
+            'parts': [ \
+                {'paragraph': { \
+                    'spans': [ \
+                        {'text': 'This is a '}, \
+                        { \
+                            'link': { \
+                                'href': 'https://foo.com', \
+                                'spans': [ \
+                                    {'text': 'link '}, \
+                                    {'style': {'style': 'bold', 'spans': [ \
+                                        {'text': 'with '}, \
+                                        {'style': {'style': 'italic', 'spans': [{'text': 'formatting'}]}} \
+                                    ]}} \
+                                ] \
+                            } \
+                        } \
+                    ] \
+                }} \
+            ] \
+        } \
+    )
 endfunction
 unittestRunTest('testMarkdownParse_nestedSpans')
 
@@ -153,7 +152,7 @@ function testMarkdownParse_spansSpacesHangFix():
 #        }
 #    );
 endfunction
-unittestRunTest('testMarkdownParse_spansSpaces hang fix')
+unittestRunTest('testMarkdownParse_spansSpacesHangFix')
 
 
 function testMarkdownParse_entityReferences():
@@ -516,7 +515,7 @@ function testMarkdownParse_italicNonBreakingSpace():
 #        }
 #    );
 endfunction
-unittestRunTest('testMarkdownParse_italicNon-breakingSpace')
+unittestRunTest('testMarkdownParse_italicNonBreakingSpace')
 
 
 function testMarkdownParse_underscoreItalic():
