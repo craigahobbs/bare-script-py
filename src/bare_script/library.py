@@ -403,18 +403,19 @@ _ARRAY_SORT_ARGS = value_args_model([
 # $doc: Evaluate a [BareScript expression model](../model/#var.vName='Expression')
 # $arg expr: The [BareScript expression model](../model/#var.vName='Expression')
 # $arg locals: Optional (default is null). The local variables object.
-# $arg builtins: Optional (default is true). If true, include the [built-in expression functions](expression.html).
+# $arg globals: Optional (default is null). The global variables object.
 # $return: The expression result
 def _barescript_evaluate_expression(args, options):
-    expr, locals_, builtins = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
+    expr, locals_, globals_ = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
     validate_expression(expr)
+    evaluate_options = options if globals_ is None else {**options, 'globals': globals_}
     evaluate_expression = _import_evaluate_expression()
-    return evaluate_expression(expr, options, locals_, builtins)
+    return evaluate_expression(expr, evaluate_options, locals_, False)
 
 _BARESCRIPT_EVALUATE_EXPRESSION_ARGS = value_args_model([
     {'name': 'expr', 'type': 'object'},
     {'name': 'locals', 'type': 'object', 'nullable': True},
-    {'name': 'builtins', 'type': 'boolean', 'default': True}
+    {'name': 'globals', 'type': 'object', 'nullable': True}
 ])
 
 
@@ -1499,6 +1500,9 @@ def _regex_new(args, unused_options):
     # Translate JavaScript named group syntax to Python
     pattern = _R_REGEX_NEW_NAMED.sub(r'(?P<\1>', pattern)
 
+    # Translate JavaScript backreference syntax to Python
+    pattern = _R_REGEX_NEW_BACKREF.sub(r'(?P=\1)', pattern)
+
     # Compute the flags mask
     flags_mask = 0
     if flags is not None:
@@ -1521,6 +1525,7 @@ _REGEX_NEW_ARGS = value_args_model([
 
 
 _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
+_R_REGEX_NEW_BACKREF = re.compile(r'\\\\k<(\w+)>')
 
 
 # $function: regexReplace

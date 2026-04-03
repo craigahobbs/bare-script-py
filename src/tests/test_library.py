@@ -599,10 +599,10 @@ class TestLibrary(unittest.TestCase):
 
 
     def test_barescript_evaluate_expression(self):
-        expr = {'function': {'args': [{'number': 5.0}, {'variable': 'true'}], 'name': 'arrayNew'}}
-        self.assertListEqual(
+        expr = {'binary': {'left': {'number': 2.0}, 'op': '*', 'right': {'number': 5}}}
+        self.assertEqual(
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None),
-            [5, True]
+            10
         )
 
         # Locals
@@ -612,14 +612,17 @@ class TestLibrary(unittest.TestCase):
             10
         )
 
+        # Globals
+        expr = {'binary': {'left': {'variable': 'B'}, 'op': '*', 'right': {'variable': 'A'}}}
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, {'A': 5}, {'B': 2}], {}),
+            10
+        )
+
         # Builtins
         expr = {'function': {'args': [{'function': {'args': [], 'name': 'pi'}}], 'name': 'cos'}}
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, True], None),
-            -1
-        )
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, False], None)
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None)
 
         self.assertEqual(str(cm_exc.exception), 'Undefined function "pi"')
 
@@ -2331,6 +2334,12 @@ a,b, c
         regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<first>\w+)(\s+)(?<last>\w+)'], None)
         self.assertIsInstance(regex, REGEX_TYPE)
         self.assertEqual(regex.pattern, r'(?P<first>\w+)(\s+)(?P<last>\w+)')
+        self.assertEqual(regex.flags, re.U)
+
+        # Backreferences
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<delim>[AB])\w+\\k<delim>'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, r'(?P<delim>[AB])\w+(?P=delim)')
         self.assertEqual(regex.flags, re.U)
 
         # Flag - "i"
