@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.21 (2026-04-03)
+
+- [4e847f0](https://github.com/craigahobbs/bare-script-py/commit/4e847f0) - improve barescriptEvaluateExpression, fix regex backref syntax
+
 ## 3.8.20 (2026-03-18)
 
 - [b7d889f](https://github.com/craigahobbs/bare-script-py/commit/b7d889f) - update doc comment
