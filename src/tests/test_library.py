@@ -599,16 +599,23 @@ class TestLibrary(unittest.TestCase):
 
 
     def test_barescript_evaluate_expression(self):
-        expr = {'binary': {'left': {'number': 2.0}, 'op': '*', 'right': {'number': 3}}}
+        expr = {'binary': {'left': {'number': 2.0}, 'op': '*', 'right': {'number': 5}}}
         self.assertEqual(
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None),
-            6
+            10
         )
 
         # Locals
         expr = {'binary': {'left': {'number': 2.0}, 'op': '*', 'right': {'variable': 'A'}}}
         self.assertEqual(
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, {'A': 5}], None),
+            10
+        )
+
+        # Globals
+        expr = {'binary': {'left': {'variable': 'B'}, 'op': '*', 'right': {'variable': 'A'}}}
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, {'A': 5}, {'B': 2}], {}),
             10
         )
 
@@ -1874,6 +1881,12 @@ foo bar
         regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<first>\w+)(\s+)(?<last>\w+)'], None)
         self.assertIsInstance(regex, REGEX_TYPE)
         self.assertEqual(regex.pattern, r'(?P<first>\w+)(\s+)(?P<last>\w+)')
+        self.assertEqual(regex.flags, re.U)
+
+        # Backreferences
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<delim>[AB])\w+\k<delim>'], None)
+        self.assertIsInstance(regex, REGEX_TYPE)
+        self.assertEqual(regex.pattern, r'(?P<delim>[AB])\w+(?P=delim)')
         self.assertEqual(regex.flags, re.U)
 
         # Flag - "i"

@@ -1293,6 +1293,9 @@ def _regex_new(args, unused_options):
     # Translate JavaScript named group syntax to Python
     pattern = _R_REGEX_NEW_NAMED.sub(r'(?P<\1>', pattern)
 
+    # Translate JavaScript backreference syntax to Python
+    pattern = _R_REGEX_NEW_BACKREF.sub(r'(?P=\1)', pattern)
+
     # Compute the flags mask
     flags_mask = 0
     if flags is not None:
@@ -1315,6 +1318,7 @@ _REGEX_NEW_ARGS = value_args_model([
 
 
 _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
+_R_REGEX_NEW_BACKREF = re.compile(r'\\k<(\w+)>')
 
 
 # $function: regexReplace
