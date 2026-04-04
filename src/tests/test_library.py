@@ -2337,10 +2337,12 @@ a,b, c
         self.assertEqual(regex.flags, re.U)
 
         # Backreferences
-        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<delim>[AB])\w+\\k<delim>'], None)
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<delim>[AB])[ab]+\k<delim>'], None)
         self.assertIsInstance(regex, REGEX_TYPE)
-        self.assertEqual(regex.pattern, r'(?P<delim>[AB])\w+(?P=delim)')
+        self.assertEqual(regex.pattern, r'(?P<delim>[AB])[ab]+(?P=delim)')
         self.assertEqual(regex.flags, re.U)
+        self.assertIsNotNone(regex.match('AabababA'))
+        self.assertIsNone(regex.match('AabaB'))
 
         # Flag - "i"
         regex = SCRIPT_FUNCTIONS['regexNew'](['a*b', 'i'], None)

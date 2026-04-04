@@ -1525,7 +1525,7 @@ _REGEX_NEW_ARGS = value_args_model([
 
 
 _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
-_R_REGEX_NEW_BACKREF = re.compile(r'\\\\k<(\w+)>')
+_R_REGEX_NEW_BACKREF = re.compile(r'\\k<(\w+)>')
 
 
 # $function: regexReplace
