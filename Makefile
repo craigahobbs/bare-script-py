@@ -148,6 +148,7 @@ include 'src/bare_script/include/data.bare'
 include 'src/bare_script/include/dataLineChart.bare'
 include 'src/bare_script/include/dataTable.bare'
 include 'src/bare_script/include/diff.bare'
+include 'src/bare_script/include/markdown.bare'
 include 'src/bare_script/include/pager.bare'
 
 includeTypes = {}
@@ -157,11 +158,13 @@ objectAssign(includeTypes, dataAggregationTypes)
 objectAssign(includeTypes, dataLineChartTypes)
 objectAssign(includeTypes, dataTableTypes)
 objectAssign(includeTypes, diffTypes)
+objectAssign(includeTypes, markdownTypes)
 objectAssign(includeTypes, pagerTypes)
 return includeTypes
 ''')
 include_types = execute_script(script, {'fetchFn': fetch_read_write, 'logFn': log_stdout})
 types.update(include_types)
+
 
 # Write the library type model
 with open(type_model_path, 'w', encoding='utf-8') as fh:

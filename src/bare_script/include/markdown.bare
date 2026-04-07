@@ -93,13 +93,13 @@ endfunction
 # $arg markdown - The [Markdown model](model.html/#var.vName='Markdown')
 # $return: The validated [Markdown model](model.html/#var.vName='Markdown')
 function markdownValidate(markdown):
-    return schemaValidate(markdownModelTypes, 'Markdown', markdown)
+    return schemaValidate(markdownTypes, 'Markdown', markdown)
 endfunction
 
 
 # The Markdown type model
-markdownModelTypes = schemaParse( \
-    'group "Markdown"', \
+markdownTypes = schemaParse( \
+    'group "markdown.bare"', \
     '', \
     '', \
     '# Markdown document', \
@@ -113,36 +113,36 @@ markdownModelTypes = schemaParse( \
     'union MarkdownPart', \
     '', \
     '    # A paragraph', \
-    '    Paragraph paragraph', \
+    '    MarkdownParagraph paragraph', \
     '', \
     '    # A horizontal rule (value is ignored)', \
     '    int(== 1) hr', \
     '', \
     '    # A list', \
-    '    List list', \
+    '    MarkdownList list', \
     '', \
     '    # A block quote', \
-    '    BlockQuote quote', \
+    '    MarkdownBlockQuote quote', \
     '', \
     '    # A code block', \
-    '    CodeBlock codeBlock', \
+    '    MarkdownCodeBlock codeBlock', \
     '', \
     '    # A table', \
-    '    Table table', \
+    '    MarkdownTable table', \
     '', \
     '', \
     '# Paragraph markdown part', \
-    'struct Paragraph', \
+    'struct MarkdownParagraph', \
     '', \
     '    # The paragraph style', \
-    '    optional ParagraphStyle style', \
+    '    optional MarkdownParagraphStyle style', \
     '', \
     '    # The paragraph span array', \
-    '    Span[] spans', \
+    '    MarkdownSpan[] spans', \
     '', \
     '', \
     '# Paragraph style enum', \
-    'enum ParagraphStyle', \
+    'enum MarkdownParagraphStyle', \
     '    h1', \
     '    h2', \
     '    h3', \
@@ -152,31 +152,31 @@ markdownModelTypes = schemaParse( \
     '', \
     '', \
     '# List markdown part', \
-    'struct List', \
+    'struct MarkdownList', \
     '', \
     '    # The list is numbered and this is starting number', \
     '    optional int(>= 0) start', \
     '', \
     "    # The list's items", \
-    '    ListItem[len > 0] items', \
+    '    MarkdownListItem[len > 0] items', \
     '', \
     '', \
     '# List item', \
-    'struct ListItem', \
+    'struct MarkdownListItem', \
     '', \
     "    # The list's parts", \
     '    MarkdownPart[] parts', \
     '', \
     '', \
     '# Block quote markdown part', \
-    'struct BlockQuote', \
+    'struct MarkdownBlockQuote', \
     '', \
     "    # The block quote's parts", \
     '    MarkdownPart[] parts', \
     '', \
     '', \
     '# Code block markdown part', \
-    'struct CodeBlock', \
+    'struct MarkdownCodeBlock', \
     '', \
     "    # The code block's language", \
     '    optional string(len > 0) language', \
@@ -189,35 +189,35 @@ markdownModelTypes = schemaParse( \
     '', \
     '', \
     '# Table markdown part', \
-    'struct Table', \
+    'struct MarkdownTable', \
     '', \
     '    # The table header cell array', \
-    '    TableRow headers', \
+    '    MarkdownTableRow headers', \
     '', \
     '    # The table cell alignment array', \
-    '    TableAlignment[len > 0] aligns', \
+    '    MarkdownTableAlignment[len > 0] aligns', \
     '', \
     '    # The table data', \
-    '    optional TableRow[len > 0] rows', \
+    '    optional MarkdownTableRow[len > 0] rows', \
     '', \
     '', \
     '# A table row', \
-    'typedef TableCell[len > 0] TableRow', \
+    'typedef MarkdownTableCell[len > 0] MarkdownTableRow', \
     '', \
     '', \
     '# A table cell', \
-    'typedef Span[] TableCell', \
+    'typedef MarkdownSpan[] MarkdownTableCell', \
     '', \
     '', \
     '# Table cell alignment', \
-    'enum TableAlignment', \
+    'enum MarkdownTableAlignment', \
     '    left', \
     '    right', \
     '    center', \
     '', \
     '', \
     '# Paragraph span', \
-    'union Span', \
+    'union MarkdownSpan', \
     '', \
     '    # Text span', \
     '    string(len > 0) text', \
@@ -226,40 +226,40 @@ markdownModelTypes = schemaParse( \
     '    int(== 1) br', \
     '', \
     '    # Style span', \
-    '    StyleSpan style', \
+    '    MarkdownStyleSpan style', \
     '', \
     '    # Link span', \
-    '    LinkSpan link', \
+    '    MarkdownLinkSpan link', \
     '', \
     '    # Image span', \
-    '    ImageSpan image', \
+    '    MarkdownImageSpan image', \
     '', \
     '    # Link reference span', \
-    '    LinkRef linkRef', \
+    '    MarkdownLinkRef linkRef', \
     '', \
     '    # Code span', \
     '    string(len > 0) code', \
     '', \
     '', \
     '# Style span', \
-    'struct StyleSpan', \
+    'struct MarkdownStyleSpan', \
     '', \
     "    # The span's character style", \
-    '    CharacterStyle style', \
+    '    MarkdownCharacterStyle style', \
     '', \
     '    # The contained spans', \
-    '    Span[] spans', \
+    '    MarkdownSpan[] spans', \
     '', \
     '', \
     '# Character style enum', \
-    'enum CharacterStyle', \
+    'enum MarkdownCharacterStyle', \
     '    bold', \
     '    italic', \
     '    strikethrough', \
     '', \
     '', \
     '# Link span', \
-    'struct LinkSpan', \
+    'struct MarkdownLinkSpan', \
     '', \
     "    # The link's URL", \
     '    string href', \
@@ -268,11 +268,11 @@ markdownModelTypes = schemaParse( \
     '    optional string(len > 0) title', \
     '', \
     '    # The contained spans', \
-    '    Span[] spans', \
+    '    MarkdownSpan[] spans', \
     '', \
     '', \
     '# Image span', \
-    'struct ImageSpan', \
+    'struct MarkdownImageSpan', \
     '', \
     '    # The image URL', \
     '    string src', \
@@ -285,8 +285,8 @@ markdownModelTypes = schemaParse( \
     '', \
     '', \
     '# Link reference span', \
-    'struct LinkRef', \
+    'struct MarkdownLinkRef', \
     '', \
     "    # The link reference link span or its text's spans (if reference not found)", \
-    '    Span[] spans' \
+    '    MarkdownSpan[] spans' \
 )
