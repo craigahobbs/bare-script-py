@@ -279,7 +279,8 @@ function dataJoin(leftData, rightData, joinExpr, rightExpr, isLeftJoin, variable
     # Bucket the right rows by their expression value
     rightCategoryRows = {}
     for rightRow in rightData:
-        categoryKey = jsonStringify(barescriptEvaluateExpression(rightExprParsed, rightRow, variables))
+        rightRowVars = if(variables != null, objectAssign(objectCopy(rightRow), variables), rightRow)
+        categoryKey = jsonStringify(barescriptEvaluateExpression(rightExprParsed, rightRowVars))
         rightCategoryKeys = objectGet(rightCategoryRows, categoryKey)
         if rightCategoryKeys == null:
             rightCategoryKeys = []
@@ -291,7 +292,8 @@ function dataJoin(leftData, rightData, joinExpr, rightExpr, isLeftJoin, variable
     # Join the left with the right
     resultData = []
     for leftRow in leftData:
-        categoryKey = jsonStringify(barescriptEvaluateExpression(leftExprParsed, leftRow, variables))
+        leftRowVars = if(variables != null, objectAssign(objectCopy(leftRow), variables), leftRow)
+        categoryKey = jsonStringify(barescriptEvaluateExpression(leftExprParsed, leftRowVars))
         if objectHas(rightCategoryRows, categoryKey):
             for rightRow in objectGet(rightCategoryRows, categoryKey):
                 joinRow = objectCopy(leftRow)
@@ -323,7 +325,8 @@ function dataCalculatedField(data, fieldName, expr, variables):
 
     # Compute the calculated field for each row
     for row in data:
-        objectSet(row, fieldName, barescriptEvaluateExpression(calcExpr, row, variables))
+        rowVars = if(variables != null, objectAssign(objectCopy(row), variables), row)
+        objectSet(row, fieldName, barescriptEvaluateExpression(calcExpr, rowVars))
     endfor
 
     return data
@@ -345,7 +348,8 @@ function dataFilter(data, expr, variables):
 
     # Filter the data
     for row in data:
-        if systemBoolean(barescriptEvaluateExpression(filterExpr, row, variables)):
+        rowVars = if(variables != null, objectAssign(objectCopy(row), variables), row)
+        if systemBoolean(barescriptEvaluateExpression(filterExpr, rowVars)):
             arrayPush(result, row)
         endif
     endfor
