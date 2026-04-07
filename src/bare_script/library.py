@@ -401,19 +401,18 @@ _ARRAY_SORT_ARGS = value_args_model([
 # $doc: Evaluate a [BareScript expression model](../model/#var.vName='Expression')
 # $arg expr: The [BareScript expression model](../model/#var.vName='Expression')
 # $arg locals: Optional (default is null). The local variables object.
-# $arg globals: Optional (default is null). The global variables object.
+# $arg builtins: Optional (default is true). If true, include the [built-in expression functions](expression.html).
 # $return: The expression result
 def _barescript_evaluate_expression(args, options):
-    expr, locals_, globals_ = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
+    expr, locals_, builtins = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
     validate_expression(expr)
-    evaluate_options = options if globals_ is None else {**options, 'globals': globals_}
     evaluate_expression = _import_evaluate_expression()
-    return evaluate_expression(expr, evaluate_options, locals_, False)
+    return evaluate_expression(expr, options, locals_, builtins)
 
 _BARESCRIPT_EVALUATE_EXPRESSION_ARGS = value_args_model([
     {'name': 'expr', 'type': 'object'},
     {'name': 'locals', 'type': 'object', 'nullable': True},
-    {'name': 'globals', 'type': 'object', 'nullable': True}
+    {'name': 'builtins', 'type': 'boolean', 'default': True}
 ])
 
 

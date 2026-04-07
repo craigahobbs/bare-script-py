@@ -612,18 +612,11 @@ class TestLibrary(unittest.TestCase):
             10
         )
 
-        # Globals
-        expr = {'binary': {'left': {'variable': 'B'}, 'op': '*', 'right': {'variable': 'A'}}}
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, {'A': 5}, {'B': 2}], {}),
-            10
-        )
-
         # Builtins
         expr = {'function': {'args': [{'function': {'args': [], 'name': 'pi'}}], 'name': 'cos'}}
+        self.assertEqual(SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None), -1)
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr], None)
-
+            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, False], None)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "pi"')
 
         # Invalid expression
