@@ -2,6 +2,8 @@
 # https://github.com/craigahobbs/bare-script/blob/main/LICENSE
 
 include <elementModel.bare>
+include <markdown.bare>
+include <markdownHighlight.bare>
 include <markdownElements.bare>
 include <markdownParser.bare>
 

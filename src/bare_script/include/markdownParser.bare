@@ -536,7 +536,7 @@ markdownParserRegexSpans = regexNew( \
     '(?<link>!?\\[' + markdownParserLinkText + '\\]\\(' + markdownParserLinkHref + '\\))|' + \
     '(?<linkRef>(?<!\\\\)!?(?:\\[' + stringReplace(markdownParserLinkText, '<link', '<linkRefOther') + '\\])?' + \
         '\\[' + stringReplace(markdownParserLinkText, '<link', '<linkRef') + '\\])|' + \
-    "(?<linkAlt><(?<linkAltScheme>[[A-Za-z]{3,}:|[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@)[^ \\r\\n]+>)|" + \
+    "(?<linkAlt><(?<linkAltScheme>[A-Za-z]{3,}:|[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@)[^ \\r\\n]+>)|" + \
     '(?<bold>(?<!\\\\)(?<!\\*)\\*{2,}(?!\\**\\s)(?:[^\\s\\\\*]|\\\\.|\\s(?!\\*{2,})|\\*(?!\\*))+\\*{2,})|' + \
     '(?<italic>(?<!\\\\)(?<!\\*)\\*(?!\\**\\s)(?:[^\\s\\\\*]|\\\\.|\\s(?!\\*))+\\*)|' + \
     '(?<boldu>(?<!\\\\)(?<!_)(?<![A-Za-z0-9])_{2,}(?!_*\\s)(?:[^\\s\\\\_]|\\\\.|\\s(?!_{2,})|_(?!_))+_{2,}(?!_*[A-Za-z0-9]))|' + \
