@@ -243,7 +243,7 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
                 curList = if(paragraphPart != null && objectHas(paragraphPart, 'list'), paragraphPart, null)
                 curListIsNumbered = curList != null && objectHas(objectGet(curList, 'list'), 'start')
                 markStr = objectGet(matchListGroups, 'mark')
-                start = numberParseInt(markStr)
+                start = numberParseInt(stringSlice(markStr, 0, stringLength(markStr) - 1))
                 isNumbered = start != null
 
                 # closeParagraph
