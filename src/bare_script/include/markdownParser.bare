@@ -513,7 +513,6 @@ markdownParserLinkHref = '[ \\r\\n]*(?<linkHref>' + \
     "'(?:\\\\.|[^\\\\'])*'|" + \
     '\\((?:\\\\.|[^\\\\)])*\\)' + \
     '))?[ \\r\\n]*'
-
 markdownParserRegexSpans = regexNew( \
     '(?<br>(?: {2,}|(?<!\\\\)\\\\)\\r?\\n)|' + \
     '(?<brHtml>(?<!\\\\)<br\\s*/?>)|' + \
@@ -532,23 +531,17 @@ markdownParserRegexSpans = regexNew( \
     '(?<link>!?\\[' + markdownParserLinkText + '\\]\\(' + markdownParserLinkHref + '\\))|' + \
     '(?<linkRef>(?<!\\\\)!?(?:\\[' + stringReplace(markdownParserLinkText, '<link', '<linkRefOther') + '\\])?' + \
         '\\[' + stringReplace(markdownParserLinkText, '<link', '<linkRef') + '\\])|' + \
-    "(?<linkAlt><(?<linkAltScheme>[A-Za-z]{3,}:|[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@)[^ \\r\\n]+>)|" + \
+    '(?<linkAlt><(?<linkAltScheme>[A-Za-z]{3,}:|[a-zA-Z0-9.!#$%&\'*+/=?^_`{|}~-]+@)[^ \\r\\n]+>)|' + \
     '(?<bold>(?<!\\\\)(?<!\\*)\\*{2,}(?!\\**\\s)(?:[^\\s\\\\*]|\\\\.|\\s(?!\\*{2,})|\\*(?!\\*))+\\*{2,})|' + \
     '(?<italic>(?<!\\\\)(?<!\\*)\\*(?!\\**\\s)(?:[^\\s\\\\*]|\\\\.|\\s(?!\\*))+\\*)|' + \
     '(?<boldu>(?<!\\\\)(?<!_)(?<![A-Za-z0-9])_{2,}(?!_*\\s)(?:[^\\s\\\\_]|\\\\.|\\s(?!_{2,})|_(?!_))+_{2,}(?!_*[A-Za-z0-9]))|' + \
     '(?<italicu>(?<!\\\\)(?<!_)(?<![A-Za-z0-9])_(?!_*\\s)(?:[^\\s\\\\_]|\\\\.|\\s(?!_))+_(?!_*[A-Za-z0-9]))|' + \
     '(?<strike>(?<!\\\\)(?<!~)(?<strikeT>~~?)(?!~)(?!\\s)' + \
         '(?:[^\\s\\\\~]|\\\\.|\\s(?!\\k<strikeT>(?!~))|(?!\\k<strikeT>(?!~))~+(?!~))+\\k<strikeT>(?!~))|' + \
-    '(?<code>(?<!\\\\)(?<!`)(?<codeT>`+)(?!`)(?:[^`]|(?!\\k<codeT>(?!`))`+(?!`))*\\k<codeT>(?!`))', \
-    'm' \
+    '(?<code>(?<!\\\\)(?<!`)(?<codeT>`+)(?!`)(?:[^`]|(?!\\k<codeT>(?!`))`+(?!`))*\\k<codeT>(?!`))' \
 )
-
-markdownParserRegexLinkDef = regexNew( \
-    '^ {0,3}\\[' + markdownParserLinkText + '\\]:[ \\r\\n]*' + \
-    stringReplace(markdownParserLinkHref, ')])*)', '])+)') + \
-    '(\\r?\\n|$)' \
-)
-
+markdownParserRegexLinkDef = regexNew('^ {0,3}\\[' + markdownParserLinkText + '\\]:[ \\r\\n]*' + \
+    stringReplace(markdownParserLinkHref, ')])*)', '])+)') + '(\\r?\\n|$)')
 markdownParserRegexLinkRefSpace = regexNew('\\s+')
 markdownParserRegexCodeSpaces = regexNew('^ (.+) $')
 markdownParserRegexCodeNewlines = regexNew('\\r?\\n')
