@@ -12,14 +12,13 @@ markdownParserRegexHeading = regexNew('^ {0,3}(?<heading>#{1,6})\\s+(?<text>.*?)
 markdownParserRegexHeadingAlt = regexNew('^ {0,3}(?<heading>=+|-+)\\s*$')
 markdownParserRegexHorizontal = regexNew('^ {0,3}(?:(?:\\*\\s*){3,}|(?:-\\s*){3,}|(?:_\\s*){3,})$')
 markdownParserRegexFenced = regexNew('^(?<indent> {0,3})(?<fence>(?:`{3,}|~{3,}))(?:\\s*(?<language>.+?))?\\s*$')
-markdownParserRegexList = regexNew('^(?<indent> {0,3}(?<mark>-|\\*|\\+|[0-9][.)]))\\s(?<line>.*)$')
-markdownParserRegexListNumbered = regexNew('^(?<indent> {0,3}(?<mark>[1-9][0-9]+[.)]))\\s(?<line>.*)$')
+markdownParserRegexList = regexNew('^(?<indent> {0,3}(?<mark>-|\\*|\\+|[0-9][.)]|[1-9][0-9]+[.)])\\s)(?<line>.*)$')
 markdownParserRegexQuote = regexNew('^(?<indent> {0,3}>\\s?)')
 markdownParserRegexTable = regexNew('^ {0,3}(?::?-+:?\\s*)?(?:\\|\\s*:?-+:?\\s*)+(?:\\|\\s*)?$')
 markdownParserRegexTableRow = regexNew('^ {0,3}(?:(?:\\\\\\||[^|])+\\s*)?(?:\\|\\s*(?:\\\\\\||[^|])*?\\s*)+(?:\\|\\s*)?')
 markdownParserRegexTableRowTrim = regexNew('^\\s*\\|?')
 markdownParserRegexTableCell = regexNew('^\\s*(?<cell>(?:\\\\\\||[^|])*?)\\s*\\|')
-markdownParserRegexTableEscape = regexNew('\\\\(\\\\|\\|)')
+markdownParserRegexTableEscape = regexNew('\\\\(\\\\|)')
 
 
 # $function: markdownParse
@@ -239,9 +238,6 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
 
             # List?
             matchList = regexMatch(markdownParserRegexList, line)
-            if matchList == null:
-                matchList = regexMatch(markdownParserRegexListNumbered, line)
-            endif
             if matchList != null:
                 matchListGroups = objectGet(matchList, 'groups')
                 curList = if(paragraphPart != null && objectHas(paragraphPart, 'list'), paragraphPart, null)
