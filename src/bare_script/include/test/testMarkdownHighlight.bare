@@ -5,7 +5,46 @@ include '../markdownHighlight.bare'
 include '../unittest.bare'
 
 
-function testMarkdownHightlightCodeBlockElements_nullLanguage():
+function testMarkdownHighlightCodeBlockElements():
+    unittestDeepEqual( \
+        markdownHighlightCodeBlockElements({'language': 'barescript', 'lines': ['foo = 1', 'bar = 2', 'systemLog(foo + bar)']}, null), \
+        [ \
+            null, \
+            { \
+                'html': 'pre', \
+                'attr': null, \
+                'elem': { \
+                    'html': 'code', \
+                    'elem': [ \
+                        {'text': 'foo = '}, \
+                        { \
+                            'html': 'span', \
+                            'attr': {'style': 'color: var(--markdown-model-color-highlight-literal);'}, \
+                            'elem': {'text': '1'} \
+                        }, \
+                        {'text': '\nbar = '}, \
+                        { \
+                            'html': 'span', \
+                            'attr': {'style': 'color: var(--markdown-model-color-highlight-literal);'}, \
+                            'elem': {'text': '2'} \
+                        }, \
+                        {'text': '\n'}, \
+                        { \
+                            'html': 'span', \
+                            'attr': {'style': 'color: var(--markdown-model-color-highlight-builtin);'}, \
+                            'elem': {'text': 'systemLog'} \
+                        }, \
+                        {'text': '(foo + bar)\n'} \
+                    ] \
+                } \
+            } \
+        ] \
+    )
+endfunction
+unittestRunTest('testMarkdownHighlightCodeBlockElements')
+
+
+function testMarkdownHighlightCodeBlockElements_nullLanguage():
     unittestDeepEqual( \
         markdownHighlightCodeBlockElements({'lines': ['foo\nbar']}, null), \
         [ \
@@ -21,12 +60,13 @@ function testMarkdownHightlightCodeBlockElements_nullLanguage():
         ] \
     )
 endfunction
-unittestRunTest('testMarkdownHightlightCodeBlockElements_nullLanguage')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_nullLanguage')
 
 
-function testCodeBlockElements_unknownLanguage():
+function testMarkdownHighlightCodeBlockElements_unknownLanguage():
+    options = {'codeBlocks': {}}
     unittestDeepEqual( \
-        markdownHighlightCodeBlockElements({'language': 'unknown', 'lines': ['foo\nbar']}, null), \
+        markdownHighlightCodeBlockElements({'language': 'unknown', 'lines': ['foo\nbar']}, options), \
         [ \
             null, \
             { \
@@ -40,18 +80,96 @@ function testCodeBlockElements_unknownLanguage():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_unknownLanguage')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_unknownLanguage')
 
 
-function testCodeBlockElements_copyUnknownLanguage_copyFn(copyCalls, text):
+async function testMarkdownHighlightCodeBlockElementsAsync():
+    unittestDeepEqual( \
+        markdownHighlightCodeBlockElementsAsync({'language': 'barescript', 'lines': ['foo = 1', 'bar = 2', 'systemLog(foo + bar)']}, null), \
+        [ \
+            null, \
+            { \
+                'html': 'pre', \
+                'attr': null, \
+                'elem': { \
+                    'html': 'code', \
+                    'elem': [ \
+                        {'text': 'foo = '}, \
+                        { \
+                            'html': 'span', \
+                            'attr': {'style': 'color: var(--markdown-model-color-highlight-literal);'}, \
+                            'elem': {'text': '1'} \
+                        }, \
+                        {'text': '\nbar = '}, \
+                        { \
+                            'html': 'span', \
+                            'attr': {'style': 'color: var(--markdown-model-color-highlight-literal);'}, \
+                            'elem': {'text': '2'} \
+                        }, \
+                        {'text': '\n'}, \
+                        { \
+                            'html': 'span', \
+                            'attr': {'style': 'color: var(--markdown-model-color-highlight-builtin);'}, \
+                            'elem': {'text': 'systemLog'} \
+                        }, \
+                        {'text': '(foo + bar)\n'} \
+                    ] \
+                } \
+            } \
+        ] \
+    )
+endfunction
+unittestRunTest('testMarkdownHighlightCodeBlockElementsAsync')
+
+
+async function testMarkdownHighlightCodeBlockElementsAsync_nullLanguage():
+    unittestDeepEqual( \
+        markdownHighlightCodeBlockElementsAsync({'lines': ['foo\nbar']}, null), \
+        [ \
+            null, \
+            { \
+                'html': 'pre', \
+                'attr': null, \
+                'elem': { \
+                    'html': 'code', \
+                    'elem': {'text': 'foo\nbar\n'} \
+                } \
+            } \
+        ] \
+    )
+endfunction
+unittestRunTest('testMarkdownHighlightCodeBlockElementsAsync_nullLanguage')
+
+
+async function testMarkdownHighlightCodeBlockElementsAsync_unknownLanguage():
+    options = {'codeBlocks': {}}
+    unittestDeepEqual( \
+        markdownHighlightCodeBlockElementsAsync({'language': 'unknown', 'lines': ['foo\nbar']}, options), \
+        [ \
+            null, \
+            { \
+                'html': 'pre', \
+                'attr': null, \
+                'elem': { \
+                    'html': 'code', \
+                    'elem': {'text': 'foo\nbar\n'} \
+                } \
+            } \
+        ] \
+    )
+endfunction
+unittestRunTest('testMarkdownHighlightCodeBlockElementsAsync_unknownLanguage')
+
+
+function testMarkdownHighlightCodeBlockElements_copyUnknownLanguage_copyFn(copyCalls, text):
     arrayPush(copyCalls, text)
 endfunction
 
 
-function testCodeBlockElements_copyUnknownLanguage():
+function testMarkdownHighlightCodeBlockElements_copyUnknownLanguage():
     copyCalls = []
     options = { \
-        'copyFn': systemPartial(testCodeBlockElements_copyUnknownLanguage_copyFn, copyCalls) \
+        'copyFn': systemPartial(testMarkdownHighlightCodeBlockElements_copyUnknownLanguage_copyFn, copyCalls) \
     }
     elements = markdownHighlightCodeBlockElements({'language': 'unknown', 'lines': ['foo', 'bar']}, options)
     elementCallback = objectGet(objectGet(objectGet(arrayGet(elements, 0), 'elem'), 'callback'), 'click')
@@ -79,13 +197,13 @@ function testCodeBlockElements_copyUnknownLanguage():
     elementCallback()
     unittestDeepEqual(copyCalls, ['foo\nbar\n'])
 endfunction
-unittestRunTest('testCodeBlockElements_copyUnknownLanguage')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_copyUnknownLanguage')
 
 
-function testCodeBlockElements_copyKnownLanguage():
+function testMarkdownHighlightCodeBlockElements_copyKnownLanguage():
     copyCalls = []
     options = { \
-        'copyFn': systemPartial(testCodeBlockElements_copyUnknownLanguage_copyFn, copyCalls) \
+        'copyFn': systemPartial(testMarkdownHighlightCodeBlockElements_copyUnknownLanguage_copyFn, copyCalls) \
     }
     elements = markdownHighlightCodeBlockElements({'language': 'barescript', 'lines': ["markdownPrint('Hello!')"]}, options)
     elementCallback = objectGet(objectGet(objectGet(arrayGet(elements, 0), 'elem'), 'callback'), 'click')
@@ -121,10 +239,10 @@ function testCodeBlockElements_copyKnownLanguage():
     elementCallback()
     unittestDeepEqual(copyCalls, ["markdownPrint('Hello!')\n"])
 endfunction
-unittestRunTest('testCodeBlockElements_copyKnownLanguage')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_copyKnownLanguage')
 
 
-function testCodeBlockElements_keywordWithinMultilineString():
+function testMarkdownHighlightCodeBlockElements_keywordWithinMultilineString():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'javascript', \
@@ -161,10 +279,10 @@ function testCodeBlockElements_keywordWithinMultilineString():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_keywordWithinMultilineString')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_keywordWithinMultilineString')
 
 
-function testCodeBlockElements_assembly():
+function testMarkdownHighlightCodeBlockElements_assembly():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'assembly', \
@@ -360,10 +478,10 @@ function testCodeBlockElements_assembly():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_assembly')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_assembly')
 
 
-function testCodeBlockElements_barescript():
+function testMarkdownHighlightCodeBlockElements_barescript():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'barescript', \
@@ -447,10 +565,10 @@ function testCodeBlockElements_barescript():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_barescript')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_barescript')
 
 
-function testCodeBlockElements_c():
+function testMarkdownHighlightCodeBlockElements_c():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'c', \
@@ -572,10 +690,10 @@ function testCodeBlockElements_c():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_c')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_c')
 
 
-function testCodeBlockElements_cpp():
+function testMarkdownHighlightCodeBlockElements_cpp():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'cpp', \
@@ -807,10 +925,10 @@ function testCodeBlockElements_cpp():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_cpp')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_cpp')
 
 
-function testCodeBlockElements_csharp():
+function testMarkdownHighlightCodeBlockElements_csharp():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'csharp', \
@@ -998,10 +1116,10 @@ function testCodeBlockElements_csharp():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_csharp')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_csharp')
 
 
-function testCodeBlockElements_css():
+function testMarkdownHighlightCodeBlockElements_css():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'css', \
@@ -1253,10 +1371,10 @@ function testCodeBlockElements_css():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_css')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_css')
 
 
-function testCodeBlockElements_go():
+function testMarkdownHighlightCodeBlockElements_go():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'go', \
@@ -1399,10 +1517,10 @@ function testCodeBlockElements_go():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_go')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_go')
 
 
-function testCodeBlockElements_html():
+function testMarkdownHighlightCodeBlockElements_html():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'html', \
@@ -1650,10 +1768,10 @@ function testCodeBlockElements_html():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_html')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_html')
 
 
-function testCodeBlockElements_java():
+function testMarkdownHighlightCodeBlockElements_java():
     elements = markdownHighlightCodeBlockElements( \
         { \
             'language': 'java', \
@@ -1811,4 +1929,4 @@ function testCodeBlockElements_java():
         ] \
     )
 endfunction
-unittestRunTest('testCodeBlockElements_java')
+unittestRunTest('testMarkdownHighlightCodeBlockElements_java')

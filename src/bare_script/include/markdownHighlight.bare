@@ -47,8 +47,10 @@ markdownHighlightMemberNames = ['builtin', 'comment', 'keyword', 'literal', 'pre
 # $arg options: Optional (default is null). The options object.
 # $return: The code block's [element model](https://github.com/craigahobbs/element-model#readme)
 function markdownHighlightCodeBlockElements(codeBlock, options):
-    if objectHas(codeBlock, 'language'):
-        language = stringLower(objectGet(codeBlock, 'language'))
+    # Code block language defined?
+    codeBlockLanguage = objectGet(codeBlock, 'language')
+    if codeBlockLanguage:
+        language = stringLower(codeBlockLanguage)
 
         # Options-provided code block render function?
         if options:
@@ -78,8 +80,10 @@ endfunction
 # $arg options: Optional (default is null). The options object.
 # $return: The code block's [element model](https://github.com/craigahobbs/element-model#readme)
 async function markdownHighlightCodeBlockElementsAsync(codeBlock, options):
-    if objectHas(codeBlock, 'language'):
-        language = stringLower(objectGet(codeBlock, 'language'))
+    # Code block language defined?
+    codeBlockLanguage = objectGet(codeBlock, 'language')
+    if codeBlockLanguage:
+        language = stringLower(codeBlockLanguage)
 
         # Options-provided code block render function?
         if options:
@@ -258,7 +262,6 @@ function markdownHighlightCreateWordListRegex(words...):
     endfor
     return '\\b(?:' + arrayJoin(escapedParts, '|') + ')\\b'
 endfunction
-
 
 
 # Common regular expression source
