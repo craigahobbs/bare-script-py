@@ -111,12 +111,10 @@ endfunction
 
 # Helper function to generate an element model from a list part
 function markdownElementsListPartElements(part, listItemElements):
-    list = objectGet(part, 'list')
-    hasStart = objectHas(list, 'start')
-    startValue = if(hasStart, objectGet(list, 'start'))
+    startValue = objectGet(objectGet(part, 'list'), 'start')
     return { \
-        'html': if(hasStart, 'ol', 'ul'), \
-        'attr': if(hasStart && startValue > 1, {'start': stringNew(startValue)}, null), \
+        'html': if(startValue != null, 'ol', 'ul'), \
+        'attr': if(startValue != null && startValue > 1, {'start': stringNew(startValue)}), \
         'elem': listItemElements \
     }
 endfunction
@@ -129,7 +127,6 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
     # Paragraph?
     if partKey == 'paragraph':
         paragraph = objectGet(part, 'paragraph')
-
         if objectHas(paragraph, 'style'):
             # Determine the header ID, if requested
             headerId = null
@@ -138,14 +135,14 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
 
                 # Duplicate header ID?
                 if objectHas(usedHeaderIds, headerId):
-                    ix = 1
+                    ix = 2
                     headerIdNew = null
                     while true:
-                        ix = ix + 1
                         headerIdNew = headerId + ix
                         if !objectHas(usedHeaderIds, headerIdNew):
                             break
                         endif
+                        ix = ix + 1
                     endwhile
                     headerId = headerIdNew
                 endif
@@ -173,13 +170,12 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
     # Table?
     elif partKey == 'table':
         table = objectGet(part, 'table')
-        headers = objectGet(table, 'headers')
         aligns = objectGet(table, 'aligns')
         alignsLength = arrayLength(aligns)
 
         # Header elements
         headerElements = []
-        for header, ixHeader in headers:
+        for header, ixHeader in objectGet(table, 'headers'):
             headerAlign = if(ixHeader < alignsLength, arrayGet(aligns, ixHeader), 'left')
             arrayPush(headerElements, { \
                 'html': 'th', \
@@ -191,9 +187,8 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
         # Row elements
         rowsElement = null
         if objectHas(table, 'rows'):
-            rows = objectGet(table, 'rows')
             rowElements = []
-            for row in rows:
+            for row in objectGet(table, 'rows'):
                 cellElements = []
                 for cell, ixCell in row:
                     cellAlign = if(ixCell < alignsLength, arrayGet(aligns, ixCell), 'left')
@@ -224,6 +219,7 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
     endif
 
     # Horizontal rule
+    # elif partKey === 'hr'
     return {'html': 'hr'}
 endfunction
 
@@ -231,7 +227,6 @@ endfunction
 # Helper function to generate element models from markdown span models
 function markdownElementsParagraphSpanElements(spans, options):
     spanElements = []
-
     for span in spans:
         spanKey = arrayGet(objectKeys(span), 0)
 
@@ -247,9 +242,8 @@ function markdownElementsParagraphSpanElements(spans, options):
         elif spanKey == 'style':
             style = objectGet(span, 'style')
             styleStyle = objectGet(style, 'style')
-            htmlTag = if(styleStyle == 'strikethrough', 'del', if(styleStyle == 'italic', 'em', 'strong'))
             arrayPush(spanElements, { \
-                'html': htmlTag, \
+                'html': if(styleStyle == 'bold', 'strong', if(styleStyle == 'italic', 'em', 'del')), \
                 'elem': markdownElementsParagraphSpanElements(objectGet(style, 'spans'), options) \
             })
 
