@@ -3790,7 +3790,7 @@ function testMarkdownParse_linkDefinitionMultiline():
     markdown = markdownParse([ \
         '   [foo]: ', \
         '      /url  ', \
-        "'           'the title'  ", \
+        "           'the title'  ", \
         '', \
         '[foo]' \
     ])
@@ -4506,7 +4506,7 @@ unittestRunTest('testMarkdownParse_linkReferenceEscapes')
 
 function testMarkdownParse_linkReferenceTextSpans():
     markdown = markdownParse([ \
-        "[link _foo **bar** \`#\`_][ref]", \
+        "[link _foo **bar** `#`_][ref]", \
         '', \
         '[ref]: /uri' \
     ])
