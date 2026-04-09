@@ -32,10 +32,7 @@ endfunction
 
 
 function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
-    linkRefs = linkRefsRaw
-    if linkRefs == null:
-        linkRefs = {'defs': {}, 'links': []}
-    endif
+    linkRefs = linkRefsRaw || {'defs': {}, 'links': []}
     markdownParts = []
     paragraphLines = []
     paragraphPart = null
@@ -49,8 +46,7 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
     # Process markdown text line by line
     emptyLine = true
     emptyLinePrev = true
-    markdownStrings = arrayFlat(markdown)
-    for markdownString in markdownStrings:
+    for markdownString in arrayFlat(markdown):
         if markdownString == null:
             continue
         endif
@@ -58,23 +54,19 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             line = stringReplace(lineRaw, '\t', '    ')
             matchLine = regexMatch(markdownParserRegexIndent, line)
             matchLineGroups = objectGet(matchLine, 'groups')
-            lineIndentStr = objectGet(matchLineGroups, 'indent')
-            lineIndent = stringLength(lineIndentStr)
-            notIndent = objectGet(matchLineGroups, 'notIndent')
+            lineIndent = stringLength(objectGet(matchLineGroups, 'indent'))
             emptyLinePrev = emptyLine
-            emptyLine = notIndent == ''
+            emptyLine = objectGet(matchLineGroups, 'notIndent') == ''
             lineNumber = lineNumber + 1
 
             # Empty line?
             if emptyLine:
                 # If there is a container part, add the empty line to the part
-                if paragraphPart != null && !objectHas(paragraphPart, 'quote'):
+                if paragraphPart && !objectHas(paragraphPart, 'quote'):
                     arrayPush(paragraphLines, line)
                 else:
-                    # closeParagraph
                     markdownParserCloseParagraph( \
-                        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                        fencedMark, linkRefs, null \
+                        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                     )
                     paragraphLines = []
                     paragraphPart = null
@@ -88,14 +80,12 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             matchFenced = regexMatch(markdownParserRegexFenced, line)
             if fencedMark != null:
                 # Fenced code block end?
-                matchFencedGroups = if(matchFenced != null, objectGet(matchFenced, 'groups'))
-                matchFencedFence = if(matchFencedGroups != null, objectGet(matchFencedGroups, 'fence'))
-                matchFencedLanguage = if(matchFencedGroups != null, objectGet(matchFencedGroups, 'language'))
-                if matchFenced != null && stringStartsWith(matchFencedFence, fencedMark) && matchFencedLanguage == null:
-                    # closeParagraph
+                matchFencedGroups = if(matchFenced, objectGet(matchFenced, 'groups'))
+                matchFencedFence = if(matchFencedGroups, objectGet(matchFencedGroups, 'fence'))
+                matchFencedLanguage = if(matchFencedGroups, objectGet(matchFencedGroups, 'language'))
+                if matchFenced && stringStartsWith(matchFencedFence, fencedMark) && matchFencedLanguage == null:
                     markdownParserCloseParagraph( \
-                        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                        fencedMark, linkRefs, null \
+                        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                     )
                     paragraphLines = []
                     paragraphPart = null
@@ -116,17 +106,15 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             endif
 
             # Code block line?
-            if lineIndent >= 4 && paragraphPart != null && objectHas(paragraphPart, 'codeBlock'):
+            if lineIndent >= 4 && paragraphPart && objectHas(paragraphPart, 'codeBlock'):
                 arrayPush(paragraphLines, stringSlice(line, 4))
                 continue
             endif
 
             # New code block?
-            if lineIndent >= 4 && (emptyLinePrev || arrayLength(paragraphLines) == 0):
-                # closeParagraph
+            if lineIndent >= 4 && (emptyLinePrev || !paragraphLines):
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 tablePart = null
@@ -138,18 +126,16 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             endif
 
             # Fenced code start?
-            if matchFenced != null:
-                # closeParagraph
+            if matchFenced:
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 tablePart = null
                 matchFencedGroups = objectGet(matchFenced, 'groups')
                 paragraphPart = {'codeBlock': {'startLineNumber': lineNumber}}
                 matchFencedLanguage = objectGet(matchFencedGroups, 'language')
-                if matchFencedLanguage != null:
+                if matchFencedLanguage:
                     objectSet(objectGet(paragraphPart, 'codeBlock'), 'language', matchFencedLanguage)
                 endif
                 arrayPush(markdownParts, paragraphPart)
@@ -161,12 +147,10 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
 
             # Block quote?
             matchQuote = regexMatch(markdownParserRegexQuote, line)
-            if matchQuote != null:
-                if paragraphPart == null || !objectHas(paragraphPart, 'quote'):
-                    # closeParagraph
+            if matchQuote:
+                if !paragraphPart || !objectHas(paragraphPart, 'quote'):
                     markdownParserCloseParagraph( \
-                        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                        fencedMark, linkRefs, null \
+                        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                     )
                     paragraphLines = []
                     tablePart = null
@@ -181,11 +165,9 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
 
             # Heading?
             matchHeading = regexMatch(markdownParserRegexHeading, line)
-            if matchHeading != null:
-                # closeParagraph
+            if matchHeading:
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 paragraphPart = null
@@ -195,8 +177,7 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
                 paragraphLines = [objectGet(matchHeadingGroups, 'text')]
                 headingStyle = 'h' + stringLength(objectGet(matchHeadingGroups, 'heading'))
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, null, null, \
-                    fencedMark, linkRefs, headingStyle \
+                    markdownParts, paragraphLines, null, null, fencedMark, linkRefs, headingStyle \
                 )
                 paragraphLines = []
                 paragraphPart = null
@@ -207,12 +188,11 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
 
             # Heading (alternate syntax)?
             matchHeadingAlt = regexMatch(markdownParserRegexHeadingAlt, line)
-            if matchHeadingAlt != null && arrayLength(paragraphLines) != 0 && paragraphPart == null:
+            if matchHeadingAlt && paragraphLines && paragraphPart == null:
                 matchHeadingAltGroups = objectGet(matchHeadingAlt, 'groups')
                 headingAltStyle = if(stringStartsWith(objectGet(matchHeadingAltGroups, 'heading'), '='), 'h1', 'h2')
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, null, null, \
-                    fencedMark, linkRefs, headingAltStyle \
+                    markdownParts, paragraphLines, null, null, fencedMark, linkRefs, headingAltStyle \
                 )
                 paragraphLines = []
                 paragraphPart = null
@@ -222,11 +202,9 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             endif
 
             # Horizontal rule?
-            if regexMatch(markdownParserRegexHorizontal, line) != null:
-                # closeParagraph
+            if regexMatch(markdownParserRegexHorizontal, line):
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 paragraphPart = null
@@ -238,25 +216,24 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
 
             # List?
             matchList = regexMatch(markdownParserRegexList, line)
-            if matchList != null:
+            if matchList:
                 matchListGroups = objectGet(matchList, 'groups')
-                curList = if(paragraphPart != null && objectHas(paragraphPart, 'list'), paragraphPart, null)
-                curListIsNumbered = curList != null && objectHas(objectGet(curList, 'list'), 'start')
+                curList = if(paragraphPart && objectHas(paragraphPart, 'list'), paragraphPart)
+                curListIsNumbered = curList && objectHas(objectGet(curList, 'list'), 'start')
                 markStr = objectGet(matchListGroups, 'mark')
                 start = numberParseInt(stringSlice(markStr, 0, stringLength(markStr) - 1))
                 isNumbered = start != null
 
-                # closeParagraph
+                # Close current paragraph
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 paragraphLineNumber = null
                 tablePart = null
 
                 # New list?
-                if curList == null || curListIsNumbered != isNumbered:
+                if !curList || curListIsNumbered != isNumbered:
                     paragraphPart = {'list': {'items': [{}]}}
                     if isNumbered:
                         objectSet(objectGet(paragraphPart, 'list'), 'start', start)
@@ -275,10 +252,10 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             endif
 
             # Table?
-            if tablePart != null:
+            if tablePart:
                 # Table row?
                 matchTableRow = regexMatch(markdownParserRegexTableRow, line)
-                if matchTableRow != null:
+                if matchTableRow:
                     tableObj = objectGet(tablePart, 'table')
                     if !objectHas(tableObj, 'rows'):
                         objectSet(tableObj, 'rows', [])
@@ -299,35 +276,25 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
                 endif
             else:
                 # Table delimiter following a table header?
-                tableHeader = if(arrayLength(paragraphLines) != 0, arrayGet(paragraphLines, arrayLength(paragraphLines) - 1), null)
-                matchTable = if(tableHeader != null, regexMatch(markdownParserRegexTable, line), null)
-                matchTableHeader = if(tableHeader != null && matchTable != null, regexMatch(markdownParserRegexTableRow, tableHeader), null)
-                if matchTableHeader != null:
+                tableHeader = if(paragraphLines, arrayGet(paragraphLines, arrayLength(paragraphLines) - 1))
+                matchTable = if(tableHeader != null, regexMatch(markdownParserRegexTable, line))
+                matchTableHeader = if(tableHeader != null && matchTable, regexMatch(markdownParserRegexTableRow, tableHeader))
+                if matchTableHeader:
                     # Does the table header match the delimiter?
-                    headerCells = markdownParserParseTableCells(tableHeader)
                     headers = []
-                    for headerCell in headerCells:
+                    for headerCell in markdownParserParseTableCells(tableHeader):
                         arrayPush(headers, markdownParserParagraphSpans(headerCell, linkRefs))
                     endfor
-                    alignCells = markdownParserParseTableCells(line)
                     aligns = []
-                    for alignCell in alignCells:
-                        if stringEndsWith(alignCell, ':'):
-                            if stringStartsWith(alignCell, ':'):
-                                arrayPush(aligns, 'center')
-                            else:
-                                arrayPush(aligns, 'right')
-                            endif
-                        else:
-                            arrayPush(aligns, 'left')
-                        endif
+                    for alignCell in markdownParserParseTableCells(line):
+                        alignValue = if(stringEndsWith(alignCell, ':'), if(stringStartsWith(alignCell, ':'), 'center', 'right'), 'left')
+                        arrayPush(aligns, alignValue)
                     endfor
                     if arrayLength(headers) == arrayLength(aligns):
                         # Remove the table header line and close the open paragraph
                         arrayPop(paragraphLines)
                         markdownParserCloseParagraph( \
-                            markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                            fencedMark, linkRefs, null \
+                            markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                         )
                         paragraphLines = []
                         paragraphPart = null
@@ -342,10 +309,9 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             endif
 
             # End code block?
-            if paragraphPart != null && objectHas(paragraphPart, 'codeBlock'):
+            if paragraphPart && objectHas(paragraphPart, 'codeBlock'):
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 paragraphPart = null
@@ -355,8 +321,7 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
             # End list?
             elif listIndent != null && emptyLinePrev:
                 markdownParserCloseParagraph( \
-                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-                    fencedMark, linkRefs, null \
+                    markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
                 paragraphLines = []
                 paragraphPart = null
@@ -372,12 +337,11 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
 
     # Close current paragraph
     markdownParserCloseParagraph( \
-        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, \
-        fencedMark, linkRefs, null \
+        markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
     )
 
     # Resolve link references
-    if linkRefsRaw == null:
+    if !linkRefsRaw:
         linkRefDefs = objectGet(linkRefs, 'defs')
         for linkRef in objectGet(linkRefs, 'links'):
             refKey = objectGet(linkRef, 'refKey')
@@ -387,7 +351,7 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
                 linkTitle = objectGet(def, 'linkTitle')
                 linkSpan = objectGet(linkRef, 'linkSpan')
                 linkRefSpan = objectGet(linkRef, 'linkRefSpan')
-                if linkSpan != null:
+                if linkSpan:
                     linkSpanLink = objectGet(linkSpan, 'link')
                     objectSet(linkSpanLink, 'href', linkHref)
                     if linkTitle != null:
@@ -414,21 +378,21 @@ endfunction
 # Helper function to close the current paragraph
 function markdownParserCloseParagraph(markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, paragraphStyle):
     # Block quote "paragraph"
-    if paragraphPart != null && objectHas(paragraphPart, 'quote'):
+    if paragraphPart && objectHas(paragraphPart, 'quote'):
         parsed = markdownParseInternal(paragraphLines, paragraphLineNumber, linkRefs)
         objectSet(objectGet(paragraphPart, 'quote'), 'parts', objectGet(parsed, 'parts'))
 
     # List item "paragraph"?
-    elif paragraphPart != null && objectHas(paragraphPart, 'list'):
+    elif paragraphPart && objectHas(paragraphPart, 'list'):
         items = objectGet(objectGet(paragraphPart, 'list'), 'items')
         parsed = markdownParseInternal(paragraphLines, paragraphLineNumber, linkRefs)
         objectSet(arrayGet(items, arrayLength(items) - 1), 'parts', objectGet(parsed, 'parts'))
 
     # Code block "paragraph"?
-    elif paragraphPart != null && objectHas(paragraphPart, 'codeBlock'):
-        # Strip trailing blank lines of non-fenced code blocks
+    elif paragraphPart && objectHas(paragraphPart, 'codeBlock'):
+        # Set the code block lines - strip trailing blank lines of non-fenced code blocks
         ixLine = arrayLength(paragraphLines) - 1
-        if fencedMark == null:
+        if !fencedMark:
             while ixLine >= 0:
                 if arrayGet(paragraphLines, ixLine) != '':
                     break
@@ -439,11 +403,11 @@ function markdownParserCloseParagraph(markdownParts, paragraphLines, paragraphPa
         objectSet(objectGet(paragraphPart, 'codeBlock'), 'lines', arraySlice(paragraphLines, 0, ixLine + 1))
 
     # Ordinary (or header) paragraph...
-    elif arrayLength(paragraphLines) > 0:
+    elif paragraphLines:
         # Process link reference definitions
         text = arrayJoin(paragraphLines, '\n')
         matchLinkDef = regexMatch(markdownParserRegexLinkDef, text)
-        while matchLinkDef != null:
+        while matchLinkDef:
             matchLinkDefGroups = objectGet(matchLinkDef, 'groups')
             linkTextHrefTitle = markdownParserGetLinkText(matchLinkDefGroups, 'link')
             linkText = arrayGet(linkTextHrefTitle, 0)
@@ -463,16 +427,15 @@ function markdownParserCloseParagraph(markdownParts, paragraphLines, paragraphPa
             endif
 
             # Check for more link reference definitions
-            matchLinkDefFullText = objectGet(objectGet(matchLinkDef, 'groups'), '0')
-            text = stringSlice(text, stringLength(matchLinkDefFullText))
+            text = stringSlice(text, stringLength(objectGet(objectGet(matchLinkDef, 'groups'), '0')))
             matchLinkDef = regexMatch(markdownParserRegexLinkDef, text)
         endwhile
 
         # Parse the paragraph spans (if there's any text left)
-        if paragraphStyle != null || regexMatch(markdownParserRegexParagraphEmpty, text) == null:
+        if paragraphStyle || !regexMatch(markdownParserRegexParagraphEmpty, text):
             partSpans = markdownParserParagraphSpans(text, linkRefs)
             part = {'paragraph': {'spans': partSpans}}
-            if paragraphStyle != null:
+            if paragraphStyle:
                 objectSet(objectGet(part, 'paragraph'), 'style', paragraphStyle)
             endif
             arrayPush(markdownParts, part)
@@ -486,7 +449,7 @@ function markdownParserParseTableCells(line):
     cells = []
     lineText = regexReplace(markdownParserRegexTableRowTrim, line, '')
     matchCell = regexMatch(markdownParserRegexTableCell, lineText)
-    while matchCell != null:
+    while matchCell:
         matchCellGroups = objectGet(matchCell, 'groups')
         cellText = objectGet(matchCellGroups, 'cell')
         arrayPush(cells, regexReplace(markdownParserRegexTableEscape, cellText, '$1'))
@@ -579,7 +542,7 @@ function markdownParserParagraphSpans(text, linkRefs):
             linkImgLinkHref = arrayGet(linkImgLinkResult, 1)
             linkImgLinkTitle = arrayGet(linkImgLinkResult, 2)
             imgSpan = markdownParserCreateImageSpan(linkImgHref, linkImgText, linkImgTitle)
-            arrayPush(spans, markdownParserCreateLinkSpanDirect(linkImgLinkHref, [imgSpan], linkImgLinkTitle))
+            arrayPush(spans, markdownParserCreateLinkSpan(linkImgLinkHref, [imgSpan], linkImgLinkTitle))
 
         # Link with inline image reference
         elif objectGet(matchGroups, 'linkImgRef') != null:
@@ -590,7 +553,7 @@ function markdownParserParagraphSpans(text, linkRefs):
             linkImgRefLinkHref = arrayGet(linkImgRefLinkResult, 1)
             linkImgRefLinkTitle = arrayGet(linkImgRefLinkResult, 2)
             imgSpan = markdownParserCreateImageRefSpan(linkImgRefText, linkImgRefImgText, linkImgRefFull, linkRefs, true)
-            arrayPush(spans, markdownParserCreateLinkSpanDirect(linkImgRefLinkHref, [imgSpan], linkImgRefLinkTitle))
+            arrayPush(spans, markdownParserCreateLinkSpan(linkImgRefLinkHref, [imgSpan], linkImgRefLinkTitle))
 
         # Link reference with inline image
         elif objectGet(matchGroups, 'linkRefImg') != null:
@@ -669,7 +632,7 @@ function markdownParserParagraphSpans(text, linkRefs):
             codeText = stringSlice(code, codeTLen, stringLength(code) - codeTLen)
             codeScrubbed = regexReplace(markdownParserRegexCodeNewlines, codeText, ' ')
             codeMatch = regexMatch(markdownParserRegexCodeSpaces, codeScrubbed)
-            if codeMatch != null:
+            if codeMatch:
                 codeScrubbed = objectGet(objectGet(codeMatch, 'groups'), '1')
             endif
             arrayPush(spans, {'code': codeScrubbed})
@@ -691,11 +654,7 @@ endfunction
 function markdownParserGetLinkText(matchGroups, prefix):
     text = objectGet(matchGroups, prefix + 'Text')
     href = objectGet(matchGroups, prefix + 'Href')
-    if stringStartsWith(href, '<'):
-        href = markdownParserRemoveEscapes(stringSlice(href, 1, stringLength(href) - 1), true)
-    else:
-        href = markdownParserRemoveEscapes(href, true)
-    endif
+    href = markdownParserRemoveEscapes(if(stringStartsWith(href, '<'), stringSlice(href, 1, stringLength(href) - 1), href), true)
     title = objectGet(matchGroups, prefix + 'Title')
     if title != null:
         title = markdownParserRemoveEscapes(stringSlice(title, 1, stringLength(title) - 1), true)
@@ -718,17 +677,10 @@ endfunction
 
 # Helper function to create a link span (with text string that needs parsing)
 function markdownParserCreateLinkSpan(href, text, title, linkRefs):
-    linkSpan = {'link': {'href': href, 'spans': markdownParserParagraphSpans(text, linkRefs)}}
-    if title != null:
-        objectSet(objectGet(linkSpan, 'link'), 'title', title)
-    endif
-    return linkSpan
-endfunction
-
-
-# Helper function to create a link span (with already-parsed spans array)
-function markdownParserCreateLinkSpanDirect(href, spansArray, title):
-    linkSpan = {'link': {'href': href, 'spans': spansArray}}
+    linkSpan = {'link': { \
+        'href': href, \
+        'spans': if(systemType(text) == 'array', text, markdownParserParagraphSpans(text, linkRefs)) \
+    }}
     if title != null:
         objectSet(objectGet(linkSpan, 'link'), 'title', title)
     endif
@@ -749,17 +701,11 @@ endfunction
 # Helper function to create a link reference span
 function markdownParserCreateLinkRefSpan(refText, optText, fullText, linkRefs, textFallback):
     linkRefSpan = {'linkRef': {'spans': markdownParserCreateFallbackSpan(fullText, linkRefs, textFallback)}}
-    linkSpanSpans = null
-    if systemType(optText) == 'array':
-        linkSpanSpans = optText
-    elif optText != null:
-        linkSpanSpans = markdownParserParagraphSpans(optText, linkRefs)
-    else:
-        linkSpanSpans = markdownParserParagraphSpans(refText, linkRefs)
-    endif
     arrayPush(objectGet(linkRefs, 'links'), { \
         'refKey': markdownParserGetLinkRefKey(refText), \
-        'linkSpan': {'link': {'spans': linkSpanSpans}}, \
+        'linkSpan': {'link': { \
+            'spans': if(systemType(optText) == 'array', optText, markdownParserParagraphSpans(optText || refText, linkRefs)) \
+        }}, \
         'linkRefSpan': linkRefSpan \
     })
     return linkRefSpan
@@ -769,10 +715,9 @@ endfunction
 # Helper function to create an image reference span
 function markdownParserCreateImageRefSpan(refText, optText, fullText, linkRefs, textFallback):
     linkRefSpan = {'linkRef': {'spans': markdownParserCreateFallbackSpan(fullText, linkRefs, textFallback)}}
-    altText = if(optText != null, optText, refText)
     arrayPush(objectGet(linkRefs, 'links'), { \
         'refKey': markdownParserGetLinkRefKey(refText), \
-        'imageSpan': {'image': {'alt': markdownParserGetImageAltText(altText)}}, \
+        'imageSpan': {'image': {'alt': markdownParserGetImageAltText(optText || refText)}}, \
         'linkRefSpan': linkRefSpan \
     })
     return linkRefSpan
