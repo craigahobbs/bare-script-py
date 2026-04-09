@@ -164,8 +164,8 @@ function testMarkdownParse_entityReferences():
             'parts': [ \
                 {'paragraph': { \
                     'spans': [ \
-                        {'text': '\xa0 & \xa9 &AElig; &Dcaron;\n' + \
-                                 '\xbe &HilbertSpace; &DifferentialD;\n' + \
+                        {'text': '\u00a0 & \u00a9 &AElig; &Dcaron;\n' + \
+                                 '\u00be &HilbertSpace; &DifferentialD;\n' + \
                                  '&ClockwiseContourIntegral; &ngE;'} \
                     ] \
                 }} \
@@ -184,7 +184,7 @@ function testMarkdownParse_entityDecimalNumericCharacterReferences():
             'parts': [ \
                 {'paragraph': { \
                     'spans': [ \
-                        {'text': '\x23 \u04d2 \u03e0 \0'} \
+                        {'text': '\u0023 \u04d2 \u03e0 \u0000'} \
                     ] \
                 }} \
             ] \
@@ -202,7 +202,7 @@ function testMarkdownParse_entityHexNumericCharacterReferences():
             'parts': [ \
                 {'paragraph': { \
                     'spans': [ \
-                        {'text': '\x22 \u0d06 \u0cab'} \
+                        {'text': '\u0022 \u0d06 \u0cab'} \
                     ] \
                 }} \
             ] \

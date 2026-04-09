@@ -825,7 +825,7 @@ endfunction
 
 # Escape and entity regex
 markdownParserRegexEscapeText = regexNew('\\\\([!-~])')
-markdownParserRegexEscapeHref = regexNew('\\\\([!-/:-@\\[-`{-~])')
+markdownParserRegexEscapeHref = regexNew('\\\\([!-/:-@[-`{-~])')
 markdownParserRegexEntityRef = regexNew('&([A-Za-z]+[0-9]*);')
 markdownParserRegexDecimalRef = regexNew('&#([0-9]{1,7});')
 markdownParserRegexHexRef = regexNew('&#[Xx]([A-Fa-f0-9]{1,6});')
