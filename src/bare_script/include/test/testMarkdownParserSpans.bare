@@ -2639,8 +2639,8 @@ unittestRunTest('testMarkdownParse_lineBreakHTMLEntityEscape')
 
 
 function testMarkdownParse_escapes():
-   markdown = markdownParse([ \
-        '\\!\\"\\#\\$\\%\\&\\\'\\(\\)\\*\\+\\,\\-\\.\\/\\:\\;\\<\\=\\>\\?\\@\\[\\\\\\]\\^\\_\\\`\\{\\|\\}\\~' \
+    markdown = markdownParse([ \
+        '\\!\\"\\#\\$\\%\\&\\\'\\(\\)\\*\\+\\,\\-\\.\\/\\:\\;\\<\\=\\>\\?\\@\\[\\\\\\]\\^\\_\\`\\{\\|\\}\\~' \
     ])
     unittestDeepEqual( \
         markdownValidate(markdown), \
