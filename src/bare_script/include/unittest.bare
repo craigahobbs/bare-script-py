@@ -180,9 +180,7 @@ endfunction
 # $doc: Stop coverage data collection
 function unittestCoverageStop():
     coverageGlobal = systemGlobalGet('__barescriptCoverage')
-    if coverageGlobal:
-        objectSet(coverageGlobal, 'enabled', false)
-    endif
+    if(coverageGlobal, objectSet(coverageGlobal, 'enabled', false))
 endfunction
 
 

@@ -939,3 +939,16 @@ function testUnittestRunTest_coverage_script_noData():
     ])
 endfunction
 unittestRunTest('testUnittestRunTest_coverage_script_noData')
+
+
+function testUnittestCoverageStart():
+    ix = 0
+    origCoverage = systemGlobalGet('__barescriptCoverage')
+    unittestCoverageStart()
+    while ix < 2:
+        systemGlobalSet('__barescriptCoverage', origCoverage)
+        ix = ix + 1
+    endwhile
+    unittestEqual(unittestCoverageGlobal() != null, true)
+endfunction
+unittestRunTest('testUnittestCoverageStart')
