@@ -2372,7 +2372,7 @@ unittestRunTest('testMarkdownParse_lineBreakBackslashEscape')
 
 function testMarkdownParse_lineBreakSeveralSpaces():
     markdown = markdownParse([ \
-        'foo$       ', \
+        'foo       ', \
         'baz' \
     ])
     unittestDeepEqual( \
