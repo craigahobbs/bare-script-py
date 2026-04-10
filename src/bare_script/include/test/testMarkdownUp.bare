@@ -122,11 +122,11 @@ endfunction
 unittestRunTest('testMarkdownUp_sessionStorage')
 
 
-function testMarkdownUp_urlObjectCreate():
-    unittestEqual(urlObjectCreate('Hello!', 'text/plain'), 'blob:text/plain-Hello!')
-    unittestEqual(urlObjectCreate('abcdefghijklmnopqrstuvwxyz', 'text/plain'), 'blob:text/plain-abcdefghijklmnopqrst')
+function testMarkdownUp_windowURLObject():
+    unittestEqual(windowURLObject('Hello!', 'text/plain'), 'blob:text/plain-Hello!')
+    unittestEqual(windowURLObject('abcdefghijklmnopqrstuvwxyz', 'text/plain'), 'blob:text/plain-abcdefghijklmnopqrst')
 endfunction
-unittestRunTest('testMarkdownUp_urlObjectCreate')
+unittestRunTest('testMarkdownUp_windowURLObject')
 
 
 function testMarkdownUp_windowClipboardRead():

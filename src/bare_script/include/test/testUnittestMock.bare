@@ -60,10 +60,6 @@ async function testUnittestMockAll():
     systemLog('Hello')
     systemLogDebug('Hello Debug')
 
-    # URL
-    unittestEqual(urlObjectCreate('Hello!', 'text/plain'), 'blob:text/plain-Hello!')
-    unittestEqual(urlObjectCreate('abcdefghijklmnopqrstuvwxyz', 'text/plain'), 'blob:text/plain-abcdefghijklmnopqrst')
-
     # Window
     unittestEqual(windowClipboardRead(), '')
     windowClipboardWrite('Hello!')
@@ -72,6 +68,8 @@ async function testUnittestMockAll():
     windowSetLocation('test.html')
     windowSetResize(null)
     windowSetTimeout(null, 1000)
+    unittestEqual(windowURLObject('Hello!', 'text/plain'), 'blob:text/plain-Hello!')
+    unittestEqual(windowURLObject('abcdefghijklmnopqrstuvwxyz', 'text/plain'), 'blob:text/plain-abcdefghijklmnopqrst')
     unittestEqual(windowWidth(), 1024)
 
     # Reset mocks

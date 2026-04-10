@@ -62,9 +62,6 @@ function unittestMockAll(data):
     unittestMockOneGeneric('systemLog')
     unittestMockOneGeneric('systemLogDebug')
 
-    # URL
-    unittestMockOne('urlObjectCreate', unittestMock_urlObjectCreate)
-
     # Window
     unittestMockOne('windowClipboardRead', unittestMock_windowClipboardRead)
     unittestMockOne('windowClipboardWrite', unittestMock_windowClipboardWrite)
@@ -72,6 +69,7 @@ function unittestMockAll(data):
     unittestMockOneGeneric('windowSetLocation')
     unittestMockOneGeneric('windowSetResize')
     unittestMockOneGeneric('windowSetTimeout')
+    unittestMockOne('windowURLObject', unittestMock_windowURLObject)
     unittestMockOne('windowWidth', unittestMock_windowWidth)
 endfunction
 
@@ -267,7 +265,7 @@ endfunction
 #
 
 
-function unittestMock_urlObjectCreate(data, contentType):
+function unittestMock_windowURLObject(data, contentType):
     return 'blob:' + urlEncode(contentType) + '-' + urlEncode(if(stringLength(data) < 20, data, stringSlice(data, 0, 20)))
 endfunction
 

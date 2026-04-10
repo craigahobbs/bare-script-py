@@ -284,22 +284,6 @@ endfunction
 
 
 #
-# URL functions
-#
-
-
-# $function: urlObjectCreate
-# $group: markdownUp.bare
-# $doc: Create an object URL (i.e. a file download URL)
-# $arg data: The object data string
-# $arg contentType: Optional (default is "text/plain"). The object content type.
-# $return: The object URL string
-function urlObjectCreate(data, contentType):
-    return 'blob:' + urlEncode(contentType) + '-' + urlEncode(if(stringLength(data) < 20, data, stringSlice(data, 0, 20)))
-endfunction
-
-
-#
 # Window functions
 #
 
@@ -354,6 +338,17 @@ endfunction
 # $arg callback: The window timeout callback function
 # $arg delay: The delay, in milliseconds, to ellapse before calling the timeout
 function windowSetTimeout():
+endfunction
+
+
+# $function: windowURLObject
+# $group: markdownUp.bare
+# $doc: Create an object URL (i.e. a file download URL)
+# $arg data: The object data string
+# $arg contentType: Optional (default is "text/plain"). The object content type.
+# $return: The object URL string
+function windowURLObject(data, contentType):
+    return 'blob:' + urlEncode(contentType) + '-' + urlEncode(if(stringLength(data) < 20, data, stringSlice(data, 0, 20)))
 endfunction
 
 
