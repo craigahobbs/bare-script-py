@@ -32,8 +32,9 @@ def main(argv=None):
     parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
-    parser.add_argument('-l', '--headless', action='store_true', help='run with MarkdownUp headless')
-    parser.add_argument('-m', '--markdown-up', action='store_true', help='run with MarkdownUp stubs')
+    markdown_up_group = parser.add_mutually_exclusive_group()
+    markdown_up_group.add_argument('-l', '--headless', action='store_true', help='run with MarkdownUp headless')
+    markdown_up_group.add_argument('-m', '--markdown-up', action='store_true', help='run with MarkdownUp stubs')
     parser.add_argument('-s', '--static', dest='static', action='store_const', const='s', help='perform static analysis')
     parser.add_argument('-x', '--staticx', dest='static', action='store_const', const='x', help='perform static analysis with execution')
     parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'), default = [],

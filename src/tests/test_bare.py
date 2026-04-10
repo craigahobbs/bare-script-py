@@ -28,7 +28,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(
                 stdout.getvalue().splitlines()[0],
-                'usage: bare [-h] [-c CODE] [-d] [-l] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
+                'usage: bare [-h] [-c CODE] [-d] [-l | -m] [-s] [-x] [-v VAR EXPR] [file ...]'
             )
             self.assertEqual(stderr.getvalue(), '')
 
@@ -43,7 +43,7 @@ class TestBare(unittest.TestCase):
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(
                 stdout.getvalue().splitlines()[0],
-                'usage: bare [-h] [-c CODE] [-d] [-l] [-m] [-s] [-x] [-v VAR EXPR] [file ...]'
+                'usage: bare [-h] [-c CODE] [-d] [-l | -m] [-s] [-x] [-v VAR EXPR] [file ...]'
             )
             self.assertEqual(stderr.getvalue(), '')
 
