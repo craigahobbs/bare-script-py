@@ -11,9 +11,11 @@ from .model import \
     validate_script
 
 from .options import \
+    FETCH_SYSTEM_PREFIX, \
     fetch_http, \
     fetch_read_only, \
     fetch_read_write, \
+    fetch_system, \
     log_stdout, \
     url_file_relative
 

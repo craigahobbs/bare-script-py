@@ -9,7 +9,7 @@ import unittest.mock
 
 import urllib3
 
-from bare_script import fetch_http, fetch_read_only, fetch_read_write, log_stdout, url_file_relative
+from bare_script import FETCH_SYSTEM_PREFIX, fetch_http, fetch_read_only, fetch_read_write, fetch_system, log_stdout, url_file_relative
 
 
 class TestOptions(unittest.TestCase):
@@ -153,6 +153,16 @@ class TestOptions(unittest.TestCase):
             result = fetch_read_write({'url': 'test.txt', 'body': 'Hello!'})
             self.assertEqual(result, '{}')
             mock_file().write.assert_called_with('Hello!')
+
+
+    def test_fetch_system(self):
+        result = fetch_system(None, {'url': f'{FETCH_SYSTEM_PREFIX}args.bare'})
+        self.assertTrue(result.startswith('# Licensed under the MIT License'))
+
+
+    def test_fetch_system_no_fallback(self):
+        result = fetch_system(None, {'url': 'unknown.bare'})
+        self.assertIsNone(result)
 
 
     def test_log_stdout(self):

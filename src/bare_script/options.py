@@ -5,6 +5,7 @@
 BareScript runtime option function implementations
 """
 
+import importlib.resources
 import os
 from pathlib import Path
 import re
@@ -79,6 +80,26 @@ def fetch_read_write(request):
     # File read
     with open(url, 'r', encoding='utf-8') as fh:
         return fh.read()
+
+
+def fetch_system(fetch_fn, request):
+    """
+    A partial :func:`fetch function <fetch_fn>` implementation that fetches system includes from
+    the local package, otherwise falls back to the first argument, `fetch_fn`, unless None.
+    """
+
+    # Is this a bare system include?
+    url = request['url']
+    if url.startswith(FETCH_SYSTEM_PREFIX):
+        path = url[len(FETCH_SYSTEM_PREFIX):]
+        with importlib.resources.files('bare_script.include').joinpath(path).open('rb') as cm_inc:
+            return cm_inc.read().decode(encoding='utf-8')
+
+    return fetch_fn(request) if fetch_fn else None
+
+
+# The system include prefix to use in conjunction with the `fetchSystem` function.
+FETCH_SYSTEM_PREFIX = ':bare-include:/'
 
 
 def log_stdout(text):

@@ -81,6 +81,18 @@
 ~~~
 
 
+~~~ {eval-rst}
+.. autofunction:: bare_script.fetch_system
+~~~
+
+
+~~~ {eval-rst}
+.. py:data:: bare_script.FETCH_SYSTEM_PREFIX
+
+   The system include prefix to use in conjunction with the `fetchSystem` function.
+~~~
+
+
 ## Log Functions
 
 ~~~ {eval-rst}
