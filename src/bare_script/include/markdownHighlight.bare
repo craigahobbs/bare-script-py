@@ -182,20 +182,30 @@ function markdownHighlightElements(highlightRegex, lines, options):
     text = arrayJoin(textParts, '')
 
     # The copy link elements
+    preAttr = null
     copyElements = null
-    copyFn = if(options, objectGet(options, 'copyFn'))
-    if copyFn:
+    if options && objectGet(options, 'copyLinks'):
+        # Increment the copy links ID index
+        copyLinksIndex = objectGet(options, 'copyLinksIndex', 1)
+        objectSet(options, 'copyLinksIndex', copyLinksIndex + 1)
+
+        # Generate the code block ID and elements
+        preID = '__markdown_copy_' + copyLinksIndex
+        preAttr = {'id': preID, 'style': 'margin-top: 0.25em'}
         copyElements = { \
             'html': 'p', \
-            'attr': {'style': 'cursor: pointer; font-size: 0.85em; text-align: right; user-select: none;'}, \
+            'attr': { \
+                'style': 'cursor: pointer; font-size: 0.85em; text-align: right; user-select: none;' \
+            }, \
             'elem': { \
                 'html': 'a', \
-                'elem': {'text': 'Copy'}, \
-                'callback': {'click': systemPartial(copyFn, text)} \
+                'attr': { \
+                    'onclick': "window.navigator.clipboard.writeText(document.getElementById('" + preID + "').innerText);" \
+                }, \
+                'elem': {'text': 'Copy'} \
             } \
         }
     endif
-    preAttr = if(copyElements != null, {'style': 'margin-top: 0.25em'}, null)
 
     # No language specified or unknown language?
     if !highlightRegex:

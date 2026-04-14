@@ -12,7 +12,7 @@ include <markdownHighlight.bare>
 # $arg options: Optional (default is null). The options object.
 # $return: The Markdown's element model
 function markdownElements(markdown, options):
-    usedHeaderIds = if(options != null && objectHas(options, 'usedHeaderIds'), objectGet(options, 'usedHeaderIds'), {})
+    usedHeaderIds = if(options, objectGet(options, 'usedHeaderIds')) || {}
     return markdownElementsPartsElements(objectGet(markdown, 'parts'), options, usedHeaderIds)
 endfunction
 
@@ -64,7 +64,7 @@ endfunction
 # $arg options: Optional (default is null). The options object.
 # $return: The Markdown's element model
 async function markdownElementsAsync(markdown, options):
-    usedHeaderIds = if(options != null && objectHas(options, 'usedHeaderIds'), objectGet(options, 'usedHeaderIds'), {})
+    usedHeaderIds = if(options, objectGet(options, 'usedHeaderIds')) || {}
     return markdownElementsPartsElementsAsync(objectGet(markdown, 'parts'), options, usedHeaderIds)
 endfunction
 
@@ -130,7 +130,7 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
         if objectHas(paragraph, 'style'):
             # Determine the header ID, if requested
             headerId = null
-            if options != null && objectHas(options, 'headerIds') && objectGet(options, 'headerIds'):
+            if options && objectGet(options, 'headerIds'):
                 headerId = markdownHeaderId(markdownParagraphText(paragraph))
 
                 # Duplicate header ID?
@@ -149,8 +149,8 @@ function markdownElementsPartElementsBase(part, options, usedHeaderIds):
                 objectSet(usedHeaderIds, headerId, true)
 
                 # Header ID hash URL fixup?
-                if options != null && objectHas(options, 'urlFn'):
-                    urlFn = objectGet(options, 'urlFn')
+                urlFn = if(options, objectGet(options, 'urlFn'))
+                if urlFn:
                     headerId = stringSlice(urlFn('#' + headerId), 1)
                 endif
             endif
@@ -253,8 +253,8 @@ function markdownElementsParagraphSpanElements(spans, options):
             href = objectGet(link, 'href')
 
             # URL fixup?
-            if options != null && objectHas(options, 'urlFn'):
-                urlFn = objectGet(options, 'urlFn')
+            urlFn = if(options, objectGet(options, 'urlFn'))
+            if urlFn:
                 href = urlFn(href)
             endif
 
@@ -274,8 +274,8 @@ function markdownElementsParagraphSpanElements(spans, options):
             src = objectGet(image, 'src')
 
             # URL fixup?
-            if options != null && objectHas(options, 'urlFn'):
-                urlFn = objectGet(options, 'urlFn')
+            urlFn = if(options, objectGet(options, 'urlFn'))
+            if urlFn:
                 src = urlFn(src)
             endif
 

@@ -161,30 +161,30 @@ endfunction
 unittestRunTest('testMarkdownHighlightCodeBlockElementsAsync_unknownLanguage')
 
 
-function testMarkdownHighlightCodeBlockElements_copyUnknownLanguage_copyFn(copyCalls, text):
-    arrayPush(copyCalls, text)
-endfunction
-
-
 function testMarkdownHighlightCodeBlockElements_copyUnknownLanguage():
-    copyCalls = []
     options = { \
-        'copyFn': systemPartial(testMarkdownHighlightCodeBlockElements_copyUnknownLanguage_copyFn, copyCalls) \
+        'copyLinks': true \
     }
-    elements = markdownHighlightCodeBlockElements({'language': 'unknown', 'lines': ['foo', 'bar']}, options)
-    elementCallback = objectGet(objectGet(objectGet(arrayGet(elements, 0), 'elem'), 'callback'), 'click')
-    unittestEqual(systemType(elementCallback), 'function')
     unittestDeepEqual( \
-        elements, \
+        markdownHighlightCodeBlockElements({'language': 'unknown', 'lines': ['foo', 'bar']}, options), \
         [ \
             { \
                 'html': 'p', \
                 'attr': {'style': 'cursor: pointer; font-size: 0.85em; text-align: right; user-select: none;'}, \
-                'elem': {'html': 'a', 'elem': {'text': 'Copy'}, 'callback': {'click': '<function>'}} \
+                'elem': { \
+                    'html': 'a', \
+                    'attr': { \
+                        'onclick': "window.navigator.clipboard.writeText(document.getElementById('__markdown_copy_1').innerText);" \
+                    }, \
+                    'elem': {'text': 'Copy'} \
+                } \
             }, \
             { \
                 'html': 'pre', \
-                'attr': {'style': 'margin-top: 0.25em'}, \
+                'attr': { \
+                    'id': '__markdown_copy_1', \
+                    'style': 'margin-top: 0.25em' \
+                }, \
                 'elem': { \
                     'html': 'code', \
                     'elem': {'text': 'foo\nbar\n'} \
@@ -192,33 +192,36 @@ function testMarkdownHighlightCodeBlockElements_copyUnknownLanguage():
             } \
         ] \
     )
-
-    # Test the callback
-    elementCallback()
-    unittestDeepEqual(copyCalls, ['foo\nbar\n'])
+    unittestEqual(objectGet(options, 'copyLinksIndex'), 2)
 endfunction
 unittestRunTest('testMarkdownHighlightCodeBlockElements_copyUnknownLanguage')
 
 
 function testMarkdownHighlightCodeBlockElements_copyKnownLanguage():
-    copyCalls = []
     options = { \
-        'copyFn': systemPartial(testMarkdownHighlightCodeBlockElements_copyUnknownLanguage_copyFn, copyCalls) \
+        'copyLinks': true, \
+        'copyLinksIndex': 2 \
     }
-    elements = markdownHighlightCodeBlockElements({'language': 'barescript', 'lines': ["markdownPrint('Hello!')"]}, options)
-    elementCallback = objectGet(objectGet(objectGet(arrayGet(elements, 0), 'elem'), 'callback'), 'click')
-    unittestEqual(systemType(elementCallback), 'function')
     unittestDeepEqual( \
-        elements, \
+        markdownHighlightCodeBlockElements({'language': 'barescript', 'lines': ["markdownPrint('Hello!')"]}, options), \
         [ \
             { \
                 'html': 'p', \
                 'attr': {'style': 'cursor: pointer; font-size: 0.85em; text-align: right; user-select: none;'}, \
-                'elem': {'html': 'a', 'elem': {'text': 'Copy'}, 'callback': {'click': '<function>'}} \
+                'elem': { \
+                    'html': 'a', \
+                    'attr': { \
+                        'onclick': "window.navigator.clipboard.writeText(document.getElementById('__markdown_copy_2').innerText);" \
+                    }, \
+                    'elem': {'text': 'Copy'} \
+                } \
             }, \
             { \
                 'html': 'pre', \
-                'attr': {'style': 'margin-top: 0.25em'}, \
+                'attr': { \
+                    'id': '__markdown_copy_2', \
+                    'style': 'margin-top: 0.25em' \
+                }, \
                 'elem': { \
                     'html': 'code', \
                     'elem': [ \
@@ -234,10 +237,7 @@ function testMarkdownHighlightCodeBlockElements_copyKnownLanguage():
             } \
         ] \
     )
-
-    # Test the callback
-    elementCallback()
-    unittestDeepEqual(copyCalls, ["markdownPrint('Hello!')\n"])
+    unittestEqual(objectGet(options, 'copyLinksIndex'), 3)
 endfunction
 unittestRunTest('testMarkdownHighlightCodeBlockElements_copyKnownLanguage')
 
