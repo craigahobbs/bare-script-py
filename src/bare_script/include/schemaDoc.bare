@@ -256,7 +256,7 @@ function schemaDocUserTypeMarkdown(types, typeName, options, headerPrefix, title
                 endif
                 if hasDoc:
                     doc = objectGet(member, 'doc')
-                    objectSet(row, 'Description', if(doc != null, arrayJoin(doc, ' '), ''))
+                    objectSet(row, 'Description', if(doc != null, arrayJoin(doc, '\n'), ''))
                 endif
                 arrayPush(tableData, row)
             endfor
@@ -320,7 +320,7 @@ function schemaDocUserTypeMarkdown(types, typeName, options, headerPrefix, title
                 row = {'Value': valueName}
                 if hasDoc:
                     doc = objectGet(value, 'doc')
-                    objectSet(row, 'Description', if(doc != null, arrayJoin(doc, ' '), ''))
+                    objectSet(row, 'Description', if(doc != null, arrayJoin(doc, '\n'), ''))
                 endif
                 arrayPush(tableData, row)
             endfor

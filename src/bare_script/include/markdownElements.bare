@@ -8,13 +8,56 @@ include <markdownHighlight.bare>
 # $function: markdownElements
 # $group: markdownElements.bare
 # $doc: Generate an element model from a Markdown model
-# $arg markdown: The Markdown model
-# $arg options: Optional (default is null). The options object.
-# $return: The Markdown's element model
+# $arg markdown: The [Markdown model](model.html#var.vName='Markdown')
+# $arg options: Optional (default is null). The [markdownElements options object](model.html#var.vName='MarkdownElementsOptions').
+# $return: The Markdown's [element model](https://github.com/craigahobbs/element-model#readme)
 function markdownElements(markdown, options):
     usedHeaderIds = if(options, objectGet(options, 'usedHeaderIds')) || {}
     return markdownElementsPartsElements(objectGet(markdown, 'parts'), options, usedHeaderIds)
 endfunction
+
+
+# The markdownElements options types
+markdownElementsTypes = schemaParse( \
+    'group "markdownElements.bare"', \
+    '', \
+    '', \
+    "# The markdownElements options object", \
+    'struct MarkdownElementsOptions', \
+    '', \
+    '    # Optional (default is null). The map of code block language to render function.', \
+    '    # A code block render function takes two arguments:', \
+    '    # [codeBlock](#struct-markdownelementscodeblock), the code block model, and', \
+    '    # [options](#struct-markdownelementsoptions), the markdownElements options object.', \
+    "    # It returns the code block's [element model](https://github.com/craigahobbs/element-model#readme).", \
+    '    MarkdownElementsCodeBlock{} codeBlocks', \
+    '', \
+    '    # Optional (default is false). If true, generate copy links.', \
+    '    bool copyLinks', \
+    '', \
+    '    # Optional (default is null). The URL modifier function.', \
+    '    # A URL modifier function takes a single string argument `url`, and returns the modified URL string.', \
+    '    any urlFn', \
+    '', \
+    '    # Optional (default is true). If true, generate header IDs.', \
+    '    bool headerIds', \
+    '', \
+    '    # The set of used header IDs', \
+    '    any{} usedHeaderIds', \
+    '', \
+    '', \
+    '# A Markdown code block', \
+    'struct MarkdownElementsCodeBlock', \
+    '', \
+    '    # The code block language', \
+    '    optional string language', \
+    '', \
+    '    # The code block lines', \
+    '    string[] lines', \
+    '', \
+    "    # Optional (default is 1). The code block's starting line number.", \
+    '    optional float startLineNumber' \
+)
 
 
 # Helper function to generate element models from markdown parts
@@ -60,9 +103,9 @@ endfunction
 # $function: markdownElementsAsync
 # $group: markdownElements.bare
 # $doc: Generate an element model from a Markdown model
-# $arg markdown: The Markdown model
-# $arg options: Optional (default is null). The options object.
-# $return: The Markdown's element model
+# $arg markdown: The [Markdown model](model.html#var.vName='Markdown')
+# $arg options: Optional (default is null). The [markdownElements options object](model.html#var.vName='MarkdownElementsOptions').
+# $return: The Markdown's [element model](https://github.com/craigahobbs/element-model#readme)
 async function markdownElementsAsync(markdown, options):
     usedHeaderIds = if(options, objectGet(options, 'usedHeaderIds')) || {}
     return markdownElementsPartsElementsAsync(objectGet(markdown, 'parts'), options, usedHeaderIds)
