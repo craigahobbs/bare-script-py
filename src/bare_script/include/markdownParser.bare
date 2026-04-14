@@ -169,7 +169,6 @@ function markdownParseInternal(markdown, startLineNumber, linkRefsRaw):
                 markdownParserCloseParagraph( \
                     markdownParts, paragraphLines, paragraphPart, paragraphLineNumber, fencedMark, linkRefs, null \
                 )
-                paragraphLines = []
                 paragraphPart = null
                 paragraphLineNumber = null
                 tablePart = null
