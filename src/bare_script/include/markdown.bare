@@ -90,8 +90,8 @@ endfunction
 # $function: markdownValidate
 # $group: markdown.bare
 # $doc: Validate a Markdown model
-# $arg markdown - The [Markdown model](model.html/#var.vName='Markdown')
-# $return: The validated [Markdown model](model.html/#var.vName='Markdown')
+# $arg markdown: The [Markdown model](model.html#var.vName='Markdown')
+# $return: The validated [Markdown model](model.html#var.vName='Markdown')
 function markdownValidate(markdown):
     return schemaValidate(markdownTypes, 'Markdown', markdown)
 endfunction

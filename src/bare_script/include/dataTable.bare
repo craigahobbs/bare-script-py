@@ -73,8 +73,8 @@ dataTableTypes = schemaParse( \
 # $function: dataTableValidate
 # $group: dataTable.bare
 # $doc: Validate a data table model
-# $arg dataTable: The [data table model](model.html#var.vName='DataTable'}
-# $return: The validated [data table model](model.html#var.vName='DataTable'}
+# $arg dataTable: The [data table model](model.html#var.vName='DataTable')
+# $return: The validated [data table model](model.html#var.vName='DataTable')
 function dataTableValidate(dataTable):
     return schemaValidate(dataTableTypes, 'DataTable', dataTable)
 endfunction

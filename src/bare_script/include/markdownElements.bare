@@ -9,7 +9,7 @@ include <markdownHighlight.bare>
 # $group: markdownElements.bare
 # $doc: Generate an element model from a Markdown model
 # $arg markdown: The [Markdown model](model.html#var.vName='Markdown')
-# $arg options: Optional (default is null). The [markdownElements options object](model.html#var.vName='MarkdownElementsOptions').
+# $arg options: Optional (default is null). The [options object](model.html#var.vName='MarkdownElementsOptions').
 # $return: The Markdown's [element model](https://github.com/craigahobbs/element-model#readme)
 function markdownElements(markdown, options):
     usedHeaderIds = if(options, objectGet(options, 'usedHeaderIds')) || {}
@@ -104,7 +104,7 @@ endfunction
 # $group: markdownElements.bare
 # $doc: Generate an element model from a Markdown model
 # $arg markdown: The [Markdown model](model.html#var.vName='Markdown')
-# $arg options: Optional (default is null). The [markdownElements options object](model.html#var.vName='MarkdownElementsOptions').
+# $arg options: Optional (default is null). The [options object](model.html#var.vName='MarkdownElementsOptions').
 # $return: The Markdown's [element model](https://github.com/craigahobbs/element-model#readme)
 async function markdownElementsAsync(markdown, options):
     usedHeaderIds = if(options, objectGet(options, 'usedHeaderIds')) || {}

@@ -4,11 +4,11 @@
 
 # The syntax-highlight model
 markdownHighlightTypes = schemaParse( \
-    'group "Syntax Highlighting"', \
+    'group "markdownHighlight.bare"', \
     '', \
     '', \
     '# Code syntax-highlighting model', \
-    'struct Highlight', \
+    'struct MarkdownHighlight', \
     '', \
     '    # The language names/aliases. The first name is the preferred name.', \
     '    string[len > 0] names', \
@@ -43,8 +43,8 @@ markdownHighlightMemberNames = ['builtin', 'comment', 'keyword', 'literal', 'pre
 # $function: markdownHighlightCodeBlockElements
 # $group: markdownHighlight.bare
 # $doc: Render a code block
-# $arg codeBlock: The code block model
-# $arg options: Optional (default is null). The options object.
+# $arg codeBlock: The [code block model](model.html#var.vName='MarkdownElementsCodeBlock')
+# $arg options: Optional (default is null). The [options object](model.html#var.vName='MarkdownElementsOptions').
 # $return: The code block's [element model](https://github.com/craigahobbs/element-model#readme)
 function markdownHighlightCodeBlockElements(codeBlock, options):
     # Code block language defined?
@@ -76,8 +76,8 @@ endfunction
 # $function: markdownHighlightCodeBlockElementsAsync
 # $group: markdownHighlight.bare
 # $doc: Render a code block
-# $arg codeBlock: The code block model
-# $arg options: Optional (default is null). The options object.
+# $arg codeBlock: The [code block model](model.html#var.vName='MarkdownElementsCodeBlock')
+# $arg options: Optional (default is null). The [options object](model.html#var.vName='MarkdownElementsOptions').
 # $return: The code block's [element model](https://github.com/craigahobbs/element-model#readme)
 async function markdownHighlightCodeBlockElementsAsync(codeBlock, options):
     # Code block language defined?
@@ -109,7 +109,7 @@ endfunction
 # $function: markdownHighlightCompileHighlightModels
 # $group: markdownHighlight.bare
 # $doc: Compile an array of highlight models
-# $arg highlights: The array of Highlight models
+# $arg highlights: The array of [highlight models](model.html#var.vName='MarkdownHighlight')
 # $return: The map of language name/alias to code block render function
 function markdownHighlightCompileHighlightModels(highlights):
     highlightMap = {}
@@ -118,7 +118,7 @@ function markdownHighlightCompileHighlightModels(highlights):
         parts = []
 
         # Validate the highlight model (for potential debug logging)
-        schemaValidate(markdownHighlightTypes, 'Highlight', highlight)
+        schemaValidate(markdownHighlightTypes, 'MarkdownHighlight', highlight)
 
         # Create regex-based regex for each member
         for memberName in markdownHighlightMemberNames:
@@ -171,7 +171,7 @@ endfunction
 # $doc: Generate a syntax-highlighted code block element model
 # $arg highlightRegex: The compiled highlight model regex (or null for no highlighting)
 # $arg lines: The code block lines
-# $arg options: Optional (default is null). The options object.
+# $arg options: Optional (default is null). The [options object](model.html#var.vName='MarkdownElementsOptions').
 # $return: The syntax-highlighted code [element model](https://github.com/craigahobbs/element-model#readme)
 function markdownHighlightElements(highlightRegex, lines, options):
     # Join the text lines

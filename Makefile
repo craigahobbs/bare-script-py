@@ -150,6 +150,7 @@ include 'src/bare_script/include/dataTable.bare'
 include 'src/bare_script/include/diff.bare'
 include 'src/bare_script/include/markdown.bare'
 include 'src/bare_script/include/markdownElements.bare'
+include 'src/bare_script/include/markdownHighlight.bare'
 include 'src/bare_script/include/pager.bare'
 
 includeTypes = {}
@@ -160,6 +161,7 @@ objectAssign(includeTypes, dataLineChartTypes)
 objectAssign(includeTypes, dataTableTypes)
 objectAssign(includeTypes, diffTypes)
 objectAssign(includeTypes, markdownElementsTypes)
+objectAssign(includeTypes, markdownHighlightTypes)
 objectAssign(includeTypes, markdownTypes)
 objectAssign(includeTypes, pagerTypes)
 return includeTypes

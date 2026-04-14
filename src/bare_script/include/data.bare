@@ -231,9 +231,9 @@ endfunction
 # $doc: Join two data arrays
 # $arg leftData: The left data array
 # $arg rightData: The right data array
-# $arg joinExpr: The [join expression](https://craigahobbs.github.io/bare-script/language/#expressions)
+# $arg joinExpr: The join expression
 # $arg rightExpr: Optional (default is null).
-# $arg rightExpr: The right [join expression](https://craigahobbs.github.io/bare-script/language/#expressions)
+# $arg rightExpr: The right join expression
 # $arg isLeftJoin: Optional (default is false). If true, perform a left join (always include left row).
 # $arg variables: Optional (default is null). A variables object for join expression evaluation.
 # $return: The joined data array
