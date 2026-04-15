@@ -235,7 +235,7 @@ function markdownHighlightElements(highlightRegex, lines, options):
         for memberName in markdownHighlightMemberNames:
             memberRegex = objectGet(highlightRegex, memberName)
             if memberRegex && regexMatch(memberRegex, highlightText):
-                color = 'var(--markdown-model-color-highlight-' + memberName + ')'
+                color = 'var(--barescript-color-highlight-' + memberName + ')'
                 break
             endif
         endfor

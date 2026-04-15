@@ -25,7 +25,7 @@ markdownParserRegexTableEscape = regexNew('\\\\(\\\\|)')
 # $group: markdownParser.bare
 # $doc: Parse Markdown text into a Markdown model
 # $arg lines...: The Markdown text lines (may contain nested arrays of un-split lines)
-# $return: The [Markdown model](https://craigahobbs.github.io/markdown-model/model/#var.vName='Markdown')
+# $return: The [Markdown model](model.html#var.vName='Markdown')
 function markdownParse(lines...):
     return markdownParseInternal(lines, 1, null)
 endfunction
