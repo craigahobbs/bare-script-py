@@ -39,7 +39,7 @@ markdownElementsTypes = schemaParse( \
     '    # A URL modifier function takes a single string argument `url`, and returns the modified URL string.', \
     '    any urlFn', \
     '', \
-    '    # Optional (default is true). If true, generate header IDs.', \
+    '    # Optional (default is false). If true, generate header IDs.', \
     '    bool headerIds', \
     '', \
     '    # The set of used header IDs', \
