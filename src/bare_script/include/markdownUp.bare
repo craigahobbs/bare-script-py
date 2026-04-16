@@ -138,7 +138,7 @@ endfunction
 function elementModelRender(element):
     if systemGlobalGet('vMarkdownUpHeadless'):
         markdownUpHeadlessMarkdown()
-        systemLog(elementModelToString(element, 4))
+        systemLog(stringTrim(elementModelToString(element, 4)))
     endif
 endfunction
 
@@ -235,7 +235,7 @@ endfunction
 function markdownUpHeadlessMarkdown():
     markdownLines = systemGlobalGet('markdownUpMarkdownLines')
     if markdownLines != null:
-        systemLog(elementModelToString(markdownElements(markdownParse(markdownLines)), 4))
+        systemLog(stringTrim(elementModelToString(markdownElements(markdownParse(markdownLines)), 4)))
         systemGlobalSet('markdownUpMarkdownLines', null)
     endif
 endfunction

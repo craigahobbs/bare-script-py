@@ -137,7 +137,6 @@ class TestBare(unittest.TestCase):
         World
     </strong>
 </p>
-
 </html>
 ''')
             self.assertEqual(mock_stderr.getvalue(), '')

@@ -97,8 +97,8 @@ function testMarkdownUp_headless():
         ['systemLog', ['<head>']], \
         ['systemLog', ['<link rel="stylesheet" href="https://craigahobbs.github.io/markdown-up/app.css">']], \
         ['systemLog', ['</head>']], \
-        ['systemLog', ['<p>\n    Hello\n</p>\n']], \
-        ['systemLog', ['<p>\n    Goodbye\n</p>\n']], \
+        ['systemLog', ['<p>\n    Hello\n</p>']], \
+        ['systemLog', ['<p>\n    Goodbye\n</p>']], \
         ['systemLog', ['</html>']] \
     ])
 endfunction
