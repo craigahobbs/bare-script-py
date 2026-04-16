@@ -7,14 +7,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://craigahobbs.github.io/markdown-up/app.css">
         <link rel="preload" href="https://craigahobbs.github.io/markdown-up/bare-script/static/markdown.css" as="style">
-        <link rel="modulepreload" href="https://craigahobbs.github.io/markdown-up/lib/app.js" as="script">
         <link rel="modulepreload" href="https://craigahobbs.github.io/markdown-up/lib/appImports.js" as="script">
     </head>
     <body>
     </body>
     <script type="module">
-        import 'https://craigahobbs.github.io/markdown-up/lib/appImports.js';
-        import {MarkdownUp} from 'https://craigahobbs.github.io/markdown-up/lib/app.js';
+        import {MarkdownUp} from 'https://craigahobbs.github.io/markdown-up/lib/appImports.js';
         const app = new MarkdownUp(window);
         app.run();
     </script>
