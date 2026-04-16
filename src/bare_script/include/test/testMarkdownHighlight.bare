@@ -1529,7 +1529,7 @@ function testMarkdownHighlightCodeBlockElements_html():
                 '<html lang="en">', \
                 '<head>', \
                 '    <!-- Metadata about the document -->', \
-                '    <meta charset="UTF-8">', \
+                '    <meta charset="utf-8">', \
                 '    <meta name="description" content="A simple example to demonstrate HTML syntax highlighting.">', \
                 '    <title>Syntax Highlighting Example</title>', \
                 '</head>', \
@@ -1597,7 +1597,7 @@ function testMarkdownHighlightCodeBlockElements_html():
                         { \
                             'html': 'span', \
                             'attr': {'style': 'color: var(--barescript-color-highlight-string);'}, \
-                            'elem': {'text': '"UTF-8"'} \
+                            'elem': {'text': '"utf-8"'} \
                         }, \
                         {'text': '>\n    '}, \
                         { \
