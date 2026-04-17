@@ -24,7 +24,6 @@
     "forms.bare": "include/forms-bare.md",
     "markdown.bare": "include/markdown-bare.md",
     "markdownElements.bare": "include/markdownElements-bare.md",
-    "markdownHighlight.bare": "include/markdownHighlight-bare.md",
     "markdownParser.bare": "include/markdownParser-bare.md",
     "markdownUp.bare": "include/markdownUp-bare.md",
     "pager.bare": "include/pager-bare.md",
