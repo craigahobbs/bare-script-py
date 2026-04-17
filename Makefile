@@ -220,13 +220,15 @@ with open('$(PERF_JSON)', 'r', encoding='utf-8') as fh:
 
 # Compute the best time for each language
 best_timings = {}
+best_timing = None
 for language, time_ms in ((timing.get('language'), timing.get('timeMs')) for timing in timings):
     if language is not None and (language not in best_timings or time_ms < best_timings[language]):
         best_timings[language] = time_ms
+        best_timing = time_ms if best_timing is None else min(best_timing, time_ms)
 
 # Report the timing multiples
 for language, time_ms in sorted(best_timings.items(), key=lambda val: val[1]):
     report = f'{language} - {time_ms:.1f} milliseconds'
-    print(report if language == 'BareScript' else f'{report} ({best_timings["BareScript"] / time_ms:.1f}x)')
+    print(f'{report} ({time_ms / best_timing:.1f}x)')
 endef
 export PERF_PY
