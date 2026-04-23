@@ -23,7 +23,6 @@ confident that BareScript will execute the same regardless of the underlying run
 
 - [The BareScript Language](https://craigahobbs.github.io/bare-script-py/language/)
 - [The BareScript Library](https://craigahobbs.github.io/bare-script-py/library/)
-- [The BareScript Expression Library](https://craigahobbs.github.io/bare-script-py/library/expression.html)
 - [API Documentation](https://craigahobbs.github.io/bare-script-py/)
 - [Source code](https://github.com/craigahobbs/bare-script-py)
 
@@ -93,7 +92,7 @@ print(execute_script(script, {'fetchFn': fetch_http}))
 This outputs:
 
 ```
-The BareScript Library has 186 functions
+The BareScript Library has 209 functions
 ```
 
 

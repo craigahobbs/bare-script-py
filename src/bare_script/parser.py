@@ -150,11 +150,11 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             # Add the if-then label definition
             ifthen = {
                 'jump': {
-                    'label': f"__bareScriptIf{label_index}",
+                    'label': f"__barescriptIf{label_index}",
                     'expr': {'unary': {'op': '!', 'expr': ifthen_expr}},
                     **statement_base
                 },
-                'done': f"__bareScriptDone{label_index}",
+                'done': f"__barescriptDone{label_index}",
                 'hasElse': False,
                 'line': line,
                 'lineNumber': start_line_number + ix_line
@@ -189,7 +189,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             # Generate the next if-then jump statement
             prev_label = ifthen['jump']['label']
             ifthen['jump'] = {
-                'label': f"__bareScriptIf{label_index}",
+                'label': f"__barescriptIf{label_index}",
                 'expr': {'unary': {'op': '!', 'expr': if_else_if_expr}},
                 **statement_base
             }
@@ -253,9 +253,9 @@ def parse_script(script_text, start_line_number=1, script_name=None):
 
             # Add the while-do label
             whiledo = {
-                'loop': f'__bareScriptLoop{label_index}',
-                'continue': f'__bareScriptLoop{label_index}',
-                'done': f'__bareScriptDone{label_index}',
+                'loop': f'__barescriptLoop{label_index}',
+                'continue': f'__barescriptLoop{label_index}',
+                'done': f'__barescriptDone{label_index}',
                 'expr': while_begin_expr,
                 'line': line,
                 'lineNumber': start_line_number + ix_line
@@ -294,12 +294,12 @@ def parse_script(script_text, start_line_number=1, script_name=None):
         if match_for_begin:
             # Add the for-each label
             foreach = {
-                'loop': f'__bareScriptLoop{label_index}',
-                'continue': f'__bareScriptContinue{label_index}',
-                'done': f'__bareScriptDone{label_index}',
-                'index': match_for_begin.group('index') or f'__bareScriptIndex{label_index}',
-                'values': f'__bareScriptValues{label_index}',
-                'length': f'__bareScriptLength{label_index}',
+                'loop': f'__barescriptLoop{label_index}',
+                'continue': f'__barescriptContinue{label_index}',
+                'done': f'__barescriptDone{label_index}',
+                'index': match_for_begin.group('index') or f'__barescriptIndex{label_index}',
+                'values': f'__barescriptValues{label_index}',
+                'length': f'__barescriptLength{label_index}',
                 'value': match_for_begin.group('value'),
                 'line': line,
                 'lineNumber': start_line_number + ix_line

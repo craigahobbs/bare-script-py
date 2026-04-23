@@ -7,16 +7,13 @@ bare-script command-line interface (CLI)
 
 import argparse
 from functools import partial
-import importlib.resources
-import os
 import sys
 import time
 
-from .library import SYSTEM_GLOBAL_INCLUDES_NAME
 from .model import lint_script
-from .options import fetch_read_write, log_stdout, url_file_relative
+from .options import FETCH_SYSTEM_PREFIX, fetch_read_write, fetch_system, log_stdout, url_file_relative
 from .parser import parse_expression, parse_script
-from .runtime import evaluate_expression, execute_script
+from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME, evaluate_expression, execute_script
 from .value import value_boolean
 
 
@@ -33,7 +30,9 @@ def main(argv=None):
     parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
-    parser.add_argument('-m', '--markdown-up', action='store_true', help='run with MarkdownUp stubs')
+    markdown_up_group = parser.add_mutually_exclusive_group()
+    markdown_up_group.add_argument('-l', '--html', action='store_true', help='run with MarkdownUp HTML output')
+    markdown_up_group.add_argument('-m', '--markdown', action='store_true', help='run with MarkdownUp text output')
     parser.add_argument('-s', '--static', dest='static', action='store_const', const='s', help='perform static analysis')
     parser.add_argument('-x', '--staticx', dest='static', action='store_const', const='x', help='perform static analysis with execution')
     parser.add_argument('-v', '--var', nargs=2, action='append', metavar=('VAR', 'EXPR'), default = [],
@@ -54,9 +53,22 @@ def main(argv=None):
         # Get the scripts to run
         scripts = args.scripts
         ix_user_script = 0
-        if args.markdown_up:
-            scripts = [('code', 'include <markdownUp.bare>'), *scripts]
-            ix_user_script = 1
+        if args.html or args.markdown:
+            # HTML or Markdown Text render?
+            if args.html:
+                scripts = [
+                    ('code', 'include <markdownUp.bare>'),
+                    ('code', 'markdownUpHTMLBegin()'),
+                    *scripts,
+                    ('code', 'markdownUpHTMLEnd()')
+                ]
+                ix_user_script = 2
+            else:
+                scripts = [
+                    ('code', 'include <markdownUp.bare>'),
+                    *scripts
+                ]
+                ix_user_script = 1
 
             # Add unittest.bare argument globals
             globals_['vUnittestReport'] = True
@@ -101,10 +113,10 @@ def main(argv=None):
                 time_begin = time.time()
                 result = execute_script(script, {
                     'debug': args.debug or False,
-                    'fetchFn': _fetch_include,
+                    'fetchFn': lambda request: fetch_system(fetch_read_write, request),
                     'globals': static_globals,
                     'logFn': log_stdout,
-                    'systemPrefix': _FETCH_INCLUDE_PREFIX,
+                    'systemPrefix': FETCH_SYSTEM_PREFIX,
                     'urlFn': partial(url_file_relative, script_value) if script_type == 'file' else None
                 })
                 if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:
@@ -138,20 +150,6 @@ def main(argv=None):
 
     # Return the status code
     sys.exit(status_code)
-
-
-def _fetch_include(request):
-    # Is this a bare system include?
-    url = request['url']
-    if url.startswith(_FETCH_INCLUDE_PREFIX):
-        path = url[len(_FETCH_INCLUDE_PREFIX):]
-        with importlib.resources.files('bare_script.include').joinpath(path).open('rb') as cm_inc:
-            return cm_inc.read().decode(encoding='utf-8')
-
-    return fetch_read_write(request)
-
-
-_FETCH_INCLUDE_PREFIX = f':bare-include:{os.sep}'
 
 
 class _InlineScriptAction(argparse.Action):

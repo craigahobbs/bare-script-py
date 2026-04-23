@@ -41,8 +41,8 @@ sync-include:
 commit: test-include
 test-include: $(DEFAULT_VENV_BUILD)
 	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/*.bare
-	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
+	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 
 
 doc:
@@ -50,12 +50,18 @@ doc:
 	cp -R static/* build/doc/html
 
     # Generate the library documentation
-	$(DEFAULT_VENV_BIN)/baredoc src/bare_script/library.py src/bare_script/include/*.bare -o build/doc/html/library/library.json
+	$(DEFAULT_VENV_BIN)/bare -m \
+		-v 'vFiles' "'$$(jq -n --args '$$ARGS.positional' src/bare_script/library.py src/bare_script/include/*.bare)'" \
+		-v 'vOutput' "'build/doc/html/library/library.json'" \
+		-c 'include <baredocCLI.bare>' \
+		-c 'return baredocCLIMain()'
 
      # Generate the single-page library documentation
 	cd build/doc/html/library/ && \
-	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <baredoc.bare>' \
-		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
+		-v 'vSingle' 'true' \
+		-v 'vPublish' 'true' \
+		-c 'include <baredoc.bare>' \
 		-c "baredocMain('library.json', 'The BareScript Library', null, 'libraryContent.json')" \
 		> barescript-library.md
 
@@ -64,8 +70,10 @@ doc:
 
      # Generate the single-page expression library documentation
 	cd build/doc/html/library/ && \
-	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <baredoc.bare>' \
-		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
+		-v 'vSingle' 'true' \
+		-v 'vPublish' 'true' \
+		-c 'include <baredoc.bare>' \
 		-c "baredocMain('expression.json', 'The BareScript Expression Library', null, 'expressionContent.json')" \
 		> barescript-expression-library.md
 
@@ -74,8 +82,10 @@ doc:
 
     # Generate the single-page library model documentation
 	cd build/doc/html/library/ && \
-	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <schemaDoc.bare>' \
-		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
+		-v 'vSingle' 'true' \
+		-v 'vPublish' 'true' \
+		-c 'include <schemaDoc.bare>' \
 		-c "schemaDocMain('model.json', 'The BareScript Library Models')" \
 		> barescript-library-model.md
 
@@ -84,8 +94,10 @@ doc:
 
     # Generate the single-page runtime model documentation
 	cd build/doc/html/library/ && \
-	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m -c 'include <schemaDoc.bare>' \
-		-v 'vSingle' 'true' -v 'vPublish' 'true' \
+	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
+		-v 'vSingle' 'true' \
+		-v 'vPublish' 'true' \
+		-c 'include <schemaDoc.bare>' \
 		-c "schemaDocMain('model.json', 'The BareScript Runtime Model')" \
 		> barescript-model.md
 
@@ -119,7 +131,6 @@ export DOC_EXPR_PY
 define DOC_LIBRARY_MODEL_PY
 import sys
 from bare_script import execute_script, fetch_read_write, log_stdout, parse_script
-from bare_script.data import AGGREGATION_TYPES
 from bare_script.library import REGEX_MATCH_TYPES, SYSTEM_FETCH_TYPES
 from bare_script.value import value_json
 
@@ -127,26 +138,37 @@ from bare_script.value import value_json
 _, type_model_path = sys.argv
 
 # Create the library type model
-types = {**AGGREGATION_TYPES, **REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
+types = {**REGEX_MATCH_TYPES, **SYSTEM_FETCH_TYPES}
 
 # Create the include library type model
 script = parse_script('''\
 include 'src/bare_script/include/args.bare'
+include 'src/bare_script/include/baredoc.bare'
+include 'src/bare_script/include/data.bare'
 include 'src/bare_script/include/dataLineChart.bare'
 include 'src/bare_script/include/dataTable.bare'
 include 'src/bare_script/include/diff.bare'
+include 'src/bare_script/include/markdown.bare'
+include 'src/bare_script/include/markdownElements.bare'
+include 'src/bare_script/include/markdownHighlight.bare'
 include 'src/bare_script/include/pager.bare'
 
 includeTypes = {}
 objectAssign(includeTypes, argsTypes)
+objectAssign(includeTypes, baredocTypes)
+objectAssign(includeTypes, dataAggregationTypes)
 objectAssign(includeTypes, dataLineChartTypes)
 objectAssign(includeTypes, dataTableTypes)
 objectAssign(includeTypes, diffTypes)
+objectAssign(includeTypes, markdownElementsTypes)
+objectAssign(includeTypes, markdownHighlightTypes)
+objectAssign(includeTypes, markdownTypes)
 objectAssign(includeTypes, pagerTypes)
 return includeTypes
 ''')
 include_types = execute_script(script, {'fetchFn': fetch_read_write, 'logFn': log_stdout})
 types.update(include_types)
+
 
 # Write the library type model
 with open(type_model_path, 'w', encoding='utf-8') as fh:
@@ -198,13 +220,15 @@ with open('$(PERF_JSON)', 'r', encoding='utf-8') as fh:
 
 # Compute the best time for each language
 best_timings = {}
+best_timing = None
 for language, time_ms in ((timing.get('language'), timing.get('timeMs')) for timing in timings):
     if language is not None and (language not in best_timings or time_ms < best_timings[language]):
         best_timings[language] = time_ms
+        best_timing = time_ms if best_timing is None else min(best_timing, time_ms)
 
 # Report the timing multiples
 for language, time_ms in sorted(best_timings.items(), key=lambda val: val[1]):
     report = f'{language} - {time_ms:.1f} milliseconds'
-    print(report if language == 'BareScript' else f'{report} ({best_timings["BareScript"] / time_ms:.1f}x)')
+    print(f'{report} ({time_ms / best_timing:.1f}x)')
 endef
 export PERF_PY

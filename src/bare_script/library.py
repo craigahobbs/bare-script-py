@@ -6,7 +6,6 @@ The BareScript library
 """
 
 import calendar
-import csv
 import datetime
 import functools
 import importlib
@@ -18,7 +17,6 @@ import urllib
 
 from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
 
-from .data import aggregate_data, add_calculated_field, filter_data, join_data, sort_data, top_data, validate_data
 from .model import validate_expression
 from .parser import parse_expression
 from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_args_validate, \
@@ -431,211 +429,6 @@ def _barescript_parse_expression(args, unused_options):
 _BARESCRIPT_PARSE_EXPRESSION_ARGS = value_args_model([
     {'name': 'exprStr', 'type': 'string'},
     {'name': 'arrayLiterals', 'type': 'boolean', 'default': True}
-])
-
-
-#
-# Coverage functions
-#
-
-
-# Coverage configuration object global variable name
-COVERAGE_GLOBAL_NAME = '__bareScriptCoverage'
-
-
-# $function: coverageGlobalGet
-# $group: coverage
-# $doc: Get the coverage global object
-# $return: The [coverage global object](https://craigahobbs.github.io/bare-script-py/model/#var.vName='CoverageGlobal')
-def _coverage_global_get(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    return globals_.get(COVERAGE_GLOBAL_NAME) if globals_ is not None else None
-
-
-# $function: coverageGlobalName
-# $group: coverage
-# $doc: Get the coverage global variable name
-# $return: The coverage global variable name
-def _coverage_global_name(unused_args, unused_options):
-    return COVERAGE_GLOBAL_NAME
-
-
-# $function: coverageStart
-# $group: coverage
-# $doc: Start coverage data collection
-def _coverage_start(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    if globals_ is not None:
-        coverage_global = {'enabled': True}
-        globals_[COVERAGE_GLOBAL_NAME] = coverage_global
-
-
-# $function: coverageStop
-# $group: coverage
-# $doc: Stop coverage data collection
-def _coverage_stop(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    if globals_ is not None:
-        coverage_global = globals_.get(COVERAGE_GLOBAL_NAME)
-        if coverage_global is not None:
-            globals_[COVERAGE_GLOBAL_NAME]['enabled'] = False
-
-
-#
-# Data functions
-#
-
-
-# $function: dataAggregate
-# $group: data
-# $doc: Aggregate a data array
-# $arg data: The data array
-# $arg aggregation: The [aggregation model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='Aggregation')
-# $return: The aggregated data array
-def _data_aggregate(args, unused_options):
-    data, aggregation = value_args_validate(_DATA_AGGREGATE_ARGS, args)
-    return aggregate_data(data, aggregation)
-
-_DATA_AGGREGATE_ARGS = value_args_model([
-    {'name': 'data', 'type': 'array'},
-    {'name': 'aggregation', 'type': 'object'}
-])
-
-
-# $function: dataCalculatedField
-# $group: data
-# $doc: Add a calculated field to a data array
-# $arg data: The data array
-# $arg fieldName: The calculated field name
-# $arg expr: The calculated field expression
-# $arg variables: Optional (default is null). A variables object the expression evaluation.
-# $return: The updated data array
-def _data_calculated_field(args, options):
-    data, field_name, expr, variables = value_args_validate(_DATA_CALCULATED_FIELD_ARGS, args)
-    return add_calculated_field(data, field_name, expr, variables, options)
-
-_DATA_CALCULATED_FIELD_ARGS = value_args_model([
-    {'name': 'data', 'type': 'array'},
-    {'name': 'fieldName', 'type': 'string'},
-    {'name': 'expr', 'type': 'string'},
-    {'name': 'variables', 'type': 'object', 'nullable': True}
-])
-
-
-# $function: dataFilter
-# $group: data
-# $doc: Filter a data array
-# $arg data: The data array
-# $arg expr: The filter expression
-# $arg variables: Optional (default is null). A variables object the expression evaluation.
-# $return: The filtered data array
-def _data_filter(args, options):
-    data, expr, variables = value_args_validate(_DATA_FILTER_ARGS, args)
-    return filter_data(data, expr, variables, options)
-
-_DATA_FILTER_ARGS = value_args_model([
-    {'name': 'data', 'type': 'array'},
-    {'name': 'expr', 'type': 'string'},
-    {'name': 'variables', 'type': 'object', 'nullable': True}
-])
-
-
-# $function: dataJoin
-# $group: data
-# $doc: Join two data arrays
-# $arg leftData: The left data array
-# $arg rightData: The right data array
-# $arg joinExpr: The [join expression](https://craigahobbs.github.io/bare-script-py/language/#expressions)
-# $arg rightExpr: Optional (default is null).
-# $arg rightExpr: The right [join expression](https://craigahobbs.github.io/bare-script-py/language/#expressions)
-# $arg isLeftJoin: Optional (default is false). If true, perform a left join (always include left row).
-# $arg variables: Optional (default is null). A variables object for join expression evaluation.
-# $return: The joined data array
-def _data_join(args, options):
-    left_data, right_data, join_expr, right_expr, is_left_join, variables = value_args_validate(_DATA_JOIN_ARGS, args)
-    return join_data(left_data, right_data, join_expr, right_expr, is_left_join, variables, options)
-
-_DATA_JOIN_ARGS = value_args_model([
-    {'name': 'leftData', 'type': 'array'},
-    {'name': 'rightData', 'type': 'array'},
-    {'name': 'joinExpr', 'type': 'string'},
-    {'name': 'rightExpr', 'type': 'string', 'nullable': True},
-    {'name': 'isLeftJoin', 'type': 'boolean', 'default': False},
-    {'name': 'variables', 'type': 'object', 'nullable': True}
-])
-
-
-# $function: dataParseCSV
-# $group: data
-# $doc: Parse CSV text to a data array
-# $arg text...: The CSV text
-# $return: The data array
-def _data_parse_csv(args, unused_options):
-    # Split the input CSV parts into lines
-    lines = []
-    for arg in args:
-        if arg is None:
-            continue
-        if value_type(arg) != 'string':
-            return None
-        lines.extend(arg.splitlines())
-
-    # Parse the CSV
-    data = list(csv.DictReader(lines, skipinitialspace=True))
-
-    # Validate the data (as CSV)
-    validate_data(data, True)
-    return data
-
-
-# $function: dataSort
-# $group: data
-# $doc: Sort a data array
-# $arg data: The data array
-# $arg sorts: The sort field-name/descending-sort tuples
-# $return: The sorted data array
-def _data_sort(args, unused_options):
-    data, sorts = value_args_validate(_DATA_SORT_ARGS, args)
-    return sort_data(data, sorts)
-
-_DATA_SORT_ARGS = value_args_model([
-    {'name': 'data', 'type': 'array'},
-    {'name': 'sorts', 'type': 'array'}
-])
-
-
-# $function: dataTop
-# $group: data
-# $doc: Keep the top rows for each category
-# $arg data: The data array
-# $arg count: The number of rows to keep (default is 1)
-# $arg categoryFields: Optional (default is null). The category fields.
-# $return: The top data array
-def _data_top(args, unused_options):
-    data, count, category_fields = value_args_validate(_DATA_TOP_ARGS, args)
-    return top_data(data, count, category_fields)
-
-_DATA_TOP_ARGS = value_args_model([
-    {'name': 'data', 'type': 'array'},
-    {'name': 'count', 'type': 'number', 'integer': True, 'gte': 1},
-    {'name': 'categoryFields', 'type': 'array', 'nullable': True}
-])
-
-
-# $function: dataValidate
-# $group: data
-# $doc: Validate a data array
-# $arg data: The data array
-# $arg csv: Optional (default is false). If true, parse value strings.
-# $return: The validated data array
-def _data_validate(args, unused_options):
-    data, csv_ = value_args_validate(_DATA_VALIDATE_ARGS, args)
-    validate_data(data, csv_)
-    return data
-
-_DATA_VALIDATE_ARGS = value_args_model([
-    {'name': 'data', 'type': 'array'},
-    {'name': 'csv', 'type': 'boolean', 'default': False}
 ])
 
 
@@ -2109,27 +1902,6 @@ _SYSTEM_GLOBAL_GET_ARGS = value_args_model([
 ])
 
 
-# System includes object global variable name
-SYSTEM_GLOBAL_INCLUDES_NAME = '__bareScriptIncludes'
-
-
-# $function: systemGlobalIncludesGet
-# $group: system
-# $doc: Get the global system includes object
-# $return: The global system includes object
-def _system_global_includes_get(unused_args, options):
-    globals_ = options.get('globals') if options is not None else None
-    return globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME) if globals_ is not None else None
-
-
-# $function: systemGlobalIncludesName
-# $group: system
-# $doc: Get the system includes object global variable name
-# $return: The system includes object global variable name
-def _system_global_includes_name(unused_args, unused_options):
-    return SYSTEM_GLOBAL_INCLUDES_NAME
-
-
 # $function: systemGlobalSet
 # $group: system
 # $doc: Set a global variable value
@@ -2285,18 +2057,6 @@ SCRIPT_FUNCTIONS = {
     'arraySort': _array_sort,
     'barescriptEvaluateExpression': _barescript_evaluate_expression,
     'barescriptParseExpression': _barescript_parse_expression,
-    'coverageGlobalGet': _coverage_global_get,
-    'coverageGlobalName': _coverage_global_name,
-    'coverageStart': _coverage_start,
-    'coverageStop': _coverage_stop,
-    'dataAggregate': _data_aggregate,
-    'dataCalculatedField': _data_calculated_field,
-    'dataFilter': _data_filter,
-    'dataJoin': _data_join,
-    'dataParseCSV': _data_parse_csv,
-    'dataSort': _data_sort,
-    'dataTop': _data_top,
-    'dataValidate': _data_validate,
     'datetimeDay': _datetime_day,
     'datetimeHour': _datetime_hour,
     'datetimeISOFormat': _datetime_iso_format,
@@ -2377,8 +2137,6 @@ SCRIPT_FUNCTIONS = {
     'systemCompare': _system_compare,
     'systemFetch': _system_fetch,
     'systemGlobalGet': _system_global_get,
-    'systemGlobalIncludesGet': _system_global_includes_get,
-    'systemGlobalIncludesName': _system_global_includes_name,
     'systemGlobalSet': _system_global_set,
     'systemIs': _system_is,
     'systemLog': _system_log,

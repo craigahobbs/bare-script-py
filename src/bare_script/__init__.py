@@ -5,24 +5,17 @@
 bare-script package
 """
 
-from .data import \
-    add_calculated_field, \
-    aggregate_data, \
-    filter_data, \
-    join_data, \
-    sort_data, \
-    top_data, \
-    validate_data
-
 from .model import \
     lint_script, \
     validate_expression, \
     validate_script
 
 from .options import \
+    FETCH_SYSTEM_PREFIX, \
     fetch_http, \
     fetch_read_only, \
     fetch_read_write, \
+    fetch_system, \
     log_stdout, \
     url_file_relative
 
