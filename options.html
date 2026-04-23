@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Options &#8212; bare-script 3.8.23 documentation</title>
+    <title>Options &#8212; bare-script 4.0.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=de1343b3"></script>
+    <script src="_static/documentation_options.js?v=3304f9e4"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -60,7 +60,6 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="scripts.html">Scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="expressions.html">Expressions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data.html">Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="errors.html">Errors</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Options</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#executescriptoptions">ExecuteScriptOptions</a></li>
@@ -191,6 +190,19 @@ and POST for URLs, otherwise read-only file system access</p>
 <span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_read_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_read_write" title="Link to this definition">¶</a></dt>
 <dd><p>A <a class="reference internal" href="#fetch_fn" title="fetch_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch</span> <span class="pre">function</span></code></a> implementation that fetches resources that uses HTTP GET
 and POST for URLs, otherwise read-write file system access</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.fetch_system">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">fetch_system</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fetch_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.fetch_system" title="Link to this definition">¶</a></dt>
+<dd><p>A partial <a class="reference internal" href="#fetch_fn" title="fetch_fn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch</span> <span class="pre">function</span></code></a> implementation that fetches system includes from
+the local package, otherwise falls back to the first argument, <cite>fetch_fn</cite>, unless None.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="bare_script.FETCH_SYSTEM_PREFIX">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">FETCH_SYSTEM_PREFIX</span></span><a class="headerlink" href="#bare_script.FETCH_SYSTEM_PREFIX" title="Link to this definition">¶</a></dt>
+<dd><p>The system include prefix to use in conjunction with the <cite>fetchSystem</cite> function.</p>
 </dd></dl>
 
 </section>
