@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.0.1 (2026-04-23)
+
+- [c41098e](https://github.com/craigahobbs/bare-script-py/commit/c41098e) - update baredocCLI docs
+
+- [29e15a8](https://github.com/craigahobbs/bare-script-py/commit/29e15a8) - fix fetchSystem on windows
+
 ## 4.0.0 (2026-04-23)
 
 - [8adb6d3](https://github.com/craigahobbs/bare-script-py/commit/8adb6d3)
