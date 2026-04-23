@@ -51,7 +51,7 @@ doc:
 
     # Generate the library documentation
 	$(DEFAULT_VENV_BIN)/bare -m \
-		-v 'vFiles' "'$$(jq -n --args '$$ARGS.positional' src/bare_script/library.py src/bare_script/include/*.bare)'" \
+		-v 'vFiles' "'$$($(DEFAULT_VENV_PYTHON) -c 'import json; import sys; print(json.dumps(sys.argv[1:]))' src/bare_script/library.py src/bare_script/include/*.bare)'" \
 		-v 'vOutput' "'build/doc/html/library/library.json'" \
 		-c 'include <baredocCLI.bare>' \
 		-c 'return baredocCLIMain()'

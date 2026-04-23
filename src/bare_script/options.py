@@ -99,7 +99,7 @@ def fetch_system(fetch_fn, request):
 
 
 # The system include prefix to use in conjunction with the `fetchSystem` function.
-FETCH_SYSTEM_PREFIX = ':bare-include:/'
+FETCH_SYSTEM_PREFIX = ':bare-include:' + os.sep
 
 
 def log_stdout(text):
