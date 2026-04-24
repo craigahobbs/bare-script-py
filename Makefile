@@ -47,7 +47,9 @@ test-include: $(DEFAULT_VENV_BUILD)
 
 doc:
     # Copy statics
-	cp -R static/* build/doc/html
+	cp -R static/* build/doc/html/
+	cp -R src/bare_script/include build/doc/html/
+	rm -rf build/doc/html/include/__pycache__
 
     # Generate the library documentation
 	$(DEFAULT_VENV_BIN)/bare -m \
