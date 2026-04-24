@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.2 (2026-04-24)
+
+- [5936abe](https://github.com/craigahobbs/bare-script-py/commit/5936abe) - define dataLineChart option fontSize in pixels
+
 ## 4.0.1 (2026-04-23)
 
 - [c41098e](https://github.com/craigahobbs/bare-script-py/commit/c41098e) - update baredocCLI docs
