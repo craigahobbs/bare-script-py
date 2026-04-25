@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.0.3 (2026-04-25)
+
+- [34087ef](https://github.com/craigahobbs/bare-script-py/commit/34087ef) - dataLineChart.bare uses documentFontSize if available
+
+- [4d4536a](https://github.com/craigahobbs/bare-script-py/commit/4d4536a) - simplify value_boolean
+
+- [fce8886](https://github.com/craigahobbs/bare-script-py/commit/fce8886) - simplify value_boolean
+
 ## 4.0.2 (2026-04-24)
 
 - [5936abe](https://github.com/craigahobbs/bare-script-py/commit/5936abe) - define dataLineChart option fontSize in pixels
