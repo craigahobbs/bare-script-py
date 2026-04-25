@@ -145,16 +145,14 @@ def value_boolean(value):
 
     if value is None:
         return False
-    elif isinstance(value, str):
-        return value != ''
     elif isinstance(value, bool):
         return value
-    elif isinstance(value, (int, float)):
-        return value != 0
-    elif isinstance(value, datetime.date):
-        return True
     elif isinstance(value, list):
         return len(value) != 0
+    elif isinstance(value, str):
+        return value != ''
+    elif isinstance(value, (int, float)):
+        return value != 0
 
     # Everything else is true
     return True
