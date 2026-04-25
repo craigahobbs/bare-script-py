@@ -143,19 +143,17 @@ def value_boolean(value):
     :rtype: bool
     """
 
-    if value is None:
-        return False
-    elif isinstance(value, bool):
+    if isinstance(value, bool):
         return value
-    elif isinstance(value, list):
-        return len(value) != 0
     elif isinstance(value, str):
         return value != ''
     elif isinstance(value, (int, float)):
         return value != 0
+    elif isinstance(value, list):
+        return len(value) != 0
 
-    # Everything else is true
-    return True
+    # Everything else non-null is true
+    return value is not None
 
 
 def value_is(value1, value2):
