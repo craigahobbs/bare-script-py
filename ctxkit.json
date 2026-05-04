@@ -1,0 +1,11 @@
+{
+    "items": [
+        {"file": "README.md"},
+        {"file": "setup.cfg"},
+        {"file": "setup.py"},
+        {"file": "Makefile"},
+        {"dir": {"path": "src", "exts": ["py", "bare", "c"]}},
+        {"file": "ctxkit-ideas.md"},
+        {"file": "ctxkit.md"}
+    ]
+}

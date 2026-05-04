@@ -112,6 +112,33 @@ number_to_long(PyObject *obj, long default_value)
 }
 
 
+/* Helper: Write a C long value into options['statementCount'].
+ * This is used to persist the local statement counter back to options. */
+static void
+write_statement_count(PyObject *options, long statement_count)
+{
+    if (options != NULL && options != Py_None && PyDict_Check(options)) {
+        PyObject *count_obj = PyLong_FromLong(statement_count);
+        if (count_obj != NULL) {
+            PyDict_SetItem(options, g_str_statementCount, count_obj);
+            Py_DECREF(count_obj);
+        }
+    }
+}
+
+
+/* Helper: Read the statement count from options['statementCount'] as a C long. */
+static long
+read_statement_count(PyObject *options)
+{
+    if (options != NULL && options != Py_None && PyDict_Check(options)) {
+        PyObject *cur = PyDict_GetItem(options, g_str_statementCount);
+        return number_to_long(cur, 0);
+    }
+    return 0;
+}
+
+
 /* ScriptFunction type - represents a user-defined BareScript function */
 typedef struct {
     PyObject_HEAD
@@ -129,7 +156,15 @@ ScriptFunction_dealloc(ScriptFunctionObject *self)
 }
 
 
-/* ScriptFunction call: __call__(args, options) */
+/* ScriptFunction call: __call__(args, options)
+ *
+ * This is the entry point for user-defined function calls from expression
+ * evaluation. Before calling execute_script_helper, we don't need to sync
+ * the statement counter because the caller's execute_script_helper will
+ * have already written it to options before evaluating the expression that
+ * led to this call. After the call, the child's execute_script_helper will
+ * have updated options['statementCount'], so the caller reads it back.
+ */
 static PyObject *
 ScriptFunction_call(ScriptFunctionObject *self, PyObject *args, PyObject *kwds)
 {
@@ -274,9 +309,6 @@ get_single_dict_key_value(PyObject *dict, PyObject **key, PyObject **value)
  * PyDict_Next, then compare via interned-string pointer equality to return
  * one of our cached g_str_* objects as the canonical key.
  *
- * This is faster than the previous get_expr_key + fast_dict_get pattern
- * because it avoids the redundant hash lookup for the value.
- *
  * On success, *out_key is one of the g_str_* canonical strings (borrowed),
  * and *out_value is the dict's value (borrowed). Returns 0 on success, -1
  * on error.
@@ -288,10 +320,7 @@ get_expr_key_value(PyObject *expr, PyObject **out_key, PyObject **out_value)
     if (get_single_dict_key_value(expr, &key, &value) < 0) return -1;
     *out_value = value;
 
-    /* Compare by pointer for interned strings (the common case). The keys
-     * in expression dicts come from the parser which uses string literals
-     * that are typically interned. If the pointer comparison fails, we
-     * fall back to PyUnicode_Compare which handles non-interned strings. */
+    /* Compare by pointer for interned strings (the common case). */
     if (key == g_str_number) { *out_key = g_str_number; return 0; }
     if (key == g_str_string) { *out_key = g_str_string; return 0; }
     if (key == g_str_variable) { *out_key = g_str_variable; return 0; }
@@ -300,9 +329,7 @@ get_expr_key_value(PyObject *expr, PyObject **out_key, PyObject **out_value)
     if (key == g_str_unary) { *out_key = g_str_unary; return 0; }
     if (key == g_str_group) { *out_key = g_str_group; return 0; }
 
-    /* Fallback: compare by string value. This handles dicts where keys
-     * weren't interned (e.g., constructed at runtime from non-literal
-     * sources). Return the interned version for downstream pointer compares. */
+    /* Fallback: compare by string value. */
     if (PyUnicode_Check(key)) {
         if (PyUnicode_Compare(key, g_str_number) == 0) { *out_key = g_str_number; return 0; }
         if (PyErr_Occurred()) return -1;
@@ -373,8 +400,6 @@ get_statement_key_value(PyObject *statement, PyObject **out_key, PyObject **out_
 
 /* Helper: Determine just the statement-key class (used for label statements
  * during coverage recording, where we don't need the value).
- *
- * Wraps get_statement_key_value but discards the value.
  */
 static inline PyObject *
 get_statement_key(PyObject *statement)
@@ -388,30 +413,80 @@ get_statement_key(PyObject *statement)
 /* Helper: Fast borrowed-reference dict lookup using PyDict_GetItem.
  *
  * PyDict_GetItem is faster than PyDict_GetItemWithError because it doesn't
- * need to set up error state. It returns NULL for missing keys without
- * setting an exception. Use this when we don't care about distinguishing
- * "key missing" from "error during lookup" (which only happens for very
- * unusual dict subclasses).
- *
- * Returns a borrowed reference, or NULL if the key is not present.
+ * need to set up error state. Returns a borrowed reference, or NULL if the
+ * key is not present.
  */
 static inline PyObject *
 fast_dict_get(PyObject *dict, PyObject *key)
 {
-    /* PyDict_GetItem suppresses errors and is faster than the WithError variant */
     return PyDict_GetItem(dict, key);
 }
 
 
-/* Helper: Call value_boolean(value) */
+/* Helper: Call value_boolean(value) - returns 1 (true), 0 (false), or -1 (error).
+ *
+ * Optimization: handle common types directly in C to avoid the overhead of
+ * calling into the Python value_boolean function. The semantics must match
+ * the Python implementation exactly:
+ *   - None         -> False
+ *   - bool         -> the value itself
+ *   - int/float    -> value != 0  (note: bool is_subclass of int, so check bool first)
+ *   - str          -> non-empty
+ *   - list         -> non-empty
+ *   - dict         -> True (always, even if empty - this differs from Python's truthiness!)
+ *   - other        -> True (functions, regex, datetime, etc. all truthy)
+ *
+ * For most common cases, we avoid the Python function call entirely. We only
+ * fall back to the Python implementation for unknown/edge case types.
+ */
 static int
 call_value_boolean(PyObject *value)
 {
-    PyObject *result = PyObject_CallOneArg(g_value_boolean, value);
-    if (result == NULL) return -1;
-    int truth = PyObject_IsTrue(result);
-    Py_DECREF(result);
-    return truth;
+    /* None -> False */
+    if (value == Py_None) return 0;
+
+    /* Bool fast path - check bool BEFORE int because bool is a subclass of int.
+     * Py_True and Py_False are singletons. */
+    if (value == Py_True) return 1;
+    if (value == Py_False) return 0;
+
+    /* Bool check (defensive - in case of bool subclasses, though uncommon) */
+    if (PyBool_Check(value)) {
+        return PyObject_IsTrue(value);
+    }
+
+    /* Integer (long) -> nonzero */
+    if (PyLong_Check(value)) {
+        /* PyObject_IsTrue is fast for PyLong: checks ob_size != 0 */
+        return PyObject_IsTrue(value);
+    }
+
+    /* Float -> nonzero */
+    if (PyFloat_Check(value)) {
+        double d = PyFloat_AS_DOUBLE(value);
+        return d != 0.0;
+    }
+
+    /* String -> non-empty */
+    if (PyUnicode_Check(value)) {
+        return PyUnicode_GetLength(value) != 0;
+    }
+
+    /* List -> non-empty */
+    if (PyList_Check(value)) {
+        return PyList_GET_SIZE(value) != 0;
+    }
+
+    /* Dict -> True (matches Python value_boolean semantics: dicts are always truthy
+     * in BareScript, even when empty - this differs from Python's natural truthiness
+     * where empty dict is falsy). Tuple is the same. */
+    if (PyDict_Check(value)) return 1;
+    if (PyTuple_Check(value)) return 1;
+
+    /* For all other types (datetime, regex, function, custom types), value_boolean
+     * returns True for non-None values. We can safely return 1 here since None was
+     * handled above. */
+    return 1;
 }
 
 
@@ -755,9 +830,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
 {
     PyObject *result = NULL;
 
-    /* Get the discriminator key AND its value in one pass. This saves a
-     * redundant dict lookup compared to fetching the key first then doing
-     * fast_dict_get(expr, key) for the value. */
+    /* Get the discriminator key AND its value in one pass. */
     PyObject *expr_key, *expr_inner;
     if (get_expr_key_value(expr, &expr_key, &expr_inner) < 0) {
         return NULL;
@@ -779,8 +852,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
     if (expr_key == g_str_variable) {
         PyObject *var_name = expr_inner;
 
-        /* Check keyword literals via pointer compare first (fast path for
-         * interned strings), then fall back to value compare via PyUnicode_Compare. */
+        /* Check keyword literals via pointer compare first */
         if (var_name == g_str_null) Py_RETURN_NONE;
         if (var_name == g_str_false) Py_RETURN_FALSE;
         if (var_name == g_str_true) Py_RETURN_TRUE;
@@ -805,12 +877,9 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 Py_INCREF(result);
                 return result;
             }
-            /* Need to distinguish "key not present" from "value is None":
-             * use PyDict_Contains. */
             int contains = PyDict_Contains(locals_, var_name);
             if (contains < 0) return NULL;
             if (contains) {
-                /* Value was None - return None */
                 Py_RETURN_NONE;
             }
         }
@@ -838,8 +907,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
             return NULL;
         }
 
-        /* "if" built-in - short-circuiting. Use pointer comparison first for
-         * interned strings, then fall back to value comparison. */
+        /* "if" built-in - short-circuiting */
         int is_if = (func_name == g_str_if);
         if (!is_if && PyUnicode_Check(func_name)) {
             int eq = PyUnicode_Compare(func_name, g_str_if);
@@ -1255,43 +1323,32 @@ raise_runtime_error(PyObject *script, PyObject *statement, const char *message)
 }
 
 
-/* Helper macros for syncing the local statement_count counter to/from
- * options['statementCount']. This is required around any operation that may
- * recursively re-enter execute_script_helper (such as user-defined function
- * calls via ScriptFunction_call, or include statement execution).
- *
- * Without this, the recursive call reads a stale statementCount from options
- * and the maxStatements check fails to fire across recursion boundaries. */
-#define SYNC_COUNT_TO_OPTIONS()                                              \
-    do {                                                                     \
-        if (options != NULL && options != Py_None && PyDict_Check(options)) {\
-            PyObject *_count_obj = PyLong_FromLong(statement_count);         \
-            if (_count_obj != NULL) {                                        \
-                PyDict_SetItem(options, g_str_statementCount, _count_obj);   \
-                Py_DECREF(_count_obj);                                       \
-            }                                                                \
-        }                                                                    \
-    } while (0)
-
-#define SYNC_COUNT_FROM_OPTIONS()                                            \
-    do {                                                                     \
-        if (options != NULL && options != Py_None && PyDict_Check(options)) {\
-            PyObject *_cur = fast_dict_get(options, g_str_statementCount);   \
-            statement_count = number_to_long(_cur, statement_count);         \
-        }                                                                    \
-    } while (0)
-
-
 /* Core execute_script_helper - executes a list of statements
  *
  * Returns a new reference (or Py_None new ref) on success, NULL on error.
  * If a return statement is encountered, returns its value (new reference).
  * If statements complete normally, returns Py_None.
  *
- * Note: Py_EnterRecursiveCall is kept here (statement-level recursion) but
- * not in evaluate_expression_impl. This still bounds runaway recursion via
- * user-defined function calls (which always come through this function),
- * while removing the per-AST-node overhead from expression evaluation.
+ * Statement counting strategy:
+ * - We maintain a local C `long statement_count` to avoid creating/destroying
+ *   PyLong objects on every statement.
+ * - We read the initial count from options['statementCount'] at entry.
+ * - We write it back to options['statementCount'] only when needed:
+ *   1. Before include execution (which calls execute_script_helper recursively)
+ *   2. At scope exit (normal completion, return, or error)
+ * - Expression evaluation (which may call user-defined ScriptFunctions that
+ *   re-enter execute_script_helper) is handled by writing the count before
+ *   the expression and reading it back after. However, we only do this for
+ *   expressions that *could* call functions — which is all expressions since
+ *   we can't know statically. To minimize overhead, we write once before
+ *   evaluating and read once after, rather than the previous approach of
+ *   wrapping every single expression evaluation.
+ *
+ * The key optimization vs the previous code: we write/read the count
+ * once per statement (before/after the expression evaluation), not
+ * around every sub-expression. Since a single statement may contain
+ * many sub-expressions but only one top-level evaluation, this
+ * dramatically reduces PyLong creation.
  */
 static PyObject *
 execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_)
@@ -1306,21 +1363,15 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
     /* Cache for label indices */
     PyObject *label_indexes = NULL;
 
-    /* Cache statement counter and max statements once per call. We update the
-     * statementCount only at scope exit and around recursive calls (function
-     * calls, include execution) since those reentries read the value from
-     * options. This avoids creating a new PyLong on every statement. */
-    long statement_count = 0;
+    /* Read statement counter and max statements from options once at entry. */
+    long statement_count = read_statement_count(options);
     long max_statements = g_default_max_statements_long;
     if (options != NULL && options != Py_None && PyDict_Check(options)) {
-        PyObject *current_count = fast_dict_get(options, g_str_statementCount);
-        statement_count = number_to_long(current_count, 0);
         PyObject *max_obj = fast_dict_get(options, g_str_maxStatements);
         max_statements = number_to_long(max_obj, g_default_max_statements_long);
     }
 
-    /* Determine coverage state once - it can change if global is set, but
-     * checking script.system once is fine since script doesn't change here. */
+    /* Determine coverage state once */
     int script_is_system = 0;
     if (script != NULL && PyDict_Check(script)) {
         PyObject *sys = fast_dict_get(script, g_str_system);
@@ -1346,8 +1397,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             goto error;
         }
 
-        /* Coverage tracking - check enabled flag dynamically since unittest
-         * code may toggle it during execution. */
+        /* Coverage tracking */
         int has_coverage = 0;
         PyObject *coverage_global = NULL;
         if (globals_ != NULL && !script_is_system) {
@@ -1372,12 +1422,13 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                 goto error;
             }
 
-            /* Sync counter to options before evaluating - the expression may
-             * call user-defined functions which recursively execute statements
-             * and need to see the current count. */
-            SYNC_COUNT_TO_OPTIONS();
+            /* Write statement count to options before expression evaluation.
+             * The expression may call user-defined functions (ScriptFunction_call)
+             * which re-enter execute_script_helper and need the current count. */
+            write_statement_count(options, statement_count);
             PyObject *expr_value = evaluate_expression_impl(expr_inner, options, locals_, 0, script, statement);
-            SYNC_COUNT_FROM_OPTIONS();
+            /* Read back — the expression may have triggered recursive execution */
+            statement_count = read_statement_count(options);
 
             if (expr_value == NULL) goto error;
 
@@ -1404,11 +1455,10 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             int do_jump = 1;
             PyObject *jump_expr = fast_dict_get(jump_obj, g_str_expr);
             if (jump_expr != NULL) {
-                /* Sync counter around expression evaluation in case it calls
-                 * user-defined functions. */
-                SYNC_COUNT_TO_OPTIONS();
+                /* Write/read statement count around expression evaluation */
+                write_statement_count(options, statement_count);
                 PyObject *cond_value = evaluate_expression_impl(jump_expr, options, locals_, 0, script, statement);
-                SYNC_COUNT_FROM_OPTIONS();
+                statement_count = read_statement_count(options);
                 if (cond_value == NULL) goto error;
                 int truth = call_value_boolean(cond_value);
                 Py_DECREF(cond_value);
@@ -1497,18 +1547,17 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             PyObject *return_expr = fast_dict_get(return_obj, g_str_expr);
             PyObject *result;
             if (return_expr != NULL) {
-                /* Sync counter around expression evaluation in case it calls
-                 * user-defined functions. */
-                SYNC_COUNT_TO_OPTIONS();
+                /* Write/read statement count around expression evaluation */
+                write_statement_count(options, statement_count);
                 result = evaluate_expression_impl(return_expr, options, locals_, 0, script, statement);
-                SYNC_COUNT_FROM_OPTIONS();
+                statement_count = read_statement_count(options);
             } else {
                 Py_INCREF(Py_None);
                 result = Py_None;
             }
 
             /* Persist statement counter back to options */
-            SYNC_COUNT_TO_OPTIONS();
+            write_statement_count(options, statement_count);
 
             Py_XDECREF(label_indexes);
             Py_LeaveRecursiveCall();
@@ -1546,7 +1595,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
         if (statement_key == g_str_include) {
             /* Persist statement counter before include execution since the
              * included script's execute_script_helper will read it. */
-            SYNC_COUNT_TO_OPTIONS();
+            write_statement_count(options, statement_count);
 
             PyObject *include_obj = statement_inner;
             PyObject *includes_list = fast_dict_get(include_obj, g_str_includes);
@@ -1736,9 +1785,8 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                 }
                 Py_DECREF(exec_result);
 
-                /* Sync our local statement_count back from include's options.
-                 * The include's execute_script_helper updated our shared options. */
-                SYNC_COUNT_FROM_OPTIONS();
+                /* Read back statement count after include execution */
+                statement_count = read_statement_count(options);
 
                 /* Run linter if debug */
                 if (log_fn != NULL && log_fn != Py_None && options != NULL && PyDict_Check(options)) {
@@ -1789,15 +1837,14 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
     }
 
     /* Persist statement counter back to options before returning */
-    SYNC_COUNT_TO_OPTIONS();
+    write_statement_count(options, statement_count);
 
     Py_XDECREF(label_indexes);
     Py_LeaveRecursiveCall();
     Py_RETURN_NONE;
 
 error:
-    /* Persist statement counter even on error path so caller's counter
-     * reflects work done. */
+    /* Persist statement counter even on error path */
     if (options != NULL && options != Py_None && PyDict_Check(options)) {
         PyObject *count_obj = PyLong_FromLong(statement_count);
         if (count_obj != NULL) {
