@@ -25,6 +25,12 @@ from .parser import \
     parse_script
 
 from .runtime import \
-    BareScriptRuntimeError, \
-    evaluate_expression, \
-    execute_script
+    BareScriptRuntimeError
+try:
+    from .runtime_c import \
+        evaluate_expression, \
+        execute_script
+except ImportError:
+    from .runtime import \
+        evaluate_expression, \
+        execute_script

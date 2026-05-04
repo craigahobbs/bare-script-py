@@ -27,7 +27,10 @@ from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_arg
 # Helper to dynamically import evaluate_expression to avoid the circular dependency
 def _import_evaluate_expression():
     if not _EVALUATE_EXPRESSION:
-        _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
+        try:
+            _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime_c').evaluate_expression)
+        except ImportError:
+            _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
     return _EVALUATE_EXPRESSION[0]
 
 _EVALUATE_EXPRESSION = []

@@ -13,7 +13,11 @@ import time
 from .model import lint_script
 from .options import FETCH_SYSTEM_PREFIX, fetch_read_write, fetch_system, log_stdout, url_file_relative
 from .parser import parse_expression, parse_script
-from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME, evaluate_expression, execute_script
+from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME
+try:
+    from .runtime_c import evaluate_expression, execute_script
+except ImportError:
+    from .runtime import evaluate_expression, execute_script
 from .value import value_boolean
 
 
