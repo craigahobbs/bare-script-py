@@ -89,7 +89,7 @@ static PyObject *g_str___barescriptIncludes = NULL;
 static PyObject *evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *globals_,
                                            PyObject *locals_, int builtins, PyObject *script,
                                            PyObject *statement, long *stmt_count);
-static PyObject *execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_);
+static PyObject *execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_, PyObject *cached_label_indexes);
 
 
 /* Helper: Convert a number-like Python object (int or float) to long.
@@ -147,6 +147,15 @@ typedef struct {
     vectorcallfunc vectorcall;  /* Required for Py_TPFLAGS_HAVE_VECTORCALL fast-call path */
     PyObject *script;     /* The script that contains this function */
     PyObject *function;   /* The function definition statement's "function" dict */
+    /* Cached fields extracted from the function dict at construction time so
+     * we avoid 3 dict lookups per call. arg_names and statements are borrowed
+     * refs into self->function (kept alive by self->function). */
+    PyObject *arg_names;       /* function['args'] list (borrowed; or NULL) */
+    PyObject *statements;      /* function['statements'] list (borrowed; or NULL) */
+    int last_arg_array;        /* function['lastArgArray'] truthy? */
+    /* Precomputed label name → statement index dict, shared across all calls
+     * of this function. NULL if the function has no label statements. */
+    PyObject *label_indexes;
 } ScriptFunctionObject;
 
 static PyObject *ScriptFunction_vectorcall(PyObject *op, PyObject *const *args,
@@ -158,6 +167,7 @@ ScriptFunction_dealloc(ScriptFunctionObject *self)
 {
     Py_XDECREF(self->script);
     Py_XDECREF(self->function);
+    Py_XDECREF(self->label_indexes);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -188,25 +198,12 @@ ScriptFunction_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, Py
     PyObject *func_locals = PyDict_New();
     if (func_locals == NULL) return NULL;
 
-    PyObject *func_args = PyDict_GetItemWithError(self->function, g_str_args);
-    if (func_args == NULL && PyErr_Occurred()) {
-        Py_DECREF(func_locals);
-        return NULL;
-    }
-
-    if (func_args != NULL && PyList_Check(func_args)) {
+    PyObject *func_args = self->arg_names;  /* cached from ScriptFunction_new */
+    if (func_args != NULL) {
         Py_ssize_t func_args_length = PyList_GET_SIZE(func_args);
         Py_ssize_t args_length = (call_args != Py_None && PyList_Check(call_args))
             ? PyList_GET_SIZE(call_args) : 0;
-
-        /* Get lastArgArray flag */
-        PyObject *last_arg_array_obj = PyDict_GetItemWithError(self->function, g_str_lastArgArray);
-        if (last_arg_array_obj == NULL && PyErr_Occurred()) {
-            Py_DECREF(func_locals);
-            return NULL;
-        }
-        int last_arg_array = (last_arg_array_obj != NULL && PyObject_IsTrue(last_arg_array_obj) == 1);
-        Py_ssize_t ix_arg_last = last_arg_array ? (func_args_length - 1) : -1;
+        Py_ssize_t ix_arg_last = self->last_arg_array ? (func_args_length - 1) : -1;
 
         for (Py_ssize_t ix_arg = 0; ix_arg < func_args_length; ix_arg++) {
             PyObject *arg_name = PyList_GET_ITEM(func_args, ix_arg);
@@ -247,15 +244,18 @@ ScriptFunction_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, Py
         }
     }
 
-    PyObject *func_statements = PyDict_GetItemWithError(self->function, g_str_statements);
+    PyObject *func_statements = self->statements;  /* cached from ScriptFunction_new */
     if (func_statements == NULL) {
-        if (!PyErr_Occurred()) PyErr_SetString(PyExc_KeyError, "statements");
+        PyErr_SetString(PyExc_KeyError, "statements");
         Py_DECREF(func_locals);
         return NULL;
     }
 
     PyObject *opts = (options == Py_None) ? NULL : options;
-    PyObject *result = execute_script_helper(self->script, func_statements, opts, func_locals);
+    /* Pass shared label_indexes cache so repeat calls of this function don't
+     * rebuild the label dict — it depends only on the (immutable) statements
+     * list, which is identical across all calls of this ScriptFunction. */
+    PyObject *result = execute_script_helper(self->script, func_statements, opts, func_locals, self->label_indexes);
     Py_DECREF(func_locals);
     return result;
 }
@@ -274,7 +274,10 @@ static PyTypeObject ScriptFunctionType = {
 };
 
 
-/* Create a new ScriptFunction */
+/* Create a new ScriptFunction. Caches `args`, `statements`, `lastArgArray`, and
+ * a precomputed label-name → statement-index dict from the function's
+ * statements list. Building these once at function definition time avoids
+ * repeated dict lookups (and label rebuilding) on every call. */
 static PyObject *
 ScriptFunction_new(PyObject *script, PyObject *function)
 {
@@ -285,6 +288,65 @@ ScriptFunction_new(PyObject *script, PyObject *function)
     Py_INCREF(function);
     self->script = script;
     self->function = function;
+    self->arg_names = NULL;
+    self->statements = NULL;
+    self->last_arg_array = 0;
+    self->label_indexes = NULL;
+
+    /* Cache args list */
+    PyObject *args_obj = PyDict_GetItemWithError(function, g_str_args);
+    if (args_obj == NULL) {
+        if (PyErr_Occurred()) PyErr_Clear();
+    } else if (PyList_Check(args_obj)) {
+        self->arg_names = args_obj;  /* borrowed, kept alive by self->function */
+    }
+
+    /* Cache lastArgArray flag */
+    PyObject *last_arg_array_obj = PyDict_GetItemWithError(function, g_str_lastArgArray);
+    if (last_arg_array_obj == NULL) {
+        if (PyErr_Occurred()) PyErr_Clear();
+    } else if (PyObject_IsTrue(last_arg_array_obj) == 1) {
+        self->last_arg_array = 1;
+    } else if (PyErr_Occurred()) {
+        PyErr_Clear();
+    }
+
+    /* Cache statements list and precompute label indexes */
+    PyObject *statements = PyDict_GetItemWithError(function, g_str_statements);
+    if (statements == NULL) {
+        if (PyErr_Occurred()) PyErr_Clear();
+    } else if (PyList_Check(statements)) {
+        self->statements = statements;  /* borrowed */
+        Py_ssize_t n = PyList_GET_SIZE(statements);
+        PyObject *labels = NULL;
+        for (Py_ssize_t i = 0; i < n; i++) {
+            PyObject *stmt = PyList_GET_ITEM(statements, i);
+            if (!PyDict_Check(stmt)) continue;
+            PyObject *label_obj = PyDict_GetItemWithError(stmt, g_str_label);
+            if (label_obj == NULL) {
+                if (PyErr_Occurred()) PyErr_Clear();
+                continue;
+            }
+            PyObject *label_name = PyDict_GetItemWithError(label_obj, g_str_name);
+            if (label_name == NULL) {
+                if (PyErr_Occurred()) PyErr_Clear();
+                continue;
+            }
+            if (labels == NULL) {
+                labels = PyDict_New();
+                if (labels == NULL) { PyErr_Clear(); break; }
+            }
+            PyObject *idx = PyLong_FromSsize_t(i);
+            if (idx == NULL) { PyErr_Clear(); break; }
+            if (PyDict_SetItem(labels, label_name, idx) < 0) {
+                Py_DECREF(idx);
+                PyErr_Clear();
+                break;
+            }
+            Py_DECREF(idx);
+        }
+        self->label_indexes = labels;
+    }
     return (PyObject *)self;
 }
 
@@ -1405,7 +1467,7 @@ raise_runtime_error(PyObject *script, PyObject *statement, const char *message)
  * dramatically reduces PyLong creation.
  */
 static PyObject *
-execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_)
+execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_, PyObject *cached_label_indexes)
 {
     if (Py_EnterRecursiveCall(" while executing BareScript")) {
         return NULL;
@@ -1414,8 +1476,11 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
     /* Get globals from options */
     PyObject *globals_ = (options != NULL && options != Py_None) ? get_globals(options) : NULL;
 
-    /* Cache for label indices */
-    PyObject *label_indexes = NULL;
+    /* Cache for label indices. If the caller (e.g. ScriptFunction_vectorcall)
+     * supplied a pre-built dict, borrow it; we still build lazily for any
+     * unknown labels. The borrowed flag tracks whether we own the ref. */
+    PyObject *label_indexes = cached_label_indexes;
+    int label_indexes_owned = 0;
 
     /* Read statement counter and max statements from options once at entry. */
     long statement_count = read_statement_count(options);
@@ -1559,10 +1624,12 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                         goto error;
                     }
 
-                    /* Cache it */
+                    /* Cache it. If we don't own a label_indexes dict yet (no
+                     * cached one was passed), allocate a private one we own. */
                     if (label_indexes == NULL) {
                         label_indexes = PyDict_New();
                         if (label_indexes == NULL) goto error;
+                        label_indexes_owned = 1;
                     }
                     PyObject *idx_obj = PyLong_FromSsize_t(target_index);
                     if (idx_obj == NULL) goto error;
@@ -1607,7 +1674,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             write_statement_count(options, statement_count);
 
             Py_XDECREF(coverage_global_cached);
-            Py_XDECREF(label_indexes);
+            if (label_indexes_owned) Py_XDECREF(label_indexes);
             Py_LeaveRecursiveCall();
             return result;
         }
@@ -1824,7 +1891,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                     Py_DECREF(include_url);
                     goto error;
                 }
-                PyObject *exec_result = execute_script_helper(include_script, include_statements, include_options, NULL);
+                PyObject *exec_result = execute_script_helper(include_script, include_statements, include_options, NULL, NULL);
                 if (exec_result == NULL) {
                     Py_DECREF(include_options);
                     Py_DECREF(include_script);
@@ -1888,7 +1955,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
     write_statement_count(options, statement_count);
 
     Py_XDECREF(coverage_global_cached);
-    Py_XDECREF(label_indexes);
+    if (label_indexes_owned) Py_XDECREF(label_indexes);
     Py_LeaveRecursiveCall();
     Py_RETURN_NONE;
 
@@ -1906,7 +1973,7 @@ error:
         }
     }
     Py_XDECREF(coverage_global_cached);
-    Py_XDECREF(label_indexes);
+    if (label_indexes_owned) Py_XDECREF(label_indexes);
     Py_LeaveRecursiveCall();
     return NULL;
 }
@@ -2029,7 +2096,7 @@ runtime_c_execute_script(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
-    PyObject *result = execute_script_helper(script, statements, options_dict, NULL);
+    PyObject *result = execute_script_helper(script, statements, options_dict, NULL, NULL);
     if (options_owned) Py_DECREF(options_dict);
     return result;
 }
