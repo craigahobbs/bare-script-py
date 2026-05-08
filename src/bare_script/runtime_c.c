@@ -530,6 +530,60 @@ is_datetime(PyObject *value)
 }
 
 
+/* Helper: Fast inline comparison for None, bool, number, and string types.
+ * Matches the semantics of value_compare (value.py).
+ * Returns 1 (handled, result in *out_c), 0 (fall back to Python), -1 (error). */
+static int
+fast_compare(PyObject *left, PyObject *right, long *out_c)
+{
+    /* None: None == None, None < any non-None value */
+    if (left == Py_None) { *out_c = (right == Py_None) ? 0 : -1; return 1; }
+    if (right == Py_None) { *out_c = 1; return 1; }
+    /* Bool (must check before number since bool is a subclass of int) */
+    if (PyBool_Check(left) && PyBool_Check(right)) {
+        *out_c = (left == right) ? 0 : (left == Py_False) ? -1 : 1;
+        return 1;
+    }
+    /* Number (int or float, not bool) */
+    if (is_number(left) && is_number(right)) {
+        double l = PyFloat_Check(left) ? PyFloat_AS_DOUBLE(left) : PyLong_AsDouble(left);
+        if (PyErr_Occurred()) return -1;
+        double r = PyFloat_Check(right) ? PyFloat_AS_DOUBLE(right) : PyLong_AsDouble(right);
+        if (PyErr_Occurred()) return -1;
+        *out_c = (l < r) ? -1 : (l > r) ? 1 : 0;
+        return 1;
+    }
+    /* String */
+    if (PyUnicode_Check(left) && PyUnicode_Check(right)) {
+        int c = PyUnicode_Compare(left, right);
+        if (c == -1 && PyErr_Occurred()) return -1;
+        *out_c = (long)c;
+        return 1;
+    }
+    /* Fall back to Python value_compare for datetime, list, dict, etc. */
+    return 0;
+}
+
+
+/* Helper: Compare two values; returns -1/0/1 or -2 on error.
+ * Uses fast_compare for common types, falls back to Python value_compare. */
+static long
+do_compare(PyObject *left, PyObject *right)
+{
+    long c;
+    int fast = fast_compare(left, right, &c);
+    if (fast < 0) return -2;
+    if (!fast) {
+        PyObject *cmp = call_value_compare(left, right);
+        if (cmp == NULL) return -2;
+        c = PyLong_AsLong(cmp);
+        Py_DECREF(cmp);
+        if (c == -1 && PyErr_Occurred()) return -2;
+    }
+    return c;
+}
+
+
 /* Helper: Convert value to long long integer (must be is_integer_number) */
 static long long
 to_long_long(PyObject *value)
@@ -697,58 +751,40 @@ evaluate_binary_op(const char *op, Py_ssize_t op_len, PyObject *left_value, PyOb
         Py_RETURN_NONE;
     }
 
-    /* Comparisons */
+    /* Comparisons — use do_compare for fast inline path on common types */
     if (op_len == 2 && op[0] == '=' && op[1] == '=') {
-        PyObject *cmp = call_value_compare(left_value, right_value);
-        if (cmp == NULL) return NULL;
-        long c = PyLong_AsLong(cmp);
-        Py_DECREF(cmp);
-        if (c == -1 && PyErr_Occurred()) return NULL;
+        long c = do_compare(left_value, right_value);
+        if (c == -2) return NULL;
         if (c == 0) Py_RETURN_TRUE;
         Py_RETURN_FALSE;
     }
     if (op_len == 2 && op[0] == '!' && op[1] == '=') {
-        PyObject *cmp = call_value_compare(left_value, right_value);
-        if (cmp == NULL) return NULL;
-        long c = PyLong_AsLong(cmp);
-        Py_DECREF(cmp);
-        if (c == -1 && PyErr_Occurred()) return NULL;
+        long c = do_compare(left_value, right_value);
+        if (c == -2) return NULL;
         if (c != 0) Py_RETURN_TRUE;
         Py_RETURN_FALSE;
     }
     if (op_len == 2 && op[0] == '<' && op[1] == '=') {
-        PyObject *cmp = call_value_compare(left_value, right_value);
-        if (cmp == NULL) return NULL;
-        long c = PyLong_AsLong(cmp);
-        Py_DECREF(cmp);
-        if (c == -1 && PyErr_Occurred()) return NULL;
+        long c = do_compare(left_value, right_value);
+        if (c == -2) return NULL;
         if (c <= 0) Py_RETURN_TRUE;
         Py_RETURN_FALSE;
     }
     if (op_len == 1 && op[0] == '<') {
-        PyObject *cmp = call_value_compare(left_value, right_value);
-        if (cmp == NULL) return NULL;
-        long c = PyLong_AsLong(cmp);
-        Py_DECREF(cmp);
-        if (c == -1 && PyErr_Occurred()) return NULL;
+        long c = do_compare(left_value, right_value);
+        if (c == -2) return NULL;
         if (c < 0) Py_RETURN_TRUE;
         Py_RETURN_FALSE;
     }
     if (op_len == 2 && op[0] == '>' && op[1] == '=') {
-        PyObject *cmp = call_value_compare(left_value, right_value);
-        if (cmp == NULL) return NULL;
-        long c = PyLong_AsLong(cmp);
-        Py_DECREF(cmp);
-        if (c == -1 && PyErr_Occurred()) return NULL;
+        long c = do_compare(left_value, right_value);
+        if (c == -2) return NULL;
         if (c >= 0) Py_RETURN_TRUE;
         Py_RETURN_FALSE;
     }
     if (op_len == 1 && op[0] == '>') {
-        PyObject *cmp = call_value_compare(left_value, right_value);
-        if (cmp == NULL) return NULL;
-        long c = PyLong_AsLong(cmp);
-        Py_DECREF(cmp);
-        if (c == -1 && PyErr_Occurred()) return NULL;
+        long c = do_compare(left_value, right_value);
+        if (c == -2) return NULL;
         if (c > 0) Py_RETURN_TRUE;
         Py_RETURN_FALSE;
     }
