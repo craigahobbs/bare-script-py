@@ -12,6 +12,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <stddef.h>
 
 
 /* Module-level cached references to Python functions and types */
@@ -85,9 +86,9 @@ static PyObject *g_str___barescriptIncludes = NULL;
 
 
 /* Forward declarations */
-static PyObject *evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
-                                           int builtins, PyObject *script, PyObject *statement,
-                                           long *stmt_count);
+static PyObject *evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *globals_,
+                                           PyObject *locals_, int builtins, PyObject *script,
+                                           PyObject *statement, long *stmt_count);
 static PyObject *execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_);
 
 
@@ -143,9 +144,13 @@ read_statement_count(PyObject *options)
 /* ScriptFunction type - represents a user-defined BareScript function */
 typedef struct {
     PyObject_HEAD
+    vectorcallfunc vectorcall;  /* Required for Py_TPFLAGS_HAVE_VECTORCALL fast-call path */
     PyObject *script;     /* The script that contains this function */
     PyObject *function;   /* The function definition statement's "function" dict */
 } ScriptFunctionObject;
+
+static PyObject *ScriptFunction_vectorcall(PyObject *op, PyObject *const *args,
+                                            size_t nargsf, PyObject *kwnames);
 
 
 static void
@@ -159,22 +164,25 @@ ScriptFunction_dealloc(ScriptFunctionObject *self)
 
 /* ScriptFunction call: __call__(args, options)
  *
- * This is the entry point for user-defined function calls from expression
- * evaluation. Before calling execute_script_helper, we don't need to sync
- * the statement counter because the caller's execute_script_helper will
- * have already written it to options before evaluating the expression that
+ * Vectorcall fast path. Avoids tuple allocation by the caller and
+ * PyArg_ParseTuple unpacking. Before calling execute_script_helper, we don't
+ * need to sync the statement counter because the caller's execute_script_helper
+ * will have already written it to options before evaluating the expression that
  * led to this call. After the call, the child's execute_script_helper will
  * have updated options['statementCount'], so the caller reads it back.
  */
 static PyObject *
-ScriptFunction_call(ScriptFunctionObject *self, PyObject *args, PyObject *kwds)
+ScriptFunction_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)
 {
-    PyObject *call_args;
-    PyObject *options;
-
-    if (!PyArg_ParseTuple(args, "OO", &call_args, &options)) {
+    ScriptFunctionObject *self = (ScriptFunctionObject *)op;
+    Py_ssize_t nargs = (Py_ssize_t)PyVectorcall_NARGS(nargsf);
+    Py_ssize_t nkw = (kwnames != NULL) ? PyTuple_GET_SIZE(kwnames) : 0;
+    if (nargs != 2 || nkw != 0) {
+        PyErr_SetString(PyExc_TypeError, "ScriptFunction expects exactly (args, options)");
         return NULL;
     }
+    PyObject *call_args = args[0];
+    PyObject *options = args[1];
 
     /* Build locals from function args */
     PyObject *func_locals = PyDict_New();
@@ -259,8 +267,9 @@ static PyTypeObject ScriptFunctionType = {
     .tp_basicsize = sizeof(ScriptFunctionObject),
     .tp_itemsize = 0,
     .tp_dealloc = (destructor)ScriptFunction_dealloc,
-    .tp_call = (ternaryfunc)ScriptFunction_call,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_vectorcall_offset = offsetof(ScriptFunctionObject, vectorcall),
+    .tp_call = PyVectorcall_Call,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,
     .tp_doc = "BareScript user-defined function",
 };
 
@@ -271,6 +280,7 @@ ScriptFunction_new(PyObject *script, PyObject *function)
 {
     ScriptFunctionObject *self = PyObject_New(ScriptFunctionObject, &ScriptFunctionType);
     if (self == NULL) return NULL;
+    self->vectorcall = ScriptFunction_vectorcall;
     Py_INCREF(script);
     Py_INCREF(function);
     self->script = script;
@@ -862,9 +872,9 @@ get_globals(PyObject *options)
  * All input arguments are borrowed references. options/locals_/script/statement may be NULL.
  */
 static PyObject *
-evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
-                          int builtins, PyObject *script, PyObject *statement,
-                          long *stmt_count)
+evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *globals_,
+                          PyObject *locals_, int builtins, PyObject *script,
+                          PyObject *statement, long *stmt_count)
 {
     PyObject *result = NULL;
 
@@ -895,42 +905,41 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
         if (var_name == g_str_false) Py_RETURN_FALSE;
         if (var_name == g_str_true) Py_RETURN_TRUE;
 
-        /* Slower fallback for non-interned variable names */
+        /* Slower fallback for non-interned variable names. Filter by length
+         * before doing string comparison: null=4, true=4, false=5. */
         if (PyUnicode_Check(var_name)) {
-            int eq = PyUnicode_Compare(var_name, g_str_null);
-            if (eq == 0) Py_RETURN_NONE;
-            if (eq == -1 && PyErr_Occurred()) return NULL;
-            eq = PyUnicode_Compare(var_name, g_str_false);
-            if (eq == 0) Py_RETURN_FALSE;
-            if (eq == -1 && PyErr_Occurred()) return NULL;
-            eq = PyUnicode_Compare(var_name, g_str_true);
-            if (eq == 0) Py_RETURN_TRUE;
-            if (eq == -1 && PyErr_Occurred()) return NULL;
+            Py_ssize_t var_len = PyUnicode_GET_LENGTH(var_name);
+            if (var_len == 4) {
+                int eq = PyUnicode_Compare(var_name, g_str_null);
+                if (eq == 0) Py_RETURN_NONE;
+                if (eq == -1 && PyErr_Occurred()) return NULL;
+                eq = PyUnicode_Compare(var_name, g_str_true);
+                if (eq == 0) Py_RETURN_TRUE;
+                if (eq == -1 && PyErr_Occurred()) return NULL;
+            } else if (var_len == 5) {
+                int eq = PyUnicode_Compare(var_name, g_str_false);
+                if (eq == 0) Py_RETURN_FALSE;
+                if (eq == -1 && PyErr_Occurred()) return NULL;
+            }
         }
 
-        /* Check locals */
-        if (locals_ != NULL && locals_ != Py_None && PyDict_Check(locals_)) {
+        /* Check locals — PyDict_GetItem returns Py_None for None values; NULL means key
+         * is not present (dicts cannot store NULL values), so no Contains check needed. */
+        if (locals_ != NULL && PyDict_Check(locals_)) {
             result = fast_dict_get(locals_, var_name);
             if (result != NULL) {
                 Py_INCREF(result);
                 return result;
             }
-            int contains = PyDict_Contains(locals_, var_name);
-            if (contains < 0) return NULL;
-            if (contains) {
-                Py_RETURN_NONE;
-            }
         }
 
-        /* Check globals */
-        PyObject *globals_ = get_globals(options);
+        /* Check globals (cached at scope entry; no per-access dict lookup needed) */
         if (globals_ != NULL) {
             result = fast_dict_get(globals_, var_name);
-            if (result == NULL) {
-                Py_RETURN_NONE;
+            if (result != NULL) {
+                Py_INCREF(result);
+                return result;
             }
-            Py_INCREF(result);
-            return result;
         }
 
         Py_RETURN_NONE;
@@ -968,7 +977,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
 
             int truth = 0;
             if (value_expr != NULL) {
-                PyObject *value = evaluate_expression_impl(value_expr, options, locals_, builtins, script, statement, stmt_count);
+                PyObject *value = evaluate_expression_impl(value_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
                 if (value == NULL) return NULL;
                 truth = call_value_boolean(value);
                 Py_DECREF(value);
@@ -980,7 +989,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 Py_RETURN_NONE;
             }
 
-            return evaluate_expression_impl(result_expr, options, locals_, builtins, script, statement, stmt_count);
+            return evaluate_expression_impl(result_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
         }
 
         /* Compute the function arguments */
@@ -992,7 +1001,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
             if (func_args == NULL) return NULL;
             for (Py_ssize_t i = 0; i < alen; i++) {
                 PyObject *arg_expr = PyList_GET_ITEM(args_expr, i);
-                PyObject *arg_value = evaluate_expression_impl(arg_expr, options, locals_, builtins, script, statement, stmt_count);
+                PyObject *arg_value = evaluate_expression_impl(arg_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
                 if (arg_value == NULL) {
                     Py_DECREF(func_args);
                     return NULL;
@@ -1003,14 +1012,11 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
 
         /* Resolve the function: locals -> globals -> builtins */
         PyObject *func_value = NULL;
-        if (locals_ != NULL && locals_ != Py_None && PyDict_Check(locals_)) {
+        if (locals_ != NULL && PyDict_Check(locals_)) {
             func_value = fast_dict_get(locals_, func_name);
         }
-        if (func_value == NULL) {
-            PyObject *globals_ = get_globals(options);
-            if (globals_ != NULL) {
-                func_value = fast_dict_get(globals_, func_name);
-            }
+        if (func_value == NULL && globals_ != NULL) {
+            func_value = fast_dict_get(globals_, func_name);
         }
         if (func_value == NULL && builtins) {
             func_value = fast_dict_get(g_expression_functions, func_name);
@@ -1026,7 +1032,8 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
             if (is_script_func && stmt_count != NULL) {
                 write_statement_count(options, *stmt_count);
             }
-            PyObject *call_result = PyObject_CallFunctionObjArgs(func_value, args_arg, options_arg, NULL);
+            PyObject *vc_args[2] = {args_arg, options_arg};
+            PyObject *call_result = PyObject_Vectorcall(func_value, vc_args, 2, NULL);
             Py_XDECREF(func_args);
             if (is_script_func && stmt_count != NULL) {
                 *stmt_count = read_statement_count(options);
@@ -1127,7 +1134,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
         if (op == NULL) return NULL;
 
         /* Evaluate left */
-        PyObject *left_value = evaluate_expression_impl(left_expr, options, locals_, builtins, script, statement, stmt_count);
+        PyObject *left_value = evaluate_expression_impl(left_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
         if (left_value == NULL) return NULL;
 
         /* Short-circuit && */
@@ -1141,7 +1148,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 return left_value;
             }
             Py_DECREF(left_value);
-            return evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement, stmt_count);
+            return evaluate_expression_impl(right_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
         }
 
         /* Short-circuit || */
@@ -1155,11 +1162,11 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 return left_value;
             }
             Py_DECREF(left_value);
-            return evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement, stmt_count);
+            return evaluate_expression_impl(right_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
         }
 
         /* Evaluate right */
-        PyObject *right_value = evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement, stmt_count);
+        PyObject *right_value = evaluate_expression_impl(right_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
         if (right_value == NULL) {
             Py_DECREF(left_value);
             return NULL;
@@ -1185,7 +1192,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
         const char *op = PyUnicode_AsUTF8AndSize(op_obj, &op_len);
         if (op == NULL) return NULL;
 
-        PyObject *value = evaluate_expression_impl(sub_expr, options, locals_, builtins, script, statement, stmt_count);
+        PyObject *value = evaluate_expression_impl(sub_expr, options, globals_, locals_, builtins, script, statement, stmt_count);
         if (value == NULL) return NULL;
 
         if (op_len == 1 && op[0] == '!') {
@@ -1219,7 +1226,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
 
     /* group */
     if (expr_key == g_str_group) {
-        return evaluate_expression_impl(expr_inner, options, locals_, builtins, script, statement, stmt_count);
+        return evaluate_expression_impl(expr_inner, options, globals_, locals_, builtins, script, statement, stmt_count);
     }
 
     /* Unknown expression type - shouldn't happen with validated input */
@@ -1474,7 +1481,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                 goto error;
             }
 
-            PyObject *expr_value = evaluate_expression_impl(expr_inner, options, locals_, 0, script, statement, &statement_count);
+            PyObject *expr_value = evaluate_expression_impl(expr_inner, options, globals_, locals_, 0, script, statement, &statement_count);
 
             if (expr_value == NULL) goto error;
 
@@ -1501,7 +1508,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             int do_jump = 1;
             PyObject *jump_expr = fast_dict_get(jump_obj, g_str_expr);
             if (jump_expr != NULL) {
-                PyObject *cond_value = evaluate_expression_impl(jump_expr, options, locals_, 0, script, statement, &statement_count);
+                PyObject *cond_value = evaluate_expression_impl(jump_expr, options, globals_, locals_, 0, script, statement, &statement_count);
                 if (cond_value == NULL) goto error;
                 int truth = call_value_boolean(cond_value);
                 Py_DECREF(cond_value);
@@ -1590,7 +1597,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             PyObject *return_expr = fast_dict_get(return_obj, g_str_expr);
             PyObject *result;
             if (return_expr != NULL) {
-                result = evaluate_expression_impl(return_expr, options, locals_, 0, script, statement, &statement_count);
+                result = evaluate_expression_impl(return_expr, options, globals_, locals_, 0, script, statement, &statement_count);
             } else {
                 Py_INCREF(Py_None);
                 result = Py_None;
@@ -1929,7 +1936,8 @@ runtime_c_evaluate_expression(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *stmt = (statement == Py_None) ? NULL : statement;
 
     long stmt_count = read_statement_count(opts);
-    return evaluate_expression_impl(expr, opts, locs, builtins, scr, stmt, &stmt_count);
+    PyObject *globs = (opts != NULL) ? get_globals(opts) : NULL;
+    return evaluate_expression_impl(expr, opts, globs, locs, builtins, scr, stmt, &stmt_count);
 }
 
 
