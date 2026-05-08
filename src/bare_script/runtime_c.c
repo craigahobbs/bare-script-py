@@ -86,7 +86,8 @@ static PyObject *g_str___barescriptIncludes = NULL;
 
 /* Forward declarations */
 static PyObject *evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
-                                           int builtins, PyObject *script, PyObject *statement);
+                                           int builtins, PyObject *script, PyObject *statement,
+                                           long *stmt_count);
 static PyObject *execute_script_helper(PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_);
 
 
@@ -826,7 +827,8 @@ get_globals(PyObject *options)
  */
 static PyObject *
 evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
-                          int builtins, PyObject *script, PyObject *statement)
+                          int builtins, PyObject *script, PyObject *statement,
+                          long *stmt_count)
 {
     PyObject *result = NULL;
 
@@ -930,7 +932,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
 
             int truth = 0;
             if (value_expr != NULL) {
-                PyObject *value = evaluate_expression_impl(value_expr, options, locals_, builtins, script, statement);
+                PyObject *value = evaluate_expression_impl(value_expr, options, locals_, builtins, script, statement, stmt_count);
                 if (value == NULL) return NULL;
                 truth = call_value_boolean(value);
                 Py_DECREF(value);
@@ -942,7 +944,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 Py_RETURN_NONE;
             }
 
-            return evaluate_expression_impl(result_expr, options, locals_, builtins, script, statement);
+            return evaluate_expression_impl(result_expr, options, locals_, builtins, script, statement, stmt_count);
         }
 
         /* Compute the function arguments */
@@ -954,7 +956,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
             if (func_args == NULL) return NULL;
             for (Py_ssize_t i = 0; i < alen; i++) {
                 PyObject *arg_expr = PyList_GET_ITEM(args_expr, i);
-                PyObject *arg_value = evaluate_expression_impl(arg_expr, options, locals_, builtins, script, statement);
+                PyObject *arg_value = evaluate_expression_impl(arg_expr, options, locals_, builtins, script, statement, stmt_count);
                 if (arg_value == NULL) {
                     Py_DECREF(func_args);
                     return NULL;
@@ -982,8 +984,17 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
             /* Call the function */
             PyObject *args_arg = func_args ? func_args : Py_None;
             PyObject *options_arg = options ? options : Py_None;
+            /* Sync statement count only for user-defined functions (ScriptFunction) which
+             * re-enter execute_script_helper and need the current count in options. */
+            int is_script_func = (Py_TYPE(func_value) == &ScriptFunctionType);
+            if (is_script_func && stmt_count != NULL) {
+                write_statement_count(options, *stmt_count);
+            }
             PyObject *call_result = PyObject_CallFunctionObjArgs(func_value, args_arg, options_arg, NULL);
             Py_XDECREF(func_args);
+            if (is_script_func && stmt_count != NULL) {
+                *stmt_count = read_statement_count(options);
+            }
 
             if (call_result == NULL) {
                 /* Check if it's BareScriptRuntimeError - re-raise */
@@ -1080,7 +1091,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
         if (op == NULL) return NULL;
 
         /* Evaluate left */
-        PyObject *left_value = evaluate_expression_impl(left_expr, options, locals_, builtins, script, statement);
+        PyObject *left_value = evaluate_expression_impl(left_expr, options, locals_, builtins, script, statement, stmt_count);
         if (left_value == NULL) return NULL;
 
         /* Short-circuit && */
@@ -1094,7 +1105,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 return left_value;
             }
             Py_DECREF(left_value);
-            return evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement);
+            return evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement, stmt_count);
         }
 
         /* Short-circuit || */
@@ -1108,11 +1119,11 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
                 return left_value;
             }
             Py_DECREF(left_value);
-            return evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement);
+            return evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement, stmt_count);
         }
 
         /* Evaluate right */
-        PyObject *right_value = evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement);
+        PyObject *right_value = evaluate_expression_impl(right_expr, options, locals_, builtins, script, statement, stmt_count);
         if (right_value == NULL) {
             Py_DECREF(left_value);
             return NULL;
@@ -1138,7 +1149,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
         const char *op = PyUnicode_AsUTF8AndSize(op_obj, &op_len);
         if (op == NULL) return NULL;
 
-        PyObject *value = evaluate_expression_impl(sub_expr, options, locals_, builtins, script, statement);
+        PyObject *value = evaluate_expression_impl(sub_expr, options, locals_, builtins, script, statement, stmt_count);
         if (value == NULL) return NULL;
 
         if (op_len == 1 && op[0] == '!') {
@@ -1172,7 +1183,7 @@ evaluate_expression_impl(PyObject *expr, PyObject *options, PyObject *locals_,
 
     /* group */
     if (expr_key == g_str_group) {
-        return evaluate_expression_impl(expr_inner, options, locals_, builtins, script, statement);
+        return evaluate_expression_impl(expr_inner, options, locals_, builtins, script, statement, stmt_count);
     }
 
     /* Unknown expression type - shouldn't happen with validated input */
@@ -1381,6 +1392,21 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
     Py_ssize_t statements_length = PyList_Check(statements) ? PyList_GET_SIZE(statements) : 0;
     Py_ssize_t ix_statement = 0;
 
+    /* Cache coverage state once before the loop to avoid per-statement dict lookup. */
+    int has_coverage = 0;
+    PyObject *coverage_global_cached = NULL;
+    if (globals_ != NULL && !script_is_system) {
+        PyObject *tmp = fast_dict_get(globals_, g_str___barescriptCoverage);
+        if (tmp != NULL && PyDict_Check(tmp)) {
+            PyObject *enabled = fast_dict_get(tmp, g_str_enabled);
+            if (enabled != NULL && PyObject_IsTrue(enabled) == 1) {
+                Py_INCREF(tmp);
+                coverage_global_cached = tmp;
+                has_coverage = 1;
+            }
+        }
+    }
+
     while (ix_statement < statements_length) {
         PyObject *statement = PyList_GET_ITEM(statements, ix_statement);
 
@@ -1397,18 +1423,8 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             goto error;
         }
 
-        /* Coverage tracking */
-        int has_coverage = 0;
-        PyObject *coverage_global = NULL;
-        if (globals_ != NULL && !script_is_system) {
-            coverage_global = fast_dict_get(globals_, g_str___barescriptCoverage);
-            if (coverage_global != NULL && PyDict_Check(coverage_global)) {
-                PyObject *enabled = fast_dict_get(coverage_global, g_str_enabled);
-                has_coverage = (enabled != NULL && PyObject_IsTrue(enabled) == 1);
-            }
-        }
         if (has_coverage) {
-            if (record_statement_coverage(script, statement, statement_key, coverage_global) < 0) {
+            if (record_statement_coverage(script, statement, statement_key, coverage_global_cached) < 0) {
                 goto error;
             }
         }
@@ -1422,13 +1438,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                 goto error;
             }
 
-            /* Write statement count to options before expression evaluation.
-             * The expression may call user-defined functions (ScriptFunction_call)
-             * which re-enter execute_script_helper and need the current count. */
-            write_statement_count(options, statement_count);
-            PyObject *expr_value = evaluate_expression_impl(expr_inner, options, locals_, 0, script, statement);
-            /* Read back — the expression may have triggered recursive execution */
-            statement_count = read_statement_count(options);
+            PyObject *expr_value = evaluate_expression_impl(expr_inner, options, locals_, 0, script, statement, &statement_count);
 
             if (expr_value == NULL) goto error;
 
@@ -1455,10 +1465,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             int do_jump = 1;
             PyObject *jump_expr = fast_dict_get(jump_obj, g_str_expr);
             if (jump_expr != NULL) {
-                /* Write/read statement count around expression evaluation */
-                write_statement_count(options, statement_count);
-                PyObject *cond_value = evaluate_expression_impl(jump_expr, options, locals_, 0, script, statement);
-                statement_count = read_statement_count(options);
+                PyObject *cond_value = evaluate_expression_impl(jump_expr, options, locals_, 0, script, statement, &statement_count);
                 if (cond_value == NULL) goto error;
                 int truth = call_value_boolean(cond_value);
                 Py_DECREF(cond_value);
@@ -1530,7 +1537,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
                     PyObject *label_statement = PyList_GET_ITEM(statements, ix_statement);
                     PyObject *label_key = get_statement_key(label_statement);
                     if (label_key == NULL) goto error;
-                    if (record_statement_coverage(script, label_statement, label_key, coverage_global) < 0) {
+                    if (record_statement_coverage(script, label_statement, label_key, coverage_global_cached) < 0) {
                         goto error;
                     }
                 }
@@ -1547,10 +1554,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             PyObject *return_expr = fast_dict_get(return_obj, g_str_expr);
             PyObject *result;
             if (return_expr != NULL) {
-                /* Write/read statement count around expression evaluation */
-                write_statement_count(options, statement_count);
-                result = evaluate_expression_impl(return_expr, options, locals_, 0, script, statement);
-                statement_count = read_statement_count(options);
+                result = evaluate_expression_impl(return_expr, options, locals_, 0, script, statement, &statement_count);
             } else {
                 Py_INCREF(Py_None);
                 result = Py_None;
@@ -1559,6 +1563,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
             /* Persist statement counter back to options */
             write_statement_count(options, statement_count);
 
+            Py_XDECREF(coverage_global_cached);
             Py_XDECREF(label_indexes);
             Py_LeaveRecursiveCall();
             return result;
@@ -1839,6 +1844,7 @@ execute_script_helper(PyObject *script, PyObject *statements, PyObject *options,
     /* Persist statement counter back to options before returning */
     write_statement_count(options, statement_count);
 
+    Py_XDECREF(coverage_global_cached);
     Py_XDECREF(label_indexes);
     Py_LeaveRecursiveCall();
     Py_RETURN_NONE;
@@ -1856,6 +1862,7 @@ error:
             PyErr_Restore(t, v, tb);
         }
     }
+    Py_XDECREF(coverage_global_cached);
     Py_XDECREF(label_indexes);
     Py_LeaveRecursiveCall();
     return NULL;
@@ -1885,7 +1892,8 @@ runtime_c_evaluate_expression(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *scr = (script == Py_None) ? NULL : script;
     PyObject *stmt = (statement == Py_None) ? NULL : statement;
 
-    return evaluate_expression_impl(expr, opts, locs, builtins, scr, stmt);
+    long stmt_count = read_statement_count(opts);
+    return evaluate_expression_impl(expr, opts, locs, builtins, scr, stmt, &stmt_count);
 }
 
 
