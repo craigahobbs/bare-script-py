@@ -546,7 +546,7 @@ _value_normalize_datetime_py = value_normalize_datetime
 # extension is available. The C versions delegate back to the _*_py aliases
 # above for the slow / complex cases (datetime, JSON, datetime parsing).
 try:
-    from .value_c import ( # pylint: disable=unused-import
+    from .value_c import (
         value_type,
         value_string,
         value_json,
