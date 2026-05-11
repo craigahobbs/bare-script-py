@@ -33,10 +33,6 @@ def _import_evaluate_expression():
 _EVALUATE_EXPRESSION = []
 
 
-# The default maximum statements for executeScript
-DEFAULT_MAX_STATEMENTS = 1e9
-
-
 #
 # Array functions
 #
