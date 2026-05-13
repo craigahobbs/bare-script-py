@@ -28,6 +28,7 @@ from .parser import \
 
 from .runtime import \
     BareScriptRuntimeError
+
 if not _os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
     try:
         from .runtime_c import evaluate_expression, execute_script

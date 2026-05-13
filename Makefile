@@ -39,6 +39,7 @@ clean:
 # Use Python runtime, unless BARESCRIPT_RUNTIME_C is set
 ifeq '$(BARESCRIPT_RUNTIME_C)' ''
 export BARESCRIPT_RUNTIME_PY=1
+DOCKER_ENV := -e BARESCRIPT_RUNTIME_PY=1
 else
 unexport BARESCRIPT_RUNTIME_PY
 endif
