@@ -7,6 +7,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <stddef.h>
 
 
 /* ---------- module-level state (cached Python objects) ---------- */
@@ -247,9 +248,13 @@ static PyObject *dict_first_key(PyObject *dict)
 
 typedef struct {
     PyObject_HEAD
+    vectorcallfunc vectorcall;
     PyObject *script;
     PyObject *function;
 } ScriptFunctionObject;
+
+static PyObject *ScriptFunction_vectorcall(
+    PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames);
 
 static int ScriptFunction_traverse(ScriptFunctionObject *self, visitproc visit, void *arg)
 {
@@ -272,13 +277,9 @@ static void ScriptFunction_dealloc(ScriptFunctionObject *self)
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
-/* Call: __call__(args, options) -> result */
-static PyObject *ScriptFunction_call(ScriptFunctionObject *self, PyObject *args, PyObject *kwargs)
+/* Shared body: takes call_args and options. Returns new ref or NULL. */
+static PyObject *ScriptFunction_call_body(ScriptFunctionObject *self, PyObject *call_args, PyObject *options)
 {
-    PyObject *call_args = NULL;
-    PyObject *options = NULL;
-    if (!PyArg_ParseTuple(args, "OO", &call_args, &options)) return NULL;
-
     PyObject *function = self->function;
     PyObject *script = self->script;
     PyObject *func_locals = PyDict_New();
@@ -352,16 +353,42 @@ static PyObject *ScriptFunction_call(ScriptFunctionObject *self, PyObject *args,
     return result;
 }
 
+/* tp_call shim (rarely used; vectorcall is the fast path) */
+static PyObject *ScriptFunction_call(ScriptFunctionObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *call_args = NULL;
+    PyObject *options = NULL;
+    if (!PyArg_ParseTuple(args, "OO", &call_args, &options)) return NULL;
+    return ScriptFunction_call_body(self, call_args, options);
+}
+
+/* Vectorcall: skips tuple packing for the call. */
+static PyObject *ScriptFunction_vectorcall(
+    PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames)
+{
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    if (kwnames != NULL && PyTuple_GET_SIZE(kwnames) > 0) {
+        PyErr_SetString(PyExc_TypeError, "ScriptFunction does not accept keyword arguments");
+        return NULL;
+    }
+    if (nargs != 2) {
+        PyErr_Format(PyExc_TypeError, "ScriptFunction expects 2 arguments, got %zd", nargs);
+        return NULL;
+    }
+    return ScriptFunction_call_body((ScriptFunctionObject *)callable, args[0], args[1]);
+}
+
 static PyTypeObject ScriptFunctionType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "bare_script.runtime_c.ScriptFunction",
     sizeof(ScriptFunctionObject),
     0,
     (destructor)ScriptFunction_dealloc,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    offsetof(ScriptFunctionObject, vectorcall),  /* tp_vectorcall_offset */
+    0, 0, 0, 0, 0, 0, 0, 0,
     (ternaryfunc)ScriptFunction_call,
     0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_HAVE_VECTORCALL,
     "BareScript script function callable",
     (traverseproc)ScriptFunction_traverse,
     (inquiry)ScriptFunction_clear,
@@ -371,6 +398,7 @@ static PyObject *new_script_function(PyObject *script, PyObject *function)
 {
     ScriptFunctionObject *self = PyObject_GC_New(ScriptFunctionObject, &ScriptFunctionType);
     if (self == NULL) return NULL;
+    self->vectorcall = ScriptFunction_vectorcall;
     Py_INCREF(script);
     Py_INCREF(function);
     self->script = script;
