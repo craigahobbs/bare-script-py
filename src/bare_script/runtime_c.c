@@ -1296,45 +1296,44 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
                    (opcs[0] == '<' && opcs[1] == 0) ||
                    (opcs[0] == '>' && opcs[1] == '=' && opcs[2] == 0) ||
                    (opcs[0] == '>' && opcs[1] == 0)) {
-            /* Fast path: number/number, string/string, bool/bool */
-            int fast_handled = 0;
-            int c = 0;
+            /* Map op to Py_* comparison code */
+            int py_op = -1;
+            if (opcs[0] == '=' && opcs[1] == '=') py_op = Py_EQ;
+            else if (opcs[0] == '!' && opcs[1] == '=') py_op = Py_NE;
+            else if (opcs[0] == '<' && opcs[1] == '=') py_op = Py_LE;
+            else if (opcs[0] == '<') py_op = Py_LT;
+            else if (opcs[0] == '>' && opcs[1] == '=') py_op = Py_GE;
+            else if (opcs[0] == '>') py_op = Py_GT;
+
+            /* Fast path: matching compatible types use PyObject_RichCompareBool
+             * (semantics match value_compare for these types). */
             int ln = is_number(left), rn = is_number(right);
-            if (ln && rn) {
-                /* Use RichCompareBool — same semantics as Python's < and == for number/number */
-                int lt = PyObject_RichCompareBool(left, right, Py_LT);
-                if (lt < 0) goto cmp_err;
-                if (lt) { c = -1; fast_handled = 1; }
-                else {
-                    int eq = PyObject_RichCompareBool(left, right, Py_EQ);
-                    if (eq < 0) goto cmp_err;
-                    c = eq ? 0 : 1; fast_handled = 1;
-                }
-            } else if (PyUnicode_Check(left) && PyUnicode_Check(right)) {
-                int uc = PyUnicode_Compare(left, right);
-                if (uc == -1 && PyErr_Occurred()) goto cmp_err;
-                c = uc; fast_handled = 1;
-            } else if (PyBool_Check(left) && PyBool_Check(right)) {
-                int li = (left == Py_True), ri = (right == Py_True);
-                c = li < ri ? -1 : (li == ri ? 0 : 1); fast_handled = 1;
-            }
-            if (!fast_handled) {
+            int fast = (ln && rn) ||
+                       (PyUnicode_Check(left) && PyUnicode_Check(right)) ||
+                       (PyBool_Check(left) && PyBool_Check(right));
+            if (fast) {
+                int b = PyObject_RichCompareBool(left, right, py_op);
+                if (b < 0) goto cmp_err;
+                result = b ? Py_True : Py_False;
+                Py_INCREF(result);
+            } else {
                 PyObject *cmp = PyObject_CallFunctionObjArgs(g_value_compare, left, right, NULL);
                 if (cmp == NULL) goto cmp_err;
-                long lc = PyLong_AsLong(cmp);
+                long c = PyLong_AsLong(cmp);
                 Py_DECREF(cmp);
-                if (lc == -1 && PyErr_Occurred()) goto cmp_err;
-                c = (int)lc;
+                if (c == -1 && PyErr_Occurred()) goto cmp_err;
+                int b = 0;
+                switch (py_op) {
+                    case Py_EQ: b = (c == 0); break;
+                    case Py_NE: b = (c != 0); break;
+                    case Py_LE: b = (c <= 0); break;
+                    case Py_LT: b = (c < 0);  break;
+                    case Py_GE: b = (c >= 0); break;
+                    case Py_GT: b = (c > 0);  break;
+                }
+                result = b ? Py_True : Py_False;
+                Py_INCREF(result);
             }
-            int b = 0;
-            if (opcs[0] == '=' && opcs[1] == '=') b = (c == 0);
-            else if (opcs[0] == '!' && opcs[1] == '=') b = (c != 0);
-            else if (opcs[0] == '<' && opcs[1] == '=') b = (c <= 0);
-            else if (opcs[0] == '<') b = (c < 0);
-            else if (opcs[0] == '>' && opcs[1] == '=') b = (c >= 0);
-            else if (opcs[0] == '>') b = (c > 0);
-            result = b ? Py_True : Py_False;
-            Py_INCREF(result);
             cmp_err: ;
         } else if (opcs[0] == '&' && opcs[1] == 0) {
             if (is_number(left) && is_number(right) && number_is_integral(left) && number_is_integral(right)) {
