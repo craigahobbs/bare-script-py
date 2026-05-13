@@ -45,6 +45,8 @@ Build and test:
 make clean test
 ```
 
+Check that `src/build/runtime_c.so` exists - if it doesn't then the `runtime_c.c` build failed.
+
 Once all tests pass, commit the initial port with a brief description.
 
 Measure baseline performance of the `runtime_c.c` port.
