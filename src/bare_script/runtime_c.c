@@ -658,7 +658,11 @@ static PyObject *evaluate_expression(
                     arg = PySequence_GetItem(args_list, i);
                     if (arg == NULL) { Py_DECREF(func_args); return NULL; }
                 }
-                PyObject *v = evaluate_expression(arg, options, locals_, builtins, script, statement);
+                int sa = 0;
+                PyObject *v = eval_simple(arg, locals_, globals_, &sa);
+                if (sa == 0) {
+                    v = evaluate_expression(arg, options, locals_, builtins, script, statement);
+                }
                 Py_DECREF(arg);
                 if (v == NULL) { Py_DECREF(func_args); return NULL; }
                 PyList_SET_ITEM(func_args, i, v);
@@ -1048,7 +1052,11 @@ static PyObject *evaluate_expression(
         PyObject *sub_expr = PyDict_GetItemWithError(un, KS_expr);
         if (PyErr_Occurred()) return NULL;
         if (un_op == NULL || sub_expr == NULL) Py_RETURN_NONE;
-        PyObject *value = evaluate_expression(sub_expr, options, locals_, builtins, script, statement);
+        int su = 0;
+        PyObject *value = eval_simple(sub_expr, locals_, globals_, &su);
+        if (su == 0) {
+            value = evaluate_expression(sub_expr, options, locals_, builtins, script, statement);
+        }
         if (value == NULL) return NULL;
 
         if (KS_EQ(un_op, KS_op_not)) {
