@@ -685,11 +685,15 @@ static PyObject *evaluate_expression(
         }
         if (func_value != NULL && func_value != Py_None) {
             PyObject *call_args = func_args ? func_args : Py_None;
-            Py_INCREF(call_args);
             PyObject *call_options = options ? options : Py_None;
-            PyObject *vc_args[2] = {call_args, call_options};
-            PyObject *result = PyObject_Vectorcall(func_value, vc_args, 2, NULL);
-            Py_DECREF(call_args);
+            PyObject *result;
+            if (Py_IS_TYPE(func_value, &ScriptFunctionType)) {
+                /* Direct C call to avoid call protocol overhead */
+                result = ScriptFunction_call_body((ScriptFunctionObject *)func_value, call_args, call_options);
+            } else {
+                PyObject *vc_args[2] = {call_args, call_options};
+                result = PyObject_Vectorcall(func_value, vc_args, 2, NULL);
+            }
             Py_XDECREF(func_args);
             if (result != NULL) return result;
 
