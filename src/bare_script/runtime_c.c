@@ -243,6 +243,13 @@ static PyObject *dict_first_key(PyObject *dict)
     return NULL;
 }
 
+/* Get first (key, value) pair. Returns 1 on success, 0 on empty dict. Both borrowed. */
+static inline int dict_first_pair(PyObject *dict, PyObject **out_key, PyObject **out_value)
+{
+    Py_ssize_t pos = 0;
+    return PyDict_Next(dict, &pos, out_key, out_value);
+}
+
 
 /* ---------- ScriptFunction callable type ---------- */
 
@@ -513,8 +520,8 @@ static PyObject *evaluate_expression(
         PyErr_SetString(PyExc_TypeError, "expression must be a dict");
         return NULL;
     }
-    PyObject *expr_key = dict_first_key(expr);
-    if (expr_key == NULL) {
+    PyObject *expr_key, *expr_value;
+    if (!dict_first_pair(expr, &expr_key, &expr_value)) {
         PyErr_SetString(PyExc_TypeError, "empty expression");
         return NULL;
     }
@@ -527,22 +534,17 @@ static PyObject *evaluate_expression(
 
     /* Number / String — fast paths */
     if (KS_EQ(expr_key, KS_number)) {
-        PyObject *v = PyDict_GetItemWithError(expr, KS_number);
-        if (v == NULL) { if (PyErr_Occurred()) return NULL; Py_RETURN_NONE; }
-        Py_INCREF(v);
-        return v;
+        Py_INCREF(expr_value);
+        return expr_value;
     }
     if (KS_EQ(expr_key, KS_string)) {
-        PyObject *v = PyDict_GetItemWithError(expr, KS_string);
-        if (v == NULL) { if (PyErr_Occurred()) return NULL; Py_RETURN_NONE; }
-        Py_INCREF(v);
-        return v;
+        Py_INCREF(expr_value);
+        return expr_value;
     }
 
     /* Variable */
     if (KS_EQ(expr_key, KS_variable)) {
-        PyObject *name = PyDict_GetItemWithError(expr, KS_variable);
-        if (name == NULL) { if (PyErr_Occurred()) return NULL; Py_RETURN_NONE; }
+        PyObject *name = expr_value;
         if (PyUnicode_Check(name)) {
             if (KS_EQ(name, KS_null)) Py_RETURN_NONE;
             if (KS_EQ(name, KS_false)) { Py_INCREF(PY_FALSE); return PY_FALSE; }
@@ -563,8 +565,7 @@ static PyObject *evaluate_expression(
 
     /* Function */
     if (KS_EQ(expr_key, KS_function)) {
-        PyObject *fn = PyDict_GetItemWithError(expr, KS_function);
-        if (fn == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
+        PyObject *fn = expr_value;
         PyObject *func_name = PyDict_GetItemWithError(fn, KS_name);
         if (func_name == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
 
@@ -708,8 +709,7 @@ static PyObject *evaluate_expression(
 
     /* Binary */
     if (KS_EQ(expr_key, KS_binary)) {
-        PyObject *bin = PyDict_GetItemWithError(expr, KS_binary);
-        if (bin == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
+        PyObject *bin = expr_value;
         PyObject *bin_op = PyDict_GetItemWithError(bin, KS_op);
         PyObject *left_expr = PyDict_GetItemWithError(bin, KS_left);
         PyObject *right_expr = PyDict_GetItemWithError(bin, KS_right);
@@ -997,8 +997,7 @@ static PyObject *evaluate_expression(
 
     /* Unary */
     if (KS_EQ(expr_key, KS_unary)) {
-        PyObject *un = PyDict_GetItemWithError(expr, KS_unary);
-        if (un == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
+        PyObject *un = expr_value;
         PyObject *un_op = PyDict_GetItemWithError(un, KS_op);
         PyObject *sub_expr = PyDict_GetItemWithError(un, KS_expr);
         if (PyErr_Occurred()) return NULL;
@@ -1034,13 +1033,7 @@ static PyObject *evaluate_expression(
     }
 
     /* Group */
-    /* expr_key == 'group' */
-    PyObject *grp = PyDict_GetItemWithError(expr, KS_group);
-    if (grp == NULL) {
-        if (PyErr_Occurred()) return NULL;
-        Py_RETURN_NONE;
-    }
-    return evaluate_expression(grp, options, locals_, builtins, script, statement);
+    return evaluate_expression(expr_value, options, locals_, builtins, script, statement);
 }
 
 
@@ -1112,8 +1105,8 @@ static PyObject *execute_script_helper(
             statement = PySequence_GetItem(statements, ix_statement);
             if (statement == NULL) { Py_XDECREF(label_indexes); return NULL; }
         }
-        PyObject *statement_key = dict_first_key(statement);
-        if (statement_key == NULL) {
+        PyObject *statement_key, *statement_body;
+        if (!dict_first_pair(statement, &statement_key, &statement_body)) {
             Py_DECREF(statement);
             Py_XDECREF(label_indexes);
             PyErr_SetString(PyExc_RuntimeError, "empty statement dict");
@@ -1153,8 +1146,7 @@ static PyObject *execute_script_helper(
 
         /* Dispatch */
         if (KS_EQ(statement_key, KS_expr)) {
-            PyObject *expr_dict = PyDict_GetItemWithError(statement, KS_expr);
-            if (expr_dict == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
+            PyObject *expr_dict = statement_body;
             PyObject *inner = PyDict_GetItemWithError(expr_dict, KS_expr);
             if (inner == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *value = evaluate_expression(inner, options, locals_, 0, script, statement);
@@ -1169,8 +1161,7 @@ static PyObject *execute_script_helper(
             }
             Py_DECREF(value);
         } else if (KS_EQ(statement_key, KS_jump)) {
-            PyObject *jump_dict = PyDict_GetItemWithError(statement, KS_jump);
-            if (jump_dict == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
+            PyObject *jump_dict = statement_body;
             PyObject *jump_expr = PyDict_GetItemWithError(jump_dict, KS_expr);
             if (jump_expr == NULL && PyErr_Occurred()) { Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL; }
             int do_jump = 1;
@@ -1249,8 +1240,7 @@ static PyObject *execute_script_helper(
                 }
             }
         } else if (KS_EQ(statement_key, KS_return)) {
-            PyObject *ret = PyDict_GetItemWithError(statement, KS_return);
-            if (ret == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
+            PyObject *ret = statement_body;
             PyObject *ret_expr = PyDict_GetItemWithError(ret, KS_expr);
             if (ret_expr == NULL && PyErr_Occurred()) { Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL; }
             PyObject *result;
@@ -1262,8 +1252,7 @@ static PyObject *execute_script_helper(
             Py_DECREF(statement); Py_XDECREF(label_indexes);
             return result;
         } else if (KS_EQ(statement_key, KS_function)) {
-            PyObject *fn = PyDict_GetItemWithError(statement, KS_function);
-            if (fn == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
+            PyObject *fn = statement_body;
             PyObject *fn_name = PyDict_GetItemWithError(fn, KS_name);
             if (fn_name == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *sf = new_script_function(script, fn);
@@ -1273,8 +1262,7 @@ static PyObject *execute_script_helper(
             }
             Py_DECREF(sf);
         } else if (KS_EQ(statement_key, KS_include)) {
-            PyObject *inc = PyDict_GetItemWithError(statement, KS_include);
-            if (inc == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
+            PyObject *inc = statement_body;
             PyObject *system_prefix = PyDict_GetItemWithError(options, KS_systemPrefix);
             if (system_prefix == NULL && PyErr_Occurred()) goto include_err;
             PyObject *fetch_fn = PyDict_GetItemWithError(options, KS_fetchFn);
