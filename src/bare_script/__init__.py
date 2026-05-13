@@ -5,6 +5,8 @@
 bare-script package
 """
 
+import os as _os
+
 from .model import \
     lint_script, \
     validate_expression, \
@@ -25,6 +27,11 @@ from .parser import \
     parse_script
 
 from .runtime import \
-    BareScriptRuntimeError, \
-    evaluate_expression, \
-    execute_script
+    BareScriptRuntimeError
+if not _os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
+    try:
+        from .runtime_c import evaluate_expression, execute_script
+    except ImportError:
+        from .runtime import evaluate_expression, execute_script
+else:
+    from .runtime import evaluate_expression, execute_script

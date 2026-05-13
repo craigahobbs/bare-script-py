@@ -7,14 +7,22 @@ bare-script command-line interface (CLI)
 
 import argparse
 from functools import partial
+import os as _os
 import sys
 import time
 
 from .model import lint_script
 from .options import FETCH_SYSTEM_PREFIX, fetch_read_write, fetch_system, log_stdout, url_file_relative
 from .parser import parse_expression, parse_script
-from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME, evaluate_expression, execute_script
+from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME
 from .value import value_boolean
+if not _os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
+    try:
+        from .runtime_c import evaluate_expression, execute_script
+    except ImportError:
+        from .runtime import evaluate_expression, execute_script
+else:
+    from .runtime import evaluate_expression, execute_script
 
 
 def main(argv=None):

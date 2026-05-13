@@ -1,8 +1,10 @@
+/.claude
 /.coverage
 /Makefile.base
 /build/
 /dist/
 /pylintrc
 /src/*.egg-info/
+/src/bare_script/*.so
 __pycache__/
 .DS_Store
