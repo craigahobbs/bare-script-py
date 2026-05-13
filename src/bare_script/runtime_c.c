@@ -161,7 +161,7 @@ is_number(PyObject *v)
 /* Fast arithmetic for number/number. op_code: 0=+ 1=- 2=* 3=/.
  * Returns NULL on error (exc set) or a result. Caller must have already
  * checked is_number(l) && is_number(r). */
-static PyObject *
+static inline PyObject *
 fast_arith(PyObject *l, PyObject *r, int op_code)
 {
     /* float + float / mixed: do as double */
@@ -1056,16 +1056,10 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
     /* variable */
     if (k0 == 'v') {
         PyObject *vname = expr_inner;
-        /* Keywords: null, false, true (length 4 or 5) */
-        Py_ssize_t vlen = PyUnicode_GET_LENGTH(vname);
-        if (vlen == 4 || vlen == 5) {
-            const char *vc = PyUnicode_AsUTF8(vname);
-            if (vc == NULL) return NULL;
-            if (vlen == 4 && vc[0] == 'n' && vc[1] == 'u' && vc[2] == 'l' && vc[3] == 'l') Py_RETURN_NONE;
-            if (vlen == 4 && vc[0] == 't' && vc[1] == 'r' && vc[2] == 'u' && vc[3] == 'e') Py_RETURN_TRUE;
-            if (vlen == 5 && vc[0] == 'f' && vc[1] == 'a' && vc[2] == 'l' && vc[3] == 's' && vc[4] == 'e') Py_RETURN_FALSE;
-        }
 
+        /* Locals first — common in hot loops. Keywords (null/true/false) are
+         * disallowed as variable names by the parser, so checking after the
+         * dict lookups doesn't change observable behavior for any valid script. */
         if (locals_ != NULL) {
             PyObject *v = PyDict_GetItemWithError(locals_, vname);
             if (v != NULL) { Py_INCREF(v); return v; }
@@ -1075,6 +1069,16 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
             PyObject *v = PyDict_GetItemWithError(globals_, vname);
             if (v != NULL) { Py_INCREF(v); return v; }
             if (PyErr_Occurred()) return NULL;
+        }
+
+        /* Fallback keyword check (locals/globals miss) */
+        Py_ssize_t vlen = PyUnicode_GET_LENGTH(vname);
+        if (vlen == 4 || vlen == 5) {
+            const char *vc = PyUnicode_AsUTF8(vname);
+            if (vc == NULL) return NULL;
+            if (vlen == 4 && vc[0] == 'n' && vc[1] == 'u' && vc[2] == 'l' && vc[3] == 'l') Py_RETURN_NONE;
+            if (vlen == 4 && vc[0] == 't' && vc[1] == 'r' && vc[2] == 'u' && vc[3] == 'e') Py_RETURN_TRUE;
+            if (vlen == 5 && vc[0] == 'f' && vc[1] == 'a' && vc[2] == 'l' && vc[3] == 's' && vc[4] == 'e') Py_RETURN_FALSE;
         }
         Py_RETURN_NONE;
     }
