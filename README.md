@@ -166,6 +166,14 @@ markdownPrint('Hello, Markdown!')
 ~~~
 
 
+## C Runtime
+
+The package ships with an optional CPython C extension (`runtime_c`) that mirrors the pure-Python
+runtime for faster script execution. When the compiled extension is available, it is used
+automatically; otherwise the pure-Python runtime is used as a fallback. Set the environment
+variable `BARESCRIPT_RUNTIME_PY=1` to force the pure-Python runtime.
+
+
 ## Development
 
 This package is developed using [python-build](https://github.com/craigahobbs/python-build#readme).
