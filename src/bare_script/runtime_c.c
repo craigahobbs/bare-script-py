@@ -1217,25 +1217,47 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
                    (opcs[0] == '<' && opcs[1] == '=' && opcs[2] == 0) ||
                    (opcs[0] == '<' && opcs[1] == 0) ||
                    (opcs[0] == '>' && opcs[1] == '=' && opcs[2] == 0) ||
-                   (opcs[0] == '>' && opcs[1] == 0 && opcs[1] != '>')) {
-            PyObject *cmp = PyObject_CallFunctionObjArgs(g_value_compare, left, right, NULL);
-            if (cmp != NULL) {
-                long c = PyLong_AsLong(cmp);
-                Py_DECREF(cmp);
-                if (c == -1 && PyErr_Occurred()) {
-                    /* leave error */
-                } else {
-                    int b = 0;
-                    if (opcs[0] == '=' && opcs[1] == '=') b = (c == 0);
-                    else if (opcs[0] == '!' && opcs[1] == '=') b = (c != 0);
-                    else if (opcs[0] == '<' && opcs[1] == '=') b = (c <= 0);
-                    else if (opcs[0] == '<') b = (c < 0);
-                    else if (opcs[0] == '>' && opcs[1] == '=') b = (c >= 0);
-                    else if (opcs[0] == '>') b = (c > 0);
-                    result = b ? Py_True : Py_False;
-                    Py_INCREF(result);
+                   (opcs[0] == '>' && opcs[1] == 0)) {
+            /* Fast path: number/number, string/string, bool/bool */
+            int fast_handled = 0;
+            int c = 0;
+            int ln = is_number(left), rn = is_number(right);
+            if (ln && rn) {
+                /* Use RichCompareBool — same semantics as Python's < and == for number/number */
+                int lt = PyObject_RichCompareBool(left, right, Py_LT);
+                if (lt < 0) goto cmp_err;
+                if (lt) { c = -1; fast_handled = 1; }
+                else {
+                    int eq = PyObject_RichCompareBool(left, right, Py_EQ);
+                    if (eq < 0) goto cmp_err;
+                    c = eq ? 0 : 1; fast_handled = 1;
                 }
+            } else if (PyUnicode_Check(left) && PyUnicode_Check(right)) {
+                int uc = PyUnicode_Compare(left, right);
+                if (uc == -1 && PyErr_Occurred()) goto cmp_err;
+                c = uc; fast_handled = 1;
+            } else if (PyBool_Check(left) && PyBool_Check(right)) {
+                int li = (left == Py_True), ri = (right == Py_True);
+                c = li < ri ? -1 : (li == ri ? 0 : 1); fast_handled = 1;
             }
+            if (!fast_handled) {
+                PyObject *cmp = PyObject_CallFunctionObjArgs(g_value_compare, left, right, NULL);
+                if (cmp == NULL) goto cmp_err;
+                long lc = PyLong_AsLong(cmp);
+                Py_DECREF(cmp);
+                if (lc == -1 && PyErr_Occurred()) goto cmp_err;
+                c = (int)lc;
+            }
+            int b = 0;
+            if (opcs[0] == '=' && opcs[1] == '=') b = (c == 0);
+            else if (opcs[0] == '!' && opcs[1] == '=') b = (c != 0);
+            else if (opcs[0] == '<' && opcs[1] == '=') b = (c <= 0);
+            else if (opcs[0] == '<') b = (c < 0);
+            else if (opcs[0] == '>' && opcs[1] == '=') b = (c >= 0);
+            else if (opcs[0] == '>') b = (c > 0);
+            result = b ? Py_True : Py_False;
+            Py_INCREF(result);
+            cmp_err: ;
         } else if (opcs[0] == '&' && opcs[1] == 0) {
             if (is_number(left) && is_number(right) && number_is_integral(left) && number_is_integral(right)) {
                 PyObject *li = PyNumber_Long(left);
