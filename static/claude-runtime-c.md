@@ -3,6 +3,8 @@ measured performance measures by 90%.
 
 Keep an optimization log in `static/claude-runtime-c-log.md`.
 
+Provide frequent, informative updates with current status and statistics.
+
 ---
 
 ## Phase 0 — Measure existing `runtime_c.c` performance
