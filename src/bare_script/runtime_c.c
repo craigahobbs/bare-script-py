@@ -113,8 +113,9 @@ static PyObject *evaluate_expression(
 static PyObject *execute_script_helper(
     PyObject *script, PyObject *statements, PyObject *options, PyObject *locals_);
 
-static int record_statement_coverage(
-    PyObject *script, PyObject *statement, PyObject *statement_key, PyObject *coverage_global);
+static PyObject *resolve_covered_dict(PyObject *script, PyObject *coverage_global);
+static int record_coverage_fast(PyObject **covered_dict_ptr, PyObject *script,
+                                PyObject *coverage_global, PyObject *statement, PyObject *statement_key);
 
 
 /* ---------- helpers ---------- */
@@ -381,60 +382,66 @@ static PyObject *new_script_function(PyObject *script, PyObject *function)
 
 /* ---------- record_statement_coverage ---------- */
 
-static int record_statement_coverage(PyObject *script, PyObject *statement,
-                                     PyObject *statement_key, PyObject *coverage_global)
+/* Resolve covered_statements dict once per script. Returns borrowed ref or NULL.
+   If script has no scriptName, returns NULL with no error set. */
+static PyObject *resolve_covered_dict(PyObject *script, PyObject *coverage_global)
 {
-    /* script_name = script.get('scriptName'); lineno = statement[statement_key].get('lineNumber') */
     PyObject *script_name = PyDict_GetItemWithError(script, KS_scriptName);
-    if (script_name == NULL && PyErr_Occurred()) return -1;
+    if (script_name == NULL) return NULL; /* either error or missing — caller handles */
 
-    PyObject *stmt_body = PyDict_GetItemWithError(statement, statement_key);
-    if (stmt_body == NULL) return PyErr_Occurred() ? -1 : 0;
-
-    PyObject *lineno = PyDict_GetItemWithError(stmt_body, KS_lineNumber);
-    if (lineno == NULL && PyErr_Occurred()) return -1;
-
-    if (script_name == NULL || lineno == NULL) return 0;
-
-    /* scripts = coverage_global.get('scripts') or new {} */
     PyObject *scripts = PyDict_GetItemWithError(coverage_global, KS_scripts);
     if (scripts == NULL) {
-        if (PyErr_Occurred()) return -1;
+        if (PyErr_Occurred()) return NULL;
         scripts = PyDict_New();
-        if (scripts == NULL) return -1;
-        if (PyDict_SetItem(coverage_global, KS_scripts, scripts) < 0) { Py_DECREF(scripts); return -1; }
+        if (scripts == NULL) return NULL;
+        if (PyDict_SetItem(coverage_global, KS_scripts, scripts) < 0) { Py_DECREF(scripts); return NULL; }
         Py_DECREF(scripts);
         scripts = PyDict_GetItemWithError(coverage_global, KS_scripts);
-        if (scripts == NULL) return -1;
+        if (scripts == NULL) return NULL;
     }
 
     PyObject *script_coverage = PyDict_GetItemWithError(scripts, script_name);
     if (script_coverage == NULL) {
-        if (PyErr_Occurred()) return -1;
+        if (PyErr_Occurred()) return NULL;
         script_coverage = PyDict_New();
-        if (script_coverage == NULL) return -1;
+        if (script_coverage == NULL) return NULL;
         PyObject *covered = PyDict_New();
-        if (covered == NULL) { Py_DECREF(script_coverage); return -1; }
-        if (PyDict_SetItem(script_coverage, KS_script, script) < 0) {
-            Py_DECREF(covered); Py_DECREF(script_coverage); return -1;
-        }
-        if (PyDict_SetItem(script_coverage, KS_covered, covered) < 0) {
-            Py_DECREF(covered); Py_DECREF(script_coverage); return -1;
+        if (covered == NULL) { Py_DECREF(script_coverage); return NULL; }
+        if (PyDict_SetItem(script_coverage, KS_script, script) < 0 ||
+            PyDict_SetItem(script_coverage, KS_covered, covered) < 0) {
+            Py_DECREF(covered); Py_DECREF(script_coverage); return NULL;
         }
         Py_DECREF(covered);
         if (PyDict_SetItem(scripts, script_name, script_coverage) < 0) {
-            Py_DECREF(script_coverage); return -1;
+            Py_DECREF(script_coverage); return NULL;
         }
         Py_DECREF(script_coverage);
         script_coverage = PyDict_GetItemWithError(scripts, script_name);
-        if (script_coverage == NULL) return -1;
+        if (script_coverage == NULL) return NULL;
+    }
+    return PyDict_GetItemWithError(script_coverage, KS_covered);
+}
+
+/* Record coverage. covered_dict_ptr is lazily resolved on first eligible statement.
+   Lazy resolution preserves the runtime.py contract that an entry is created in
+   coverage_global['scripts'] only after a statement with a lineNumber is seen. */
+static int record_coverage_fast(PyObject **covered_dict_ptr, PyObject *script,
+                                PyObject *coverage_global, PyObject *statement, PyObject *statement_key)
+{
+    PyObject *stmt_body = PyDict_GetItemWithError(statement, statement_key);
+    if (stmt_body == NULL) return PyErr_Occurred() ? -1 : 0;
+    PyObject *lineno = PyDict_GetItemWithError(stmt_body, KS_lineNumber);
+    if (lineno == NULL) return PyErr_Occurred() ? -1 : 0;
+
+    PyObject *covered_statements = *covered_dict_ptr;
+    if (covered_statements == NULL) {
+        covered_statements = resolve_covered_dict(script, coverage_global);
+        if (covered_statements == NULL) return PyErr_Occurred() ? -1 : 0;
+        *covered_dict_ptr = covered_statements;
     }
 
-    /* lineno_str = str(lineno) */
     PyObject *lineno_str = PyObject_Str(lineno);
     if (lineno_str == NULL) return -1;
-    PyObject *covered_statements = PyDict_GetItemWithError(script_coverage, KS_covered);
-    if (covered_statements == NULL) { Py_DECREF(lineno_str); return PyErr_Occurred() ? -1 : 0; }
 
     PyObject *covered_statement = PyDict_GetItemWithError(covered_statements, lineno_str);
     if (covered_statement == NULL) {
@@ -455,7 +462,6 @@ static int record_statement_coverage(PyObject *script, PyObject *statement,
     }
     Py_DECREF(lineno_str);
 
-    /* covered_statement['count'] += 1 */
     PyObject *cur = PyDict_GetItemWithError(covered_statement, KS_count);
     if (cur == NULL) return PyErr_Occurred() ? -1 : 0;
     PyObject *one = PyLong_FromLong(1);
@@ -1031,6 +1037,7 @@ static PyObject *execute_script_helper(
     }
 
     int has_coverage = 0;
+    PyObject *covered_dict = NULL;  /* borrowed; set when has_coverage */
     PyObject *coverage_global = PyDict_GetItemWithError(globals_, g_SYSTEM_GLOBAL_COVERAGE_NAME);
     if (coverage_global == NULL && PyErr_Occurred()) return NULL;
     if (coverage_global != NULL && PyDict_Check(coverage_global)) {
@@ -1043,6 +1050,14 @@ static PyObject *execute_script_helper(
         int sys_is = (sys_flag != NULL) ? PyObject_IsTrue(sys_flag) : 0;
         if (sys_is < 0) return NULL;
         has_coverage = en && !sys_is;
+        if (has_coverage) {
+            /* If script has no scriptName, no statement would ever record. Short-circuit. */
+            PyObject *script_name = PyDict_GetItemWithError(script, KS_scriptName);
+            if (script_name == NULL) {
+                if (PyErr_Occurred()) return NULL;
+                has_coverage = 0;
+            }
+        }
     }
 
     Py_ssize_t ix_statement = 0;
@@ -1089,7 +1104,7 @@ static PyObject *execute_script_helper(
         }
 
         if (has_coverage) {
-            if (record_statement_coverage(script, statement, statement_key, coverage_global) < 0) {
+            if (record_coverage_fast(&covered_dict, script, coverage_global, statement, statement_key) < 0) {
                 Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
             }
         }
@@ -1184,7 +1199,7 @@ static PyObject *execute_script_helper(
                     }
                     PyObject *lst_key = dict_first_key(lst);
                     if (lst_key != NULL) {
-                        if (record_statement_coverage(script, lst, lst_key, coverage_global) < 0) {
+                        if (record_coverage_fast(&covered_dict, script, coverage_global, lst, lst_key) < 0) {
                             Py_DECREF(lst); Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
                         }
                     }
