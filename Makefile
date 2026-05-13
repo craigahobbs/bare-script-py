@@ -33,7 +33,7 @@ help:
 
 
 clean:
-	rm -rf Makefile.base pylintrc
+	rm -rf Makefile.base pylintrc src/bare_script/*.so
 
 
 # Use Python runtime, unless BARESCRIPT_RUNTIME_C is set
