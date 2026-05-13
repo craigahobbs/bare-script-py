@@ -176,6 +176,14 @@ dict_first_key(PyObject *d)
     return NULL;
 }
 
+/* Get first key+value of a dict (single-entry tagged dict). Borrowed refs. */
+static int
+dict_first_kv(PyObject *d, PyObject **key, PyObject **value)
+{
+    Py_ssize_t pos = 0;
+    return PyDict_Next(d, &pos, key, value);
+}
+
 
 /* Returns 1 if isinstance(v, datetime.date) - uses cached class */
 static int
@@ -433,42 +441,62 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
     PyObject *globals_ = PyDict_GetItemWithError(options, S_globals);
     if (globals_ == NULL) return NULL;
 
+    /* Cache max_statements once - constant across the run */
+    PyObject *max_stmt_obj = PyDict_GetItemWithError(options, S_maxStatements);
+    if (max_stmt_obj == NULL && PyErr_Occurred()) return NULL;
+    double max_statements_d = g_default_max_statements;
+    if (max_stmt_obj != NULL) {
+        if (PyLong_Check(max_stmt_obj)) {
+            max_statements_d = (double)PyLong_AsLongLong(max_stmt_obj);
+        } else if (PyFloat_Check(max_stmt_obj)) {
+            max_statements_d = PyFloat_AS_DOUBLE(max_stmt_obj);
+        } else {
+            max_statements_d = PyFloat_AsDouble(max_stmt_obj);
+            if (max_statements_d == -1 && PyErr_Occurred()) return NULL;
+        }
+    }
+
+    /* Cache coverage state once - script's system flag and coverage_global don't change */
+    PyObject *coverage_global = PyDict_GetItemWithError(globals_, S_cov_global);
+    if (coverage_global == NULL && PyErr_Occurred()) return NULL;
+    int coverage_active = 0;
+    if (coverage_global != NULL && PyDict_Check(coverage_global)) {
+        PyObject *enabled = PyDict_GetItemWithError(coverage_global, S_enabled);
+        if (enabled == NULL && PyErr_Occurred()) return NULL;
+        if (enabled != NULL && PyObject_IsTrue(enabled)) {
+            PyObject *system_flag = PyDict_GetItemWithError(script, S_system);
+            if (system_flag == NULL && PyErr_Occurred()) return NULL;
+            if (system_flag == NULL || !PyObject_IsTrue(system_flag)) {
+                coverage_active = 1;
+            }
+        }
+    }
+
     PyObject *label_indexes = NULL;
     Py_ssize_t statements_length = PyList_GET_SIZE(statements);
     Py_ssize_t ix_statement = 0;
 
     while (ix_statement < statements_length) {
         PyObject *statement = PyList_GET_ITEM(statements, ix_statement);
-        PyObject *statement_key = dict_first_key(statement);
-        if (statement_key == NULL) {
+        PyObject *statement_key = NULL;
+        PyObject *statement_inner = NULL;
+        if (!dict_first_kv(statement, &statement_key, &statement_inner)) {
             PyErr_SetString(PyExc_ValueError, "empty statement");
             goto error;
         }
 
-        /* Increment statement counter */
+        /* Increment statement counter (kept in options for visibility to nested calls) */
         PyObject *cur_count = PyDict_GetItemWithError(options, S_statementCount);
         if (cur_count == NULL && PyErr_Occurred()) goto error;
-        long count_val = 0;
-        if (cur_count != NULL) {
-            count_val = PyLong_AsLong(cur_count);
-            if (count_val == -1 && PyErr_Occurred()) goto error;
-        }
+        long count_val = (cur_count != NULL) ? PyLong_AsLong(cur_count) : 0;
+        if (count_val == -1 && PyErr_Occurred()) goto error;
         count_val++;
         PyObject *new_count = PyLong_FromLong(count_val);
         if (new_count == NULL) goto error;
-        if (PyDict_SetItem(options, S_statementCount, new_count) < 0) {
-            Py_DECREF(new_count); goto error;
-        }
+        int rc = PyDict_SetItem(options, S_statementCount, new_count);
         Py_DECREF(new_count);
+        if (rc < 0) goto error;
 
-        PyObject *max_stmt_obj = PyDict_GetItemWithError(options, S_maxStatements);
-        if (max_stmt_obj == NULL && PyErr_Occurred()) goto error;
-        double max_statements_d = (max_stmt_obj == NULL) ? g_default_max_statements : PyFloat_AsDouble(max_stmt_obj);
-        if (max_statements_d == -1 && PyErr_Occurred()) {
-            PyErr_Clear();
-            max_statements_d = (double)PyLong_AsLong(max_stmt_obj);
-            if (max_statements_d == -1 && PyErr_Occurred()) goto error;
-        }
         if (max_statements_d > 0 && (double)count_val > max_statements_d) {
             char buf[128];
             snprintf(buf, sizeof(buf), "Exceeded maximum script statements (%ld)", (long)max_statements_d);
@@ -479,33 +507,18 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             goto error;
         }
 
-        /* Coverage */
-        PyObject *coverage_global = PyDict_GetItemWithError(globals_, S_cov_global);
-        if (coverage_global == NULL && PyErr_Occurred()) goto error;
-        int has_coverage = 0;
-        if (coverage_global != NULL && PyDict_Check(coverage_global)) {
-            PyObject *enabled = PyDict_GetItemWithError(coverage_global, S_enabled);
-            if (enabled == NULL && PyErr_Occurred()) goto error;
-            if (enabled != NULL && PyObject_IsTrue(enabled)) {
-                PyObject *system_flag = PyDict_GetItemWithError(script, S_system);
-                if (system_flag == NULL && PyErr_Occurred()) goto error;
-                if (system_flag == NULL || !PyObject_IsTrue(system_flag)) {
-                    has_coverage = 1;
-                }
-            }
-        }
-        if (has_coverage) {
+        if (coverage_active) {
             if (record_statement_coverage(script, statement, statement_key, coverage_global) < 0) goto error;
         }
 
-        /* Dispatch by statement key */
-        int cmp;
+        /* Dispatch on first character of statement_key */
+        const char *kc = PyUnicode_AsUTF8(statement_key);
+        if (kc == NULL) goto error;
+        char k0 = kc[0];
 
         /* expr */
-        cmp = PyUnicode_Compare(statement_key, S_expr);
-        if (cmp == 0) {
-            PyObject *expr_dict = PyDict_GetItemWithError(statement, S_expr);
-            if (expr_dict == NULL) goto error;
+        if (k0 == 'e') {
+            PyObject *expr_dict = statement_inner;
             PyObject *inner_expr = PyDict_GetItemWithError(expr_dict, S_expr);
             if (inner_expr == NULL) goto error;
             PyObject *expr_value = eval_expression(inner_expr, options, locals_, 0, script, statement);
@@ -524,13 +537,10 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             ix_statement++;
             continue;
         }
-        if (cmp < 0 && PyErr_Occurred()) goto error;
 
         /* jump */
-        cmp = PyUnicode_Compare(statement_key, S_jump);
-        if (cmp == 0) {
-            PyObject *jump_dict = PyDict_GetItemWithError(statement, S_jump);
-            if (jump_dict == NULL) goto error;
+        if (k0 == 'j') {
+            PyObject *jump_dict = statement_inner;
             int do_jump = 1;
             PyObject *jump_expr = PyDict_GetItemWithError(jump_dict, S_expr);
             if (jump_expr == NULL && PyErr_Occurred()) goto error;
@@ -554,7 +564,6 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
                     }
                 }
                 if (ix_label == -1) {
-                    /* search */
                     Py_ssize_t i;
                     for (i = 0; i < statements_length; i++) {
                         PyObject *st = PyList_GET_ITEM(statements, i);
@@ -589,7 +598,7 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
                 }
                 ix_statement = ix_label;
 
-                if (has_coverage) {
+                if (coverage_active) {
                     PyObject *label_statement = PyList_GET_ITEM(statements, ix_statement);
                     PyObject *label_statement_key = dict_first_key(label_statement);
                     if (label_statement_key != NULL) {
@@ -600,13 +609,10 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             ix_statement++;
             continue;
         }
-        if (cmp < 0 && PyErr_Occurred()) goto error;
 
         /* return */
-        cmp = PyUnicode_Compare(statement_key, S_return);
-        if (cmp == 0) {
-            PyObject *return_dict = PyDict_GetItemWithError(statement, S_return);
-            if (return_dict == NULL) goto error;
+        if (k0 == 'r') {
+            PyObject *return_dict = statement_inner;
             PyObject *return_expr = PyDict_GetItemWithError(return_dict, S_expr);
             if (return_expr == NULL && PyErr_Occurred()) goto error;
             Py_XDECREF(label_indexes);
@@ -615,13 +621,10 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             }
             Py_RETURN_NONE;
         }
-        if (cmp < 0 && PyErr_Occurred()) goto error;
 
         /* function */
-        cmp = PyUnicode_Compare(statement_key, S_function);
-        if (cmp == 0) {
-            PyObject *fn_dict = PyDict_GetItemWithError(statement, S_function);
-            if (fn_dict == NULL) goto error;
+        if (k0 == 'f') {
+            PyObject *fn_dict = statement_inner;
             PyObject *fn_name = PyDict_GetItemWithError(fn_dict, S_name);
             if (fn_name == NULL) goto error;
             PyObject *callable = ScriptFunction_new(script, fn_dict);
@@ -633,13 +636,10 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             ix_statement++;
             continue;
         }
-        if (cmp < 0 && PyErr_Occurred()) goto error;
 
         /* include */
-        cmp = PyUnicode_Compare(statement_key, S_include);
-        if (cmp == 0) {
-            PyObject *inc_dict = PyDict_GetItemWithError(statement, S_include);
-            if (inc_dict == NULL) goto error;
+        if (k0 == 'i') {
+            PyObject *inc_dict = statement_inner;
             PyObject *system_prefix = PyDict_GetItemWithError(options, S_systemPrefix);
             if (system_prefix == NULL && PyErr_Occurred()) goto error;
             PyObject *fetch_fn = PyDict_GetItemWithError(options, S_fetchFn);
@@ -799,7 +799,6 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             ix_statement++;
             continue;
         }
-        if (cmp < 0 && PyErr_Occurred()) goto error;
 
         /* label or unknown - just advance */
         ix_statement++;
