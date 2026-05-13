@@ -85,6 +85,8 @@ Build and test:
 make clean test BARESCRIPT_RUNTIME_C=1
 ```
 
+Check that `src/build/runtime_c.so` exists - if it doesn't then the `runtime_c.c` build failed.
+
 Measure `runtime_c.c` performance again and compute the percent improvement. Revert optimizations
 that don't improve performance or meaningfully simplify. Reject if the performance gain is small and
 the change comparatively complex.
