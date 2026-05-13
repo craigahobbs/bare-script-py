@@ -722,15 +722,29 @@ static PyObject *evaluate_expression(
                 Py_UCS4 c0 = PyUnicode_READ_CHAR(bin_op, 0);
                 PyObject *fp = NULL;
                 int cmp_kind = 0; /* 0=none, 1=<, 2=<=, 3=>, 4=>=, 5===, 6=!= */
+                /* Double-only fast path: inline + - * to avoid PyNumber dispatch. */
+                int both_float = (lt == &PyFloat_Type && rt == &PyFloat_Type);
                 if (op_len == 1) {
-                    switch (c0) {
-                    case '+': fp = PyNumber_Add(left, right); break;
-                    case '-': fp = PyNumber_Subtract(left, right); break;
-                    case '*': fp = PyNumber_Multiply(left, right); break;
-                    case '/': fp = PyNumber_TrueDivide(left, right); break;
-                    case '%': fp = PyNumber_Remainder(left, right); break;
-                    case '<': cmp_kind = 1; break;
-                    case '>': cmp_kind = 3; break;
+                    if (both_float && (c0 == '+' || c0 == '-' || c0 == '*')) {
+                        double a = PyFloat_AS_DOUBLE(left);
+                        double b = PyFloat_AS_DOUBLE(right);
+                        double r;
+                        switch (c0) {
+                        case '+': r = a + b; break;
+                        case '-': r = a - b; break;
+                        case '*': default: r = a * b; break;
+                        }
+                        fp = PyFloat_FromDouble(r);
+                    } else {
+                        switch (c0) {
+                        case '+': fp = PyNumber_Add(left, right); break;
+                        case '-': fp = PyNumber_Subtract(left, right); break;
+                        case '*': fp = PyNumber_Multiply(left, right); break;
+                        case '/': fp = PyNumber_TrueDivide(left, right); break;
+                        case '%': fp = PyNumber_Remainder(left, right); break;
+                        case '<': cmp_kind = 1; break;
+                        case '>': cmp_kind = 3; break;
+                        }
                     }
                 } else if (op_len == 2) {
                     Py_UCS4 c1 = PyUnicode_READ_CHAR(bin_op, 1);
