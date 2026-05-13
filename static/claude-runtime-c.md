@@ -3,7 +3,8 @@ measured performance measures by 90%.
 
 Keep an optimization log in `static/claude-runtime-c-log.md`.
 
-Provide frequent, informative updates with current status and statistics.
+Provide frequent detailed status reports including optimization statistics at all phases of the
+process.
 
 ---
 
@@ -58,6 +59,8 @@ and:
 make perf BARESCRIPT_RUNTIME_C=1
 ```
 
+Update the optimization log.
+
 ---
 
 ## Phase 2 — Optimization Planning
@@ -71,6 +74,8 @@ not be afraid of aggressive changes if you think they can be highly impactful.
 
 Please continue to update and re-prioritize our optimization ideas throughout the optimization
 process.
+
+Update the optimization log.
 
 ---
 
@@ -91,6 +96,8 @@ that don't improve performance or meaningfully simplify. Reject if the performan
 the change comparatively complex.
 
 If accepting the optimization, commit with a brief comment.
+
+Update the optimization log.
 
 ---
 

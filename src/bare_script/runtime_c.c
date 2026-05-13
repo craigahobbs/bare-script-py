@@ -250,6 +250,42 @@ static inline int dict_first_pair(PyObject *dict, PyObject **out_key, PyObject *
     return PyDict_Next(dict, &pos, out_key, out_value);
 }
 
+/* Fast inline evaluation for number/string/variable expressions only.
+   Returns: new ref on success (status: 1), NULL on error (status: -1),
+   or NULL with status=0 if expression isn't a simple leaf (caller must fallback). */
+static inline PyObject *eval_simple(PyObject *expr, PyObject *locals_, PyObject *globals_, int *status)
+{
+    if (!PyDict_Check(expr)) { *status = 0; return NULL; }
+    PyObject *k, *v;
+    if (!dict_first_pair(expr, &k, &v)) { *status = 0; return NULL; }
+    if (k == KS_number || k == KS_string) {
+        *status = 1;
+        Py_INCREF(v);
+        return v;
+    }
+    if (k == KS_variable) {
+        *status = 1;
+        if (PyUnicode_Check(v)) {
+            if (v == KS_null || PyUnicode_Compare(v, KS_null) == 0) Py_RETURN_NONE;
+            if (v == KS_false || PyUnicode_Compare(v, KS_false) == 0) return Py_NewRef(Py_False);
+            if (v == KS_true || PyUnicode_Compare(v, KS_true) == 0) return Py_NewRef(Py_True);
+        }
+        if (locals_ != NULL && locals_ != Py_None) {
+            PyObject *r = PyDict_GetItemWithError(locals_, v);
+            if (r != NULL) { Py_INCREF(r); return r; }
+            if (PyErr_Occurred()) { *status = -1; return NULL; }
+        }
+        if (globals_ != NULL) {
+            PyObject *r = PyDict_GetItemWithError(globals_, v);
+            if (r != NULL) { Py_INCREF(r); return r; }
+            if (PyErr_Occurred()) { *status = -1; return NULL; }
+        }
+        Py_RETURN_NONE;
+    }
+    *status = 0;
+    return NULL;
+}
+
 
 /* ---------- ScriptFunction callable type ---------- */
 
@@ -551,14 +587,16 @@ static PyObject *evaluate_expression(
             if (KS_EQ(name, KS_true)) { Py_INCREF(PY_TRUE); return PY_TRUE; }
         }
         if (locals_ != NULL && locals_ != Py_None) {
-            PyObject *v = PyDict_GetItemWithError(locals_, name);
-            if (v != NULL) { Py_INCREF(v); return v; }
-            if (PyErr_Occurred()) return NULL;
+            PyObject *v = NULL;
+            int rc = PyDict_GetItemRef(locals_, name, &v);
+            if (rc < 0) return NULL;
+            if (rc > 0) return v;
         }
         if (globals_ != NULL) {
-            PyObject *v = PyDict_GetItemWithError(globals_, name);
-            if (v != NULL) { Py_INCREF(v); return v; }
-            if (PyErr_Occurred()) return NULL;
+            PyObject *v = NULL;
+            int rc = PyDict_GetItemRef(globals_, name, &v);
+            if (rc < 0) return NULL;
+            if (rc > 0) return v;
         }
         Py_RETURN_NONE;
     }
@@ -716,7 +754,11 @@ static PyObject *evaluate_expression(
         if (PyErr_Occurred()) return NULL;
         if (bin_op == NULL || left_expr == NULL) Py_RETURN_NONE;
 
-        PyObject *left = evaluate_expression(left_expr, options, locals_, builtins, script, statement);
+        int s = 0;
+        PyObject *left = eval_simple(left_expr, locals_, globals_, &s);
+        if (s == 0) {
+            left = evaluate_expression(left_expr, options, locals_, builtins, script, statement);
+        }
         if (left == NULL) return NULL;
 
         /* && / || short-circuit */
@@ -736,7 +778,11 @@ static PyObject *evaluate_expression(
         }
 
         if (right_expr == NULL) { Py_DECREF(left); Py_RETURN_NONE; }
-        PyObject *right = evaluate_expression(right_expr, options, locals_, builtins, script, statement);
+        s = 0;
+        PyObject *right = eval_simple(right_expr, locals_, globals_, &s);
+        if (s == 0) {
+            right = evaluate_expression(right_expr, options, locals_, builtins, script, statement);
+        }
         if (right == NULL) { Py_DECREF(left); return NULL; }
 
         /* Numeric fast path: both operands are non-bool int/float.
