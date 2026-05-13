@@ -90,6 +90,9 @@ static double g_default_max_statements = 1e9;
  * Inside the loop we use the bare long, avoiding a dict update per statement. */
 static __thread long g_stmt_counter = 0;
 static __thread int g_helper_depth = 0;
+/* Cached globals_ pointer for the current exec_script_helper / py_evaluate_expression
+ * scope; avoids dict lookup in eval_expression. Saved/restored at boundaries. */
+static __thread PyObject *g_globals_cache = NULL;
 
 
 /* ---------------------------------------------------------------------------
@@ -491,6 +494,9 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
 {
     PyObject *globals_ = PyDict_GetItemWithError(options, S_globals);
     if (globals_ == NULL) return NULL;
+    /* Save & install globals_ in the thread-local cache for eval_expression */
+    PyObject *prev_globals = g_globals_cache;
+    g_globals_cache = globals_;
 
     /* Top-level entry: read counter from options. Nested calls share the
      * thread-local counter directly. */
@@ -499,10 +505,10 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
         PyObject *cur = PyDict_GetItemWithError(options, S_statementCount);
         if (cur != NULL) {
             long v = PyLong_AsLong(cur);
-            if (v == -1 && PyErr_Occurred()) { g_helper_depth--; return NULL; }
+            if (v == -1 && PyErr_Occurred()) { g_helper_depth--; g_globals_cache = prev_globals; return NULL; }
             g_stmt_counter = v;
         } else {
-            if (PyErr_Occurred()) { g_helper_depth--; return NULL; }
+            if (PyErr_Occurred()) { g_helper_depth--; g_globals_cache = prev_globals; return NULL; }
             g_stmt_counter = 0;
         }
     }
@@ -871,6 +877,7 @@ error:
     ret = NULL;
 done:
     Py_XDECREF(label_indexes);
+    g_globals_cache = prev_globals;
     /* Sync counter to options at top-level exit */
     int new_depth = --g_helper_depth;
     if (new_depth == 0) {
@@ -1026,8 +1033,8 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         PyErr_SetString(PyExc_ValueError, "empty expression");
         return NULL;
     }
-    PyObject *globals_ = NULL;
-    if (options != NULL && options != Py_None) {
+    PyObject *globals_ = g_globals_cache;
+    if (globals_ == NULL && options != NULL && options != Py_None) {
         globals_ = PyDict_GetItemWithError(options, S_globals);
         if (globals_ == NULL && PyErr_Occurred()) return NULL;
     }
@@ -1492,7 +1499,12 @@ py_evaluate_expression(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *locs = (locals_ == Py_None) ? NULL : locals_;
     PyObject *scr = (script == Py_None) ? NULL : script;
     PyObject *stm = (statement == Py_None) ? NULL : statement;
-    return eval_expression(expr, opts, locs, builtins ? 1 : 0, scr, stm);
+    /* Save/restore globals cache around top-level eval */
+    PyObject *prev_globals = g_globals_cache;
+    g_globals_cache = NULL;
+    PyObject *r = eval_expression(expr, opts, locs, builtins ? 1 : 0, scr, stm);
+    g_globals_cache = prev_globals;
+    return r;
 }
 
 
