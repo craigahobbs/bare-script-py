@@ -817,13 +817,79 @@ error:
  * Evaluate expression
  * ------------------------------------------------------------------------- */
 
+/* Direct call into a ScriptFunction without going through tp_call/PyArg_UnpackTuple.
+ * Returns NULL with exception on error, or a new reference on success. */
+static PyObject *
+script_function_call_direct(ScriptFunctionObject *sf, PyObject *call_args, PyObject *options)
+{
+    PyObject *function = sf->function;
+    PyObject *script = sf->script;
+    PyObject *func_locals = PyDict_New();
+    if (func_locals == NULL) return NULL;
+
+    PyObject *func_args = PyDict_GetItemWithError(function, S_args);
+    if (func_args == NULL && PyErr_Occurred()) { Py_DECREF(func_locals); return NULL; }
+    if (func_args != NULL) {
+        Py_ssize_t args_length = (call_args == NULL || call_args == Py_None) ? 0 : PyList_GET_SIZE(call_args);
+        Py_ssize_t func_args_length = PyList_GET_SIZE(func_args);
+
+        PyObject *last_arg_array_flag = PyDict_GetItemWithError(function, S_lastArgArray);
+        if (last_arg_array_flag == NULL && PyErr_Occurred()) { Py_DECREF(func_locals); return NULL; }
+        Py_ssize_t ix_arg_last = -1;
+        if (last_arg_array_flag != NULL && PyObject_IsTrue(last_arg_array_flag)) {
+            ix_arg_last = func_args_length - 1;
+        }
+
+        for (Py_ssize_t ix = 0; ix < func_args_length; ix++) {
+            PyObject *arg_name = PyList_GET_ITEM(func_args, ix);
+            PyObject *value;
+            if (ix < args_length) {
+                if (ix == ix_arg_last) {
+                    value = PyList_GetSlice(call_args, ix, args_length);
+                    if (value == NULL) { Py_DECREF(func_locals); return NULL; }
+                } else {
+                    value = PyList_GET_ITEM(call_args, ix);
+                    Py_INCREF(value);
+                }
+            } else if (ix == ix_arg_last) {
+                value = PyList_New(0);
+                if (value == NULL) { Py_DECREF(func_locals); return NULL; }
+            } else {
+                value = Py_None; Py_INCREF(value);
+            }
+            if (PyDict_SetItem(func_locals, arg_name, value) < 0) {
+                Py_DECREF(value); Py_DECREF(func_locals); return NULL;
+            }
+            Py_DECREF(value);
+        }
+    }
+
+    PyObject *fn_statements = PyDict_GetItemWithError(function, S_statements);
+    if (fn_statements == NULL) {
+        Py_DECREF(func_locals);
+        if (!PyErr_Occurred()) PyErr_SetString(PyExc_KeyError, "statements");
+        return NULL;
+    }
+
+    PyObject *result = exec_script_helper(script, fn_statements, options, func_locals);
+    Py_DECREF(func_locals);
+    return result;
+}
+
+
 static PyObject *
 do_function_call(PyObject *func_value, PyObject *func_name, PyObject *func_args_list,
                  PyObject *options, PyObject *script, PyObject *statement)
 {
     PyObject *args_arg = (func_args_list == NULL) ? Py_None : func_args_list;
     PyObject *opts_arg = (options == NULL) ? Py_None : options;
-    PyObject *result = PyObject_CallFunctionObjArgs(func_value, args_arg, opts_arg, NULL);
+
+    PyObject *result;
+    if (Py_TYPE(func_value) == &ScriptFunctionType) {
+        result = script_function_call_direct((ScriptFunctionObject *)func_value, args_arg, opts_arg);
+    } else {
+        result = PyObject_CallFunctionObjArgs(func_value, args_arg, opts_arg, NULL);
+    }
     if (result != NULL) return result;
 
     /* Exception path */
