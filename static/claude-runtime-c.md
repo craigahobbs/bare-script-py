@@ -82,7 +82,7 @@ Implement the current top optimization idea.
 Build and test:
 
 ```
-make clean test
+make clean test BARESCRIPT_RUNTIME_C=1
 ```
 
 Measure `runtime_c.c` performance again and compute the percent improvement. Revert optimizations
