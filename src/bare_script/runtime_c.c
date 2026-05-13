@@ -705,6 +705,83 @@ static PyObject *evaluate_expression(
         PyObject *right = evaluate_expression(right_expr, options, locals_, builtins, script, statement);
         if (right == NULL) { Py_DECREF(left); return NULL; }
 
+        /* Numeric fast path: both operands are non-bool int/float.
+           Py_TYPE(true) is &PyBool_Type, not &PyLong_Type, so this excludes bools. */
+        {
+            PyTypeObject *lt = Py_TYPE(left), *rt = Py_TYPE(right);
+            int l_num = (lt == &PyFloat_Type || lt == &PyLong_Type);
+            int r_num = (rt == &PyFloat_Type || rt == &PyLong_Type);
+            if (l_num && r_num) {
+                Py_ssize_t op_len = PyUnicode_GET_LENGTH(bin_op);
+                Py_UCS4 c0 = PyUnicode_READ_CHAR(bin_op, 0);
+                PyObject *fp = NULL;
+                int cmp_kind = 0; /* 0=none, 1=<, 2=<=, 3=>, 4=>=, 5===, 6=!= */
+                if (op_len == 1) {
+                    switch (c0) {
+                    case '+': fp = PyNumber_Add(left, right); break;
+                    case '-': fp = PyNumber_Subtract(left, right); break;
+                    case '*': fp = PyNumber_Multiply(left, right); break;
+                    case '/': fp = PyNumber_TrueDivide(left, right); break;
+                    case '%': fp = PyNumber_Remainder(left, right); break;
+                    case '<': cmp_kind = 1; break;
+                    case '>': cmp_kind = 3; break;
+                    }
+                } else if (op_len == 2) {
+                    Py_UCS4 c1 = PyUnicode_READ_CHAR(bin_op, 1);
+                    if (c1 == '=') {
+                        switch (c0) {
+                        case '<': cmp_kind = 2; break;
+                        case '>': cmp_kind = 4; break;
+                        case '=': cmp_kind = 5; break;
+                        case '!': cmp_kind = 6; break;
+                        }
+                    } else if (c0 == '*' && c1 == '*') {
+                        fp = PyNumber_Power(left, right, Py_None);
+                    }
+                }
+                if (cmp_kind != 0) {
+                    /* Inline numeric comparison matching value_compare semantics:
+                       value_compare(a,b) = -1 if a<b else 0 if a==b else 1.
+                       For NaN, a<b and a==b are both false, so result is 1.
+                       Thus value_compare(a,b) > 0 corresponds to !(a <= b). */
+                    double a = (lt == &PyFloat_Type) ? PyFloat_AS_DOUBLE(left) : (double)PyLong_AsLongLong(left);
+                    double b = (rt == &PyFloat_Type) ? PyFloat_AS_DOUBLE(right) : (double)PyLong_AsLongLong(right);
+                    if (PyErr_Occurred()) {
+                        /* long overflow — fall back to call_value_compare */
+                        PyErr_Clear();
+                        long cv = call_value_compare(left, right);
+                        if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
+                        int r;
+                        switch (cmp_kind) {
+                        case 1: r = (cv < 0); break;
+                        case 2: r = (cv <= 0); break;
+                        case 3: r = (cv > 0); break;
+                        case 4: r = (cv >= 0); break;
+                        case 5: r = (cv == 0); break;
+                        case 6: default: r = (cv != 0); break;
+                        }
+                        fp = r ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
+                    } else {
+                        int r;
+                        switch (cmp_kind) {
+                        case 1: r = (a < b); break;
+                        case 2: r = (a <= b); break;
+                        case 3: r = !(a <= b); break;  /* matches value_compare > 0 incl NaN */
+                        case 4: r = !(a < b); break;
+                        case 5: r = (a == b); break;
+                        case 6: default: r = !(a == b); break;
+                        }
+                        fp = r ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
+                    }
+                }
+                if (fp != NULL) {
+                    Py_DECREF(left); Py_DECREF(right);
+                    return fp;
+                }
+                if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
+            }
+        }
+
         PyObject *result = NULL;
         int op_handled = 0;
 
