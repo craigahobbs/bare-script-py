@@ -876,8 +876,9 @@ static PyObject *
 eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builtins,
                 PyObject *script, PyObject *statement)
 {
-    PyObject *expr_key = dict_first_key(expr);
-    if (expr_key == NULL) {
+    PyObject *expr_key = NULL;
+    PyObject *expr_inner = NULL;
+    if (!dict_first_kv(expr, &expr_key, &expr_inner)) {
         PyErr_SetString(PyExc_ValueError, "empty expression");
         return NULL;
     }
@@ -887,32 +888,32 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         if (globals_ == NULL && PyErr_Occurred()) return NULL;
     }
 
+    const char *kc = PyUnicode_AsUTF8(expr_key);
+    if (kc == NULL) return NULL;
+    char k0 = kc[0];
+
     /* number */
-    if (PyUnicode_Compare(expr_key, S_number) == 0) {
-        PyObject *v = PyDict_GetItemWithError(expr, S_number);
-        if (v == NULL) return NULL;
-        Py_INCREF(v); return v;
+    if (k0 == 'n') {
+        Py_INCREF(expr_inner); return expr_inner;
     }
-    if (PyErr_Occurred()) return NULL;
 
     /* string */
-    if (PyUnicode_Compare(expr_key, S_string) == 0) {
-        PyObject *v = PyDict_GetItemWithError(expr, S_string);
-        if (v == NULL) return NULL;
-        Py_INCREF(v); return v;
+    if (k0 == 's') {
+        Py_INCREF(expr_inner); return expr_inner;
     }
-    if (PyErr_Occurred()) return NULL;
 
     /* variable */
-    if (PyUnicode_Compare(expr_key, S_variable) == 0) {
-        PyObject *vname = PyDict_GetItemWithError(expr, S_variable);
-        if (vname == NULL) return NULL;
-        if (PyUnicode_Compare(vname, S_null) == 0) Py_RETURN_NONE;
-        if (PyErr_Occurred()) return NULL;
-        if (PyUnicode_Compare(vname, S_false) == 0) { Py_RETURN_FALSE; }
-        if (PyErr_Occurred()) return NULL;
-        if (PyUnicode_Compare(vname, S_true) == 0) { Py_RETURN_TRUE; }
-        if (PyErr_Occurred()) return NULL;
+    if (k0 == 'v') {
+        PyObject *vname = expr_inner;
+        /* Keywords: null, false, true (length 4 or 5) */
+        Py_ssize_t vlen = PyUnicode_GET_LENGTH(vname);
+        if (vlen == 4 || vlen == 5) {
+            const char *vc = PyUnicode_AsUTF8(vname);
+            if (vc == NULL) return NULL;
+            if (vlen == 4 && vc[0] == 'n' && vc[1] == 'u' && vc[2] == 'l' && vc[3] == 'l') Py_RETURN_NONE;
+            if (vlen == 4 && vc[0] == 't' && vc[1] == 'r' && vc[2] == 'u' && vc[3] == 'e') Py_RETURN_TRUE;
+            if (vlen == 5 && vc[0] == 'f' && vc[1] == 'a' && vc[2] == 'l' && vc[3] == 's' && vc[4] == 'e') Py_RETURN_FALSE;
+        }
 
         if (locals_ != NULL) {
             PyObject *v = PyDict_GetItemWithError(locals_, vname);
@@ -926,12 +927,10 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         }
         Py_RETURN_NONE;
     }
-    if (PyErr_Occurred()) return NULL;
 
     /* function */
-    if (PyUnicode_Compare(expr_key, S_function) == 0) {
-        PyObject *fn_dict = PyDict_GetItemWithError(expr, S_function);
-        if (fn_dict == NULL) return NULL;
+    if (k0 == 'f') {
+        PyObject *fn_dict = expr_inner;
         PyObject *func_name = PyDict_GetItemWithError(fn_dict, S_name);
         if (func_name == NULL) return NULL;
 
@@ -1013,12 +1012,9 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         Py_XDECREF(func_args_list);
         return result;
     }
-    if (PyErr_Occurred()) return NULL;
-
     /* binary */
-    if (PyUnicode_Compare(expr_key, S_binary) == 0) {
-        PyObject *bin = PyDict_GetItemWithError(expr, S_binary);
-        if (bin == NULL) return NULL;
+    if (k0 == 'b') {
+        PyObject *bin = expr_inner;
         PyObject *op = PyDict_GetItemWithError(bin, S_op);
         if (op == NULL) return NULL;
         PyObject *left_expr = PyDict_GetItemWithError(bin, S_left);
@@ -1215,12 +1211,9 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         if (result == NULL && !PyErr_Occurred()) Py_RETURN_NONE;
         return result;
     }
-    if (PyErr_Occurred()) return NULL;
-
     /* unary */
-    if (PyUnicode_Compare(expr_key, S_unary) == 0) {
-        PyObject *u = PyDict_GetItemWithError(expr, S_unary);
-        if (u == NULL) return NULL;
+    if (k0 == 'u') {
+        PyObject *u = expr_inner;
         PyObject *op = PyDict_GetItemWithError(u, S_op);
         if (op == NULL) return NULL;
         PyObject *u_expr = PyDict_GetItemWithError(u, S_expr);
@@ -1245,14 +1238,11 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         if (result == NULL && !PyErr_Occurred()) Py_RETURN_NONE;
         return result;
     }
-    if (PyErr_Occurred()) return NULL;
-
     /* group */
-    PyObject *grp = PyDict_GetItemWithError(expr, S_group);
-    if (grp != NULL) {
-        return eval_expression(grp, options, locals_, builtins, script, statement);
+    if (k0 == 'g') {
+        return eval_expression(expr_inner, options, locals_, builtins, script, statement);
     }
-    if (PyErr_Occurred()) return NULL;
+
     Py_RETURN_NONE;
 }
 
