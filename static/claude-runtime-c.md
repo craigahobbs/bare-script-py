@@ -3,8 +3,8 @@ measured performance measures by 90%.
 
 Keep an optimization log in `static/claude-runtime-c-log.md`.
 
-Provide frequent detailed status reports including optimization statistics at all phases of the
-process.
+Provide frequent, "fancy" status reports with current optimization statistics and current task
+description at all phases of the process.
 
 ---
 

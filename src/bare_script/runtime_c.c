@@ -978,24 +978,31 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
             }
         }
 
-        /* lookup function */
+        /* lookup function: locals_ takes priority even if value is None */
         PyObject *func_value = NULL;
+        int found = 0;
         if (locals_ != NULL) {
             PyObject *v = PyDict_GetItemWithError(locals_, func_name);
             if (v == NULL && PyErr_Occurred()) { Py_XDECREF(func_args_list); return NULL; }
-            if (v != NULL) func_value = v;
+            if (v != NULL || PyDict_Contains(locals_, func_name) == 1) {
+                func_value = v;
+                found = 1;
+            }
         }
-        if (func_value == NULL && globals_ != NULL) {
+        if (!found && globals_ != NULL) {
             PyObject *v = PyDict_GetItemWithError(globals_, func_name);
             if (v == NULL && PyErr_Occurred()) { Py_XDECREF(func_args_list); return NULL; }
-            if (v != NULL) func_value = v;
+            if (v != NULL || PyDict_Contains(globals_, func_name) == 1) {
+                func_value = v;
+                found = 1;
+            }
         }
-        if (func_value == NULL && builtins) {
+        if (!found && builtins) {
             PyObject *v = PyDict_GetItemWithError(g_expression_functions, func_name);
             if (v == NULL && PyErr_Occurred()) { Py_XDECREF(func_args_list); return NULL; }
             if (v != NULL) func_value = v;
         }
-        if (func_value == NULL) {
+        if (func_value == NULL || func_value == Py_None) {
             PyObject *fn_copy = func_name; Py_INCREF(fn_copy);
             raise_runtime_error(script, statement, "Undefined function \"%S\"", fn_copy);
             Py_DECREF(fn_copy);
@@ -1065,43 +1072,33 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
                 if (l_dt && rn) {
                     PyObject *ldt = PyObject_CallFunctionObjArgs(g_value_normalize_datetime, left, NULL);
                     if (ldt != NULL) {
-                        PyObject *delta = PyObject_CallFunction(g_datetime_timedelta, "(dO)", 0.0, Py_None);
-                        Py_XDECREF(delta);
-                        /* Build timedelta(milliseconds=right) */
-                        PyObject *td = PyObject_CallFunction(g_datetime_timedelta, "(dO)", 0.0, Py_None);
-                        Py_XDECREF(td);
-                        /* Use kwargs */
+                        PyObject *empty = PyTuple_New(0);
                         PyObject *kw = PyDict_New();
-                        if (kw != NULL) {
-                            if (PyDict_SetItemString(kw, "milliseconds", right) == 0) {
-                                PyObject *empty = PyTuple_New(0);
-                                PyObject *delta2 = PyObject_Call(g_datetime_timedelta, empty, kw);
-                                Py_DECREF(empty);
-                                if (delta2 != NULL) {
-                                    result = PyNumber_Add(ldt, delta2);
-                                    Py_DECREF(delta2);
-                                }
+                        if (empty != NULL && kw != NULL && PyDict_SetItemString(kw, "milliseconds", right) == 0) {
+                            PyObject *delta = PyObject_Call(g_datetime_timedelta, empty, kw);
+                            if (delta != NULL) {
+                                result = PyNumber_Add(ldt, delta);
+                                Py_DECREF(delta);
                             }
-                            Py_DECREF(kw);
                         }
+                        Py_XDECREF(empty);
+                        Py_XDECREF(kw);
                         Py_DECREF(ldt);
                     }
                 } else if (ln && r_dt) {
                     PyObject *rdt = PyObject_CallFunctionObjArgs(g_value_normalize_datetime, right, NULL);
                     if (rdt != NULL) {
+                        PyObject *empty = PyTuple_New(0);
                         PyObject *kw = PyDict_New();
-                        if (kw != NULL) {
-                            if (PyDict_SetItemString(kw, "milliseconds", left) == 0) {
-                                PyObject *empty = PyTuple_New(0);
-                                PyObject *delta2 = PyObject_Call(g_datetime_timedelta, empty, kw);
-                                Py_DECREF(empty);
-                                if (delta2 != NULL) {
-                                    result = PyNumber_Add(rdt, delta2);
-                                    Py_DECREF(delta2);
-                                }
+                        if (empty != NULL && kw != NULL && PyDict_SetItemString(kw, "milliseconds", left) == 0) {
+                            PyObject *delta = PyObject_Call(g_datetime_timedelta, empty, kw);
+                            if (delta != NULL) {
+                                result = PyNumber_Add(rdt, delta);
+                                Py_DECREF(delta);
                             }
-                            Py_DECREF(kw);
                         }
+                        Py_XDECREF(empty);
+                        Py_XDECREF(kw);
                         Py_DECREF(rdt);
                     }
                 }
