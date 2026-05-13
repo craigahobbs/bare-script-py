@@ -1,8 +1,6 @@
 /goal Port src/bare_script/runtime.py to src/bare_script/runtime_c.c from scratch and improve
 measured performance measures by 90%.
 
-Keep an optimization log in `static/claude-runtime-c-log.md`.
-
 Provide frequent, "fancy" status reports with current optimization statistics and current task
 description at all phases of the process.
 
@@ -61,8 +59,6 @@ and:
 make perf BARESCRIPT_RUNTIME_C=1
 ```
 
-Update the optimization log.
-
 ---
 
 ## Phase 2 — Optimization Planning
@@ -76,8 +72,6 @@ not be afraid of aggressive changes if you think they can be highly impactful.
 
 Please continue to update and re-prioritize our optimization ideas throughout the optimization
 process.
-
-Update the optimization log.
 
 ---
 
@@ -99,8 +93,6 @@ the change comparatively complex.
 
 If accepting the optimization, commit with a brief comment.
 
-Update the optimization log.
-
 ---
 
 ## Phase 4 - Final Review
@@ -110,6 +102,6 @@ When you have exhausted worthwhile optimization ideas, stop the optimization.
 Do a careful review of runtime_c.c with an eye for memory and reference leaks.
 
 Add a comment to `runtime_c.c` that describes the process by which it was created and the
-progression of optimizations. Remove the optimization log. Commit.
+progression of optimizations. Commit.
 
 You are done (even if goal hasn't been achieved).

@@ -85,6 +85,12 @@ static PyObject *S_includes_global = NULL; /* __barescriptIncludes */
 /* Default max statements: 1e9 */
 static double g_default_max_statements = 1e9;
 
+/* Thread-local statement counter. Sync'd to options['statementCount'] only at
+ * top-level entry/exit boundaries (when helper_depth transitions 0 <-> 1).
+ * Inside the loop we use the bare long, avoiding a dict update per statement. */
+static __thread long g_stmt_counter = 0;
+static __thread int g_helper_depth = 0;
+
 
 /* ---------------------------------------------------------------------------
  * Forward declarations
@@ -146,6 +152,51 @@ is_number(PyObject *v)
 {
     if (PyBool_Check(v)) return 0;
     return PyLong_Check(v) || PyFloat_Check(v);
+}
+
+
+/* Fast arithmetic for number/number. op_code: 0=+ 1=- 2=* 3=/.
+ * Returns NULL on error (exc set) or a result. Caller must have already
+ * checked is_number(l) && is_number(r). */
+static PyObject *
+fast_arith(PyObject *l, PyObject *r, int op_code)
+{
+    /* float + float / mixed: do as double */
+    if (PyFloat_Check(l) || PyFloat_Check(r)) {
+        double a, b;
+        if (PyFloat_Check(l)) a = PyFloat_AS_DOUBLE(l);
+        else {
+            a = PyLong_AsDouble(l);
+            if (a == -1.0 && PyErr_Occurred()) return NULL;
+        }
+        if (PyFloat_Check(r)) b = PyFloat_AS_DOUBLE(r);
+        else {
+            b = PyLong_AsDouble(r);
+            if (b == -1.0 && PyErr_Occurred()) return NULL;
+        }
+        double d;
+        switch (op_code) {
+            case 0: d = a + b; break;
+            case 1: d = a - b; break;
+            case 2: d = a * b; break;
+            case 3:
+                if (b == 0.0) {
+                    PyErr_SetString(PyExc_ZeroDivisionError, "float division by zero");
+                    return NULL;
+                }
+                d = a / b; break;
+            default: d = 0.0;
+        }
+        return PyFloat_FromDouble(d);
+    }
+    /* int op int — fall back to PyNumber for big-int correctness */
+    switch (op_code) {
+        case 0: return PyNumber_Add(l, r);
+        case 1: return PyNumber_Subtract(l, r);
+        case 2: return PyNumber_Multiply(l, r);
+        case 3: return PyNumber_TrueDivide(l, r);
+    }
+    Py_RETURN_NONE;
 }
 
 
@@ -441,6 +492,21 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
     PyObject *globals_ = PyDict_GetItemWithError(options, S_globals);
     if (globals_ == NULL) return NULL;
 
+    /* Top-level entry: read counter from options. Nested calls share the
+     * thread-local counter directly. */
+    int outer_depth = g_helper_depth++;
+    if (outer_depth == 0) {
+        PyObject *cur = PyDict_GetItemWithError(options, S_statementCount);
+        if (cur != NULL) {
+            long v = PyLong_AsLong(cur);
+            if (v == -1 && PyErr_Occurred()) { g_helper_depth--; return NULL; }
+            g_stmt_counter = v;
+        } else {
+            if (PyErr_Occurred()) { g_helper_depth--; return NULL; }
+            g_stmt_counter = 0;
+        }
+    }
+
     /* Cache max_statements once - constant across the run */
     PyObject *max_stmt_obj = PyDict_GetItemWithError(options, S_maxStatements);
     if (max_stmt_obj == NULL && PyErr_Occurred()) return NULL;
@@ -473,6 +539,7 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
     }
 
     PyObject *label_indexes = NULL;
+    PyObject *ret = NULL;
     Py_ssize_t statements_length = PyList_GET_SIZE(statements);
     Py_ssize_t ix_statement = 0;
 
@@ -485,17 +552,9 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             goto error;
         }
 
-        /* Increment statement counter (kept in options for visibility to nested calls) */
-        PyObject *cur_count = PyDict_GetItemWithError(options, S_statementCount);
-        if (cur_count == NULL && PyErr_Occurred()) goto error;
-        long count_val = (cur_count != NULL) ? PyLong_AsLong(cur_count) : 0;
-        if (count_val == -1 && PyErr_Occurred()) goto error;
-        count_val++;
-        PyObject *new_count = PyLong_FromLong(count_val);
-        if (new_count == NULL) goto error;
-        int rc = PyDict_SetItem(options, S_statementCount, new_count);
-        Py_DECREF(new_count);
-        if (rc < 0) goto error;
+        /* Increment thread-local statement counter (synced to options at top boundaries) */
+        g_stmt_counter++;
+        long count_val = g_stmt_counter;
 
         if (max_statements_d > 0 && (double)count_val > max_statements_d) {
             char buf[128];
@@ -615,11 +674,12 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
             PyObject *return_dict = statement_inner;
             PyObject *return_expr = PyDict_GetItemWithError(return_dict, S_expr);
             if (return_expr == NULL && PyErr_Occurred()) goto error;
-            Py_XDECREF(label_indexes);
             if (return_expr != NULL) {
-                return eval_expression(return_expr, options, locals_, 0, script, statement);
+                ret = eval_expression(return_expr, options, locals_, 0, script, statement);
+            } else {
+                ret = Py_None; Py_INCREF(Py_None);
             }
-            Py_RETURN_NONE;
+            goto done;
         }
 
         /* function */
@@ -804,12 +864,30 @@ exec_script_helper(PyObject *script, PyObject *statements, PyObject *options, Py
         ix_statement++;
     }
 
-    Py_XDECREF(label_indexes);
-    Py_RETURN_NONE;
+    ret = Py_None; Py_INCREF(Py_None);
+    goto done;
 
 error:
+    ret = NULL;
+done:
     Py_XDECREF(label_indexes);
-    return NULL;
+    /* Sync counter to options at top-level exit */
+    int new_depth = --g_helper_depth;
+    if (new_depth == 0) {
+        PyObject *exc_type = NULL, *exc_val = NULL, *exc_tb = NULL;
+        if (ret == NULL) PyErr_Fetch(&exc_type, &exc_val, &exc_tb);
+        PyObject *final_count = PyLong_FromLong(g_stmt_counter);
+        if (final_count != NULL) {
+            if (PyDict_SetItem(options, S_statementCount, final_count) < 0) {
+                PyErr_Clear();
+            }
+            Py_DECREF(final_count);
+        } else {
+            PyErr_Clear();
+        }
+        if (ret == NULL) PyErr_Restore(exc_type, exc_val, exc_tb);
+    }
+    return ret;
 }
 
 
@@ -1118,7 +1196,7 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         if (opcs[0] == '+' && opcs[1] == 0) {
             int ln = is_number(left), rn = is_number(right);
             if (ln && rn) {
-                result = PyNumber_Add(left, right);
+                result = fast_arith(left, right, 0);
             } else if (PyUnicode_Check(left) && PyUnicode_Check(right)) {
                 result = PyUnicode_Concat(left, right);
             } else if (PyUnicode_Check(left)) {
@@ -1167,7 +1245,7 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
         } else if (opcs[0] == '-' && opcs[1] == 0) {
             int ln = is_number(left), rn = is_number(right);
             if (ln && rn) {
-                result = PyNumber_Subtract(left, right);
+                result = fast_arith(left, right, 1);
             } else {
                 int l_dt = is_datetime(left), r_dt = is_datetime(right);
                 if (l_dt && r_dt) {
@@ -1202,11 +1280,11 @@ eval_expression(PyObject *expr, PyObject *options, PyObject *locals_, int builti
             }
         } else if (opcs[0] == '*' && opcs[1] == 0) {
             if (is_number(left) && is_number(right)) {
-                result = PyNumber_Multiply(left, right);
+                result = fast_arith(left, right, 2);
             }
         } else if (opcs[0] == '/' && opcs[1] == 0) {
             if (is_number(left) && is_number(right)) {
-                result = PyNumber_TrueDivide(left, right);
+                result = fast_arith(left, right, 3);
             }
         } else if (opcs[0] == '%' && opcs[1] == 0) {
             if (is_number(left) && is_number(right)) {
@@ -1380,7 +1458,7 @@ py_execute_script(PyObject *self, PyObject *args, PyObject *kwargs)
         }
     }
 
-    /* statementCount = 0 */
+    /* statementCount = 0 (visible to Python; runtime uses g_stmt_counter) */
     PyObject *zero = PyLong_FromLong(0);
     if (zero == NULL) { Py_DECREF(options); return NULL; }
     if (PyDict_SetItem(options, S_statementCount, zero) < 0) {
