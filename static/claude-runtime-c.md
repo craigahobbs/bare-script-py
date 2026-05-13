@@ -29,8 +29,7 @@ make perf
 
 Begin by deleting any existing `src/bare_script/runtime_c.c` entirely and do not refer to it.
 
-Next, faithfully port `runtime.py` to a new `runtime_c.c` from scratch. Optimize Python C API usage
-for Python 3.13+.
+Next, faithfully port `runtime.py` to a new `runtime_c.c` from scratch.
 
 Read these files:
 

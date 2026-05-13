@@ -146,15 +146,24 @@ static PyObject *raise_runtime_error_fmt(PyObject *script, PyObject *statement, 
     return raise_runtime_error(script, statement, buf);
 }
 
-/* Call a Python value_boolean(value) and return 0/1. Returns -1 on error. */
-static int call_value_boolean(PyObject *value)
+/* Inlined value_boolean for common BareScript types. Returns -1 on error. */
+static inline int fast_value_boolean(PyObject *v)
 {
-    PyObject *result = PyObject_CallOneArg(g_value_boolean, value);
-    if (result == NULL) return -1;
-    int r = PyObject_IsTrue(result);
-    Py_DECREF(result);
-    return r;
+    if (v == Py_None) return 0;
+    if (v == Py_True) return 1;
+    if (v == Py_False) return 0;
+    PyTypeObject *t = Py_TYPE(v);
+    if (t == &PyLong_Type) return PyObject_IsTrue(v);
+    if (t == &PyFloat_Type) return PyFloat_AS_DOUBLE(v) != 0.0;
+    if (t == &PyUnicode_Type) return PyUnicode_GET_LENGTH(v) != 0;
+    if (t == &PyList_Type) return PyList_GET_SIZE(v) != 0;
+    /* Other non-None (dict, datetime, function, regex, etc.) -> true */
+    return 1;
 }
+#define call_value_boolean(v) fast_value_boolean(v)
+
+/* Pointer-identity-first key compare. Both sides expected to be interned. */
+#define KS_EQ(k, ks) ((k) == (ks) || (PyUnicode_Check(k) && PyUnicode_Compare((k), (ks)) == 0))
 
 /* Call value_compare(a, b) and return its long int. Returns LONG_MIN on error. */
 static long call_value_compare(PyObject *a, PyObject *b)
@@ -483,13 +492,13 @@ static PyObject *evaluate_expression(
     }
 
     /* Number / String — fast paths */
-    if (expr_key == KS_number || PyUnicode_Compare(expr_key, KS_number) == 0) {
+    if (KS_EQ(expr_key, KS_number)) {
         PyObject *v = PyDict_GetItemWithError(expr, KS_number);
         if (v == NULL) { if (PyErr_Occurred()) return NULL; Py_RETURN_NONE; }
         Py_INCREF(v);
         return v;
     }
-    if (expr_key == KS_string || PyUnicode_Compare(expr_key, KS_string) == 0) {
+    if (KS_EQ(expr_key, KS_string)) {
         PyObject *v = PyDict_GetItemWithError(expr, KS_string);
         if (v == NULL) { if (PyErr_Occurred()) return NULL; Py_RETURN_NONE; }
         Py_INCREF(v);
@@ -497,13 +506,13 @@ static PyObject *evaluate_expression(
     }
 
     /* Variable */
-    if (PyUnicode_Compare(expr_key, KS_variable) == 0) {
+    if (KS_EQ(expr_key, KS_variable)) {
         PyObject *name = PyDict_GetItemWithError(expr, KS_variable);
         if (name == NULL) { if (PyErr_Occurred()) return NULL; Py_RETURN_NONE; }
         if (PyUnicode_Check(name)) {
-            if (PyUnicode_Compare(name, KS_null) == 0) Py_RETURN_NONE;
-            if (PyUnicode_Compare(name, KS_false) == 0) { Py_INCREF(PY_FALSE); return PY_FALSE; }
-            if (PyUnicode_Compare(name, KS_true) == 0) { Py_INCREF(PY_TRUE); return PY_TRUE; }
+            if (KS_EQ(name, KS_null)) Py_RETURN_NONE;
+            if (KS_EQ(name, KS_false)) { Py_INCREF(PY_FALSE); return PY_FALSE; }
+            if (KS_EQ(name, KS_true)) { Py_INCREF(PY_TRUE); return PY_TRUE; }
         }
         if (locals_ != NULL && locals_ != Py_None) {
             PyObject *v = PyDict_GetItemWithError(locals_, name);
@@ -519,14 +528,14 @@ static PyObject *evaluate_expression(
     }
 
     /* Function */
-    if (PyUnicode_Compare(expr_key, KS_function) == 0) {
+    if (KS_EQ(expr_key, KS_function)) {
         PyObject *fn = PyDict_GetItemWithError(expr, KS_function);
         if (fn == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
         PyObject *func_name = PyDict_GetItemWithError(fn, KS_name);
         if (func_name == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
 
         /* "if" builtin */
-        if (PyUnicode_Compare(func_name, KS_if) == 0) {
+        if (KS_EQ(func_name, KS_if)) {
             PyObject *args_expr = PyDict_GetItemWithError(fn, KS_args);
             if (args_expr == NULL && PyErr_Occurred()) return NULL;
             Py_ssize_t alen = 0;
@@ -597,7 +606,7 @@ static PyObject *evaluate_expression(
             func_value = PyDict_GetItemWithError(g_EXPRESSION_FUNCTIONS, func_name);
             if (func_value == NULL && PyErr_Occurred()) { Py_XDECREF(func_args); return NULL; }
         }
-        if (func_value != NULL) {
+        if (func_value != NULL && func_value != Py_None) {
             PyObject *call_args = func_args ? func_args : Py_None;
             Py_INCREF(call_args);
             PyObject *call_options = options ? options : Py_None;
@@ -664,7 +673,7 @@ static PyObject *evaluate_expression(
     }
 
     /* Binary */
-    if (PyUnicode_Compare(expr_key, KS_binary) == 0) {
+    if (KS_EQ(expr_key, KS_binary)) {
         PyObject *bin = PyDict_GetItemWithError(expr, KS_binary);
         if (bin == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
         PyObject *bin_op = PyDict_GetItemWithError(bin, KS_op);
@@ -677,14 +686,14 @@ static PyObject *evaluate_expression(
         if (left == NULL) return NULL;
 
         /* && / || short-circuit */
-        if (PyUnicode_Compare(bin_op, KS_op_amp) == 0) {
+        if (KS_EQ(bin_op, KS_op_amp)) {
             int b = call_value_boolean(left);
             if (b < 0) { Py_DECREF(left); return NULL; }
             if (!b) return left;
             Py_DECREF(left);
             return evaluate_expression(right_expr, options, locals_, builtins, script, statement);
         }
-        if (PyUnicode_Compare(bin_op, KS_op_pipe) == 0) {
+        if (KS_EQ(bin_op, KS_op_pipe)) {
             int b = call_value_boolean(left);
             if (b < 0) { Py_DECREF(left); return NULL; }
             if (b) return left;
@@ -699,7 +708,7 @@ static PyObject *evaluate_expression(
         PyObject *result = NULL;
         int op_handled = 0;
 
-        if (PyUnicode_Compare(bin_op, KS_op_plus) == 0) {
+        if (KS_EQ(bin_op, KS_op_plus)) {
             op_handled = 1;
             if (is_number(left) && is_number(right)) {
                 result = PyNumber_Add(left, right);
@@ -746,7 +755,7 @@ static PyObject *evaluate_expression(
                     Py_DECREF(rdt);
                 }
             }
-        } else if (PyUnicode_Compare(bin_op, KS_op_minus) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_minus)) {
             op_handled = 1;
             if (is_number(left) && is_number(right)) {
                 result = PyNumber_Subtract(left, right);
@@ -774,70 +783,70 @@ static PyObject *evaluate_expression(
                 }
                 Py_XDECREF(ldt); Py_XDECREF(rdt);
             }
-        } else if (PyUnicode_Compare(bin_op, KS_op_star) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_star)) {
             op_handled = 1;
             if (is_number(left) && is_number(right)) result = PyNumber_Multiply(left, right);
-        } else if (PyUnicode_Compare(bin_op, KS_op_slash) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_slash)) {
             op_handled = 1;
             if (is_number(left) && is_number(right)) result = PyNumber_TrueDivide(left, right);
-        } else if (PyUnicode_Compare(bin_op, KS_op_eq) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_eq)) {
             op_handled = 1;
             long c = call_value_compare(left, right);
             if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
             result = (c == 0) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
-        } else if (PyUnicode_Compare(bin_op, KS_op_ne) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_ne)) {
             op_handled = 1;
             long c = call_value_compare(left, right);
             if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
             result = (c != 0) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
-        } else if (PyUnicode_Compare(bin_op, KS_op_le) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_le)) {
             op_handled = 1;
             long c = call_value_compare(left, right);
             if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
             result = (c <= 0) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
-        } else if (PyUnicode_Compare(bin_op, KS_op_lt) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_lt)) {
             op_handled = 1;
             long c = call_value_compare(left, right);
             if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
             result = (c < 0) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
-        } else if (PyUnicode_Compare(bin_op, KS_op_ge) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_ge)) {
             op_handled = 1;
             long c = call_value_compare(left, right);
             if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
             result = (c >= 0) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
-        } else if (PyUnicode_Compare(bin_op, KS_op_gt) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_gt)) {
             op_handled = 1;
             long c = call_value_compare(left, right);
             if (PyErr_Occurred()) { Py_DECREF(left); Py_DECREF(right); return NULL; }
             result = (c > 0) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
-        } else if (PyUnicode_Compare(bin_op, KS_op_pct) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_pct)) {
             op_handled = 1;
             if (is_number(left) && is_number(right)) result = PyNumber_Remainder(left, right);
-        } else if (PyUnicode_Compare(bin_op, KS_op_pow) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_pow)) {
             op_handled = 1;
             if (is_number(left) && is_number(right)) result = PyNumber_Power(left, right, Py_None);
-        } else if (PyUnicode_Compare(bin_op, KS_op_band) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_band)) {
             op_handled = 1;
             if (is_number(left) && is_integer_valued(left) && is_number(right) && is_integer_valued(right)) {
                 PyObject *ll = to_pylong(left); PyObject *rr = to_pylong(right);
                 if (ll && rr) result = PyNumber_And(ll, rr);
                 Py_XDECREF(ll); Py_XDECREF(rr);
             }
-        } else if (PyUnicode_Compare(bin_op, KS_op_bor) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_bor)) {
             op_handled = 1;
             if (is_number(left) && is_integer_valued(left) && is_number(right) && is_integer_valued(right)) {
                 PyObject *ll = to_pylong(left); PyObject *rr = to_pylong(right);
                 if (ll && rr) result = PyNumber_Or(ll, rr);
                 Py_XDECREF(ll); Py_XDECREF(rr);
             }
-        } else if (PyUnicode_Compare(bin_op, KS_op_bxor) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_bxor)) {
             op_handled = 1;
             if (is_number(left) && is_integer_valued(left) && is_number(right) && is_integer_valued(right)) {
                 PyObject *ll = to_pylong(left); PyObject *rr = to_pylong(right);
                 if (ll && rr) result = PyNumber_Xor(ll, rr);
                 Py_XDECREF(ll); Py_XDECREF(rr);
             }
-        } else if (PyUnicode_Compare(bin_op, KS_op_shl) == 0) {
+        } else if (KS_EQ(bin_op, KS_op_shl)) {
             op_handled = 1;
             if (is_number(left) && is_integer_valued(left) && is_number(right) && is_integer_valued(right)) {
                 PyObject *ll = to_pylong(left); PyObject *rr = to_pylong(right);
@@ -862,7 +871,7 @@ static PyObject *evaluate_expression(
     }
 
     /* Unary */
-    if (PyUnicode_Compare(expr_key, KS_unary) == 0) {
+    if (KS_EQ(expr_key, KS_unary)) {
         PyObject *un = PyDict_GetItemWithError(expr, KS_unary);
         if (un == NULL) return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
         PyObject *un_op = PyDict_GetItemWithError(un, KS_op);
@@ -872,14 +881,14 @@ static PyObject *evaluate_expression(
         PyObject *value = evaluate_expression(sub_expr, options, locals_, builtins, script, statement);
         if (value == NULL) return NULL;
 
-        if (PyUnicode_Compare(un_op, KS_op_not) == 0) {
+        if (KS_EQ(un_op, KS_op_not)) {
             int b = call_value_boolean(value);
             Py_DECREF(value);
             if (b < 0) return NULL;
             if (b) Py_RETURN_FALSE;
             Py_RETURN_TRUE;
         }
-        if (PyUnicode_Compare(un_op, KS_op_minus) == 0) {
+        if (KS_EQ(un_op, KS_op_minus)) {
             PyObject *result = NULL;
             if (is_number(value)) result = PyNumber_Negative(value);
             Py_DECREF(value);
@@ -922,6 +931,43 @@ static PyObject *execute_script_helper(
     Py_ssize_t statements_length = PyList_Check(statements) ? PyList_GET_SIZE(statements) : PyObject_Length(statements);
     if (statements_length < 0) return NULL;
 
+    /* Hoist invariants out of the statement loop:
+       - max_statements: not expected to change mid-execution.
+       - coverage_global / has_coverage: coverage object pointer stable per
+         execute_script call.
+       - script_system: stable per script.
+     */
+    long long max_statements = DEFAULT_MAX_STATEMENTS;
+    {
+        PyObject *max_obj = PyDict_GetItemWithError(options, KS_maxStatements);
+        if (max_obj == NULL && PyErr_Occurred()) return NULL;
+        if (max_obj != NULL) {
+            long long mv = PyLong_AsLongLong(max_obj);
+            if (mv == -1 && PyErr_Occurred()) {
+                PyErr_Clear();
+                double dv = PyFloat_AsDouble(max_obj);
+                if (dv == -1.0 && PyErr_Occurred()) return NULL;
+                mv = (long long)dv;
+            }
+            max_statements = mv;
+        }
+    }
+
+    int has_coverage = 0;
+    PyObject *coverage_global = PyDict_GetItemWithError(globals_, g_SYSTEM_GLOBAL_COVERAGE_NAME);
+    if (coverage_global == NULL && PyErr_Occurred()) return NULL;
+    if (coverage_global != NULL && PyDict_Check(coverage_global)) {
+        PyObject *enabled = PyDict_GetItemWithError(coverage_global, KS_enabled);
+        if (enabled == NULL && PyErr_Occurred()) return NULL;
+        int en = (enabled != NULL) ? PyObject_IsTrue(enabled) : 0;
+        if (en < 0) return NULL;
+        PyObject *sys_flag = PyDict_GetItemWithError(script, KS_system);
+        if (sys_flag == NULL && PyErr_Occurred()) return NULL;
+        int sys_is = (sys_flag != NULL) ? PyObject_IsTrue(sys_flag) : 0;
+        if (sys_is < 0) return NULL;
+        has_coverage = en && !sys_is;
+    }
+
     Py_ssize_t ix_statement = 0;
     while (ix_statement < statements_length) {
         PyObject *statement;
@@ -958,22 +1004,6 @@ static PyObject *execute_script_helper(
         }
         Py_DECREF(new_count);
 
-        PyObject *max_obj = PyDict_GetItemWithError(options, KS_maxStatements);
-        long long max_statements = DEFAULT_MAX_STATEMENTS;
-        if (max_obj == NULL) {
-            if (PyErr_Occurred()) { Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL; }
-        } else {
-            max_statements = PyLong_AsLongLong(max_obj);
-            if (max_statements == -1 && PyErr_Occurred()) {
-                /* maybe float */
-                PyErr_Clear();
-                double dv = PyFloat_AsDouble(max_obj);
-                if (dv == -1.0 && PyErr_Occurred()) {
-                    Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
-                }
-                max_statements = (long long)dv;
-            }
-        }
         if (max_statements > 0 && stmt_count > max_statements) {
             char buf[128];
             snprintf(buf, sizeof(buf), "Exceeded maximum script statements (%lld)", max_statements);
@@ -981,27 +1011,6 @@ static PyObject *execute_script_helper(
             Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
         }
 
-        /* Coverage */
-        PyObject *coverage_global = PyDict_GetItemWithError(globals_, g_SYSTEM_GLOBAL_COVERAGE_NAME);
-        if (coverage_global == NULL && PyErr_Occurred()) {
-            Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
-        }
-        int has_coverage = 0;
-        if (coverage_global != NULL && PyDict_Check(coverage_global)) {
-            PyObject *enabled = PyDict_GetItemWithError(coverage_global, KS_enabled);
-            if (enabled == NULL && PyErr_Occurred()) {
-                Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
-            }
-            int en = (enabled != NULL) ? PyObject_IsTrue(enabled) : 0;
-            if (en < 0) { Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL; }
-            PyObject *sys_flag = PyDict_GetItemWithError(script, KS_system);
-            if (sys_flag == NULL && PyErr_Occurred()) {
-                Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
-            }
-            int sys_is = (sys_flag != NULL) ? PyObject_IsTrue(sys_flag) : 0;
-            if (sys_is < 0) { Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL; }
-            has_coverage = en && !sys_is;
-        }
         if (has_coverage) {
             if (record_statement_coverage(script, statement, statement_key, coverage_global) < 0) {
                 Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
@@ -1009,7 +1018,7 @@ static PyObject *execute_script_helper(
         }
 
         /* Dispatch */
-        if (PyUnicode_Compare(statement_key, KS_expr) == 0) {
+        if (KS_EQ(statement_key, KS_expr)) {
             PyObject *expr_dict = PyDict_GetItemWithError(statement, KS_expr);
             if (expr_dict == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *inner = PyDict_GetItemWithError(expr_dict, KS_expr);
@@ -1025,7 +1034,7 @@ static PyObject *execute_script_helper(
                 }
             }
             Py_DECREF(value);
-        } else if (PyUnicode_Compare(statement_key, KS_jump) == 0) {
+        } else if (KS_EQ(statement_key, KS_jump)) {
             PyObject *jump_dict = PyDict_GetItemWithError(statement, KS_jump);
             if (jump_dict == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *jump_expr = PyDict_GetItemWithError(jump_dict, KS_expr);
@@ -1105,7 +1114,7 @@ static PyObject *execute_script_helper(
                     Py_DECREF(lst);
                 }
             }
-        } else if (PyUnicode_Compare(statement_key, KS_return) == 0) {
+        } else if (KS_EQ(statement_key, KS_return)) {
             PyObject *ret = PyDict_GetItemWithError(statement, KS_return);
             if (ret == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *ret_expr = PyDict_GetItemWithError(ret, KS_expr);
@@ -1118,7 +1127,7 @@ static PyObject *execute_script_helper(
             }
             Py_DECREF(statement); Py_XDECREF(label_indexes);
             return result;
-        } else if (PyUnicode_Compare(statement_key, KS_function) == 0) {
+        } else if (KS_EQ(statement_key, KS_function)) {
             PyObject *fn = PyDict_GetItemWithError(statement, KS_function);
             if (fn == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *fn_name = PyDict_GetItemWithError(fn, KS_name);
@@ -1129,7 +1138,7 @@ static PyObject *execute_script_helper(
                 Py_DECREF(sf); Py_DECREF(statement); Py_XDECREF(label_indexes); return NULL;
             }
             Py_DECREF(sf);
-        } else if (PyUnicode_Compare(statement_key, KS_include) == 0) {
+        } else if (KS_EQ(statement_key, KS_include)) {
             PyObject *inc = PyDict_GetItemWithError(statement, KS_include);
             if (inc == NULL) { Py_DECREF(statement); Py_XDECREF(label_indexes); return PyErr_Occurred() ? NULL : Py_NewRef(Py_None); }
             PyObject *system_prefix = PyDict_GetItemWithError(options, KS_systemPrefix);
