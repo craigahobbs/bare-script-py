@@ -40,11 +40,7 @@ setup(
         Extension(
             'bare_script.runtime_c',
             sources=['src/bare_script/runtime_c.c']
-        ),
-        Extension(
-            'bare_script.value_c',
-            sources=['src/bare_script/value_c.c']
-        ),
+        )
     ],
     cmdclass={'build_ext': OptionalBuildExt}
 )

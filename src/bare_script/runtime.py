@@ -8,11 +8,15 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import DEFAULT_MAX_STATEMENTS, EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from .library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
 from .parser import parse_script
 from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
+
+
+# The default maximum statements for executeScript
+DEFAULT_MAX_STATEMENTS = 1e9
 
 
 # Coverage configuration object global variable name

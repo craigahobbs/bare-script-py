@@ -23,12 +23,31 @@ SPHINX_DOC := doc
 include Makefile.base
 
 
+# runtime-c porting/optimization model and effort
+RUNTIME_C_MODEL ?= opus
+RUNTIME_C_EFFORT ?= high
+
+
 help:
-	@echo "            [perf|sync-include|test-include]"
+	@echo "            [perf|runtime-c|sync-include|test-include]"
 
 
 clean:
 	rm -rf Makefile.base pylintrc
+
+
+# Use Python runtime, unless BARESCRIPT_RUNTIME_C is set
+ifeq '$(BARESCRIPT_RUNTIME_C)' ''
+export BARESCRIPT_RUNTIME_PY=1
+else
+unexport BARESCRIPT_RUNTIME_PY
+endif
+
+
+commit:
+ifeq '$(BARESCRIPT_RUNTIME_C)' ''
+	$(MAKE) test test-include BARESCRIPT_RUNTIME_C=1
+endif
 
 
 .PHONY: sync-include
@@ -43,6 +62,11 @@ test-include: $(DEFAULT_VENV_BUILD)
 	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/*.bare
 	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
+
+
+.PHONY: runtime-c
+runtime-c: $(DEFAULT_VENV_BUILD)
+	claude --model $(RUNTIME_C_MODEL) --enable-auto-mode --effort $(RUNTIME_C_EFFORT) "$$(cat static/claude-runtime-c.md)"
 
 
 doc:
