@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.0 (2026-05-13)
+
+- [2881c7d](https://github.com/craigahobbs/bare-script-py/commit/2881c7d) - add C runtime for 3-8x perf improvement
+
+- [f7741a2](https://github.com/craigahobbs/bare-script-py/commit/f7741a2) - move default_max_statements to runtime
+
 ## 4.0.3 (2026-04-25)
 
 - [34087ef](https://github.com/craigahobbs/bare-script-py/commit/34087ef) - dataLineChart.bare uses documentFontSize if available
