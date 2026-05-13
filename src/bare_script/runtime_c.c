@@ -1,8 +1,65 @@
 /*
- * runtime_c.c - C port of bare_script/runtime.py for Python 3.13+
+ * runtime_c.c — C port of bare_script/runtime.py for Python 3.13+
  *
- * Faithful port of runtime.py. See claude-runtime-c-log.md for the
- * optimization history.
+ * runtime.py is the reference implementation. This file is a faithful C
+ * port plus targeted optimizations. To keep them in sync, when adding
+ * features or fixing bugs, update runtime.py first and then mirror the
+ * change here.
+ *
+ * Construction history:
+ * 1. Phase 1 — Fresh port from runtime.py. Cached imports for all helpers
+ *    (value_boolean, value_compare, value_normalize_datetime, etc.) and
+ *    interned every AST dict-key and operator string at module init so
+ *    later comparisons can use cheap identity checks. ScriptFunction is a
+ *    custom Python type (replacing functools.partial) that carries the
+ *    (script, function) pair and implements tp_call.
+ *
+ * 2. Optimization rounds (rough effect on the mandelbrot perf benchmark,
+ *    pure-Python baseline 16,721 ms; on the include test suite baseline
+ *    3,404 ms):
+ *      Opt 1 — Hoisted max_statements, coverage_global, and script.system
+ *              out of the per-statement loop; inlined value_boolean for the
+ *              common BareScript types (None/bool/int/float/str/list);
+ *              KS_EQ macro does pointer-identity check before falling back
+ *              to PyUnicode_Compare. Fix: locals[name]=None must still
+ *              raise "Undefined function".
+ *      Opt 2 — Numeric fast path for binary ops. When both operands are
+ *              non-bool int/float, dispatch on the op's first character and
+ *              inline +, -, *, /, %, **, <, <=, >, >=, ==, !=. Inline numeric
+ *              comparison uses !(a <= b) for ">" / !(a < b) for ">=" so it
+ *              matches value_compare's NaN semantics. (-18% perf)
+ *      Opt 3 — Coverage: lazy-resolve the per-script "covered" dict once,
+ *              reused for every following statement. The eager version of
+ *              this regressed a test that asserts the scripts entry is only
+ *              created after a statement with a lineNumber is seen.
+ *      Opt 4 — Inline float+float, float-float, float*float arithmetic to
+ *              skip PyNumber_Add dispatch (only for these three ops since
+ *              division by zero, modulo semantics, etc. differ from Python).
+ *      Opt 5 — ScriptFunction implements the vectorcall protocol so calls
+ *              from evaluate_expression's function dispatch don't have to
+ *              pack a 2-tuple.
+ *      Opt 6 — Use PyDict_Next once at the top of evaluate_expression and
+ *              the statement dispatch loop to extract both the first key
+ *              and its value. Eliminates the second PyDict_GetItem each
+ *              expression/statement was doing to fetch its inner body.
+ *              (-7% perf)
+ *      Opt 7 — eval_simple inline helper for leaf sub-expressions
+ *              (number/string/variable). Used inside binary evaluation to
+ *              skip the full recursive evaluate_expression call for simple
+ *              operands. Subtle bug fixed during this round: not all AST
+ *              string literals (notably the keyword 'false') are interned
+ *              to the same canonical PyUnicode as our cached KS_false, so
+ *              eval_simple must use PyUnicode_Compare fallback for the
+ *              null/true/false keyword check, not pointer identity alone.
+ *              (-9% perf)
+ *      Opt 8 — Extend eval_simple to function-argument and unary
+ *              sub-expression evaluation.
+ *      Opt 9 — Direct C call into ScriptFunction_call_body when the target
+ *              is a ScriptFunction (skips the call protocol entirely).
+ *
+ * Final result vs. pure-Python runtime.py:
+ *   - include test suite: 3404 ms -> ~1340 ms (~2.5x speedup)
+ *   - mandelbrot perf:    16721 ms -> ~3090 ms (~5.4x speedup)
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -216,20 +273,6 @@ static PyObject *to_pylong(PyObject *v)
         return v;
     }
     return PyNumber_Long(v);
-}
-
-/* dict.get with default fallback. Returns new ref, or NULL on error (default is borrowed). */
-static PyObject *dict_get_new(PyObject *dict, PyObject *key, PyObject *def)
-{
-    PyObject *value = PyDict_GetItemWithError(dict, key);
-    if (value != NULL) {
-        Py_INCREF(value);
-        return value;
-    }
-    if (PyErr_Occurred()) return NULL;
-    if (def == NULL) Py_RETURN_NONE;
-    Py_INCREF(def);
-    return def;
 }
 
 /* Get next dict key (the first key in iteration order). Returns borrowed reference or NULL on error/empty. */
