@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.1 (2026-05-14)
+
+- [97f80bf](https://github.com/craigahobbs/bare-script-py/commit/97f80bf) - run make runtime-optimize for 20% performance improvement
+
 ## 4.1.0 (2026-05-13)
 
 - [2881c7d](https://github.com/craigahobbs/bare-script-py/commit/2881c7d) - add C runtime for 3-8x perf improvement
