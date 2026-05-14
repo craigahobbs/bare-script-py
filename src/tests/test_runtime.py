@@ -1717,6 +1717,22 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), True)
 
 
+    def test_binary_comparison_non_number(self):
+        # String compare exercises the value_compare fallthrough for all comparison operators
+        expr = validate_expression({'binary': {'op': '==', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        self.assertEqual(evaluate_expression(expr), False)
+        expr = validate_expression({'binary': {'op': '!=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        self.assertEqual(evaluate_expression(expr), True)
+        expr = validate_expression({'binary': {'op': '<=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        self.assertEqual(evaluate_expression(expr), True)
+        expr = validate_expression({'binary': {'op': '<', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        self.assertEqual(evaluate_expression(expr), True)
+        expr = validate_expression({'binary': {'op': '>=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        self.assertEqual(evaluate_expression(expr), False)
+        expr = validate_expression({'binary': {'op': '>', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        self.assertEqual(evaluate_expression(expr), False)
+
+
     def test_binary_modulus(self):
         options = {'globals': {'testNumber': _test_number}}
 

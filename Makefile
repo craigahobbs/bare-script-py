@@ -23,13 +23,13 @@ SPHINX_DOC := doc
 include Makefile.base
 
 
-# runtime-c porting/optimization model and effort
-RUNTIME_C_MODEL ?= opus
-RUNTIME_C_EFFORT ?= high
+# AI optimization model and effort
+OPTIMIZE_MODEL ?= opus
+OPTIMIZE_EFFORT ?= high
 
 
 help:
-	@echo "            [perf|runtime-c|sync-include|test-include]"
+	@echo "            [perf|runtime-c|runtime-optimize|sync-include|test-include]"
 
 
 clean:
@@ -65,9 +65,14 @@ test-include: $(DEFAULT_VENV_BUILD)
 	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 
 
+.PHONY: runtime-optimize
+runtime-optimize:
+	claude --enable-auto-mode --add-dir ../bare-script --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-optimize.md)"
+
+
 .PHONY: runtime-c
-runtime-c: $(DEFAULT_VENV_BUILD)
-	claude --model $(RUNTIME_C_MODEL) --enable-auto-mode --effort $(RUNTIME_C_EFFORT) "$$(cat static/claude-runtime-c.md)"
+runtime-c:
+	claude --enable-auto-mode --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-c.md)"
 
 
 doc:

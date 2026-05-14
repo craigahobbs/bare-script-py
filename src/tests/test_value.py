@@ -320,7 +320,9 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare({'value': 2}, {'value': 1}), 1)
         self.assertEqual(value_compare({'a': 1}, {'b': 1}), -1)
         self.assertEqual(value_compare({'b': 1}, {'a': 1}), 1)
+        self.assertEqual(value_compare({'a': 1}, {'a': 1, 'b': 2}), -1)
         self.assertEqual(value_compare({'a': 1}, {'b': 2, 'a': 1}), -1)
+        self.assertEqual(value_compare({'a': 1, 'b': 2}, {'a': 1}), 1)
         self.assertEqual(value_compare({'b': 2, 'a': 1}, {'a': 1}), 1)
 
         # array
