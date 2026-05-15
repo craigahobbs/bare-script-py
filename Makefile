@@ -230,7 +230,8 @@ export DOC_RUNTIME_MODEL_PY
 perf: $(DEFAULT_VENV_BUILD)
 	mkdir -p $(dir $(PERF_JSON))
 	echo "[" > $(PERF_JSON)
-	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "BareScript", "timeMs": '$$($(DEFAULT_VENV_BIN)/bare perf/test.bare)'},' >> $(PERF_JSON); done
+	for X in $$(seq 1 $(PERF_RUNS)); do unset BARESCRIPT_RUNTIME_PY; echo '{"language": "BareScript (C)", "timeMs": '$$($(DEFAULT_VENV_BIN)/bare perf/test.bare)'},' >> $(PERF_JSON); done
+	for X in $$(seq 1 $(PERF_RUNS)); do BARESCRIPT_RUNTIME_PY=1 echo '{"language": "BareScript (Py)", "timeMs": '$$($(DEFAULT_VENV_BIN)/bare perf/test.bare)'},' >> $(PERF_JSON); done
 	for X in $$(seq 1 $(PERF_RUNS)); do echo '{"language": "Python", "timeMs": '$$($(DEFAULT_VENV_PYTHON) perf/test.py)'},' >> $(PERF_JSON); done
 	echo '{}' >> $(PERF_JSON)
 	echo "]" >> $(PERF_JSON)

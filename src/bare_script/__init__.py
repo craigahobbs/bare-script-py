@@ -5,7 +5,7 @@
 bare-script package
 """
 
-import os as _os
+import os
 
 from .model import \
     lint_script, \
@@ -29,7 +29,7 @@ from .parser import \
 from .runtime import \
     BareScriptRuntimeError
 
-if not _os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
+if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
     try:
         from .runtime_c import evaluate_expression, execute_script
     except ImportError:

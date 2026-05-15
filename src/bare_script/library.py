@@ -11,7 +11,7 @@ import functools
 import importlib
 import json
 import math
-import os as _os
+import os
 import random
 import re
 import urllib
@@ -28,7 +28,7 @@ from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_arg
 # Helper to dynamically import evaluate_expression to avoid the circular dependency
 def _import_evaluate_expression():
     if not _EVALUATE_EXPRESSION:
-        if not _os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
+        if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
             try:
                 _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime_c').evaluate_expression)
             except (ImportError, AttributeError):

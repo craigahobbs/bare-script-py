@@ -7,7 +7,7 @@ bare-script command-line interface (CLI)
 
 import argparse
 from functools import partial
-import os as _os
+import os
 import sys
 import time
 
@@ -16,7 +16,7 @@ from .options import FETCH_SYSTEM_PREFIX, fetch_read_write, fetch_system, log_st
 from .parser import parse_expression, parse_script
 from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME
 from .value import value_boolean
-if not _os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
+if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
     try:
         from .runtime_c import evaluate_expression, execute_script
     except ImportError:
