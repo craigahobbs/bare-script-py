@@ -19,6 +19,15 @@ $(eval $(call WGET, https://craigahobbs.github.io/python-build/pylintrc))
 SPHINX_DOC := doc
 
 
+# Use Python runtime, unless BARESCRIPT_RUNTIME_C is set
+ifeq '$(BARESCRIPT_RUNTIME_C)' ''
+export BARESCRIPT_RUNTIME_PY=1
+DOCKER_ENV := -e BARESCRIPT_RUNTIME_PY=1
+else
+unexport BARESCRIPT_RUNTIME_PY
+endif
+
+
 # Include python-build
 include Makefile.base
 
@@ -34,15 +43,6 @@ help:
 
 clean:
 	rm -rf Makefile.base pylintrc src/bare_script/*.so
-
-
-# Use Python runtime, unless BARESCRIPT_RUNTIME_C is set
-ifeq '$(BARESCRIPT_RUNTIME_C)' ''
-export BARESCRIPT_RUNTIME_PY=1
-DOCKER_ENV := -e BARESCRIPT_RUNTIME_PY=1
-else
-unexport BARESCRIPT_RUNTIME_PY
-endif
 
 
 commit:
