@@ -400,42 +400,58 @@ script_function_call(PyObject *script, PyObject *function, PyObject *args, PyObj
 
         PyObject *last_arg_array = dict_getitem_borrow(function, K_lastArgArray);
         if (PyErr_Occurred()) { Py_DECREF(func_locals); return NULL; }
-        Py_ssize_t ix_arg_last = -1;
-        if (last_arg_array != NULL && PyObject_IsTrue(last_arg_array) == 1) {
-            ix_arg_last = func_args_length - 1;
-        }
+        int has_last_arg_array = (last_arg_array != NULL && PyObject_IsTrue(last_arg_array) == 1);
 
-        for (Py_ssize_t ix = 0; ix < func_args_length; ix++) {
-            PyObject *arg_name = PyList_GET_ITEM(func_args, ix);
-            PyObject *val = NULL;
-            int needs_decref = 0;
-            if (ix < args_length) {
-                if (ix == ix_arg_last) {
-                    /* args[ix:] */
-                    if (PyList_Check(args)) {
-                        val = PyList_GetSlice(args, ix, args_length);
+        if (has_last_arg_array) {
+            Py_ssize_t ix_arg_last = func_args_length - 1;
+            for (Py_ssize_t ix = 0; ix < func_args_length; ix++) {
+                PyObject *arg_name = PyList_GET_ITEM(func_args, ix);
+                PyObject *val = NULL;
+                int needs_decref = 0;
+                if (ix < args_length) {
+                    if (ix == ix_arg_last) {
+                        /* args[ix:] */
+                        if (PyList_Check(args)) {
+                            val = PyList_GetSlice(args, ix, args_length);
+                        } else {
+                            val = PySequence_GetSlice(args, ix, args_length);
+                        }
+                        if (!val) { Py_DECREF(func_locals); return NULL; }
+                        needs_decref = 1;
                     } else {
-                        val = PySequence_GetSlice(args, ix, args_length);
+                        val = PySequence_GetItem(args, ix);
+                        if (!val) { Py_DECREF(func_locals); return NULL; }
+                        needs_decref = 1;
                     }
-                    if (!val) { Py_DECREF(func_locals); return NULL; }
-                    needs_decref = 1;
                 } else {
-                    val = PySequence_GetItem(args, ix);
-                    if (!val) { Py_DECREF(func_locals); return NULL; }
-                    needs_decref = 1;
+                    if (ix == ix_arg_last) {
+                        val = PyList_New(0);
+                        if (!val) { Py_DECREF(func_locals); return NULL; }
+                        needs_decref = 1;
+                    } else {
+                        val = Py_None;
+                    }
                 }
-            } else {
-                if (ix == ix_arg_last) {
-                    val = PyList_New(0);
+                int rc = PyDict_SetItem(func_locals, arg_name, val);
+                if (needs_decref) Py_DECREF(val);
+                if (rc < 0) { Py_DECREF(func_locals); return NULL; }
+            }
+        } else {
+            for (Py_ssize_t ix = 0; ix < func_args_length; ix++) {
+                PyObject *arg_name = PyList_GET_ITEM(func_args, ix);
+                PyObject *val;
+                int needs_decref = 0;
+                if (ix < args_length) {
+                    val = PySequence_GetItem(args, ix);
                     if (!val) { Py_DECREF(func_locals); return NULL; }
                     needs_decref = 1;
                 } else {
                     val = Py_None;
                 }
+                int rc = PyDict_SetItem(func_locals, arg_name, val);
+                if (needs_decref) Py_DECREF(val);
+                if (rc < 0) { Py_DECREF(func_locals); return NULL; }
             }
-            int rc = PyDict_SetItem(func_locals, arg_name, val);
-            if (needs_decref) Py_DECREF(val);
-            if (rc < 0) { Py_DECREF(func_locals); return NULL; }
         }
     }
 
@@ -588,12 +604,12 @@ op_to_id(PyObject *op)
     if (op == K_op_minus) return OP_MINUS;
     if (op == K_op_star) return OP_STAR;
     if (op == K_op_slash) return OP_SLASH;
+    if (op == K_op_lt) return OP_LT;
+    if (op == K_op_le) return OP_LE;
+    if (op == K_op_gt) return OP_GT;
+    if (op == K_op_ge) return OP_GE;
     if (op == K_op_eq) return OP_EQ;
     if (op == K_op_ne) return OP_NE;
-    if (op == K_op_le) return OP_LE;
-    if (op == K_op_lt) return OP_LT;
-    if (op == K_op_ge) return OP_GE;
-    if (op == K_op_gt) return OP_GT;
     if (op == K_op_pct) return OP_PCT;
     if (op == K_op_star_star) return OP_STAR_STAR;
     if (op == K_op_amp_amp) return OP_AND_AND;
@@ -611,12 +627,12 @@ op_to_id(PyObject *op)
     if (PyUnicode_Compare(op, K_op_minus) == 0) return OP_MINUS;
     if (PyUnicode_Compare(op, K_op_star) == 0) return OP_STAR;
     if (PyUnicode_Compare(op, K_op_slash) == 0) return OP_SLASH;
+    if (PyUnicode_Compare(op, K_op_lt) == 0) return OP_LT;
+    if (PyUnicode_Compare(op, K_op_le) == 0) return OP_LE;
+    if (PyUnicode_Compare(op, K_op_gt) == 0) return OP_GT;
+    if (PyUnicode_Compare(op, K_op_ge) == 0) return OP_GE;
     if (PyUnicode_Compare(op, K_op_eq) == 0) return OP_EQ;
     if (PyUnicode_Compare(op, K_op_ne) == 0) return OP_NE;
-    if (PyUnicode_Compare(op, K_op_le) == 0) return OP_LE;
-    if (PyUnicode_Compare(op, K_op_lt) == 0) return OP_LT;
-    if (PyUnicode_Compare(op, K_op_ge) == 0) return OP_GE;
-    if (PyUnicode_Compare(op, K_op_gt) == 0) return OP_GT;
     if (PyUnicode_Compare(op, K_op_pct) == 0) return OP_PCT;
     if (PyUnicode_Compare(op, K_op_star_star) == 0) return OP_STAR_STAR;
     if (PyUnicode_Compare(op, K_op_amp_amp) == 0) return OP_AND_AND;

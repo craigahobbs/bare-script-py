@@ -512,6 +512,31 @@ class TestExecuteScript(unittest.TestCase):
         self.assertListEqual(execute_script(script), [1, []])
 
 
+    def test_function_last_arg_array_missing_intermediate(self):
+        script = validate_script({
+            'statements': [
+                {
+                    'function': {
+                        'name': 'test',
+                        'args': ['a', 'b', 'c'],
+                        'lastArgArray': True,
+                        'statements': [
+                            {'return': {
+                                'expr': {'function': {
+                                    'name': 'arrayNew', 'args': [{'variable': 'a'}, {'variable': 'b'}, {'variable': 'c'}]
+                                }}
+                            }}
+                        ]
+                    }
+                },
+                {'return': {
+                    'expr': {'function': {'name': 'test', 'args': [{'number': 1}]}}
+                }}
+            ]
+        })
+        self.assertListEqual(execute_script(script), [1, None, []])
+
+
     def test_function_async(self):
         script = validate_script({
             'statements': [

@@ -224,13 +224,17 @@ def _script_function(script, function, args, options):
     if func_args is not None:
         args_length = len(args)
         func_args_length = len(func_args)
-        ix_arg_last = function.get('lastArgArray', None) and (func_args_length - 1)
-        for ix_arg in range(func_args_length):
-            arg_name = func_args[ix_arg]
-            if ix_arg < args_length:
-                func_locals[arg_name] = args[ix_arg] if ix_arg != ix_arg_last else args[ix_arg:]
-            else:
-                func_locals[arg_name] = [] if ix_arg == ix_arg_last else None
+        if function.get('lastArgArray'):
+            ix_arg_last = func_args_length - 1
+            for ix_arg in range(func_args_length):
+                arg_name = func_args[ix_arg]
+                if ix_arg < args_length:
+                    func_locals[arg_name] = args[ix_arg] if ix_arg != ix_arg_last else args[ix_arg:]
+                else:
+                    func_locals[arg_name] = [] if ix_arg == ix_arg_last else None
+        else:
+            for ix_arg in range(func_args_length):
+                func_locals[func_args[ix_arg]] = args[ix_arg] if ix_arg < args_length else None
     return _execute_script_helper(script, function['statements'], options, func_locals)
 
 
@@ -399,6 +403,26 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
                 (right_type is int or right_type is float)):
                 return left_value / right_value
 
+        elif bin_op == '<':
+            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
+                return left_value < right_value
+            return value_compare(left_value, right_value) < 0
+
+        elif bin_op == '<=':
+            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
+                return left_value <= right_value
+            return value_compare(left_value, right_value) <= 0
+
+        elif bin_op == '>':
+            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
+                return left_value > right_value
+            return value_compare(left_value, right_value) > 0
+
+        elif bin_op == '>=':
+            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
+                return left_value >= right_value
+            return value_compare(left_value, right_value) >= 0
+
         elif bin_op == '==':
             if (left_type is int or left_type is float) and (right_type is int or right_type is float):
                 return left_value == right_value
@@ -408,26 +432,6 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
             if (left_type is int or left_type is float) and (right_type is int or right_type is float):
                 return left_value != right_value
             return value_compare(left_value, right_value) != 0
-
-        elif bin_op == '<=':
-            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
-                return left_value <= right_value
-            return value_compare(left_value, right_value) <= 0
-
-        elif bin_op == '<':
-            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
-                return left_value < right_value
-            return value_compare(left_value, right_value) < 0
-
-        elif bin_op == '>=':
-            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
-                return left_value >= right_value
-            return value_compare(left_value, right_value) >= 0
-
-        elif bin_op == '>':
-            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
-                return left_value > right_value
-            return value_compare(left_value, right_value) > 0
 
         elif bin_op == '%':
             # number % number
@@ -443,32 +447,32 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
 
         elif bin_op == '&':
             # int & int
-            if ((left_type is int or left_type is float) and int(left_value) == left_value and
-                (right_type is int or right_type is float) and int(right_value) == right_value):
+            if ((left_type is int or (left_type is float and left_value.is_integer())) and
+                (right_type is int or (right_type is float and right_value.is_integer()))):
                 return int(left_value) & int(right_value)
 
         elif bin_op == '|':
             # int & int
-            if ((left_type is int or left_type is float) and int(left_value) == left_value and
-                (right_type is int or right_type is float) and int(right_value) == right_value):
+            if ((left_type is int or (left_type is float and left_value.is_integer())) and
+                (right_type is int or (right_type is float and right_value.is_integer()))):
                 return int(left_value) | int(right_value)
 
         elif bin_op == '^':
             # int & int
-            if ((left_type is int or left_type is float) and int(left_value) == left_value and
-                (right_type is int or right_type is float) and int(right_value) == right_value):
+            if ((left_type is int or (left_type is float and left_value.is_integer())) and
+                (right_type is int or (right_type is float and right_value.is_integer()))):
                 return int(left_value) ^ int(right_value)
 
         elif bin_op == '<<':
             # int & int
-            if ((left_type is int or left_type is float) and int(left_value) == left_value and
-                (right_type is int or right_type is float) and int(right_value) == right_value):
+            if ((left_type is int or (left_type is float and left_value.is_integer())) and
+                (right_type is int or (right_type is float and right_value.is_integer()))):
                 return int(left_value) << int(right_value)
 
         else: # bin_op == '>>':
             # int & int
-            if ((left_type is int or left_type is float) and int(left_value) == left_value and
-                (right_type is int or right_type is float) and int(right_value) == right_value):
+            if ((left_type is int or (left_type is float and left_value.is_integer())) and
+                (right_type is int or (right_type is float and right_value.is_integer()))):
                 return int(left_value) >> int(right_value)
 
         # Invalid operation values
@@ -486,7 +490,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
             if val_type is int or val_type is float:
                 return -value
         else: # unary_op == '~':
-            if (val_type is int or val_type is float) and int(value) == value:
+            if val_type is int or (val_type is float and value.is_integer()):
                 return ~int(value)
 
         # Invalid operation value
