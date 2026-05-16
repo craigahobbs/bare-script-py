@@ -35,6 +35,7 @@ include Makefile.base
 # AI optimization model and effort
 OPTIMIZE_MODEL ?= opus
 OPTIMIZE_EFFORT ?= high
+OPTIMIZE_ENVIRON ?= $(if $(OPTIMIZE_OLLAMA), ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="")
 
 
 help:
@@ -67,12 +68,12 @@ test-include: $(DEFAULT_VENV_BUILD)
 
 .PHONY: runtime-optimize
 runtime-optimize:
-	claude --enable-auto-mode --add-dir ../bare-script --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-optimize.md)"
+	$(OPTIMIZE_ENVIRON) claude --enable-auto-mode --add-dir ../bare-script --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-optimize.md)"
 
 
 .PHONY: runtime-c
 runtime-c:
-	claude --enable-auto-mode --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-c.md)"
+	$(OPTIMIZE_ENVIRON) claude --enable-auto-mode --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-c.md)"
 
 
 doc:
