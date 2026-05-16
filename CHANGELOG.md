@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.3 (2026-05-15)
+
+- [a715a5f](https://github.com/craigahobbs/bare-script-py/commit/a715a5f) - optimize parser.py for ~20% performance improvement
+
 ## 4.1.2 (2026-05-15)
 
 - [c452e94](https://github.com/craigahobbs/bare-script-py/commit/c452e94) - minor runtime optimizations
