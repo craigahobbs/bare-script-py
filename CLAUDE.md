@@ -63,4 +63,4 @@ When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as c
 
 ## Sister Implementation
 
-A JavaScript implementation lives at `../bare-script/` and shares an identical test suite. The `make sync-include` target rsyncs `src/bare_script/include/` and `static/` into the JS repo so the two stay in lockstep.
+A JavaScript implementation lives at `../bare-script/` and shares an identical test suite. The `make sync` target rsyncs `src/bare_script/include/` and `static/` into the JS repo so the two stay in lockstep.

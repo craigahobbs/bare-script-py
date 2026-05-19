@@ -39,7 +39,7 @@ OPTIMIZE_ENVIRON ?= $(if $(OPTIMIZE_OLLAMA), ANTHROPIC_BASE_URL=http://localhost
 
 
 help:
-	@echo "            [perf|runtime-c|runtime-optimize|sync-include|test-include]"
+	@echo "            [perf|runtime-c|runtime-optimize|sync|test-include]"
 
 
 clean:
@@ -52,8 +52,9 @@ ifeq '$(BARESCRIPT_RUNTIME_C)' ''
 endif
 
 
-.PHONY: sync-include
-sync-include:
+.PHONY: sync
+sync:
+	cp SKILL.md ../bare-script/
 	rsync -rv --delete --exclude=.git/ --exclude=__init__.py --exclude=__pycache__ src/bare_script/include/ ../bare-script/lib/include/
 	rsync -rv --delete --exclude=.git/ static/ ../bare-script/static/
 
