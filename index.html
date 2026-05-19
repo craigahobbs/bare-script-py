@@ -241,6 +241,28 @@ runtime for faster script execution. When the compiled extension is available, i
 automatically; otherwise the pure-Python runtime is used as a fallback. Set the environment
 variable <code class="docutils literal notranslate"><span class="pre">BARESCRIPT_RUNTIME_PY=1</span></code> to force the pure-Python runtime.</p>
 </section>
+<section id="using-barescript-with-an-ai-assistant">
+<h2>Using BareScript with an AI Assistant<a class="headerlink" href="#using-barescript-with-an-ai-assistant" title="Link to this heading">¶</a></h2>
+<p>This repository ships a
+<a class="reference external" href="https://github.com/craigahobbs/bare-script-py/blob/main/SKILL.md"><code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code></a>
+file that teaches an AI coding assistant how to write idiomatic BareScript — language syntax, the
+built-in and include libraries, the MarkdownUp application pattern, and the unit-test conventions.
+It is plain Markdown and applies to either BareScript implementation.</p>
+<p>For <a class="reference external" href="https://claude.com/claude-code">Claude Code</a> and other tools that follow the
+<a class="reference external" href="https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview">Agent Skills</a>
+convention, install it as a project or user skill:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mkdir</span> <span class="o">-</span><span class="n">p</span> <span class="o">.</span><span class="n">claude</span><span class="o">/</span><span class="n">skills</span><span class="o">/</span><span class="n">bare</span><span class="o">-</span><span class="n">script</span>
+<span class="n">cp</span> <span class="n">SKILL</span><span class="o">.</span><span class="n">md</span> <span class="o">.</span><span class="n">claude</span><span class="o">/</span><span class="n">skills</span><span class="o">/</span><span class="n">bare</span><span class="o">-</span><span class="n">script</span><span class="o">/</span><span class="n">SKILL</span><span class="o">.</span><span class="n">md</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">~/.claude/skills/bare-script/SKILL.md</span></code> instead to make it available across all projects. For
+other assistants, include the file’s contents in your system prompt or rules file.</p>
+<p>Once installed, you can prompt the assistant with tasks like:</p>
+<blockquote>
+<div><p>Build a MarkdownUp application that plays tic-tac-toe against the user, with a reset button
+and a running win/loss/draw tally rendered as a bar chart.</p>
+</div></blockquote>
+</section>
 <section id="development">
 <h2>Development<a class="headerlink" href="#development" title="Link to this heading">¶</a></h2>
 <p>This package is developed using <a class="reference external" href="https://github.com/craigahobbs/python-build#readme">python-build</a>.
