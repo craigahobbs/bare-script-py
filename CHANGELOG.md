@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.5 (2026-05-21)
+
+- [b04bb75](https://github.com/craigahobbs/bare-script-py/commit/b04bb75) - optimize markdownElements.bare and markdownParser.bare
+
 ## 4.1.4 (2026-05-20)
 
 - [5d83122](https://github.com/craigahobbs/bare-script-py/commit/5d83122) - optimize data.bare, dataLineChart.bare, dataTable.bare, and qrcode.bare
