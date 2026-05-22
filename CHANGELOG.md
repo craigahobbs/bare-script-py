@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.1.8 (2026-05-22)
+
+- [2b7e7c7](https://github.com/craigahobbs/bare-script-py/commit/2b7e7c7) - improve markdownElements code block copy link
+
+- [3ae4039](https://github.com/craigahobbs/bare-script-py/commit/3ae4039) - markdown.css - use pure white/black for print
+
+- [f4f0b50](https://github.com/craigahobbs/bare-script-py/commit/f4f0b50) - markdown.css fixes and improvements
+
 ## 4.1.5 (2026-05-21)
 
 - [b04bb75](https://github.com/craigahobbs/bare-script-py/commit/b04bb75) - optimize markdownElements.bare and markdownParser.bare
