@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.9 (2026-05-22)
+
+- [0edf49d](https://github.com/craigahobbs/bare-script-py/commit/0edf49d) - markdown.css fixes and improvements
+
 ## 4.1.8 (2026-05-22)
 
 - [2b7e7c7](https://github.com/craigahobbs/bare-script-py/commit/2b7e7c7) - improve markdownElements code block copy link
