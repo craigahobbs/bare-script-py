@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.11 (2026-05-23)
+
+- [ace0dd1](https://github.com/craigahobbs/bare-script-py/commit/ace0dd1) - fix markdown.css issues, fix doc links
+
 ## 4.1.9 (2026-05-22)
 
 - [0edf49d](https://github.com/craigahobbs/bare-script-py/commit/0edf49d) - markdown.css fixes and improvements
