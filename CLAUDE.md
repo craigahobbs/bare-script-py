@@ -57,7 +57,7 @@ Pure-BareScript libraries (args parsing, data aggregation/charts, markdown rende
 
 When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as coverage recording (`record_statement_coverage`). `make test-include` runs in debug mode (`bare -d`), so coverage shows up hot in profiles, but production BareScript runs without it. Optimize the non-debug execution path: expression evaluation, statement dispatch, function call setup, dict lookups, value coercion.
 
-`make runtime-c` invokes Claude Code (configurable via `RUNTIME_C_MODEL`, `RUNTIME_C_EFFORT`) against the prompt in `static/claude-runtime-c.md` to drive porting/optimization work on the extension.
+`make runtime-c` invokes Claude Code (configurable via `RUNTIME_C_MODEL`, `RUNTIME_C_EFFORT`) against the prompt in `perf/claude-runtime-c.md` to drive porting/optimization work on the extension.
 
 ### Library function documentation
 
@@ -96,6 +96,13 @@ Prefer a *real* document over a synthetic one for the harness input. The distrib
 
 When an optimization is behaviorally correct but fails a test, consider whether the test is asserting on a "don't care" edge case — for example, a code-block-line input with a baked-in trailing `\n` that the parser pipeline never actually produces. Modifying the test input is sometimes the right call. Check whether the corner case is documented behavior first.
 
-## Cross-repo workflow
+## Cross-repo workflow / tandem development
 
-Changes to `src/bare_script/include/` or `static/`: make the change here, run `make test-include`, then `make sync` to push to `../bare-script/`. Python-side changes in `src/bare_script/*.py` typically need a parallel edit in the JavaScript implementation.
+The Python and JS implementations are mirrors of each other — great effort has been made to keep `src/bare_script/*.py` and the corresponding `lib/*.js` files (runtime, value, parser, library, model, options, etc.) as close to line-for-line identical as possible, and they must stay that way. **Any change to one implementation needs a parallel change to the other in the same working session** — features, bug fixes, refactors, optimizations, and test additions all apply.
+
+Workflow for a tandem change:
+
+- Changes to `src/bare_script/include/` or `static/` (the shared `.bare` sources and include-library tests): make the change here, run `make test-include`, then `make sync` to push to `../bare-script/`. Do not hand-edit those files in the JavaScript repo.
+- Changes to `src/bare_script/*.py`: make the parallel edit in `../bare-script/`'s corresponding module. Keep structure, naming, and ordering aligned so the two files diff cleanly.
+- After editing both repos, run the full gate in each: `make commit` (tests + lint + 100% coverage), plus `make test-include`. For perf-sensitive changes also run `make perf` in both.
+- For optimization work specifically: an optimization should not disproportionately regress either implementation. Favor wins that make `bare-script` (JavaScript) faster, since JS is the more performance-sensitive target. Stage the changes in each repo with a prepared commit message but don't commit until you've made an accept/reject recommendation per project based on the measured deltas — an optimization can be worth keeping in one repo and rejecting in the other if perf diverges sharply.

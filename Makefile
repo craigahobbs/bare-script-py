@@ -32,14 +32,8 @@ endif
 include Makefile.base
 
 
-# AI optimization model and effort
-OPTIMIZE_MODEL ?= opus
-OPTIMIZE_EFFORT ?= high
-OPTIMIZE_ENVIRON ?= $(if $(OPTIMIZE_OLLAMA), ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="")
-
-
 help:
-	@echo "            [perf|runtime-c|runtime-optimize|sync|test-include]"
+	@echo "            [perf|runtime-c|sync|test-include]"
 
 
 clean:
@@ -65,16 +59,6 @@ test-include: $(DEFAULT_VENV_BUILD)
 	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/*.bare
 	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
-
-
-.PHONY: runtime-optimize
-runtime-optimize:
-	$(OPTIMIZE_ENVIRON) claude --enable-auto-mode --add-dir ../bare-script --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-optimize.md)"
-
-
-.PHONY: runtime-c
-runtime-c:
-	$(OPTIMIZE_ENVIRON) claude --enable-auto-mode --model $(OPTIMIZE_MODEL) --effort $(OPTIMIZE_EFFORT) "$$(cat static/claude-runtime-c.md)"
 
 
 doc:
@@ -267,3 +251,13 @@ for language, time_ms in sorted(best_timings.items(), key=lambda val: val[1]):
     print(f'{report} ({time_ms / best_timing:.1f}x)')
 endef
 export PERF_PY
+
+
+# Port runtime to C for performance
+.PHONY: runtime-c
+runtime-c:
+	$(if $(OPTIMIZE_OLLAMA), ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="" )claude \
+		--enable-auto-mode \
+		--model $(if $(OPTIMIZE_MODEL),$(OPTIMIZE_MODEL),opus) \
+		--effort $(if $(OPTIMIZE_EFFORT),$(OPTIMIZE_EFFORT),xhigh) \
+		"$$(cat perf/claude-runtime-c.md)"
