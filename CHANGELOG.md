@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.0 (2026-05-26)
+
+- [ab8b2c9](https://github.com/craigahobbs/bare-script-py/commit/ab8b2c9) - use css light-dark function in markdown.css, improve printing
+
 ## 4.1.11 (2026-05-23)
 
 - [ace0dd1](https://github.com/craigahobbs/bare-script-py/commit/ace0dd1) - fix markdown.css issues, fix doc links
