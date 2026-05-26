@@ -67,6 +67,8 @@ When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as c
 2. Add the `$function: / $group: / $doc: / $arg:` doc block above it.
 3. Add test cases in `src/tests/test_library.py`.
 
+`make doc` (and therefore `make commit`) also renders single-page Markdown versions of the library and library-model docs into `build/doc/html/library/` — `barescript-library.md` and `barescript-library-model.md` — published at <https://craigahobbs.github.io/bare-script-py/library/barescript-library.md> and <https://craigahobbs.github.io/bare-script-py/library/barescript-library-model.md>. These are the Markdown equivalents of the HTML library reference, intended for fetching into an AI assistant's context alongside `SKILL.md`.
+
 ## Conventions
 
 - pylint runs with the project `pylintrc`; 100% compliance required.
