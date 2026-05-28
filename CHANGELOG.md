@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.1 (2026-05-27)
+
+- [a309f98](https://github.com/craigahobbs/bare-script-py/commit/a309f98) - add markdownUp.bare windowKeyState and windowPlaySound functions
+
 ## 4.2.0 (2026-05-26)
 
 - [ab8b2c9](https://github.com/craigahobbs/bare-script-py/commit/ab8b2c9) - use css light-dark function in markdown.css, improve printing
