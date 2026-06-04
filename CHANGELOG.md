@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.2 (2026-06-04)
+
+- [38bc6fb](https://github.com/craigahobbs/bare-script-py/commit/38bc6fb) - eliminate dataSort debug logging for field-only sort orders
+
 ## 4.2.1 (2026-05-27)
 
 - [a309f98](https://github.com/craigahobbs/bare-script-py/commit/a309f98) - add markdownUp.bare windowKeyState and windowPlaySound functions
