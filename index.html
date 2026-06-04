@@ -257,15 +257,14 @@ convention, install it as a project or user skill:</p>
 </div>
 <p>Use <code class="docutils literal notranslate"><span class="pre">~/.claude/skills/bare-script/SKILL.md</span></code> instead to make it available across all projects. For
 other assistants, include the file’s contents in your system prompt or rules file.</p>
-<p>Once installed, you can prompt the assistant with tasks like:</p>
-<blockquote>
-<div><p>Build a MarkdownUp application that plays tic-tac-toe against the user, with a reset button
-and a running win/loss/draw tally rendered as a bar chart.</p>
-</div></blockquote>
+<p>Once installed, prompt the assistant with a task like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">claude</span> <span class="s2">&quot;Build a MarkdownUp application that plays tic-tac-toe against the user, with a reset button and a running win/loss/draw tally rendered as a bar chart. Save it as ticTacToe.md&quot;</span>
+</pre></div>
+</div>
 <p>To run the resulting MarkdownUp application locally, install the
 <a class="reference external" href="https://pypi.org/project/markdown-up/">markdown-up</a> viewer and point it at the Markdown file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">markdown</span><span class="o">-</span><span class="n">up</span>
-<span class="n">markdown</span><span class="o">-</span><span class="n">up</span> <span class="n">yourApp</span><span class="o">.</span><span class="n">md</span>
+<span class="n">markdown</span><span class="o">-</span><span class="n">up</span> <span class="n">ticTacToe</span><span class="o">.</span><span class="n">md</span>
 </pre></div>
 </div>
 <p>The BareScript library is also documented as single-page Markdown, which can be fetched directly
