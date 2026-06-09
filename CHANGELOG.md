@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.4 (2026-06-09)
+
+- [2242b46](https://github.com/craigahobbs/bare-script-py/commit/2242b46) - convert integer library arguments to int
+
 ## 4.2.3 (2026-06-09)
 
 - [d3bf579](https://github.com/craigahobbs/bare-script-py/commit/d3bf579) - improve dataTableMarkdown to more-fully implement data table options
