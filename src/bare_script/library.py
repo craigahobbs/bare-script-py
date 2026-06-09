@@ -1044,6 +1044,8 @@ _NUMBER_TO_FIXED_ARGS = value_args_model([
 # $return: The integer as a string of the given base
 def _number_to_string(args, unused_options):
     x, radix = value_args_validate(_NUMBER_TO_STRING_ARGS, args)
+    if not x:
+        return '0'
     digits = []
     while x:
         digits.append(_NUMBER_TO_STRING_DIGITS[x % radix])

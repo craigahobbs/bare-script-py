@@ -1461,6 +1461,8 @@ foo bar
 
 
     def test_number_to_string(self):
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([0], None), '0')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([0, 16], None), '0')
         self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123], None), '123')
         self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123, 2], None), '1111011')
         self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123, 16], None), '7b')
