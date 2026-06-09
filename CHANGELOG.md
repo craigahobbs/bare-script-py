@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.5 (2026-06-09)
+
+- [42fa6b5](https://github.com/craigahobbs/bare-script-py/commit/42fa6b5) - fix numberToString\(0\)
+
 ## 4.2.4 (2026-06-09)
 
 - [2242b46](https://github.com/craigahobbs/bare-script-py/commit/2242b46) - convert integer library arguments to int
