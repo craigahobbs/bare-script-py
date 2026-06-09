@@ -548,6 +548,12 @@ class TestValue(unittest.TestCase):
             [2, 5]
         )
 
+        # Integer argument normalized to int (the parser produces floats for numeric literals)
+        validated = value_args_validate(fn_args, [4.0, 3.5])
+        self.assertListEqual(validated, [4, 3.5])
+        self.assertIs(type(validated[0]), int)
+        self.assertIs(type(validated[1]), float)
+
         # Bool integer
         with self.assertRaises(ValueArgsError) as cm_exc:
             value_args_validate(fn_args, [True, 3.5])

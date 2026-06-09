@@ -69,7 +69,7 @@ def _array_delete(args, unused_options):
     if index >= len(array):
         raise ValueArgsError('index', index)
 
-    del array[int(index)]
+    del array[index]
 
 _ARRAY_DELETE_ARGS = value_args_model([
     {'name': 'array', 'type': 'array'},
@@ -132,7 +132,7 @@ def _array_get(args, unused_options):
     if index >= len(array):
         raise ValueArgsError('index', index)
 
-    return array[int(index)]
+    return array[index]
 
 _ARRAY_GET_ARGS = value_args_model([
     {'name': 'array', 'type': 'array'},
@@ -154,11 +154,11 @@ def _array_index_of(args, options):
 
     # Value function?
     if value_type(value) == 'function':
-        for ix in range(int(index), len(array)):
+        for ix in range(index, len(array)):
             if value_boolean(value([array[ix]], options)):
                 return ix
     else:
-        for ix in range(int(index), len(array)):
+        for ix in range(index, len(array)):
             if value_compare(array[ix], value) == 0:
                 return ix
 
@@ -203,11 +203,11 @@ def _array_last_index_of(args, options):
 
     # Value function?
     if value_type(value) == 'function':
-        for ix in range(int(index), -1, -1):
+        for ix in range(index, -1, -1):
             if value_boolean(value([array[ix]], options)):
                 return ix
     else:
-        for ix in range(int(index), -1, -1):
+        for ix in range(index, -1, -1):
             if value_compare(array[ix], value) == 0:
                 return ix
 
@@ -251,7 +251,7 @@ def _array_new(args, unused_options):
 # $return: The new array
 def _array_new_size(args, unused_options):
     size, value = value_args_validate(_ARRAY_NEW_SIZE_ARGS, args)
-    return list(value for _ in range(int(size)))
+    return list(value for _ in range(size))
 
 _ARRAY_NEW_SIZE_ARGS = value_args_model([
     {'name': 'size', 'type': 'number', 'default': 0, 'integer': True, 'gte': 0},
@@ -320,7 +320,7 @@ def _array_set(args, unused_options):
     if index >= len(array):
         raise ValueArgsError('index', index)
 
-    array[int(index)] = value
+    array[index] = value
     return value
 
 _ARRAY_SET_ARGS = value_args_model([
@@ -365,7 +365,7 @@ def _array_slice(args, unused_options):
     if end > len(array):
         raise ValueArgsError('end', end)
 
-    return array[int(start):int(end)]
+    return array[start:end]
 
 _ARRAY_SLICE_ARGS = value_args_model([
     {'name': 'array', 'type': 'array'},
@@ -594,18 +594,18 @@ def _datetime_new(args, unused_options):
         while day < 1:
             year = year if month != 1 else year - 1
             month = month - 1 if month != 1 else 12
-            _, month_days = calendar.monthrange(int(year), int(month))
+            _, month_days = calendar.monthrange(year, month)
             day += month_days
     elif day > 28:
-        _, month_days = calendar.monthrange(int(year), int(month))
+        _, month_days = calendar.monthrange(year, month)
         while day > month_days:
             day -= month_days
             year = year if month != 12 else year + 1
             month = month + 1 if month != 12 else 1
-            _, month_days = calendar.monthrange(int(year), int(month))
+            _, month_days = calendar.monthrange(year, month)
 
     # Return the datetime
-    return datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), int(millisecond) * 1000)
+    return datetime.datetime(year, month, day, hour, minute, second, millisecond * 1000)
 
 _DATETIME_NEW_ARGS = value_args_model([
     {'name': 'year', 'type': 'number', 'integer': True, 'gte': 100},
@@ -690,7 +690,7 @@ _JSON_PARSE_ARGS = value_args_model([
 # $return: The JSON string
 def _json_stringify(args, unused_options):
     value, indent = value_args_validate(_JSON_STRINGIFY_ARGS, args)
-    return value_json(value, int(indent) if indent is not None else None)
+    return value_json(value, indent)
 
 _JSON_STRINGIFY_ARGS = value_args_model([
     {'name': 'value'},
@@ -1007,7 +1007,7 @@ _NUMBER_PARSE_FLOAT_ARGS = value_args_model([
 # $return: The integer
 def _number_parse_int(args, unused_options):
     string, radix = value_args_validate(_NUMBER_PARSE_INT_ARGS, args)
-    return value_parse_integer(string, int(radix))
+    return value_parse_integer(string, radix)
 
 _NUMBER_PARSE_INT_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
@@ -1024,7 +1024,7 @@ _NUMBER_PARSE_INT_ARGS = value_args_model([
 # $return: The fixed-point notation string
 def _number_to_fixed(args, unused_options):
     x, digits, trim = value_args_validate(_NUMBER_TO_FIXED_ARGS, args)
-    result = f'{value_round_number(x, digits):.{int(digits)}f}'
+    result = f'{value_round_number(x, digits):.{digits}f}'
     if trim:
         return R_NUMBER_CLEANUP.sub('', result)
     return result
@@ -1468,7 +1468,7 @@ def _string_char_at(args, unused_options):
     if index >= len(string):
         raise ValueArgsError('index', index)
 
-    return string[int(index)]
+    return string[index]
 
 _STRING_CHAR_AT_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
@@ -1487,7 +1487,7 @@ def _string_char_code_at(args, unused_options):
     if index >= len(string):
         raise ValueArgsError('index', index)
 
-    return ord(string[int(index)])
+    return ord(string[index])
 
 _STRING_CHAR_CODE_AT_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
@@ -1564,7 +1564,7 @@ def _string_index_of(args, unused_options):
     if index > len(string):
         raise ValueArgsError('index', index, -1)
 
-    return string.find(search, int(index))
+    return string.find(search, index)
 
 _STRING_INDEX_OF_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
@@ -1586,7 +1586,7 @@ def _string_last_index_of(args, unused_options):
     if index > len(string):
         raise ValueArgsError('index', index, -1)
 
-    return string.rfind(search, 0, int(index) + len(search))
+    return string.rfind(search, 0, index + len(search))
 
 _STRING_LAST_INDEX_OF_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
@@ -1645,7 +1645,7 @@ _STRING_NEW_ARGS = value_args_model([
 # $return: The repeated string
 def _string_repeat(args, unused_options):
     string, count = value_args_validate(_STRING_REPEAT_ARGS, args)
-    return string * int(count)
+    return string * count
 
 _STRING_REPEAT_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},
@@ -1686,7 +1686,7 @@ def _string_slice(args, unused_options):
     if end > len(string):
         raise ValueArgsError('end', end)
 
-    return string[int(start):int(end)]
+    return string[start:end]
 
 _STRING_SLICE_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'},

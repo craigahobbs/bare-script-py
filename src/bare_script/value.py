@@ -306,12 +306,17 @@ def value_args_validate(fn_args, args, error_return_value=None):
             arg_lte = fn_arg.get('lte')
             arg_gt = fn_arg.get('gt')
             arg_gte = fn_arg.get('gte')
-            if ((fn_arg.get('integer') and int(arg_value) != arg_value) or
+            arg_integer = fn_arg.get('integer')
+            if ((arg_integer and int(arg_value) != arg_value) or
                 (arg_lt is not None and not (arg_value < arg_lt)) or
                 (arg_lte is not None and not (arg_value <= arg_lte)) or
                 (arg_gt is not None and not (arg_value > arg_gt)) or
                 (arg_gte is not None and not (arg_value >= arg_gte))):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
+
+            # Normalize integer arguments to int (the parser produces floats for numeric literals)
+            if arg_integer:
+                args[ix] = int(arg_value)
         elif arg_type == 'string':
             arg_value_type = type(arg_value)
             if arg_value_type is not str:

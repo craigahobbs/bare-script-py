@@ -1465,6 +1465,10 @@ foo bar
         self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123, 2], None), '1111011')
         self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123, 16], None), '7b')
 
+        # Float values (as produced by the parser for numeric literals)
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([1.0], None), '1')
+        self.assertEqual(SCRIPT_FUNCTIONS['numberToString']([123.0, 16.0], None), '7b')
+
         # Non-integer value
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['numberToString']([123.5], None)
