@@ -258,6 +258,6 @@ export PERF_PY
 runtime-c:
 	$(if $(OPTIMIZE_OLLAMA), ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="" )claude \
 		--enable-auto-mode \
-		--model $(if $(OPTIMIZE_MODEL),$(OPTIMIZE_MODEL),opus) \
+		--model $(if $(OPTIMIZE_MODEL),$(OPTIMIZE_MODEL),fable) \
 		--effort $(if $(OPTIMIZE_EFFORT),$(OPTIMIZE_EFFORT),xhigh) \
 		"$$(cat perf/claude-runtime-c.md)"

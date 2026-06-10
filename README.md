@@ -168,10 +168,30 @@ markdownPrint('Hello, Markdown!')
 
 ## C Runtime
 
-The package ships with an optional CPython C extension (`runtime_c`) that mirrors the pure-Python
-runtime for faster script execution. When the compiled extension is available, it is used
-automatically; otherwise the pure-Python runtime is used as a fallback. Set the environment
-variable `BARESCRIPT_RUNTIME_PY=1` to force the pure-Python runtime.
+The package ships with an optional CPython C extension, `runtime_c`, that mirrors the pure-Python
+runtime for faster script execution. The compiled extension is used automatically when available;
+set the environment variable `BARESCRIPT_RUNTIME_PY=1` to force the pure-Python runtime.
+
+The extension supports CPython 3.10 and later on both the default (GIL) and free-threaded Python
+builds.
+
+The C runtime runs the BareScript include library test suite (`make test-include`) about 3.6x
+faster than the pure-Python runtime (CPython 3.14, Apple M-series):
+
+| Runtime             | Test Suite Time (ms) | Multiple |
+| ------------------- | -------------------: | -------: |
+| BareScript (C)      |                  586 |     1.0x |
+| BareScript (Python) |                 2115 |     3.6x |
+
+Compute-intensive scripts run up to roughly 30x faster - for example, the
+[Mandelbrot benchmark](https://github.com/craigahobbs/bare-script-py/blob/main/perf/test.bare)
+(`make perf`), shown here against the equivalent native Python program:
+
+| Language            | Best Time (ms) | Multiple |
+| ------------------- | -------------: | -------: |
+| Python              |            152 |     1.0x |
+| BareScript (C)      |            322 |     2.1x |
+| BareScript (Python) |          10389 |    68.5x |
 
 
 ## Using BareScript with an AI Assistant

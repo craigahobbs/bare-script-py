@@ -1487,6 +1487,102 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Undefined function "fnUnknown"')
 
 
+    def test_error_max_statements_library_error(self):
+        # Library function argument errors must not disturb the statement counter
+        script = validate_script({
+            'statements': [
+                {'expr': {'name': 'i', 'expr': {'number': 0}}},
+                {'label': {'name': 'loop'}},
+                {'expr': {'name': 'x', 'expr': {'function': {'name': 'arrayLength', 'args': [{'number': 0}]}}}},
+                {'expr': {'name': 'i', 'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}}},
+                {'jump': {'label': 'loop', 'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'number': 50}}}}},
+                {'return': {'expr': {'variable': 'i'}}}
+            ]
+        })
+        self.assertEqual(execute_script(script, {'globals': {}}), 50)
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            execute_script(script, {'globals': {}, 'maxStatements': 100})
+        self.assertEqual(str(cm_exc.exception), 'Exceeded maximum script statements (100)')
+
+
+    def test_function_library_error_message(self):
+        # Library function error messages must match the reference implementation exactly
+        script = validate_script({
+            'statements': [
+                {'return': {'expr': {'function': {'name': 'stringFromCharCode', 'args': [
+                    {'binary': {'op': '*', 'left': {'number': 1e308}, 'right': {'number': 10}}}
+                ]}}}}
+            ]
+        })
+        logs = []
+        options = {'debug': True, 'logFn': logs.append}
+        self.assertIsNone(execute_script(script, options))
+        self.assertListEqual(logs, [
+            'BareScript: Function "stringFromCharCode" failed with error: cannot convert float infinity to integer'
+        ])
+
+
+    def test_function_args_model_mutation(self):
+        # Mutating a function model's argument names between calls rebinds like the reference
+        script = validate_script({
+            'statements': [
+                {'function': {
+                    'name': 'fn',
+                    'args': ['a'],
+                    'statements': [
+                        {'return': {'expr': {'variable': 'b'}}}
+                    ]
+                }}
+            ]
+        })
+        globals_ = {}
+        execute_script(script, {'globals': globals_})
+        options = {'globals': globals_}
+        self.assertIsNone(globals_['fn']([1, 2], options))
+        script['statements'][0]['function']['args'].append('b')
+        self.assertEqual(globals_['fn']([1, 2], options), 2)
+
+
+    def test_function_library_override(self):
+        # A library function name overridden in globals must be called instead of the library
+        # implementation (guards the C runtime's library intrinsics)
+        script = validate_script({
+            'statements': [
+                {'return': {
+                    'expr': {'function': {'name': 'mathSqrt', 'args': [{'number': 16}]}}
+                }}
+            ]
+        })
+        self.assertEqual(execute_script(script), 4)
+        options = {'globals': {'mathSqrt': lambda args, unused_options: args[0] + 100}}
+        self.assertEqual(execute_script(script, options), 116)
+
+
+    def test_function_script_function_no_globals(self):
+        script = validate_script({
+            'statements': [
+                {'function': {
+                    'name': 'fn',
+                    'statements': [
+                        {'return': {'expr': {'number': 5}}}
+                    ]
+                }}
+            ]
+        })
+        globals_ = {}
+        execute_script(script, {'globals': globals_})
+        expr = validate_expression({'function': {'name': 'fn', 'args': []}})
+
+        # Options with globals - the script function call succeeds
+        self.assertEqual(evaluate_expression(expr, {'globals': globals_}), 5)
+
+        # No options - the script function call fails internally and evaluates to null
+        self.assertIsNone(evaluate_expression(expr, None, {'fn': globals_['fn']}))
+
+        # Options without globals - same
+        self.assertIsNone(evaluate_expression(expr, {}, {'fn': globals_['fn']}))
+
+
     def test_function_runtime_error(self):
         expr = validate_expression({
             'function': {
