@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.6 (2026-06-10)
+
+- [34e14f3](https://github.com/craigahobbs/bare-script-py/commit/34e14f3) - Re-port runtime_c.c using claude-fable-5 for 2x performance improvement. Added free-threaded Python support.
+
 ## 4.2.5 (2026-06-09)
 
 - [42fa6b5](https://github.com/craigahobbs/bare-script-py/commit/42fa6b5) - fix numberToString\(0\)
