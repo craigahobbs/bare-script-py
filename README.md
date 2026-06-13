@@ -79,11 +79,11 @@ from bare_script import execute_script, fetch_http, parse_script
 
 # Parse the script
 script = parse_script('''\
-# Fetch the BareScript library documentation JSON
-docs = jsonParse(systemFetch('https://craigahobbs.github.io/bare-script-py/library/library.json'))
+# Fetch the BareScript builtin library documentation JSON
+docs = jsonParse(systemFetch('https://craigahobbs.github.io/bare-script-py/library/library-builtin.json'))
 
-# Return the number of library functions
-return 'The BareScript Library has ' + arrayLength(objectGet(docs, 'functions')) + ' functions'
+# Return the number of builtin functions
+return 'The BareScript Library has ' + arrayLength(objectGet(docs, 'functions')) + ' builtin functions'
 ''')
 
 # Execute the script
@@ -93,7 +93,7 @@ print(execute_script(script, {'fetchFn': fetch_http}))
 This outputs:
 
 ```
-The BareScript Library has 209 functions
+The BareScript Library has 108 builtin functions
 ```
 
 
