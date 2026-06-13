@@ -85,6 +85,16 @@ An argument value type
 
 ## baredoc.bare
 
+### struct BaredocConfig
+
+The baredoc documentation application configuration
+
+| Name     | Type                                        | Attributes | Description                                          |
+|----------|---------------------------------------------|------------|------------------------------------------------------|
+| title    | string                                      |            | The documentation title                              |
+| content  | string                                      | optional   | The optional top-level Markdown content resource URL |
+| sections | [BaredocSection](#struct-baredocsection) [] |            | The documentation sections                           |
+
 ### struct BaredocFunction
 
 A library function
@@ -107,6 +117,16 @@ A function argument
 | name | string    | The argument name                           |
 | doc  | string [] | The argument's documentation Markdown lines |
 
+### struct BaredocGroup
+
+A library function group's content and description (the group is defined by the library functions)
+
+| Name        | Type   | Attributes | Description                                                                    |
+|-------------|--------|------------|--------------------------------------------------------------------------------|
+| name        | string |            | The group name (matches a library function group)                              |
+| content     | string | optional   | The optional group Markdown content resource URL (defaults to the description) |
+| description | string | optional   | The optional brief group description Markdown for the index page               |
+
 ### struct BaredocLibrary
 
 A library documentation model
@@ -114,6 +134,16 @@ A library documentation model
 | Name      | Type                                          | Description           |
 |-----------|-----------------------------------------------|-----------------------|
 | functions | [BaredocFunction](#struct-baredocfunction) [] | The library functions |
+
+### struct BaredocSection
+
+A documentation section
+
+| Name   | Type                                    | Attributes | Description                                                                                    |
+|--------|-----------------------------------------|------------|------------------------------------------------------------------------------------------------|
+| title  | string                                  |            | The section title                                                                              |
+| url    | string                                  |            | The section's library documentation JSON resource URL                                          |
+| groups | [BaredocGroup](#struct-baredocgroup) [] | optional   | Optional content and descriptions for the groups (groups are defined by the library functions) |
 
 ---
 
