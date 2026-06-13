@@ -67,13 +67,6 @@ doc:
 	cp -R src/bare_script/include build/doc/html/
 	rm -rf build/doc/html/include/__pycache__
 
-    # Generate the library documentation
-	$(DEFAULT_VENV_BIN)/bare -m \
-		-v 'vFiles' "'$$($(DEFAULT_VENV_PYTHON) -c 'import json; import sys; print(json.dumps(sys.argv[1:]))' src/bare_script/library.py src/bare_script/include/*.bare)'" \
-		-v 'vOutput' "'build/doc/html/library/library-model.json'" \
-		-c 'include <baredocCLI.bare>' \
-		-c 'return baredocCLIMain()'
-
     # Generate the builtin library documentation
 	$(DEFAULT_VENV_BIN)/bare -m \
 		-v 'vFiles' "'$$($(DEFAULT_VENV_PYTHON) -c 'import json; import sys; print(json.dumps(sys.argv[1:]))' src/bare_script/library.py)'" \
@@ -98,7 +91,7 @@ doc:
 		> barescript-library.md
 
     # Generate the expression library documentation
-	$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" build/doc/html/library/library-model.json build/doc/html/library/expression-builtin.json
+	$(DEFAULT_VENV_PYTHON) -c "$$DOC_EXPR_PY" build/doc/html/library/library-builtin.json build/doc/html/library/expression-builtin.json
 
      # Generate the single-page expression library documentation
 	cd build/doc/html/library/ && \

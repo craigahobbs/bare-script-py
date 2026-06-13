@@ -61,7 +61,7 @@ When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as c
 
 ### Library function documentation
 
-`library.py` and `.bare` files use the `# $function:` doc-comment convention. `baredoc` reads these to generate the library documentation model JSON (e.g. `library-model.json`). To add a new built-in function:
+`library.py` and `.bare` files use the `# $function:` doc-comment convention. `baredoc` reads these to generate the library documentation model JSON (e.g. `library-builtin.json`). To add a new built-in function:
 
 1. Implement in `library.py`, register in `SCRIPT_FUNCTIONS` (and `EXPRESSION_FUNCTIONS` if expression-callable, plus `EXPRESSION_FUNCTION_MAP` if the expression-context name differs).
 2. Add the `$function: / $group: / $doc: / $arg:` doc block above it.
