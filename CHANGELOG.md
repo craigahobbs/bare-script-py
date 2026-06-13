@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.7 (2026-06-12)
+
+- [0a18883](https://github.com/craigahobbs/bare-script-py/commit/0a18883) - update baredoc application to separate builtin and include functions
+
 ## 4.2.6 (2026-06-10)
 
 - [34e14f3](https://github.com/craigahobbs/bare-script-py/commit/34e14f3) - Re-port runtime_c.c using claude-fable-5 for 2x performance improvement. Added free-threaded Python support.
