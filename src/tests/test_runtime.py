@@ -2138,6 +2138,139 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), 16)
 
 
+class TestIntrinsics(unittest.TestCase):
+
+    @staticmethod
+    def _run(expr, options=None):
+        return execute_script(validate_script({'statements': [{'return': {'expr': expr}}]}), options)
+
+    @staticmethod
+    def _fn(name, *args):
+        return {'function': {'name': name, 'args': list(args)}}
+
+    @staticmethod
+    def _num(value):
+        return {'number': value}
+
+    @staticmethod
+    def _str(value):
+        return {'string': value}
+
+    @classmethod
+    def _arr(cls, *values):
+        return cls._fn('arrayNew', *(cls._num(value) for value in values))
+
+    def test_intrinsic_array_get(self):
+        run, fn, num, str_, arr = self._run, self._fn, self._num, self._str, self._arr
+        # valid - float literal index (coerced) in bounds, and a positive int index (from mathFloor)
+        self.assertEqual(run(fn('arrayGet', arr(7, 8, 9), num(1.0))), 8)
+        self.assertEqual(run(fn('arrayGet', arr(7, 8, 9), fn('mathFloor', num(1.5)))), 8)
+        # error paths - each returns null, observationally identical to value_args_validate
+        self.assertIsNone(run(fn('arrayGet')))                                            # array missing
+        self.assertIsNone(run(fn('arrayGet', num(5.0), num(0.0))))                        # array not a list
+        self.assertIsNone(run(fn('arrayGet', arr(1))))                                    # index missing
+        self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), num(1.5))))                    # float index not integer
+        self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), num(-1.0))))                   # float index negative
+        self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), fn('mathFloor', num(-1.5)))))  # int index negative
+        self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), str_('x'))))                   # index not a number
+        self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), num(0.0), num(9.0))))          # too many arguments
+        self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), num(9.0))))                    # index out of bounds
+
+    def test_intrinsic_array_push(self):
+        run, fn, num, arr = self._run, self._fn, self._num, self._arr
+        # valid - returns the (mutated) array, with and without extra values
+        self.assertEqual(run(fn('arrayPush', arr(1), num(2.0), num(3.0))), [1, 2, 3])
+        self.assertEqual(run(fn('arrayPush', arr(5))), [5])
+        # error paths
+        self.assertIsNone(run(fn('arrayPush')))                       # array missing
+        self.assertIsNone(run(fn('arrayPush', num(5.0), num(1.0))))   # array not a list
+
+    def test_intrinsic_object_get(self):
+        run, fn, num, str_ = self._run, self._fn, self._num, self._str
+        obj = fn('objectNew', str_('k'), str_('v'))
+        # valid - present key, missing key (default null), explicit default
+        self.assertEqual(run(fn('objectGet', obj, str_('k'))), 'v')
+        self.assertIsNone(run(fn('objectGet', obj, str_('z'))))
+        self.assertEqual(run(fn('objectGet', fn('objectNew'), str_('z'), str_('D'))), 'D')
+        # error paths
+        self.assertIsNone(run(fn('objectGet')))                             # object missing
+        self.assertIsNone(run(fn('objectGet', num(5.0), str_('k'))))        # object not a dict
+        self.assertIsNone(run(fn('objectGet', fn('objectNew'))))            # key missing
+        self.assertIsNone(run(fn('objectGet', fn('objectNew'), num(5.0))))  # key not a string
+        # too many arguments - the error return value is the default-value argument
+        self.assertEqual(run(fn('objectGet', obj, str_('k'), num(9.0), num(9.0))), 9)
+
+    def test_intrinsic_array_set(self):
+        run, fn, num, str_, arr = self._run, self._fn, self._num, self._str, self._arr
+        # valid - returns the set value; float index, int index, and missing value (null)
+        self.assertEqual(run(fn('arraySet', arr(1, 2), num(1.0), num(9.0))), 9)
+        self.assertEqual(run(fn('arraySet', arr(1, 2, 3), fn('mathFloor', num(1.5)), num(9.0))), 9)
+        self.assertIsNone(run(fn('arraySet', arr(1, 2), num(1.0))))                       # value missing -> set null
+        # error paths
+        self.assertIsNone(run(fn('arraySet')))                                            # array missing
+        self.assertIsNone(run(fn('arraySet', num(5.0), num(0.0), num(9.0))))              # array not a list
+        self.assertIsNone(run(fn('arraySet', arr(1))))                                    # index missing
+        self.assertIsNone(run(fn('arraySet', arr(1, 2, 3), num(1.5), num(9.0))))          # float index not integer
+        self.assertIsNone(run(fn('arraySet', arr(1, 2, 3), fn('mathFloor', num(-1.5)), num(9.0))))  # int index negative
+        self.assertIsNone(run(fn('arraySet', arr(1, 2, 3), str_('x'), num(9.0))))         # index not a number
+        self.assertIsNone(run(fn('arraySet', arr(1, 2), num(0.0), num(9.0), num(9.0))))   # too many arguments
+        self.assertIsNone(run(fn('arraySet', arr(1), num(5.0), num(9.0))))                # index out of bounds
+
+    def test_intrinsic_object_set(self):
+        run, fn, num, str_ = self._run, self._fn, self._num, self._str
+        # valid - returns the set value, with a value and with a missing value (null)
+        self.assertEqual(run(fn('objectSet', fn('objectNew'), str_('k'), num(5.0))), 5)
+        self.assertIsNone(run(fn('objectSet', fn('objectNew'), str_('k'))))               # value missing -> set null
+        # error paths
+        self.assertIsNone(run(fn('objectSet')))                                           # object missing
+        self.assertIsNone(run(fn('objectSet', num(5.0), str_('k'), num(1.0))))            # object not a dict
+        self.assertIsNone(run(fn('objectSet', fn('objectNew'))))                          # key missing
+        self.assertIsNone(run(fn('objectSet', fn('objectNew'), num(5.0), num(1.0))))      # key not a string
+        self.assertIsNone(run(fn('objectSet', fn('objectNew'), str_('k'), num(1.0), num(9.0))))  # too many arguments
+
+    def test_intrinsic_debug_logging(self):
+        # On bad arguments an intrinsic raises ValueArgsError, which the shared call-error handler
+        # logs exactly as the normal call path would (value_args_validate is never entered).
+        logs = []
+        options = {'logFn': logs.append, 'debug': True}
+        self.assertIsNone(self._run(self._fn('arrayGet', self._str('x'), self._num(0.0)), options))
+        self.assertIsNone(self._run(self._fn('arrayGet', self._arr(1), self._num(0.0), self._num(9.0)), options))
+        self.assertIsNone(self._run(self._fn('objectSet', self._fn('objectNew'), self._num(5.0), self._num(1.0)), options))
+        self.assertListEqual(logs, [
+            'BareScript: Function "arrayGet" failed with error: Invalid "array" argument value, "x"',
+            'BareScript: Function "arrayGet" failed with error: Too many arguments (3)',
+            'BareScript: Function "objectSet" failed with error: Invalid "key" argument value, 5'
+        ])
+
+    def test_intrinsic_aliased_name_falls_through(self):
+        # Aliasing a library intrinsic to another name: func_value is in the intrinsic set but the
+        # call name matches no inlined branch, so it falls through to the normal call path.
+        script = validate_script({'statements': [
+            {'expr': {'name': 'myGet', 'expr': {'variable': 'arrayGet'}}},
+            {'return': {'expr': self._fn('myGet', self._arr(1, 2, 3), self._num(1.0))}}
+        ]})
+        self.assertEqual(execute_script(script), 2)
+
+    def test_intrinsic_system_global_get(self):
+        # systemGlobalGet returns the genuine library function (intrinsics are inlined fast paths,
+        # not separate objects). Calling it indirectly hits the intrinsic set but matches no inlined
+        # branch, so it falls through to the real function (with full argument validation).
+        script = validate_script({'statements': [
+            {'expr': {'name': 'getObj', 'expr': self._fn('systemGlobalGet', self._str('objectGet'))}},
+            {'return': {'expr': self._fn('getObj', self._fn('objectNew', self._str('k'), self._str('v')), self._str('k'))}}
+        ]})
+        self.assertEqual(execute_script(script), 'v')
+
+    def test_intrinsic_override(self):
+        # A user/global override resolves to a different function object (not in the intrinsic set),
+        # so the override runs instead of the inlined fast path; without it the intrinsic runs.
+        def my_object_get(unused_args, unused_options):
+            return 'override'
+        expr = self._fn('objectGet', self._fn('objectNew', self._str('k'), self._str('v')), self._str('k'))
+        self.assertEqual(self._run(expr, {'globals': {'objectGet': my_object_get}}), 'override')
+        self.assertEqual(self._run(expr), 'v')
+
+
 # Helper functions to get test values of specific types
 def _test_date(unused_args, unused_options):
     return datetime.datetime(2024, 1, 6)

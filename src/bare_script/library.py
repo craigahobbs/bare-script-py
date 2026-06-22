@@ -2208,3 +2208,17 @@ EXPRESSION_FUNCTIONS = dict(
     (expr_fn_name, SCRIPT_FUNCTIONS[script_fn_name])
     for expr_fn_name, script_fn_name in EXPRESSION_FUNCTION_MAP.items()
 )
+
+
+# Library functions with an inline "intrinsic" fast path in the runtime call dispatch. Membership is by
+# function-object identity, so any override (a user function, an options global, or an unittestMock
+# systemGlobalSet) is a different object that misses the set and takes the normal call path. Kept small
+# on purpose: these hot, validation-heavy accessors measured as ~all of the include-test speedup.
+# Defined here, next to SCRIPT_FUNCTIONS, mirroring the JavaScript implementation.
+INTRINSICS = frozenset((
+    SCRIPT_FUNCTIONS['arrayGet'],
+    SCRIPT_FUNCTIONS['arrayPush'],
+    SCRIPT_FUNCTIONS['arraySet'],
+    SCRIPT_FUNCTIONS['objectGet'],
+    SCRIPT_FUNCTIONS['objectSet'],
+))

@@ -8,7 +8,7 @@ The BareScript runtime
 import datetime
 import functools
 
-from .library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from .library import EXPRESSION_FUNCTIONS, INTRINSICS, SCRIPT_FUNCTIONS
 from .model import lint_script
 from .options import url_file_relative
 from .parser import parse_script
@@ -315,6 +315,109 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
         if func_value is not None:
             # Call the function
             try:
+                # Intrinsic fast path: run the body inline, skipping value_args_validate and the
+                # call frame. Bad arguments raise ValueArgsError, handled by the except below exactly
+                # as the normal call would; a call reaching one of these under a different name (an
+                # alias) matches no branch and falls through to the normal call.
+                if func_value in INTRINSICS:
+                    func_args_length = len(func_args)
+                    if func_name == 'arrayGet':
+                        if func_args_length < 1:
+                            raise ValueArgsError('array', None)
+                        array_value = func_args[0]
+                        array_type = type(array_value)
+                        if array_type is not list:
+                            raise ValueArgsError('array', array_value)
+                        if func_args_length < 2:
+                            raise ValueArgsError('index', None)
+                        index_value = func_args[1]
+                        index_type = type(index_value)
+                        if index_type is float:
+                            if index_value < 0 or not index_value.is_integer():
+                                raise ValueArgsError('index', index_value)
+                            index_value = int(index_value)
+                        elif index_type is int:
+                            if index_value < 0:
+                                raise ValueArgsError('index', index_value)
+                        else:
+                            raise ValueArgsError('index', index_value)
+                        if func_args_length > 2:
+                            raise ValueArgsError(None, func_args_length)
+                        if index_value >= len(array_value):
+                            raise ValueArgsError('index', index_value)
+                        return array_value[index_value]
+                    if func_name == 'arrayPush':
+                        if func_args_length < 1:
+                            raise ValueArgsError('array', None)
+                        array_value = func_args[0]
+                        array_type = type(array_value)
+                        if array_type is not list:
+                            raise ValueArgsError('array', array_value)
+                        array_value.extend(func_args[1:])
+                        return array_value
+                    if func_name == 'arraySet':
+                        if func_args_length < 1:
+                            raise ValueArgsError('array', None)
+                        array_value = func_args[0]
+                        array_type = type(array_value)
+                        if array_type is not list:
+                            raise ValueArgsError('array', array_value)
+                        if func_args_length < 2:
+                            raise ValueArgsError('index', None)
+                        index_value = func_args[1]
+                        index_type = type(index_value)
+                        if index_type is float:
+                            if index_value < 0 or not index_value.is_integer():
+                                raise ValueArgsError('index', index_value)
+                            index_value = int(index_value)
+                        elif index_type is int:
+                            if index_value < 0:
+                                raise ValueArgsError('index', index_value)
+                        else:
+                            raise ValueArgsError('index', index_value)
+                        if func_args_length > 3:
+                            raise ValueArgsError(None, func_args_length)
+                        if index_value >= len(array_value):
+                            raise ValueArgsError('index', index_value)
+                        set_value = func_args[2] if func_args_length >= 3 else None
+                        array_value[index_value] = set_value
+                        return set_value
+                    if func_name == 'objectGet':
+                        default_value = func_args[2] if func_args_length >= 3 else None
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None, default_value)
+                        object_value = func_args[0]
+                        object_type = type(object_value)
+                        if object_type is not dict:
+                            raise ValueArgsError('object', object_value, default_value)
+                        if func_args_length < 2:
+                            raise ValueArgsError('key', None, default_value)
+                        key_value = func_args[1]
+                        key_type = type(key_value)
+                        if key_type is not str:
+                            raise ValueArgsError('key', key_value, default_value)
+                        if func_args_length > 3:
+                            raise ValueArgsError(None, func_args_length, default_value)
+                        return object_value.get(key_value, default_value)
+                    if func_name == 'objectSet':
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None)
+                        object_value = func_args[0]
+                        object_type = type(object_value)
+                        if object_type is not dict:
+                            raise ValueArgsError('object', object_value)
+                        if func_args_length < 2:
+                            raise ValueArgsError('key', None)
+                        key_value = func_args[1]
+                        key_type = type(key_value)
+                        if key_type is not str:
+                            raise ValueArgsError('key', key_value)
+                        if func_args_length > 3:
+                            raise ValueArgsError(None, func_args_length)
+                        set_value = func_args[2] if func_args_length >= 3 else None
+                        object_value[key_value] = set_value
+                        return set_value
+
                 return func_value(func_args, options)
             except BareScriptRuntimeError:
                 raise
