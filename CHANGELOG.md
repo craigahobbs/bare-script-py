@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.8 (2026-06-22)
+
+- [8c4be75](https://github.com/craigahobbs/bare-script-py/commit/8c4be75) - implement function intrinsics for ~6% make test-include perf gain
+
 ## 4.2.7 (2026-06-12)
 
 - [0a18883](https://github.com/craigahobbs/bare-script-py/commit/0a18883) - update baredoc application to separate builtin and include functions
