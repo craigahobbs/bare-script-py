@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.9 (2026-06-29)
+
+- [17893ff](https://github.com/craigahobbs/bare-script-py/commit/17893ff) - fix arrayIndexOf and arrayLastIndexOf empty array behavior, fix function expression parsing issue, and update skill
+
+- [b0df079](https://github.com/craigahobbs/bare-script-py/commit/b0df079) - update documentation for elementModelRender library function
+
 ## 4.2.8 (2026-06-22)
 
 - [8c4be75](https://github.com/craigahobbs/bare-script-py/commit/8c4be75) - implement function intrinsics for ~6% make test-include perf gain
