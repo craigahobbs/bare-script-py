@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.10 (2026-06-29)
+
+- [029979c](https://github.com/craigahobbs/bare-script-py/commit/029979c) - fix while-continue hang
+
 ## 4.2.9 (2026-06-29)
 
 - [17893ff](https://github.com/craigahobbs/bare-script-py/commit/17893ff) - fix arrayIndexOf and arrayLastIndexOf empty array behavior, fix function expression parsing issue, and update skill
