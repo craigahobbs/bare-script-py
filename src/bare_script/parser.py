@@ -240,7 +240,7 @@ def parse_script(script_text, start_line_number=1, script_name=None):
             # Add the while-do label
             whiledo = {
                 'loop': f'__barescriptLoop{label_index}',
-                'continue': f'__barescriptLoop{label_index}',
+                'continue': f'__barescriptContinue{label_index}',
                 'done': f'__barescriptDone{label_index}',
                 'expr': while_begin_expr,
                 'line': line,
@@ -269,6 +269,8 @@ def parse_script(script_text, start_line_number=1, script_name=None):
                 raise BareScriptParserError('No matching while statement', line, 1, start_line_number + ix_line, script_name)
 
             # Add the while-do footer statements
+            if whiledo.get('hasContinue'):
+                statements.append({'label': {'name': whiledo['continue'], **statement_base}})
             statements.extend([
                 {'jump': {'label': whiledo['loop'], 'expr': whiledo['expr'], **statement_base}},
                 {'label': {'name': whiledo['done'], **statement_base}}
