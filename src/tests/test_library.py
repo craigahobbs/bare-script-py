@@ -247,16 +247,16 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
-        # Index outside valid range
+        # Negative start index is invalid
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, -1], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 4], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 4')
-        self.assertEqual(cm_exc.exception.return_value, -1)
+        # A start index at/after the end (or an empty array) simply finds nothing
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 4], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([[], 2], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([[], 2, 0], None), -1)
 
         # Non-number index
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -325,16 +325,16 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Invalid "array" argument value, null')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
-        # Index outside valid range
+        # Negative start index is invalid
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, -1], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, -1')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 4], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "index" argument value, 4')
-        self.assertEqual(cm_exc.exception.return_value, -1)
+        # A start index at/after the end clamps to the end; an empty array finds nothing
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([array, 2, 4], None), 3)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([[], 2], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayLastIndexOf']([[], 2, 0], None), -1)
 
         # Non-number index
         with self.assertRaises(ValueArgsError) as cm_exc:

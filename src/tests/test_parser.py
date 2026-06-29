@@ -1889,6 +1889,25 @@ class TestParseExpression(unittest.TestCase):
         })
 
 
+    def test_single_character_function_name(self):
+        # Regression: a single-character function name must parse as a call (not fail)
+        expr = parse_expression('f()')
+        self.assertDictEqual(validate_expression(expr), {'function': {'name': 'f', 'args': []}})
+
+        # ...including immediately after a unary operator and as an operand
+        expr = parse_expression('-f()')
+        self.assertDictEqual(validate_expression(expr), {'unary': {'op': '-', 'expr': {'function': {'name': 'f', 'args': []}}}})
+
+        expr = parse_expression('x + f(1)')
+        self.assertDictEqual(validate_expression(expr), {
+            'binary': {
+                'op': '+',
+                'left': {'variable': 'x'},
+                'right': {'function': {'name': 'f', 'args': [{'number': 1.0}]}}
+            }
+        })
+
+
     def test_syntax_error(self):
         expr_text = ' @#$'
         with self.assertRaises(BareScriptParserError) as cm_exc:

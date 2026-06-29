@@ -764,7 +764,7 @@ def _parse_unary_expression(expr_text, array_literals):
 # BareScript expression regex
 _R_EXPR_BINARY_OP = re.compile(r'^\s*(\*\*|\*|\/|%|\+|-|<<|>>|<=|<|>=|>|==|!=|&&|\|\||&|\^|\|)')
 _R_EXPR_UNARY_OP = re.compile(r'^\s*(!|-|~)')
-_R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w+)\s*\(')
+_R_EXPR_FUNCTION_OPEN = re.compile(r'^\s*([A-Za-z_]\w*)\s*\(')
 _R_EXPR_FUNCTION_SEPARATOR = re.compile(r'^\s*,')
 _R_EXPR_FUNCTION_CLOSE = re.compile(r'^\s*\)')
 _R_EXPR_GROUP_OPEN = re.compile(r'^\s*\(')

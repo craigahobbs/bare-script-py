@@ -149,8 +149,6 @@ _ARRAY_GET_ARGS = value_args_model([
 # $return: The first index of the value in the array; -1 if not found.
 def _array_index_of(args, options):
     array, value, index = value_args_validate(_ARRAY_INDEX_OF_ARGS, args, -1)
-    if index >= len(array):
-        raise ValueArgsError('index', index, -1)
 
     # Value function?
     if value_type(value) == 'function':
@@ -196,10 +194,8 @@ _ARRAY_JOIN_ARGS = value_args_model([
 # $return: The last index of the value in the array; -1 if not found.
 def _array_last_index_of(args, options):
     array, value, index = value_args_validate(_ARRAY_LAST_INDEX_OF_ARGS, args, -1)
-    if index is None:
+    if index is None or index >= len(array):
         index = len(array) - 1
-    if index >= len(array):
-        raise ValueArgsError('index', index, -1)
 
     # Value function?
     if value_type(value) == 'function':
