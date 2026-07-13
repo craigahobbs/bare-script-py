@@ -623,7 +623,7 @@ class TestLibrary(unittest.TestCase):
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([{'foo': 'bar'}], None)
 
-        self.assertEqual(str(cm_exc.exception), "Unknown member 'foo'")
+        self.assertEqual(str(cm_exc.exception), 'Unknown member "foo"')
 
 
     def test_barescript_parse_expression(self):
@@ -2075,12 +2075,12 @@ foo bar
         # Invalid types
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['schemaValidate']([{}, 'MyStruct', {}], None)
-        self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'dict'), expected type 'Types' [len > 0]")
+        self.assertEqual(str(cm_exc.exception), 'Invalid value {} (type "dict"), expected type "Types" [len > 0]')
 
         # Invalid value
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['schemaValidate']([types, 'MyStruct', {}], None)
-        self.assertEqual(str(cm_exc.exception), "Required member 'a' missing")
+        self.assertEqual(str(cm_exc.exception), 'Required member "a" missing')
 
         # Non-object types
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -2102,7 +2102,7 @@ foo bar
         # Invalid types
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['schemaValidateTypeModel']([{}], None)
-        self.assertEqual(str(cm_exc.exception), "Invalid value {} (type 'dict'), expected type 'Types' [len > 0]")
+        self.assertEqual(str(cm_exc.exception), 'Invalid value {} (type "dict"), expected type "Types" [len > 0]')
 
         # Non-object types
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -2733,14 +2733,14 @@ foo bar
         logs = []
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['systemFetch']([{}], options)
-        self.assertEqual(str(cm_exc.exception), "Required member 'url' missing")
+        self.assertEqual(str(cm_exc.exception), 'Required member "url" missing')
         self.assertListEqual(logs, [])
 
         # Invalid array of request models
         logs = []
         with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
             SCRIPT_FUNCTIONS['systemFetch']([[{}]], options)
-        self.assertEqual(str(cm_exc.exception), "Required member 'url' missing")
+        self.assertEqual(str(cm_exc.exception), 'Required member "url" missing')
         self.assertListEqual(logs, [])
 
         # Unexpected input type

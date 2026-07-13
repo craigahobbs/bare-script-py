@@ -647,7 +647,7 @@ class TestValue(unittest.TestCase):
         # Invalid function arguments model
         with self.assertRaises(ValidationError) as cm_exc:
             value_args_model([])
-        self.assertEqual(str(cm_exc.exception), "Invalid value [] (type 'list'), expected type 'FunctionArguments' [len > 0]")
+        self.assertEqual(str(cm_exc.exception), 'Invalid value [] (type "list"), expected type "FunctionArguments" [len > 0]')
 
         # Null default argument value error
         with self.assertRaises(ValueError) as cm_exc:
