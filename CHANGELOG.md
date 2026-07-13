@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.11 (2026-07-13)
+
+- [6da714a](https://github.com/craigahobbs/bare-script-py/commit/6da714a) - tighten scheme-markdown dependency
+
 ## 4.2.10 (2026-06-29)
 
 - [029979c](https://github.com/craigahobbs/bare-script-py/commit/029979c) - fix while-continue hang
