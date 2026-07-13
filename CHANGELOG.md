@@ -1,8 +1,12 @@
 # Changelog
 
+## 4.2.12 (2026-07-13
+
+- [b3340f6](https://github.com/craigahobbs/bare-script-py/commit/b3340f6) - schema-markdown 1.3
+
 ## 4.2.11 (2026-07-13)
 
-- [6da714a](https://github.com/craigahobbs/bare-script-py/commit/6da714a) - tighten scheme-markdown dependency
+- [6da714a](https://github.com/craigahobbs/bare-script-py/commit/6da714a) - tighten schema-markdown dependency
 
 ## 4.2.10 (2026-06-29)
 
