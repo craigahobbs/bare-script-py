@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.0 (2026-07-29)
+
+- [26a0c06](https://github.com/craigahobbs/bare-script-py/commit/26a0c06) - port schema-markdown to the include library, embed the include library source, and optimize the runtime
+
 ## 4.2.12 (2026-07-13
 
 - [b3340f6](https://github.com/craigahobbs/bare-script-py/commit/b3340f6) - schema-markdown 1.3
