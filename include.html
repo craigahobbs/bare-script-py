@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Include &#8212; bare-script 5.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
+    <script src="_static/documentation_options.js?v=ce74c6a2"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Errors" href="errors.html" />
+    <link rel="prev" title="Expressions" href="expressions.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+    <link rel="canonical" href="https://craigahobbs.github.io/bare-script-py/include.html" />
+  
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bare-script</a></h1>
+
+
+
+<p class="blurb">A lightweight scripting and expression language</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=craigahobbs&repo=bare-script-py&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="scripts.html">Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="expressions.html">Expressions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Include</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#data-bare">data.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#datalinechart-bare">dataLineChart.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#datatable-bare">dataTable.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#elementmodel-bare">elementModel.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#markdown-bare">markdown.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#markdownelements-bare">markdownElements.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#markdownparser-bare">markdownParser.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#qrcode-bare">qrcode.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#schema-bare">schema.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#schemadoc-bare">schemaDoc.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#schemaparser-bare">schemaParser.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#schematypemodel-bare">schemaTypeModel.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#url-bare">url.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#errors">Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="errors.html">Errors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="options.html">Options</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="expressions.html" title="previous chapter">Expressions</a></li>
+      <li>Next: <a href="errors.html" title="next chapter">Errors</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="include">
+<h1>Include<a class="headerlink" href="#include" title="Link to this heading">¶</a></h1>
+<section id="data-bare">
+<h2>data.bare<a class="headerlink" href="#data-bare" title="Link to this heading">¶</a></h2>
+<section id="data-aggregate">
+<h3>data_aggregate<a class="headerlink" href="#data-aggregate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_aggregate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_aggregate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aggregation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_aggregate" title="Link to this definition">¶</a></dt>
+<dd><p>Aggregate a data array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>aggregation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The aggregation model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The aggregated data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-calculated-field">
+<h3>data_calculated_field<a class="headerlink" href="#data-calculated-field" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_calculated_field">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_calculated_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_calculated_field" title="Link to this definition">¶</a></dt>
+<dd><p>Add a calculated field to a data array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>field_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The calculated field name</p></li>
+<li><p><strong>expr</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The calculated field expression</p></li>
+<li><p><strong>variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The expression variables object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-filter">
+<h3>data_filter<a class="headerlink" href="#data-filter" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_filter">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Filter a data array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>expr</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The filter expression</p></li>
+<li><p><strong>variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The expression variables object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-join">
+<h3>data_join<a class="headerlink" href="#data-join" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_join">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_join</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">left_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">join_expr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_expr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_left_join</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_join" title="Link to this definition">¶</a></dt>
+<dd><p>Join two data arrays</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>left_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The left data array</p></li>
+<li><p><strong>right_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The right data array</p></li>
+<li><p><strong>join_expr</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The join expression</p></li>
+<li><p><strong>right_expr</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The right join expression</p></li>
+<li><p><strong>is_left_join</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – If True, perform a left join (always include left row)</p></li>
+<li><p><strong>variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The join expression variables object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The joined data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-parse-csv">
+<h3>data_parse_csv<a class="headerlink" href="#data-parse-csv" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_parse_csv">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_parse_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_parse_csv" title="Link to this definition">¶</a></dt>
+<dd><p>Parse CSV text to a data array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The CSV text</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-sort">
+<h3>data_sort<a class="headerlink" href="#data-sort" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_sort">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_sort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sorts</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_sort" title="Link to this definition">¶</a></dt>
+<dd><p>Sort a data array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>sorts</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>)</em>) – The array of sort tuples, [field] or [field, descending]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sorted data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-top">
+<h3>data_top<a class="headerlink" href="#data-top" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_top">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_top</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_top" title="Link to this definition">¶</a></dt>
+<dd><p>Keep the top rows for each category</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>count</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The number of rows to keep (default is 1)</p></li>
+<li><p><strong>category_fields</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>) or </em><em>None</em><em>, </em><em>optional</em>) – The category fields</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The top data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-validate">
+<h3>data_validate<a class="headerlink" href="#data-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">csv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a data array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>csv</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – If True, parse value strings</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The map of field name to field type</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="datalinechart-bare">
+<h2>dataLineChart.bare<a class="headerlink" href="#datalinechart-bare" title="Link to this heading">¶</a></h2>
+<section id="data-line-chart-elements">
+<h3>data_line_chart_elements<a class="headerlink" href="#data-line-chart-elements" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_line_chart_elements">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_line_chart_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_chart</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_line_chart_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Render a line chart as an element model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>line_chart</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The line chart model</p></li>
+<li><p><strong>options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The line chart options object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The line chart element model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-line-chart-validate">
+<h3>data_line_chart_validate<a class="headerlink" href="#data-line-chart-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_line_chart_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_line_chart_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line_chart</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_line_chart_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a line chart model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>line_chart</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The line chart model</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated line chart model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="datatable-bare">
+<h2>dataTable.bare<a class="headerlink" href="#datatable-bare" title="Link to this heading">¶</a></h2>
+<section id="data-table-elements">
+<h3>data_table_elements<a class="headerlink" href="#data-table-elements" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_table_elements">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_table_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_table_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Render a data table as an element model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The data array</p></li>
+<li><p><strong>data_table</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The data table model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The data table element model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-table-markdown">
+<h3>data_table_markdown<a class="headerlink" href="#data-table-markdown" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_table_markdown">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_table_markdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_table_markdown" title="Link to this definition">¶</a></dt>
+<dd><p>Create the array of Markdown table line strings</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>)</em>) – The array of row objects</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The data table model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The array of Markdown table line strings</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-table-validate">
+<h3>data_table_validate<a class="headerlink" href="#data-table-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.data_table_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">data_table_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_table</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.data_table_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a data table model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data_table</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The data table model</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated data table model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="elementmodel-bare">
+<h2>elementModel.bare<a class="headerlink" href="#elementmodel-bare" title="Link to this heading">¶</a></h2>
+<section id="element-model-to-string">
+<h3>element_model_to_string<a class="headerlink" href="#element-model-to-string" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.element_model_to_string">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">element_model_to_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.element_model_to_string" title="Link to this definition">¶</a></dt>
+<dd><p>Render an element model to an HTML or SVG string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>elements</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> or </em><em>None</em>) – The element model</p></li>
+<li><p><strong>indent</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The indentation string or number of spaces</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The HTML or SVG string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="element-model-validate">
+<h3>element_model_validate<a class="headerlink" href="#element-model-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.element_model_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">element_model_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elements</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.element_model_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate an element model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>elements</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> or </em><em>None</em>) – The element model</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated element model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a> or None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="markdown-bare">
+<h2>markdown.bare<a class="headerlink" href="#markdown-bare" title="Link to this heading">¶</a></h2>
+<section id="markdown-escape">
+<h3>markdown_escape<a class="headerlink" href="#markdown-escape" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_escape">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_escape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_escape" title="Link to this definition">¶</a></dt>
+<dd><p>Escape a string for inclusion in Markdown text</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The text to escape</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The escaped text</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="markdown-header-id">
+<h3>markdown_header_id<a class="headerlink" href="#markdown-header-id" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_header_id">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_header_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_header_id" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a Markdown header ID from text</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The text</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The header element ID</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="markdown-paragraph-text">
+<h3>markdown_paragraph_text<a class="headerlink" href="#markdown-paragraph-text" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_paragraph_text">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_paragraph_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paragraph</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_paragraph_text" title="Link to this definition">¶</a></dt>
+<dd><p>Get a Markdown paragraph model’s text</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>paragraph</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The Markdown paragraph model</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The paragraph text string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="markdown-title">
+<h3>markdown_title<a class="headerlink" href="#markdown-title" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_title">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_title</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">markdown</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_title" title="Link to this definition">¶</a></dt>
+<dd><p>Get a Markdown model’s title</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>markdown</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The Markdown model</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The title string or None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a> or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="markdown-validate">
+<h3>markdown_validate<a class="headerlink" href="#markdown-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">markdown</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a Markdown model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>markdown</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The Markdown model</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated Markdown model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="markdownelements-bare">
+<h2>markdownElements.bare<a class="headerlink" href="#markdownelements-bare" title="Link to this heading">¶</a></h2>
+<section id="markdown-elements">
+<h3>markdown_elements<a class="headerlink" href="#markdown-elements" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_elements">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">markdown</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Generate an element model from a Markdown model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>markdown</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The Markdown model</p></li>
+<li><p><strong>options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The Markdown elements options object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Markdown’s element model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="markdownparser-bare">
+<h2>markdownParser.bare<a class="headerlink" href="#markdownparser-bare" title="Link to this heading">¶</a></h2>
+<section id="markdown-parse">
+<h3>markdown_parse<a class="headerlink" href="#markdown-parse" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_parse">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_parse" title="Link to this definition">¶</a></dt>
+<dd><p>Parse Markdown text into a Markdown model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>)</em>) – The Markdown text</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Markdown model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="qrcode-bare">
+<h2>qrcode.bare<a class="headerlink" href="#qrcode-bare" title="Link to this heading">¶</a></h2>
+<section id="qrcode-elements">
+<h3>qrcode_elements<a class="headerlink" href="#qrcode-elements" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.qrcode_elements">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">qrcode_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.qrcode_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Generate the element model for a QR code</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>)</em>) – The QR code message or the QR code matrix</p></li>
+<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The size of the QR code, in pixels</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The error correction level: ‘low’, ‘medium’, ‘quartile’, or ‘high’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The QR code SVG element model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="qrcode-matrix">
+<h3>qrcode_matrix<a class="headerlink" href="#qrcode-matrix" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.qrcode_matrix">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">qrcode_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.qrcode_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a QR code pixel matrix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The QR code message</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The error correction level: ‘low’, ‘medium’, ‘quartile’, or ‘high’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The QR code pixel matrix</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="schema-bare">
+<h2>schema.bare<a class="headerlink" href="#schema-bare" title="Link to this heading">¶</a></h2>
+<section id="schema-get-enum-values">
+<h3>schema_get_enum_values<a class="headerlink" href="#schema-get-enum-values" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_get_enum_values">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_get_enum_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enum_model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_get_enum_values" title="Link to this definition">¶</a></dt>
+<dd><p>Get an enum’s values (inherited values first)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p></li>
+<li><p><strong>enum_model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The enum model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The array of enum value models</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="schema-get-referenced-types">
+<h3>schema_get_referenced_types<a class="headerlink" href="#schema-get-referenced-types" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_get_referenced_types">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_get_referenced_types</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">referenced_types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_get_referenced_types" title="Link to this definition">¶</a></dt>
+<dd><p>Get a user type’s referenced type model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p></li>
+<li><p><strong>type_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The type name</p></li>
+<li><p><strong>referenced_types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – A map of referenced user type name to user type model to update</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The referenced type model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="schema-get-struct-members">
+<h3>schema_get_struct_members<a class="headerlink" href="#schema-get-struct-members" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_get_struct_members">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_get_struct_members</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">struct</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_get_struct_members" title="Link to this definition">¶</a></dt>
+<dd><p>Get a struct’s members (inherited members first)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p></li>
+<li><p><strong>struct</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The struct model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The array of struct member models</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="schema-validate">
+<h3>schema_validate<a class="headerlink" href="#schema-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a value using a schema type model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p></li>
+<li><p><strong>type_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The type name</p></li>
+<li><p><strong>value</strong> – The value to validate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated, transformed value</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="schemadoc-bare">
+<h2>schemaDoc.bare<a class="headerlink" href="#schemadoc-bare" title="Link to this heading">¶</a></h2>
+<section id="schema-doc-markdown">
+<h3>schema_doc_markdown<a class="headerlink" href="#schema-doc-markdown" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_doc_markdown">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_doc_markdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_doc_markdown" title="Link to this definition">¶</a></dt>
+<dd><p>Generate the Schema Markdown user type documentation as an array of Markdown text lines</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p></li>
+<li><p><strong>type_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The type name</p></li>
+<li><p><strong>options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The schema documentation options object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The array of Markdown text lines</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="schemaparser-bare">
+<h2>schemaParser.bare<a class="headerlink" href="#schemaparser-bare" title="Link to this heading">¶</a></h2>
+<section id="schema-parse">
+<h3>schema_parse<a class="headerlink" href="#schema-parse" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_parse">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_parse" title="Link to this definition">¶</a></dt>
+<dd><p>Parse Schema Markdown text</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>)</em>) – The <a class="reference external" href="https://craigahobbs.github.io/schema-markdown-js/language/">Schema Markdown</a> text</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaParserError" title="bare_script.include.SchemaParserError"><strong>SchemaParserError</strong></a> – A parsing error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="schematypemodel-bare">
+<h2>schemaTypeModel.bare<a class="headerlink" href="#schematypemodel-bare" title="Link to this heading">¶</a></h2>
+<section id="schema-type-model">
+<h3>schema_type_model<a class="headerlink" href="#schema-type-model" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_type_model">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_type_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_type_model" title="Link to this definition">¶</a></dt>
+<dd><p>Get the Schema Markdown type model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The Schema Markdown <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="schema-type-model-validate">
+<h3>schema_type_model_validate<a class="headerlink" href="#schema-type-model-validate" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.schema_type_model_validate">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">schema_type_model_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">types</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.schema_type_model_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a Schema Markdown type model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>types</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The schema’s <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Types'">type model</a> to validate</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated type model</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="url-bare">
+<h2>url.bare<a class="headerlink" href="#url-bare" title="Link to this heading">¶</a></h2>
+<section id="url-decode-component">
+<h3>url_decode_component<a class="headerlink" href="#url-decode-component" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.url_decode_component">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">url_decode_component</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">string</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.url_decode_component" title="Link to this definition">¶</a></dt>
+<dd><p>Decode a percent-encoded string component</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>string</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The string component to decode</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The decoded string, or None on failure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a> or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="url-decode-query-string">
+<h3>url_decode_query_string<a class="headerlink" href="#url-decode-query-string" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.url_decode_query_string">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">url_decode_query_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_string</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.url_decode_query_string" title="Link to this definition">¶</a></dt>
+<dd><p>Decode a URL query string to an object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>query_string</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The query string to decode</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The decoded query string object, or None on failure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a> or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="url-encode">
+<h3>url_encode<a class="headerlink" href="#url-encode" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.url_encode">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">url_encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.url_encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode a URL</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The URL to encode</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The encoded URL</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="url-encode-component">
+<h3>url_encode_component<a class="headerlink" href="#url-encode-component" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.url_encode_component">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">url_encode_component</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.url_encode_component" title="Link to this definition">¶</a></dt>
+<dd><p>Encode a URL component</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The URL component to encode</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The encoded URL component</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="url-encode-query-string">
+<h3>url_encode_query_string<a class="headerlink" href="#url-encode-query-string" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.url_encode_query_string">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">url_encode_query_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.url_encode_query_string" title="Link to this definition">¶</a></dt>
+<dd><p>Encode an object as a URL query string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The object to encode</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The encoded query string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="errors">
+<h2>Errors<a class="headerlink" href="#errors" title="Link to this heading">¶</a></h2>
+<section id="schemaparsererror">
+<h3>SchemaParserError<a class="headerlink" href="#schemaparsererror" title="Link to this heading">¶</a></h3>
+<dl class="py exception">
+<dt class="sig sig-object py" id="bare_script.include.SchemaParserError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">SchemaParserError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">errors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.SchemaParserError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>A Schema Markdown parser error</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>errors</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>)</em>) – The list of error strings</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="bare_script.include.SchemaParserError.errors">
+<span class="sig-name descname"><span class="pre">errors</span></span><a class="headerlink" href="#bare_script.include.SchemaParserError.errors" title="Link to this definition">¶</a></dt>
+<dd><p>The list of error strings</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="schemavalidationerror">
+<h3>SchemaValidationError<a class="headerlink" href="#schemavalidationerror" title="Link to this heading">¶</a></h3>
+<dl class="py exception">
+<dt class="sig sig-object py" id="bare_script.include.SchemaValidationError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">SchemaValidationError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">member_fqn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.SchemaValidationError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>A schema type model validation error</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The validation error message</p></li>
+<li><p><strong>member_fqn</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>None</em>) – The fully-qualified member name or None</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="bare_script.include.SchemaValidationError.member_fqn">
+<span class="sig-name descname"><span class="pre">member_fqn</span></span><a class="headerlink" href="#bare_script.include.SchemaValidationError.member_fqn" title="Link to this definition">¶</a></dt>
+<dd><p>The fully-qualified member name or None</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;2021, Craig A. Hobbs.
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -2,8 +2,6 @@
 
 ## Table of Contents
 
-- [RegexMatch](#var.vPublish=true&var.vSingle=true&regexmatch)
-- [SystemFetch](#var.vPublish=true&var.vSingle=true&systemfetch)
 - [args.bare](#var.vPublish=true&var.vSingle=true&args-bare)
 - [baredoc.bare](#var.vPublish=true&var.vSingle=true&baredoc-bare)
 - [data.bare](#var.vPublish=true&var.vSingle=true&data-bare)
@@ -14,34 +12,6 @@
 - [markdownElements.bare](#var.vPublish=true&var.vSingle=true&markdownelements-bare)
 - [markdownHighlight.bare](#var.vPublish=true&var.vSingle=true&markdownhighlight-bare)
 - [pager.bare](#var.vPublish=true&var.vSingle=true&pager-bare)
-
----
-
-## RegexMatch
-
-### struct RegexMatch
-
-A regex match model
-
-| Name   | Type      | Attributes | Description                                                                                                      |
-|--------|-----------|------------|------------------------------------------------------------------------------------------------------------------|
-| index  | int       | value >= 0 | The zero-based index of the match in the input string                                                            |
-| input  | string    |            | The input string                                                                                                 |
-| groups | string {} |            | The matched groups. The "0" key is the full match text. Ordered (non-named) groups use keys "1", "2", and so on. |
-
----
-
-## SystemFetch
-
-### struct SystemFetchRequest
-
-A fetch request model
-
-| Name    | Type      | Attributes | Description         |
-|---------|-----------|------------|---------------------|
-| url     | string    |            | The resource URL    |
-| body    | string    | optional   | The request body    |
-| headers | string {} | optional   | The request headers |
 
 ---
 
