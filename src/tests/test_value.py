@@ -4,12 +4,11 @@
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
 import datetime
+import json
 import platform
 import re
 import unittest
 import uuid
-
-from schema_markdown import ValidationError
 
 from bare_script.value import ValueArgsError, value_args_model, value_args_validate, value_boolean, value_compare, value_is, value_json, \
     value_normalize_datetime, value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
@@ -129,6 +128,9 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_json({'value': 4, 'c': 3, 'a': 1, 'b': 2}), '{"a":1,"b":2,"c":3,"value":4}')
         self.assertEqual(value_json([1, 2, 3]), '[1,2,3]')
 
+        # Non-ASCII characters are not escaped
+        self.assertEqual(value_json({'café': '٥'}), '{"café":"٥"}')
+
         # Indent
         self.assertEqual(value_json({'value': 1}, 2), '{\n  "value": 1\n}')
 
@@ -161,6 +163,10 @@ class TestValue(unittest.TestCase):
         # Invalid
         self.assertEqual(value_json({'A': 1, 'B': re.compile('^$')}), '{"A":1,"B":null}')
         self.assertEqual(value_json(re.compile('^$')), 'null')
+
+
+    def test_value_json_proto_key(self):
+        self.assertEqual(value_json(json.loads('{"__proto__": {"b": 2}, "a": 1}')), '{"__proto__":{"b":2},"a":1}')
 
 
     def test_value_boolean(self):
@@ -644,11 +650,6 @@ class TestValue(unittest.TestCase):
         ]
         self.assertEqual(value_args_model(fn_args), fn_args)
 
-        # Invalid function arguments model
-        with self.assertRaises(ValidationError) as cm_exc:
-            value_args_model([])
-        self.assertEqual(str(cm_exc.exception), 'Invalid value [] (type "list"), expected type "FunctionArguments" [len > 0]')
-
         # Null default argument value error
         with self.assertRaises(ValueError) as cm_exc:
             value_args_model([
@@ -689,6 +690,14 @@ class TestValue(unittest.TestCase):
         self.assertIsNone(value_parse_number('1234.45asdf'))
         self.assertIsNone(value_parse_number('1234.45 asdf'))
 
+        # Non-ASCII digits and digit separators
+        self.assertIsNone(value_parse_number('١٢٣'))
+        self.assertIsNone(value_parse_number('1_000'))
+
+        # Non-finite
+        self.assertIsNone(value_parse_number('1e400'))
+        self.assertIsNone(value_parse_number('-1e400'))
+
 
     def test_value_parse_integer(self):
         self.assertEqual(value_parse_integer('123'), 123)
@@ -699,6 +708,7 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_parse_integer('101', 2), 5)
         self.assertEqual(value_parse_integer('707', 8), 455)
         self.assertEqual(value_parse_integer('ff', 16), 255)
+        self.assertEqual(value_parse_integer('10', 2.), 2)
 
         # Padding
         self.assertEqual(value_parse_integer('  123  '), 123)
@@ -721,9 +731,15 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_parse_integer('123asdf'), None)
         self.assertEqual(value_parse_integer('123 asdf'), None)
 
+        # Non-ASCII digits and digit separators
+        self.assertEqual(value_parse_integer('١٢٣'), None)
+        self.assertEqual(value_parse_integer('1_000'), None)
+        self.assertEqual(value_parse_integer('0x10', 16), None)
+
         # Bad radix
         self.assertEqual(value_parse_integer('10', '2'), None)
         self.assertEqual(value_parse_integer('10', 2.5), None)
+        self.assertEqual(value_parse_integer('10', float('nan')), None)
         self.assertEqual(value_parse_integer('10', 1), None)
         self.assertEqual(value_parse_integer('10', 37), None)
         self.assertEqual(value_parse_integer('12', 2), None)
@@ -761,6 +777,18 @@ class TestValue(unittest.TestCase):
             value_parse_datetime('2022-08-29'),
             datetime.datetime(2022, 8, 29)
         )
+
+        # Date year less than 100
+        self.assertEqual(
+            value_parse_datetime('0050-01-01'),
+            datetime.datetime(50, 1, 1)
+        )
+
+        # Rolled-over date components
+        self.assertIsNone(value_parse_datetime('2020-02-30'))
+        self.assertIsNone(value_parse_datetime('2020-13-01'))
+        self.assertIsNone(value_parse_datetime('2020-02-30T00:00:00Z'))
+        self.assertIsNone(value_parse_datetime('2020-01-01T24:30:00Z'))
 
         # Parse failure
         self.assertIsNone(value_parse_datetime('2022-08-29T15:08:00'))

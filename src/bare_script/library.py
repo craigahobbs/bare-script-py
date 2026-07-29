@@ -14,11 +14,7 @@ import math
 import os
 import random
 import re
-import urllib
 
-from schema_markdown import TYPE_MODEL, parse_schema_markdown, validate_type, validate_type_model
-
-from .model import validate_expression
 from .parser import parse_expression
 from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_args_validate, \
     value_boolean, value_compare, value_is, value_json, value_normalize_datetime, value_parse_datetime, \
@@ -404,7 +400,6 @@ _ARRAY_SORT_ARGS = value_args_model([
 # $return: The expression result
 def _barescript_evaluate_expression(args, options):
     expr, locals_, builtins = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
-    validate_expression(expr)
     evaluate_expression = _import_evaluate_expression()
     return evaluate_expression(expr, options, locals_, builtins)
 
@@ -1115,7 +1110,7 @@ _OBJECT_DELETE_ARGS = value_args_model([
 # $arg object: The object
 # $arg key: The key
 # $arg defaultValue: The default value (optional)
-# $return: The value or null if the key does not exist
+# $return: The value, or the default value if the key does not exist
 def _object_get(args, unused_options):
     default_value_arg = args[2] if len(args) >= 3 else None
     object_, key, default_value = value_args_validate(_OBJECT_GET_ARGS, args, default_value_arg)
@@ -1217,8 +1212,11 @@ _REGEX_ESCAPE_ARGS = value_args_model([
 # $doc: Find the first match of a regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The [match object](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='RegexMatch'),
-# $return: or null if no matches are found
+# $return: The match object, or null if no matches are found.
+# $return: The match object contains the following members:
+# $return: - **index** - the zero-based index of the match in the input string
+# $return: - **input** - the input string
+# $return: - **groups** - the matched groups. The "0" key is the full match text. Ordered (non-named) groups use keys "1", "2", and so on.
 def _regex_match(args, unused_options):
     regex, string = value_args_validate(_REGEX_MATCH_ARGS, args)
     match = regex.search(string)
@@ -1235,7 +1233,7 @@ _REGEX_MATCH_ARGS = value_args_model([
 # $doc: Find all matches of regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The array of [match objects](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='RegexMatch')
+# $return: The array of match objects (see the [regexMatch](#var.vName='regexMatch') function)
 def _regex_match_all(args, unused_options):
     regex, string = value_args_validate(_REGEX_MATCH_ALL_ARGS, args)
     return [_regex_match_groups(match) for match in regex.finditer(string)]
@@ -1256,25 +1254,6 @@ def _regex_match_groups(match):
         'input': match.string,
         'groups': groups
     }
-
-
-# The regex match model
-REGEX_MATCH_TYPES = parse_schema_markdown('''\
-group "RegexMatch"
-
-
-# A regex match model
-struct RegexMatch
-
-    # The zero-based index of the match in the input string
-    int(>= 0) index
-
-    # The input string
-    string input
-
-    # The matched groups. The "0" key is the full match text. Ordered (non-named) groups use keys "1", "2", and so on.
-    string{} groups
-''')
 
 
 # $function: regexNew
@@ -1350,7 +1329,7 @@ _REGEX_REPLACE_ARGS = value_args_model([
 ])
 
 
-_R_REGEX_REPLACE_INDEX = re.compile(r'\$(\d+)')
+_R_REGEX_REPLACE_INDEX = re.compile(r'\$([0-9]+)')
 _R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 
 
@@ -1367,86 +1346,6 @@ def _regex_split(args, unused_options):
 _REGEX_SPLIT_ARGS = value_args_model([
     {'name': 'regex', 'type': 'regex'},
     {'name': 'string', 'type': 'string'}
-])
-
-
-#
-# Schema functions
-#
-
-
-# $function: schemaParse
-# $group: schema
-# $doc: Parse the [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/) text
-# $arg lines...: The [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/)
-# $arg lines...: text lines (may contain nested arrays of un-split lines)
-# $return: The schema's [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-def _schema_parse(args, unused_options):
-    return parse_schema_markdown(args)
-
-
-# $function: schemaParseEx
-# $group: schema
-# $doc: Parse the [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/) text with options
-# $arg lines: The array of [Schema Markdown](https://craigahobbs.github.io/schema-markdown-js/language/)
-# $arg lines: text lines (may contain nested arrays of un-split lines)
-# $arg types: Optional. The [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='').
-# $arg filename: Optional (default is ""). The file name.
-# $return: The schema's [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-def _schema_parse_ex(args, unused_options):
-    lines, types, filename = value_args_validate(_SCHEMA_PARSE_EX_ARGS, args)
-    lines_type = value_type(lines)
-    types = types if types is not None else {}
-    if lines_type not in ('array', 'string'):
-        raise ValueArgsError('lines', lines)
-
-    return parse_schema_markdown(lines, types, filename)
-
-_SCHEMA_PARSE_EX_ARGS = value_args_model([
-    {'name': 'lines'},
-    {'name': 'types', 'type': 'object', 'nullable': True},
-    {'name': 'filename', 'type': 'string', 'default': ''}
-])
-
-
-# $function: schemaTypeModel
-# $group: schema
-# $doc: Get the [Schema Markdown Type Model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-# $return: The [Schema Markdown Type Model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-def _schema_type_model(unused_args, unused_options):
-    return TYPE_MODEL
-
-
-# $function: schemaValidate
-# $group: schema
-# $doc: Validate an object to a schema type
-# $arg types: The [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-# $arg typeName: The type name
-# $arg value: The object to validate
-# $return: The validated object or null if validation fails
-def _schema_validate(args, unused_options):
-    types, type_name, value = value_args_validate(_SCHEMA_VALIDATE_ARGS, args)
-    validate_type_model(types)
-    return validate_type(types, type_name, value)
-
-_SCHEMA_VALIDATE_ARGS = value_args_model([
-    {'name': 'types', 'type': 'object'},
-    {'name': 'typeName', 'type': 'string'},
-    {'name': 'value'}
-])
-
-
-# $function: schemaValidateTypeModel
-# $group: schema
-# $doc: Validate a [Schema Markdown Type Model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-# $arg types: The [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='') to validate
-# $return: The validated [type model](https://craigahobbs.github.io/bare-script-py/model/#var.vName='Types'&var.vURL='')
-def _schema_validate_type_model(args, unused_options):
-    types, = value_args_validate(_SCHEMA_VALIDATE_TYPE_MODEL_ARGS, args)
-    return validate_type_model(types)
-
-_SCHEMA_VALIDATE_TYPE_MODEL_ARGS = value_args_model([
-    {'name': 'types', 'type': 'object'}
 ])
 
 
@@ -1497,10 +1396,13 @@ _STRING_CHAR_CODE_AT_ARGS = value_args_model([
 # $group: string
 # $doc: Decode a UTF-8 byte value array to a string
 # $arg bytes: The UTF-8 byte array
-# $return: The string
+# $return: The string, or null if the byte array is not valid UTF-8
 def _string_decode(args, unused_options):
     bytes_, = value_args_validate(_STRING_DECODE_ARGS, args)
-    return bytes(bytes_).decode('utf-8')
+    try:
+        return bytes(int(byte) for byte in bytes_).decode('utf-8')
+    except (TypeError, ValueError):
+        return None
 
 _STRING_DECODE_ARGS = value_args_model([
     {'name': 'bytes', 'type': 'array'}
@@ -1545,7 +1447,7 @@ _STRING_ENDS_WITH_ARGS = value_args_model([
 def _string_from_char_code(char_codes, unused_options):
     for code in char_codes:
         if value_type(code) != 'number' or int(code) != code or code < 0:
-            raise ValueArgsError('char_codes', code)
+            raise ValueArgsError('charCodes', code)
 
     return ''.join(chr(int(code)) for code in char_codes)
 
@@ -1807,10 +1709,11 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 # $function: systemFetch
 # $group: system
 # $doc: Retrieve a URL resource
-# $arg url: The resource URL,
-# $arg url: [request model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest'),
-# $arg url: or array of URL and
-# $arg url: [request model](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest')
+# $arg url: The resource URL, request model, or array of URL and request model.
+# $arg url: The request model is an object with the following members:
+# $arg url: - **url** - the resource URL
+# $arg url: - **body** - the optional request body string
+# $arg url: - **headers** - the optional request headers (an object of string values)
 # $return: The response string or array of strings; null if an error occurred
 def _system_fetch(args, options):
     url, = value_args_validate(_SYSTEM_FETCH_ARGS, args)
@@ -1827,14 +1730,14 @@ def _system_fetch(args, options):
     if url_type == 'string':
         requests.append({'url': url})
     elif url_type == 'object':
-        requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url))
+        requests.append(_system_fetch_request_validate(url))
     elif url_type == 'array':
         is_response_array = True
         for url_item in url:
             if value_type(url_item) == 'string':
                 requests.append({'url': url_item})
             else:
-                requests.append(validate_type(SYSTEM_FETCH_TYPES, 'SystemFetchRequest', url_item))
+                requests.append(_system_fetch_request_validate(url_item))
     else:
         raise ValueArgsError('url', url)
 
@@ -1867,23 +1770,16 @@ _SYSTEM_FETCH_ARGS = value_args_model([
 ])
 
 
-# The aggregation model
-SYSTEM_FETCH_TYPES = parse_schema_markdown('''\
-group "SystemFetch"
-
-
-# A fetch request model
-struct SystemFetchRequest
-
-    # The resource URL
-    string url
-
-    # The request body
-    optional string body
-
-    # The request headers
-    optional string{} headers
-''')
+# Helper to validate a systemFetch request model
+def _system_fetch_request_validate(request):
+    request_url = request.get('url')
+    body = request.get('body')
+    headers = request.get('headers')
+    if value_type(request_url) != 'string' or (body is not None and value_type(body) != 'string') or \
+       (headers is not None and (value_type(headers) != 'object' or
+                                 any(value_type(header_value) != 'string' for header_value in headers.values()))):
+        raise ValueArgsError('url', request)
+    return request
 
 
 # $function: systemGlobalGet
@@ -1891,7 +1787,7 @@ struct SystemFetchRequest
 # $doc: Get a global variable value
 # $arg name: The global variable name
 # $arg defaultValue: The default value (optional)
-# $return: The global variable's value or null if it does not exist
+# $return: The global variable's value, or the default value if it does not exist
 def _system_global_get(args, options):
     name, default_value = value_args_validate(_SYSTEM_GLOBAL_GET_ARGS, args)
     globals_ = options.get('globals') if options is not None else None
@@ -2003,39 +1899,6 @@ _SYSTEM_TYPE_ARGS = value_args_model([
 ])
 
 
-#
-# URL functions
-#
-
-
-# $function: urlEncode
-# $group: url
-# $doc: Encode a URL
-# $arg url: The URL string
-# $return: The encoded URL string
-def _url_encode(args, unused_options):
-    url, = value_args_validate(_URL_ENCODE_ARGS, args)
-    return urllib.parse.quote(url, safe="':/&+!#=")
-
-_URL_ENCODE_ARGS = value_args_model([
-    {'name': 'url', 'type': 'string'}
-])
-
-
-# $function: urlEncodeComponent
-# $group: url
-# $doc: Encode a URL component
-# $arg url: The URL component string
-# $return: The encoded URL component string
-def _url_encode_component(args, unused_options):
-    url, = value_args_validate(_URL_ENCODE_COMPONENT_ARGS, args)
-    return urllib.parse.quote(url, safe="'")
-
-_URL_ENCODE_COMPONENT_ARGS = value_args_model([
-    {'name': 'url', 'type': 'string'}
-])
-
-
 # The built-in script functions
 SCRIPT_FUNCTIONS = {
     'arrayCopy': _array_copy,
@@ -2110,11 +1973,6 @@ SCRIPT_FUNCTIONS = {
     'regexNew': _regex_new,
     'regexReplace': _regex_replace,
     'regexSplit': _regex_split,
-    'schemaParse': _schema_parse,
-    'schemaParseEx': _schema_parse_ex,
-    'schemaTypeModel': _schema_type_model,
-    'schemaValidate': _schema_validate,
-    'schemaValidateTypeModel': _schema_validate_type_model,
     'stringCharAt': _string_char_at,
     'stringCharCodeAt': _string_char_code_at,
     'stringDecode': _string_decode,
@@ -2144,8 +2002,6 @@ SCRIPT_FUNCTIONS = {
     'systemLogDebug': _system_log_debug,
     'systemPartial': _system_partial,
     'systemType': _system_type,
-    'urlEncode': _url_encode,
-    'urlEncodeComponent': _url_encode_component
 }
 
 
@@ -2209,12 +2065,19 @@ EXPRESSION_FUNCTIONS = dict(
 # Library functions with an inline "intrinsic" fast path in the runtime call dispatch. Membership is by
 # function-object identity, so any override (a user function, an options global, or an unittestMock
 # systemGlobalSet) is a different object that misses the set and takes the normal call path. Kept small
-# on purpose: these hot, validation-heavy accessors measured as ~all of the include-test speedup.
+# on purpose: membership is limited to the hottest functions by measured call count across the include
+# tests and the perf suite.
 # Defined here, next to SCRIPT_FUNCTIONS, mirroring the JavaScript implementation.
 INTRINSICS = frozenset((
     SCRIPT_FUNCTIONS['arrayGet'],
+    SCRIPT_FUNCTIONS['arrayLength'],
+    SCRIPT_FUNCTIONS['arrayNew'],
     SCRIPT_FUNCTIONS['arrayPush'],
     SCRIPT_FUNCTIONS['arraySet'],
+    SCRIPT_FUNCTIONS['mathSqrt'],
     SCRIPT_FUNCTIONS['objectGet'],
+    SCRIPT_FUNCTIONS['objectHas'],
+    SCRIPT_FUNCTIONS['objectKeys'],
     SCRIPT_FUNCTIONS['objectSet'],
+    SCRIPT_FUNCTIONS['stringLength'],
 ))

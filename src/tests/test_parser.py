@@ -1760,6 +1760,34 @@ foo bar
         self.assertEqual(cm_exc.exception.line_number, 3)
 
 
+    def test_non_ascii_identifier_syntax_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            parse_script('café = 1\n')
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+café = 1
+   ^
+''')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.line, 'café = 1')
+        self.assertEqual(cm_exc.exception.column_number, 4)
+        self.assertEqual(cm_exc.exception.line_number, 1)
+
+
+    def test_non_ascii_number_syntax_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            parse_script('x = ٥\n')
+        self.assertEqual(str(cm_exc.exception), '''\
+:1: Syntax error
+x = ٥
+    ^
+''')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.line, 'x = ٥')
+        self.assertEqual(cm_exc.exception.column_number, 5)
+        self.assertEqual(cm_exc.exception.line_number, 1)
+
+
     def test_assignment_statement_expression_syntax_error(self):
         with self.assertRaises(BareScriptParserError) as cm_exc:
             parse_script('''\

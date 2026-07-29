@@ -11,8 +11,8 @@ import os
 import sys
 import time
 
-from .model import lint_script
-from .options import FETCH_SYSTEM_PREFIX, fetch_read_write, fetch_system, log_stdout, url_file_relative
+from .lint import lint_script
+from .options import fetch_read_write, log_stdout, url_file_relative
 from .parser import parse_expression, parse_script
 from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME
 from .value import value_boolean
@@ -121,10 +121,9 @@ def main(argv=None):
                 time_begin = time.time()
                 result = execute_script(script, {
                     'debug': args.debug or False,
-                    'fetchFn': lambda request: fetch_system(fetch_read_write, request),
+                    'fetchFn': fetch_read_write,
                     'globals': static_globals,
                     'logFn': log_stdout,
-                    'systemPrefix': FETCH_SYSTEM_PREFIX,
                     'urlFn': partial(url_file_relative, script_value) if script_type == 'file' else None
                 })
                 if isinstance(result, (int, float)) and int(result) == result and 0 <= result <= 255:

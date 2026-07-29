@@ -9,8 +9,6 @@ import math
 import re
 import unittest
 
-import schema_markdown
-
 from bare_script import BareScriptRuntimeError
 from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
 from bare_script.parser import BareScriptParserError
@@ -619,12 +617,6 @@ class TestLibrary(unittest.TestCase):
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, False], None)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "pi"')
 
-        # Invalid expression
-        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
-            SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([{'foo': 'bar'}], None)
-
-        self.assertEqual(str(cm_exc.exception), 'Unknown member "foo"')
-
 
     def test_barescript_parse_expression(self):
         self.assertDictEqual(
@@ -734,6 +726,25 @@ foo bar
             SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29T15:08:00-08:00'], None),
             datetime.datetime.fromisoformat('2022-08-29T15:08:00-08:00').astimezone().replace(tzinfo=None)
         )
+
+        # Date
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse'](['2022-08-29'], None), datetime.datetime(2022, 8, 29))
+
+        # Date year less than 100
+        self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse'](['0050-01-01'], None), datetime.datetime(50, 1, 1))
+
+        # Hour 24 - the ISO 8601 special case for midnight at the end of the day
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-01-01T24:00:00Z'], None),
+            datetime.datetime.fromisoformat('2020-01-02T00:00:00+00:00').astimezone().replace(tzinfo=None)
+        )
+
+        # Rolled-over date components
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-02-30'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-13-01'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-02-30T00:00:00Z'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-04-31T00:00:00Z'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-01-01T24:30:00Z'], None))
 
         # Invalid datetime string
         self.assertEqual(SCRIPT_FUNCTIONS['datetimeISOParse'](['invalid'], None), None)
@@ -1372,6 +1383,10 @@ foo bar
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45asdf'], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1234.45 asdf'], None))
 
+        # Non-ASCII digits and digit separators
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['١٢٣'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseFloat'](['1_000'], None))
+
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['numberParseFloat']([10], None)
@@ -1391,6 +1406,10 @@ foo bar
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['asdf'], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1234asdf'], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1234.45 asdf'], None))
+
+        # Non-ASCII digits and digit separators
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['١٢٣'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1_000'], None))
 
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -1623,6 +1642,39 @@ foo bar
         self.assertIsNone(cm_exc.exception.return_value)
 
 
+    def test_object_assign_proto_key(self):
+        obj = {'a': 1}
+        obj2 = json.loads('{"__proto__": {"b": 2}, "c": 3}')
+        self.assertIs(SCRIPT_FUNCTIONS['objectAssign']([obj, obj2], None), obj)
+        self.assertListEqual(list(obj.keys()), ['a', '__proto__', 'c'])
+        self.assertDictEqual(obj['__proto__'], {'b': 2})
+
+
+    def test_object_get_inherited_property_name(self):
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([{}, 'constructor'], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([{}, '__proto__', 'default'], None), 'default')
+        self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([json.loads('{"__proto__": 5}'), '__proto__'], None), 5)
+
+
+    def test_object_has_inherited_property_name(self):
+        self.assertFalse(SCRIPT_FUNCTIONS['objectHas']([{}, 'constructor'], None))
+        self.assertFalse(SCRIPT_FUNCTIONS['objectHas']([{}, '__proto__'], None))
+        self.assertTrue(SCRIPT_FUNCTIONS['objectHas']([json.loads('{"__proto__": 5}'), '__proto__'], None))
+
+
+    def test_object_new_proto_key(self):
+        obj = SCRIPT_FUNCTIONS['objectNew'](['__proto__', 5], None)
+        self.assertListEqual(list(obj.keys()), ['__proto__'])
+        self.assertEqual(obj['__proto__'], 5)
+
+
+    def test_object_set_proto_key(self):
+        obj = {}
+        self.assertEqual(SCRIPT_FUNCTIONS['objectSet']([obj, '__proto__', 5], None), 5)
+        self.assertListEqual(list(obj.keys()), ['__proto__'])
+        self.assertEqual(obj['__proto__'], 5)
+
+
     def test_object_get(self):
         obj = {'a': 1, 'b': 2}
         self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, 'a'], None), 1)
@@ -1631,6 +1683,11 @@ foo bar
         obj = {}
         self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, 'a'], None))
         self.assertEqual(SCRIPT_FUNCTIONS['objectGet']([obj, 'a', 1], None), 1)
+
+        # Null value with/without default - the default is only for missing keys
+        obj = {'a': None}
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, 'a'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['objectGet']([obj, 'a', 1], None))
 
         # Null input
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -1810,13 +1867,18 @@ foo bar
 
         # Named groups
         self.assertDictEqual(
-            SCRIPT_FUNCTIONS['regexMatch']([re.compile(r'(?P<first>\w+)(\s+)(?P<last>\w+)'), 'foo bar thud'], None),
+            SCRIPT_FUNCTIONS['regexMatch']([re.compile(r'(?P<first>[A-Za-z0-9_]+)(\s+)(?P<last>[A-Za-z0-9_]+)'), 'foo bar thud'], None),
             {
                 'index': 0,
                 'input': 'foo bar thud',
                 'groups': {'0': 'foo bar', '1': 'foo', '2': ' ', '3': 'bar', 'first': 'foo', 'last': 'bar'}
             }
         )
+
+        # Named group with an inherited-property name
+        proto_match = SCRIPT_FUNCTIONS['regexMatch']([re.compile(r'(?P<__proto__>[0-9]+)'), 'abc123'], None)
+        self.assertListEqual(list(proto_match['groups'].keys()), ['0', '1', '__proto__'])
+        self.assertEqual(proto_match['groups']['__proto__'], '123')
 
         # No match
         self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), 'boo bar'], None))
@@ -1877,9 +1939,9 @@ foo bar
         self.assertEqual(regex.flags, re.U)
 
         # Named groups
-        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<first>\w+)(\s+)(?<last>\w+)'], None)
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'(?<first>[A-Za-z0-9_]+)(\s+)(?<last>[A-Za-z0-9_]+)'], None)
         self.assertIsInstance(regex, REGEX_TYPE)
-        self.assertEqual(regex.pattern, r'(?P<first>\w+)(\s+)(?P<last>\w+)')
+        self.assertEqual(regex.pattern, r'(?P<first>[A-Za-z0-9_]+)(\s+)(?P<last>[A-Za-z0-9_]+)')
         self.assertEqual(regex.flags, re.U)
 
         # Backreferences
@@ -1925,11 +1987,15 @@ foo bar
 
 
     def test_regex_replace(self):
-        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$1'], None), 'ba')
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^([A-Za-z0-9_])([A-Za-z0-9_])$'), 'ab', '$2$1'], None), 'ba')
+
+        # Non-ASCII digit after "$" is not a group index
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile('x'), 'axb', '$١'], None), 'a$١b')
 
         # Named groups
         self.assertEqual(
-            SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(?P<first>\w+)\s+(?P<last>\w+)'), 'foo bar', '$2, $1'], None),
+            SCRIPT_FUNCTIONS['regexReplace'](
+                [re.compile(r'^(?P<first>[A-Za-z0-9_]+)\s+(?P<last>[A-Za-z0-9_]+)'), 'foo bar', '$2, $1'], None),
             'bar, foo'
         )
 
@@ -1946,10 +2012,10 @@ foo bar
         )
 
         # JavaScript escape
-        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2$$$1'], None), 'b$a')
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^([A-Za-z0-9_])([A-Za-z0-9_])$'), 'ab', '$2$$$1'], None), 'b$a')
 
         # Python escape
-        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^(\w)(\w)$'), 'ab', '$2\\$1'], None), 'b\\a')
+        self.assertEqual(SCRIPT_FUNCTIONS['regexReplace']([re.compile(r'^([A-Za-z0-9_])([A-Za-z0-9_])$'), 'ab', '$2\\$1'], None), 'b\\a')
 
         # Non-regex
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -1983,131 +2049,6 @@ foo bar
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['regexSplit']([re.compile(r'\s*,\s*'), None], None)
         self.assertEqual(str(cm_exc.exception), 'Invalid "string" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-
-    #
-    # Schema functions
-    #
-
-
-    def test_schema_parse(self):
-        types = SCRIPT_FUNCTIONS['schemaParse'](['typedef int MyType', 'typedef MyType MyType2'], None)
-        self.assertDictEqual(types, {
-            'MyType': {'typedef': {'name': 'MyType', 'type': {'builtin': 'int'}}},
-            'MyType2': {'typedef': {'name': 'MyType2','type': {'user': 'MyType'}}}
-        })
-
-        # Syntax error
-        with self.assertRaises(schema_markdown.SchemaMarkdownParserError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaParse'](['asdf'], None)
-        self.assertEqual(str(cm_exc.exception), ':1: error: Syntax error')
-
-
-    def test_schema_parse_ex(self):
-        # Array input
-        types = SCRIPT_FUNCTIONS['schemaParseEx']([['typedef int MyType', 'typedef MyType MyType2']], None)
-        self.assertDictEqual(types, {
-            'MyType': {'typedef': {'name': 'MyType', 'type': {'builtin': 'int'}}},
-            'MyType2': {'typedef': {'name': 'MyType2','type': {'user': 'MyType'}}}
-        })
-
-        # String input
-        types = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef int MyType'], None)
-        self.assertDictEqual(types, {
-            'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}}
-        })
-
-        # Types provided
-        types = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef int MyType'], None)
-        types2 = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef MyType MyType2', types], None)
-        self.assertDictEqual(types, {
-            'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}},
-            'MyType2': {'typedef': {'name': 'MyType2','type': {'user': 'MyType'}}}
-        })
-        self.assertIs(types, types2)
-
-        # Filename provided
-        types = SCRIPT_FUNCTIONS['schemaParseEx'](['typedef int MyType', {}, 'test.smd'], None)
-        self.assertDictEqual(types, {
-            'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}}
-        })
-
-        # Syntax error
-        with self.assertRaises(schema_markdown.SchemaMarkdownParserError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaParseEx'](['asdf'], None)
-        self.assertEqual(str(cm_exc.exception), ':1: error: Syntax error')
-
-        # Syntax error with filename
-        with self.assertRaises(schema_markdown.SchemaMarkdownParserError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaParseEx'](['asdf', {}, 'test.smd'], None)
-        self.assertEqual(str(cm_exc.exception), 'test.smd:1: error: Syntax error')
-
-        # Non-array/string input
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaParseEx']([None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "lines" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-        # Non-object types
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaParseEx'](['', 'abc'], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "types" argument value, "abc"')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-        # Non-string filename
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaParseEx'](['', {}, None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "filename" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-
-    def test_schema_type_model(self):
-        type_model = SCRIPT_FUNCTIONS['schemaTypeModel']([], None)
-        self.assertTrue('Types' in type_model)
-        self.assertDictEqual(SCRIPT_FUNCTIONS['schemaValidateTypeModel']([type_model], None), type_model)
-
-
-    def test_schema_validate(self):
-        types = SCRIPT_FUNCTIONS['schemaParse'](['# My struct', 'struct MyStruct', '', '  # An integer\n  int a'], None)
-        self.assertDictEqual(SCRIPT_FUNCTIONS['schemaValidate']([types, 'MyStruct', {'a': 5}], None), {'a': 5})
-
-        # Invalid types
-        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaValidate']([{}, 'MyStruct', {}], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid value {} (type "dict"), expected type "Types" [len > 0]')
-
-        # Invalid value
-        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaValidate']([types, 'MyStruct', {}], None)
-        self.assertEqual(str(cm_exc.exception), 'Required member "a" missing')
-
-        # Non-object types
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaValidate']([None, 'MyStruct', None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "types" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-        # Non-string type
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaValidate']([{}, None, None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "typeName" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-
-    def test_schema_validate_type_model(self):
-        types = {'MyType': {'typedef': {'name': 'MyType','type': {'builtin': 'int'}}}}
-        self.assertDictEqual(SCRIPT_FUNCTIONS['schemaValidateTypeModel']([types], None), types)
-
-        # Invalid types
-        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaValidateTypeModel']([{}], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid value {} (type "dict"), expected type "Types" [len > 0]')
-
-        # Non-object types
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['schemaValidateTypeModel']([None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "types" argument value, null')
         self.assertIsNone(cm_exc.exception.return_value)
 
 
@@ -2191,6 +2132,13 @@ foo bar
     def test_string_decode(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringDecode']([[102, 111, 111]], None), 'foo')
 
+        # Non-integer byte values
+        self.assertEqual(SCRIPT_FUNCTIONS['stringDecode']([[102.0, 111.0, 111.0]], None), 'foo')
+
+        # Invalid UTF-8
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringDecode']([[255]], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['stringDecode']([[0xED, 0xA0, 0x80]], None))
+
         # Non-array
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringDecode']([None], None)
@@ -2232,19 +2180,19 @@ foo bar
         # Non-number code
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringFromCharCode']([97, 'b', 99], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "char_codes" argument value, "b"')
+        self.assertEqual(str(cm_exc.exception), 'Invalid "charCodes" argument value, "b"')
         self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-integer code
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringFromCharCode']([97, 98.5, 99], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "char_codes" argument value, 98.5')
+        self.assertEqual(str(cm_exc.exception), 'Invalid "charCodes" argument value, 98.5')
         self.assertIsNone(cm_exc.exception.return_value)
 
         # Negative code
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringFromCharCode']([97, -98, 99], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "char_codes" argument value, -98')
+        self.assertEqual(str(cm_exc.exception), 'Invalid "charCodes" argument value, -98')
         self.assertIsNone(cm_exc.exception.return_value)
 
 
@@ -2731,16 +2679,42 @@ foo bar
 
         # Invalid request model
         logs = []
-        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+        with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['systemFetch']([{}], options)
-        self.assertEqual(str(cm_exc.exception), 'Required member "url" missing')
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {}')
+        self.assertIsNone(cm_exc.exception.return_value)
         self.assertListEqual(logs, [])
 
         # Invalid array of request models
         logs = []
-        with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+        with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['systemFetch']([[{}]], options)
-        self.assertEqual(str(cm_exc.exception), 'Required member "url" missing')
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {}')
+        self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(logs, [])
+
+        # Invalid request model body
+        logs = []
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'body': 7}], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"body":7,"url":"test.txt"}')
+        self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(logs, [])
+
+        # Invalid request model headers
+        logs = []
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'headers': 7}], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"headers":7,"url":"test.txt"}')
+        self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(logs, [])
+
+        # Invalid request model header value
+        logs = []
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'headers': {'HEADER': 7}}], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"headers":{"HEADER":7},"url":"test.txt"}')
+        self.assertIsNone(cm_exc.exception.return_value)
         self.assertListEqual(logs, [])
 
         # Unexpected input type
@@ -2765,6 +2739,16 @@ foo bar
         self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['a', 2], options), 1)
         self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['b', 2], options), 2)
 
+        # Null value with/without default - the default is only for missing globals
+        options = {'globals': {'a': None}}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['a'], options))
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['a', 2], options))
+
+        # Inherited property names must not resolve
+        options = {'globals': {}}
+        self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['constructor'], options))
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['constructor', 2], options), 2)
+
         # No globals
         options = {}
         self.assertIsNone(SCRIPT_FUNCTIONS['systemGlobalGet'](['a'], options))
@@ -2788,6 +2772,11 @@ foo bar
         self.assertDictEqual(options['globals'], {'a': 1})
         self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['a', 2], options), 2)
         self.assertDictEqual(options['globals'], {'a': 2})
+
+        # Proto name - sets an own key, not the object prototype
+        options = {'globals': {}}
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalSet'](['__proto__', 5], options), 5)
+        self.assertEqual(SCRIPT_FUNCTIONS['systemGlobalGet'](['__proto__'], options), 5)
 
         # No globals
         options = {}
@@ -2943,43 +2932,3 @@ foo bar
     #
     # URL functions
     #
-
-
-    def test_url_encode(self):
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](["https://foo.com/this & 'that' + 2!"], None),
-            "https://foo.com/this%20&%20'that'%20+%202!"
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['https://foo.com/this (& that) + 2'], None),
-            'https://foo.com/this%20%28&%20that%29%20+%202'
-        )
-
-        # Hash param URL
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncode'](['#url=other.md'], None),
-            '#url=other.md'
-        )
-
-        # Non-string URL
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['urlEncode']([None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)
-
-
-    def test_url_encode_component(self):
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](["https://foo.com/this & 'that' + 2"], None),
-            "https%3A%2F%2Ffoo.com%2Fthis%20%26%20'that'%20%2B%202"
-        )
-        self.assertEqual(
-            SCRIPT_FUNCTIONS['urlEncodeComponent'](['https://foo.com/this (& that) + 2'], None),
-            'https%3A%2F%2Ffoo.com%2Fthis%20%28%26%20that%29%20%2B%202'
-        )
-
-        # Non-string URL
-        with self.assertRaises(ValueArgsError) as cm_exc:
-            SCRIPT_FUNCTIONS['urlEncodeComponent']([None], None)
-        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, null')
-        self.assertIsNone(cm_exc.exception.return_value)

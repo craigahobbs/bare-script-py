@@ -21,8 +21,20 @@ Build driven by `Makefile` + `Makefile.base` (the latter downloaded from `python
 - `make doc` — Sphinx docs + library docs build (writes to `build/doc/`)
 - `make commit` — full pre-publish gate (test + lint + doc + cover), re-runs test + test-include with the C runtime
 - `make test-include` — run the `.bare` test suite under `src/bare_script/include/test/` via the `bare` CLI
-- `TEST=testNameGlob make test-include` — single `.bare` test
-- `make perf` — benchmark BareScript (C) vs BareScript (Py) vs Python
+- `TEST=<name> make test-include` — single `.bare` test. This is an **exact** test name, not a glob or pattern
+  (`unittest.bare` compares with `!=`), so a prefix like `testSchemaValidate` silently runs 0 tests
+- `make perf` — benchmark BareScript (PyC), BareScript (Py), and Python across the `perf/` test suite (mandelbrot,
+  schemaParse, schemaValidate, markdownParse, markdownElements, urlEncode, urlDecode, and the BareScript-only
+  qrcodeMatrix; the markdown and qrcode tests aren't supported by the native Python program. urlEncode/urlDecode race
+  `urlEncodeQueryString`/`urlDecodeQueryString` against schema-markdown's `encode_query_string`/`decode_query_string`,
+  the closest native analog even though they differ in percent-encoding scheme); if `../bare-script` exists, its
+  `make perf` (BareScript (JS)
+  and JavaScript) also runs and its data is merged into the report. Each `perf/test.*` program takes a language label and an optional test name (all tests when omitted;
+  iteration counts are tuned per test) and outputs `language,test,runs,timeMs` CSV rows — e.g.
+  `build/venv/system/bin/python3 perf/test.py "Python" mandelbrot` (the venv provides `schema-markdown`) or
+  `bare perf/test.bare -v vLanguage "'BareScript (PyC)'" -v vTest "'schemaParse'"`
+- `make perf TEST=<name>` — run a single perf test across all languages (a program silently skips a test it doesn't
+  implement; an unknown test name fails the run)
 - `make sync` — push `src/bare_script/include/` and `static/` to the JavaScript repo
 - `make clean` / `make superclean` — remove `build/`, downloaded base files, container images
 
@@ -35,13 +47,16 @@ By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set
 ### Modules
 
 - `src/bare_script/parser.py` — text → AST (the "BareScript model", a plain dict validated against the schema in `model.py`). `parse_script` and `parse_expression` are the entry points.
-- `src/bare_script/runtime.py` — pure-Python `execute_script` / `evaluate_expression`. Implements statement counting (`maxStatements`), coverage recording, and the core interpreter loop. The reference implementation.
+- `src/bare_script/runtime.py` — pure-Python `execute_script` / `evaluate_expression`. Implements statement counting (`maxStatements`), coverage recording, and the core interpreter loop. The reference implementation. System includes (`include <name.bare>`) execute from the embedded `SYSTEM_INCLUDES` map in `include_source.py`.
+- `src/bare_script/include_source.py` — **generated** module (Makefile target; regenerated when `src/bare_script/include/*.bare` changes) exporting each include file's source as a string plus the `SYSTEM_INCLUDES` file-name → source map. Checked in; never edit by hand — run `make src/bare_script/include_source.py`.
 - `src/bare_script/runtime_c.c` — CPython extension that mirrors `runtime.py` for performance (see "C extension" below).
 - `src/bare_script/library.py` — all ~200 built-in functions registered in `SCRIPT_FUNCTIONS` (and the smaller expression-only set in `EXPRESSION_FUNCTIONS`).
-- `src/bare_script/model.py` — Schema-Markdown type model for the BareScript AST + `lint_script`.
+- `src/bare_script/model.py` — Schema-Markdown type model for the BareScript AST (`BARE_SCRIPT_TYPES`, `validate_script`, `validate_expression`).
+- `src/bare_script/lint.py` — `lint_script` static analysis. Kept separate from `model.py` so the runtime does not depend on the include module.
+- `src/bare_script/include.py` — executes the include library (data, markdown, qrcode, schema, url, etc.) from the embedded include source into a single module-private globals at module import, and exports native stub functions for the include libraries' public functions (`data_aggregate`, `markdown_parse`, `schema_parse`, `schema_validate`, `url_encode`, etc.), imported from `bare_script.include`. MarkdownUp-render, app-main, and async include functions are not stubbed. Bootstraps eagerly at module import (imported transitively via `model.py`, so every `import bare_script` still runs it). The adjacent `src/bare_script/include/` `.bare` directory is a plain data directory — it must not contain an `__init__.py`, which would shadow this module.
 - `src/bare_script/value.py` — type coercion and comparison primitives (`value_type`, `value_compare`, `value_args_validate`, etc.). Argument validation is declarative via `value_args_model`.
-- `src/bare_script/options.py` — fetch implementations: HTTP via urllib3, local files, and the system include prefix (`FETCH_SYSTEM_PREFIX`).
-- `src/bare_script/__init__.py` — public surface (`execute_script`, `parse_script`, `parse_expression`, `evaluate_expression`, `lint_script`, `validate_script`, `validate_expression`, plus fetch/log helpers). Imports from `runtime_c` when the compiled `.so` is present unless `BARESCRIPT_RUNTIME_PY=1` is set. Callers should import from `bare_script`, not submodules.
+- `src/bare_script/options.py` — fetch implementations: HTTP via urllib3 and local files.
+- `src/bare_script/__init__.py` — public surface (`execute_script`, `parse_script`, `parse_expression`, `evaluate_expression`, `lint_script`, `validate_script`, `validate_expression`, plus fetch/log helpers). Imports from `runtime_c` when the compiled `.so` is present unless `BARESCRIPT_RUNTIME_PY=1` is set. The include module is not imported or re-exported here — import its stubs from `bare_script.include` (e.g. `from bare_script.include import schema_parse`). Otherwise, callers should import from `bare_script`, not submodules.
 
 ### CLI
 
@@ -49,7 +64,7 @@ By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set
 
 ### Include library (`src/bare_script/include/*.bare`)
 
-Pure-BareScript libraries (args parsing, data aggregation/charts, markdown rendering, diff, unittest framework, etc.) live under `src/bare_script/include/`. They are part of the **shipped package** and are loaded via `include <name.bare>` using the system include prefix. Each has a `testXxx.bare` counterpart in `src/bare_script/include/test/` driven by `unittest.bare`. Modify with `make test-include` (not just `make test`).
+Pure-BareScript libraries (args parsing, data aggregation/charts, markdown rendering, diff, unittest framework, etc.) live under `src/bare_script/include/`. They are part of the **shipped package** and are loaded via `include <name.bare>` from the embedded source map in the generated `src/bare_script/include_source.py`. Each has a `testXxx.bare` counterpart in `src/bare_script/include/test/` driven by `unittest.bare`. Modify with `make test-include` (not just `make test`).
 
 ### C extension
 
@@ -61,7 +76,7 @@ When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as c
 
 ### Library function documentation
 
-`library.py` and `.bare` files use the `# $function:` doc-comment convention. `baredoc` reads these to generate the library documentation model JSON (e.g. `library-builtin.json`). To add a new built-in function:
+`library.py` and `.bare` files use the `# $function:` doc-comment convention. `baredocCLI.bare` (run via the `bare` CLI in the `doc` target) reads these to generate the library documentation model JSON (e.g. `library-builtin.json`). To add a new built-in function:
 
 1. Implement in `library.py`, register in `SCRIPT_FUNCTIONS` (and `EXPRESSION_FUNCTIONS` if expression-callable, plus `EXPRESSION_FUNCTION_MAP` if the expression-context name differs).
 2. Add the `$function: / $group: / $doc: / $arg:` doc block above it.
@@ -72,10 +87,16 @@ When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as c
 ## Conventions
 
 - pylint runs with the project `pylintrc`; 100% compliance required.
+- The `.bare` include library is held to 100% too, by a separate mechanism: the include-test runners pass
+  `'coverageMin': 100`, so a change that adds an unreached branch fails `make test-include` — not `make cover`.
+  Either cover the new path with a test or drop it; the same dead-defensive-check caution below applies.
 - All `src/bare_script/` code must keep line + branch coverage at 100%. New code without tests will fail `make commit`. Beware: defensive checks that become unreachable after a refactor (e.g. a `continue` guard left in place when the surrounding logic now guarantees its condition is false) will break coverage. Either remove the dead check and rely on the proven invariant, or add a test that exercises the defensive path.
 - `runtime.py` and `runtime_c.c` are kept structurally aligned — when changing one, mirror the change in the other. `runtime.py` is the reference implementation.
+- BareScript literals: write objects as `{}` / `{'key': value}` and arrays as `[]` / `[a, b]` — never `objectNew()`
+  or `arrayNew()`. The parser lowers both literal forms to the same `objectNew` / `arrayNew` AST nodes, so this is
+  purely stylistic with no perf difference. (`arrayNewSize(n, value)` is a different function and stays.)
 - Argument validation goes through `value_args_model` / `value_args_validate` from `value.py`; do not hand-roll type checks in library functions.
-- Only one runtime dependency (`schema-markdown`); avoid adding more.
+- Only one runtime dependency (`urllib3`); avoid adding more.
 
 ## Perf measurement
 
@@ -91,6 +112,21 @@ bare perf/foo.bare    # AFTER
 
 Have the harness run each scenario 3–5 times; the first iteration is usually slow due to runtime warmup — focus on the steady-state numbers. Treat changes under ~2% as noise. Optimization ideas that look promising in isolation often regress in real workloads — measure each candidate against a same-session baseline before committing.
 
+The perf report aggregates by **best** per-run timing per language, not mean, which is why best-of-N interleaving is
+the right protocol. The report's non-BareScript rows (`JavaScript`, `Python`) never touch the include library, so
+their deltas in the same runs are a free noise control.
+
+Same-session alone is not enough for small deltas — load drifts a few percent even within minutes, enough to fake or mask a win. For A/B comparisons, interleave the configurations in one loop (baseline, then candidate, repeated 3×) and compare best-of-N per configuration. This works for runtime changes too: save baseline and candidate copies of the changed module (e.g. `src/bare_script/runtime.py`) and copy the right one into place before each perf invocation — each `bare` run is a fresh process, so swapping files between invocations is safe.
+
+To find pure-Python runtime hot spots, profile a perf test directly:
+
+```bash
+BARESCRIPT_RUNTIME_PY=1 build/venv/system/bin/python -m cProfile -s tottime -m bare_script \
+    perf/test.bare -v vLanguage "'Py'" -v vTest "'schemaValidate'"
+```
+
+The interpreter loop dominates every workload — `_evaluate_expression_helper` recursion, dict lookups, and Python call overhead, not the library functions — so pure-Python optimization effort goes to eliminating per-node calls and per-call work.
+
 Prefer a *real* document over a synthetic one for the harness input. The distribution of features in real content — span density, link patterns, code-block sizes, paragraph length — reflects what users actually feed the library; a hand-built blob can over-weight one feature and miss the actual bottleneck. For markdown-rendering work, `static/language/README.md` is a convenient ~14 KB sample. Two practical notes:
 
 - `systemFetch` is async, so a harness that calls it needs `async function main():`.
@@ -98,13 +134,73 @@ Prefer a *real* document over a synthetic one for the harness input. The distrib
 
 When an optimization is behaviorally correct but fails a test, consider whether the test is asserting on a "don't care" edge case — for example, a code-block-line input with a baked-in trailing `\n` that the parser pipeline never actually produces. Modifying the test input is sometimes the right call. Check whether the corner case is documented behavior first.
 
+### Finding the hot spots: the statement profiler
+
+`cProfile` finds hot spots in the *runtime*; it cannot tell you which lines of a `.bare` include file are hot. For that, use the runtime's coverage recorder as a per-line statement profiler. Coverage is skipped for system includes (`not script.system`), so the target must be included as a *local* file — copy it into `perf/` and include it by path, which also overrides the system definitions loaded earlier:
+
+```
+include <unittest.bare>
+include 'fooVariant.bare'          # copy of src/bare_script/include/foo.bare
+
+unittestCoverageStart()
+fooEntryPoint(input)               # one representative call
+unittestCoverageStop()
+
+scripts = objectGet(unittestCoverageGlobal(), 'scripts')
+for scriptName in objectKeys(scripts):
+    covered = objectGet(objectGet(scripts, scriptName), 'covered')
+    for lineno in objectKeys(covered):
+        systemLog(scriptName + ' ' + lineno + ' ' + objectGet(objectGet(covered, lineno), 'count'))
+    endfor
+endfor
+```
+
+Annotating the source with those counts is what surfaces structural waste that reading the code does not — e.g. a guard chain whose remaining tests are still walked after a match, or a loop iterating declared members when most are absent from the value. Note that a `for ... in` loop costs ~4 recorded statements per iteration of index bookkeeping, and each `elif` costs ~2, so those lines look hot even when the body is trivial.
+
+### Statement count is only a proxy when the statements do real work
+
+Reducing recorded statements does **not** reliably reduce time. Measured on `schemaValidate` under the JS runtime: statements removed that were jump/label/assignment bookkeeping cost about **5.5 ns each**, while `objectHas`-and-loop-work statements cost about **36 ns** and the overall average was about **71 ns**. A change that removed 5.7% of statements (converting every branch to an explicit return, eliminating the shared `valueNew = value` / `return valueNew` tail) delivered **0.4%** — noise. A change that removed a comparable share but included 160 `regexMatch` calls per run delivered nearly its full statement share.
+
+So before trusting a statement-count estimate, check *what kind* of statement the change removes. Prioritize eliminating built-in calls (especially `regexMatch`/`regexReplace`), allocations, and interpreted function calls. Deprioritize eliminating jumps, `endif` labels, and plain assignments — and always confirm with an interleaved A/B before committing to the idea. Pure Python rewards statement elimination somewhat more than V8 does, but the ranking of *which* statements matter is the same in both.
+
+Two related traps worth remembering: the perf report's non-BareScript languages (`Python`, `JavaScript`) never touch the include library, so their deltas in the same runs are a free noise control — if they move as much as the BareScript numbers, you have measured nothing. And a candidate that adds a per-call memo only pays when one call does repeated work; it is a net loss on small inputs.
+
 ## Cross-repo workflow / tandem development
 
 The Python and JS implementations are mirrors of each other — great effort has been made to keep `src/bare_script/*.py` and the corresponding `lib/*.js` files (runtime, value, parser, library, model, options, etc.) as close to line-for-line identical as possible, and they must stay that way. **Any change to one implementation needs a parallel change to the other in the same working session** — features, bug fixes, refactors, optimizations, and test additions all apply.
+
+**`make sync` pushes outward, and the mirror repo defines the same target pushing the other way.** Always invoke it
+as `make -C <repo> sync` — a shell left sitting in the mirror repo will silently sync in reverse and revert the work
+you just finished.
 
 Workflow for a tandem change:
 
 - Changes to `src/bare_script/include/` or `static/` (the shared `.bare` sources and include-library tests): make the change here, run `make test-include`, then `make sync` to push to `../bare-script/`. Do not hand-edit those files in the JavaScript repo.
 - Changes to `src/bare_script/*.py`: make the parallel edit in `../bare-script/`'s corresponding module. Keep structure, naming, and ordering aligned so the two files diff cleanly.
 - After editing both repos, run the full gate in each: `make commit` (tests + lint + 100% coverage), plus `make test-include`. For perf-sensitive changes also run `make perf` in both.
-- For optimization work specifically: an optimization should not disproportionately regress either implementation. Favor wins that make `bare-script` (JavaScript) faster, since JS is the more performance-sensitive target. Stage the changes in each repo with a prepared commit message but don't commit until you've made an accept/reject recommendation per project based on the measured deltas — an optimization can be worth keeping in one repo and rejecting in the other if perf diverges sharply.
+- For optimization work specifically: measure interleaved in both repos before recommending, and favor wins that make `bare-script` (JavaScript) faster, since JS is the more performance-sensitive target. Line-for-line parity beats one-sided gains — an optimization that requires structural divergence between the ports is dropped even if it wins big in one engine. (Verified: inlining leaf-expression evaluation into the expression evaluator's binary/argument sites gained 10–20% in CPython, which rewards eliminating function calls, but cost V8 8–40% by bloating the JIT-inlined hot function; it was rejected to keep the ports identical.) Stage the changes in each repo with a prepared commit message but don't commit until the measured deltas confirm the change helps — or at least doesn't regress — both implementations.
+
+### The schema-markdown reference ports
+
+`schema.bare`, `schemaParser.bare`, `schemaTypeModel.bare`, and `schemaUtil.bare` are ports of the **reference Schema
+Markdown implementations**, which live in two more repositories:
+
+- `../schema-markdown-js/lib/schema.js` and `lib/parser.js` (JavaScript)
+- `../schema-markdown/src/schema_markdown/schema.py` and `parser.py` (Python)
+
+These are kept as close to line-for-line identical with the `.bare` sources as the languages allow, so **a change to the
+schema include files needs a matching change in both reference repos in the same session** — and vice versa. Each has its
+own `make commit` gate (tests + lint + 100% coverage) that must pass. They are separate repositories with their own
+branches; nothing syncs automatically.
+
+Two corollaries, both learned the hard way:
+
+- **Port changes that are perf-neutral in native code anyway.** A branch reorder or a restructured conditional may win
+  several percent in the BareScript interpreter and nothing in JS/Python — port it regardless, to keep the sources
+  aligned. A pure block move with no line-level churn is the ideal shape; verify it as one by comparing the sorted line
+  multiset against `HEAD` before and after.
+- **Drop optimizations that force structural divergence.** The reference implementations raise/throw on validation error
+  and thread no state, so a BareScript optimization that hangs a per-call memo off the threaded `error` object has
+  nowhere to live in them without adding a parameter to every recursive call. Prefer the change that keeps all four
+  sources parallel, even when it measures slower.
+

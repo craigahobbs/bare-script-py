@@ -131,6 +131,41 @@ This outputs:
 ```
 
 
+## The Include Library Stub Functions
+
+BareScript include library functions are callable directly from Python using the native stub functions
+exported by the
+[include module](https://craigahobbs.github.io/bare-script-py/include.html) — for example,
+[data_aggregate](https://craigahobbs.github.io/bare-script-py/include.html#data-aggregate),
+[markdown_parse](https://craigahobbs.github.io/bare-script-py/include.html#markdown-parse),
+[qrcode_matrix](https://craigahobbs.github.io/bare-script-py/include.html#qrcode-matrix),
+[schema_parse](https://craigahobbs.github.io/bare-script-py/include.html#schema-parse),
+[schema_validate](https://craigahobbs.github.io/bare-script-py/include.html#schema-validate), and
+[url_encode](https://craigahobbs.github.io/bare-script-py/include.html#url-encode).
+Each stub function executes its corresponding include library function using the BareScript
+runtime. For example:
+
+``` python
+from bare_script.include import markdown_parse, markdown_title
+
+# Parse the Markdown text
+markdown = markdown_parse('''\
+# Hello, Markdown!
+
+This is some text.
+''')
+
+# Print the Markdown title
+print(markdown_title(markdown))
+```
+
+This outputs:
+
+```
+Hello, Markdown!
+```
+
+
 ## The BareScript Command-Line Interface (CLI)
 
 You can run BareScript from the command line using the BareScript CLI, "bare". BareScript script
@@ -173,25 +208,40 @@ runtime for faster script execution. The compiled extension is used automaticall
 set the environment variable `BARESCRIPT_RUNTIME_PY=1` to force the pure-Python runtime.
 
 The extension supports CPython 3.10 and later on both the default (GIL) and free-threaded Python
-builds.
+builds. See the Performance section below for benchmark results comparing the C runtime, the
+pure-Python runtime, and native Python.
 
-The C runtime runs the BareScript include library test suite (`make test-include`) about 3.6x
-faster than the pure-Python runtime (CPython 3.14, Apple M-series):
 
-| Runtime             | Test Suite Time (ms) | Multiple |
-| ------------------- | -------------------: | -------: |
-| BareScript (C)      |                  586 |     1.0x |
-| BareScript (Python) |                 2115 |     3.6x |
+## Performance
 
-Compute-intensive scripts run up to roughly 30x faster - for example, the
-[Mandelbrot benchmark](https://github.com/craigahobbs/bare-script-py/blob/main/perf/test.bare)
-(`make perf`), shown here against the equivalent native Python program:
+The `make perf` target benchmarks the BareScript runtime with a suite of compute-intensive tests —
+Mandelbrot set computation, Markdown parsing and rendering, QR code generation, Schema Markdown
+parsing and validation, and URL encoding and decoding — and compares each test with an equivalent
+native Python program (using the
+[schema-markdown](https://pypi.org/project/schema-markdown/) package).
 
-| Language            | Best Time (ms) | Multiple |
-| ------------------- | -------------: | -------: |
-| Python              |            152 |     1.0x |
-| BareScript (C)      |            322 |     2.1x |
-| BareScript (Python) |          10389 |    68.5x |
+The following results are from `make perf PERF_MERGE=` (CPython 3.14, Apple M-series). "BareScript
+(PyC)" is the C runtime; "BareScript (Py)" is the pure-Python runtime. Times are the best per-run
+timing in milliseconds per 100 runs. Multiples are relative to the native Python time. Tests
+without a native Python equivalent are omitted.
+
+| Test             | Language         | Time (ms) | Multiple |
+| ---------------- | ---------------- | --------: | -------: |
+| mandelbrot       | Python           |    4793.6 |          |
+|                  | BareScript (PyC) |   11400.0 |     2.4x |
+|                  | BareScript (Py)  |  338000.0 |    70.5x |
+| schemaValidate   | Python           |      21.2 |          |
+|                  | BareScript (PyC) |      98.4 |     4.6x |
+|                  | BareScript (Py)  |    1437.6 |    67.7x |
+| urlEncode        | Python           |       1.1 |          |
+|                  | BareScript (PyC) |       5.5 |     5.1x |
+|                  | BareScript (Py)  |      38.5 |    36.3x |
+| schemaParse      | Python           |      17.7 |          |
+|                  | BareScript (PyC) |     128.0 |     7.2x |
+|                  | BareScript (Py)  |     912.8 |    51.5x |
+| urlDecode        | Python           |       1.2 |          |
+|                  | BareScript (PyC) |      12.6 |    10.7x |
+|                  | BareScript (Py)  |      64.7 |    55.0x |
 
 
 ## Using BareScript with an AI Assistant

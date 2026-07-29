@@ -7,9 +7,12 @@ The BareScript runtime
 
 import datetime
 import functools
+import math
+import sys
 
+from .include_source import SYSTEM_INCLUDES
 from .library import EXPRESSION_FUNCTIONS, INTRINSICS, SCRIPT_FUNCTIONS
-from .model import lint_script
+from .lint import lint_script
 from .options import url_file_relative
 from .parser import parse_script
 from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
@@ -53,10 +56,15 @@ def execute_script(script, options=None):
 
     # Execute the script
     options['statementCount'] = 0
-    return _execute_script_helper(script, script['statements'], options, None)
+    return _execute_script_helper(script, script['statements'], options, None, _compute_label_indexes(script['statements']))
 
 
-def _execute_script_helper(script, statements, options, locals_):
+# Compute a statements array's map of label name to statement index
+def _compute_label_indexes(statements):
+    return {statement['label']['name']: ix_statement for ix_statement, statement in enumerate(statements) if 'label' in statement}
+
+
+def _execute_script_helper(script, statements, options, locals_, label_indexes):
     globals_ = options['globals']
     max_statements = options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
     options.setdefault('statementCount', 0)
@@ -67,15 +75,15 @@ def _execute_script_helper(script, statements, options, locals_):
         coverage_global.get('enabled') and not script.get('system')
 
     # Iterate each script statement
-    label_indexes = None
     statements_length = len(statements)
     ix_statement = 0
     while ix_statement < statements_length:
         statement = statements[ix_statement]
 
         # Increment the statement counter
-        options['statementCount'] += 1
-        if max_statements > 0 and options['statementCount'] > max_statements:
+        statement_count = options['statementCount'] + 1
+        options['statementCount'] = statement_count
+        if statement_count > max_statements > 0:
             raise BareScriptRuntimeError(script, statement, f'Exceeded maximum script statements ({max_statements})')
 
         # Record the statement coverage
@@ -86,7 +94,7 @@ def _execute_script_helper(script, statements, options, locals_):
         # Expression?
         if 'expr' in statement:
             stmt_expr = statement['expr']
-            expr_value = evaluate_expression(stmt_expr['expr'], options, locals_, False, script, statement)
+            expr_value = _evaluate_expression_helper(stmt_expr['expr'], options, globals_, locals_, False, script, statement)
             expr_name = stmt_expr.get('name')
             if expr_name is not None:
                 if locals_ is not None:
@@ -99,22 +107,13 @@ def _execute_script_helper(script, statements, options, locals_):
             stmt_jump = statement['jump']
             # Evaluate the expression (if any)
             if 'expr' not in stmt_jump or \
-               value_boolean(evaluate_expression(stmt_jump['expr'], options, locals_, False, script, statement)):
-                # Find the label
+               value_boolean(_evaluate_expression_helper(stmt_jump['expr'], options, globals_, locals_, False, script, statement)):
+                # Jump to the label
                 jump_label = stmt_jump['label']
-                if label_indexes is not None and jump_label in label_indexes:
-                    ix_statement = label_indexes[jump_label]
-                else:
-                    ix_label = next(
-                        (ix_stmt for ix_stmt, stmt in enumerate(statements) if 'label' in stmt and stmt['label']['name'] == jump_label),
-                        -1
-                    )
-                    if ix_label == -1:
-                        raise BareScriptRuntimeError(script, statement, f"Unknown jump label \"{jump_label}\"")
-                    if label_indexes is None:
-                        label_indexes = {}
-                    label_indexes[jump_label] = ix_label
-                    ix_statement = ix_label
+                ix_label = label_indexes.get(jump_label)
+                if ix_label is None:
+                    raise BareScriptRuntimeError(script, statement, f"Unknown jump label \"{jump_label}\"")
+                ix_statement = ix_label
 
                 # Record the label statement coverage
                 if has_coverage:
@@ -126,44 +125,46 @@ def _execute_script_helper(script, statements, options, locals_):
         elif 'return' in statement:
             stmt_return = statement['return']
             if 'expr' in stmt_return:
-                return evaluate_expression(stmt_return['expr'], options, locals_, False, script, statement)
+                return _evaluate_expression_helper(stmt_return['expr'], options, globals_, locals_, False, script, statement)
             return None
 
         # Function?
         elif 'function' in statement:
             stmt_function = statement['function']
-            globals_[stmt_function['name']] = functools.partial(_script_function, script, stmt_function)
+            globals_[stmt_function['name']] = \
+                functools.partial(_script_function, script, stmt_function, _compute_label_indexes(stmt_function['statements']))
 
         # Include?
         elif 'include' in statement:
-            system_prefix = options.get('systemPrefix')
             fetch_fn = options.get('fetchFn')
             log_fn = options.get('logFn')
             url_fn = options.get('urlFn')
             for include in statement['include']['includes']:
                 include_url = include['url']
 
-                # Fixup system include URL
+                # Fixup the non-system include URL
                 system_include = include.get('system')
-                if system_include and system_prefix is not None:
-                    include_url = url_file_relative(system_prefix, include_url)
-                elif url_fn is not None:
+                if not system_include and url_fn is not None:
                     include_url = url_fn(include_url)
 
-                # Already included?
+                # Already included? System include keys are bracketed so they can't collide with local include URLs.
+                include_key = f'<{include_url}>' if system_include else include_url
                 global_includes = globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME)
                 if global_includes is None or not isinstance(global_includes, dict):
                     global_includes = {}
                     globals_[SYSTEM_GLOBAL_INCLUDES_NAME] = global_includes
-                if global_includes.get(include_url):
+                if global_includes.get(include_key):
                     continue
-                global_includes[include_url] = True
+                global_includes[include_key] = True
 
-                # Fetch the URL
-                try:
-                    include_text = fetch_fn({'url': include_url}) if fetch_fn is not None else None
-                except:
-                    include_text = None
+                # Get the include script text - system includes from the system include map, otherwise fetch
+                if system_include:
+                    include_text = SYSTEM_INCLUDES.get(include_url)
+                else:
+                    try:
+                        include_text = fetch_fn({'url': include_url}) if fetch_fn is not None else None
+                    except:
+                        include_text = None
                 if include_text is None:
                     raise BareScriptRuntimeError(script, statement, f'Include of "{include_url}" failed')
 
@@ -175,7 +176,10 @@ def _execute_script_helper(script, statements, options, locals_):
                 # Execute the include script
                 include_options = options.copy()
                 include_options['urlFn'] = functools.partial(url_file_relative, include_url)
-                _execute_script_helper(include_script, include_script['statements'], include_options, None)
+                _execute_script_helper(
+                    include_script, include_script['statements'], include_options, None,
+                    _compute_label_indexes(include_script['statements'])
+                )
 
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
@@ -218,7 +222,7 @@ def _record_statement_coverage(script, statement, statement_key, coverage_global
 
 
 # Runtime script function implementation
-def _script_function(script, function, args, options):
+def _script_function(script, function, label_indexes, args, options):
     func_locals = {}
     func_args = function.get('args')
     if func_args is not None:
@@ -235,7 +239,7 @@ def _script_function(script, function, args, options):
         else:
             for ix_arg in range(func_args_length):
                 func_locals[func_args[ix_arg]] = args[ix_arg] if ix_arg < args_length else None
-    return _execute_script_helper(script, function['statements'], options, func_locals)
+    return _execute_script_helper(script, function['statements'], options, func_locals, label_indexes)
 
 
 def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=None, statement=None):
@@ -255,7 +259,11 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
     """
 
     globals_ = options.get('globals') if options is not None else None
+    return _evaluate_expression_helper(expr, options, globals_, locals_, builtins, script, statement)
 
+
+# Expression evaluation helper - threads the globals object to avoid a per-call options lookup
+def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, script, statement):
     # Number
     if 'number' in expr:
         return expr['number']
@@ -294,15 +302,15 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
             value_expr = args_expr[0] if args_expr_length >= 1 else None
             true_expr = args_expr[1] if args_expr_length >= 2 else None
             false_expr = args_expr[2] if args_expr_length >= 3 else None
-            value = evaluate_expression(value_expr, options, locals_, builtins, script, statement) \
+            value = _evaluate_expression_helper(value_expr, options, globals_, locals_, builtins, script, statement) \
                 if value_expr is not None else False
             result_expr = true_expr if value_boolean(value) else false_expr
-            return evaluate_expression(result_expr, options, locals_, builtins, script, statement) \
+            return _evaluate_expression_helper(result_expr, options, globals_, locals_, builtins, script, statement) \
                 if result_expr is not None else None
 
         # Compute the function arguments
         args_expr = func.get('args')
-        func_args = [evaluate_expression(arg, options, locals_, builtins, script, statement) for arg in args_expr] \
+        func_args = [_evaluate_expression_helper(arg, options, globals_, locals_, builtins, script, statement) for arg in args_expr] \
             if args_expr is not None else None
 
         # Global/local function?
@@ -320,6 +328,10 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
                 # as the normal call would; a call reaching one of these under a different name (an
                 # alias) matches no branch and falls through to the normal call.
                 if func_value in INTRINSICS:
+                    # arrayNew has no argument validation - handled before the length access below
+                    # because func_args is None when the function expression has no arguments
+                    if func_name == 'arrayNew':
+                        return func_args
                     func_args_length = len(func_args)
                     if func_name == 'arrayGet':
                         if func_args_length < 1:
@@ -346,6 +358,16 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
                         if index_value >= len(array_value):
                             raise ValueArgsError('index', index_value)
                         return array_value[index_value]
+                    if func_name == 'arrayLength':
+                        if func_args_length < 1:
+                            raise ValueArgsError('array', None, 0)
+                        array_value = func_args[0]
+                        array_type = type(array_value)
+                        if array_type is not list:
+                            raise ValueArgsError('array', array_value, 0)
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length, 0)
+                        return len(array_value)
                     if func_name == 'arrayPush':
                         if func_args_length < 1:
                             raise ValueArgsError('array', None)
@@ -382,6 +404,16 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
                         set_value = func_args[2] if func_args_length >= 3 else None
                         array_value[index_value] = set_value
                         return set_value
+                    if func_name == 'mathSqrt':
+                        if func_args_length < 1:
+                            raise ValueArgsError('x', None)
+                        x_value = func_args[0]
+                        x_type = type(x_value)
+                        if (x_type is not int and x_type is not float) or not x_value >= 0:
+                            raise ValueArgsError('x', x_value)
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length)
+                        return math.sqrt(x_value)
                     if func_name == 'objectGet':
                         default_value = func_args[2] if func_args_length >= 3 else None
                         if func_args_length < 1:
@@ -399,6 +431,32 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
                         if func_args_length > 3:
                             raise ValueArgsError(None, func_args_length, default_value)
                         return object_value.get(key_value, default_value)
+                    if func_name == 'objectHas':
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None, False)
+                        object_value = func_args[0]
+                        object_type = type(object_value)
+                        if object_type is not dict:
+                            raise ValueArgsError('object', object_value, False)
+                        if func_args_length < 2:
+                            raise ValueArgsError('key', None, False)
+                        key_value = func_args[1]
+                        key_type = type(key_value)
+                        if key_type is not str:
+                            raise ValueArgsError('key', key_value, False)
+                        if func_args_length > 2:
+                            raise ValueArgsError(None, func_args_length, False)
+                        return key_value in object_value
+                    if func_name == 'objectKeys':
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None)
+                        object_value = func_args[0]
+                        object_type = type(object_value)
+                        if object_type is not dict:
+                            raise ValueArgsError('object', object_value)
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length)
+                        return list(object_value.keys())
                     if func_name == 'objectSet':
                         if func_args_length < 1:
                             raise ValueArgsError('object', None)
@@ -417,6 +475,16 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
                         set_value = func_args[2] if func_args_length >= 3 else None
                         object_value[key_value] = set_value
                         return set_value
+                    if func_name == 'stringLength':
+                        if func_args_length < 1:
+                            raise ValueArgsError('string', None, 0)
+                        string_value = func_args[0]
+                        string_type = type(string_value)
+                        if string_type is not str:
+                            raise ValueArgsError('string', string_value, 0)
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length, 0)
+                        return len(string_value)
 
                 return func_value(func_args, options)
             except BareScriptRuntimeError:
@@ -438,29 +506,29 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
     if 'binary' in expr:
         binary = expr['binary']
         bin_op = binary['op']
-        left_value = evaluate_expression(binary['left'], options, locals_, builtins, script, statement)
+        left_value = _evaluate_expression_helper(binary['left'], options, globals_, locals_, builtins, script, statement)
 
         # Short-circuiting "and" binary operator
         if bin_op == '&&':
             if not value_boolean(left_value):
                 return left_value
-            return evaluate_expression(binary['right'], options, locals_, builtins, script, statement)
+            return _evaluate_expression_helper(binary['right'], options, globals_, locals_, builtins, script, statement)
 
         # Short-circuiting "or" binary operator
         elif bin_op == '||':
             if value_boolean(left_value):
                 return left_value
-            return evaluate_expression(binary['right'], options, locals_, builtins, script, statement)
+            return _evaluate_expression_helper(binary['right'], options, globals_, locals_, builtins, script, statement)
 
         # Non-short-circuiting binary operators
-        right_value = evaluate_expression(binary['right'], options, locals_, builtins, script, statement)
+        right_value = _evaluate_expression_helper(binary['right'], options, globals_, locals_, builtins, script, statement)
         left_type = type(left_value)
         right_type = type(right_value)
         if bin_op == '+':
             # number + number
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
-                return left_value + right_value
+                return _arithmetic_result(left_value + right_value)
 
             # string + string
             elif left_type is str and right_type is str:
@@ -476,17 +544,23 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
             elif (isinstance(left_value, datetime.date) and
                   (right_type is int or right_type is float)):
                 left_dt = value_normalize_datetime(left_value)
-                return left_dt + datetime.timedelta(milliseconds=right_value)
+                try:
+                    return left_dt + datetime.timedelta(milliseconds=right_value)
+                except OverflowError:
+                    return None
             elif ((left_type is int or left_type is float) and
                   isinstance(right_value, datetime.date)):
                 right_dt = value_normalize_datetime(right_value)
-                return right_dt + datetime.timedelta(milliseconds=left_value)
+                try:
+                    return right_dt + datetime.timedelta(milliseconds=left_value)
+                except OverflowError:
+                    return None
 
         elif bin_op == '-':
             # number - number
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
-                return left_value - right_value
+                return _arithmetic_result(left_value - right_value)
 
             # datetime - datetime
             elif isinstance(left_value, datetime.date) and isinstance(right_value, datetime.date):
@@ -498,13 +572,16 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
             # number * number
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
-                return left_value * right_value
+                return _arithmetic_result(left_value * right_value)
 
         elif bin_op == '/':
             # number / number
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
-                return left_value / right_value
+                try:
+                    return _arithmetic_result(left_value / right_value)
+                except ZeroDivisionError:
+                    return None
 
         elif bin_op == '<':
             if (left_type is int or left_type is float) and (right_type is int or right_type is float):
@@ -540,13 +617,19 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
             # number % number
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
-                return left_value % right_value
+                try:
+                    return _arithmetic_result(left_value % right_value)
+                except ZeroDivisionError:
+                    return None
 
         elif bin_op == '**':
             # number ** number
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
-                return left_value ** right_value
+                try:
+                    return _arithmetic_result(left_value ** right_value)
+                except (OverflowError, ZeroDivisionError):
+                    return None
 
         elif bin_op == '&':
             # int & int
@@ -585,7 +668,7 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
     if 'unary' in expr:
         unary = expr['unary']
         unary_op = unary['op']
-        value = evaluate_expression(unary['expr'], options, locals_, builtins, script, statement)
+        value = _evaluate_expression_helper(unary['expr'], options, globals_, locals_, builtins, script, statement)
         if unary_op == '!':
             return not value_boolean(value)
         val_type = type(value)
@@ -601,7 +684,20 @@ def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=
 
     # Expression group
     # expr_key == 'group'
-    return evaluate_expression(expr['group'], options, locals_, builtins, script, statement)
+    return _evaluate_expression_helper(expr['group'], options, globals_, locals_, builtins, script, statement)
+
+
+# Helper to normalize an arithmetic result - non-finite numbers (including out-of-double-range
+# integers and complex results) are invalid operation values
+def _arithmetic_result(result):
+    result_type = type(result)
+    if result_type is float:
+        return result if math.isfinite(result) else None
+    if result_type is int:
+        return result if -sys.float_info.max <= result <= sys.float_info.max else None
+
+    # complex - a float raised to a fractional power of a negative base
+    return None
 
 
 class BareScriptRuntimeError(Exception):

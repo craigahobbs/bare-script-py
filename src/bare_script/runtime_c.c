@@ -145,7 +145,6 @@ typedef struct {
     PyObject *str_globals;
     PyObject *str_maxStatements;
     PyObject *str_statementCount;
-    PyObject *str_systemPrefix;
     PyObject *str_fetchFn;
     PyObject *str_logFn;
     PyObject *str_urlFn;
@@ -202,6 +201,7 @@ typedef struct {
     PyObject *parse_script;
     PyObject *lint_script;
     PyObject *partial;
+    PyObject *system_includes;
 
     // Constants
     PyObject *default_max_statements;
@@ -1353,7 +1353,7 @@ static PyObject *intrinsic_string_from_char_code(PyObject *args)
                 goto done;
             }
             if (floor(number) != number || number < 0.) {
-                intrinsic_args_error("char_codes", code, NULL);
+                intrinsic_args_error("charCodes", code, NULL);
                 goto done;
             }
         } else if (PyLong_CheckExact(code)) {
@@ -1363,12 +1363,12 @@ static PyObject *intrinsic_string_from_char_code(PyObject *args)
                 goto done;
             }
             if (overflow < 0 || (!overflow && code_ll < 0)) {
-                intrinsic_args_error("char_codes", code, NULL);
+                intrinsic_args_error("charCodes", code, NULL);
                 goto done;
             }
             number = (overflow > 0) ? 4294967296. : (double)code_ll;
         } else {
-            intrinsic_args_error("char_codes", code, NULL);
+            intrinsic_args_error("charCodes", code, NULL);
             goto done;
         }
         if (number > 1114111.) {
@@ -3419,6 +3419,38 @@ static inline int binary_op_to_opid(BinaryOp op)
 
 // Apply a binary operator to evaluated left and right values (borrowed references). Returns a
 // new reference, or NULL with an exception set.
+// Normalize an arithmetic result - non-finite numbers (including out-of-double-range integers and
+// complex results) and arithmetic errors (ZeroDivisionError, OverflowError) are invalid operation
+// values (None)
+static PyObject *arithmetic_result(PyObject *result)
+{
+    if (result == NULL) {
+        if (PyErr_ExceptionMatches(PyExc_ZeroDivisionError) || PyErr_ExceptionMatches(PyExc_OverflowError)) {
+            PyErr_Clear();
+            return Py_NewRef(Py_None);
+        }
+        return NULL;
+    }
+    if (PyFloat_CheckExact(result)) {
+        if (!isfinite(PyFloat_AS_DOUBLE(result))) {
+            Py_DECREF(result);
+            return Py_NewRef(Py_None);
+        }
+    } else if (PyLong_CheckExact(result)) {
+        double result_double = PyLong_AsDouble(result);
+        if (result_double == -1. && PyErr_Occurred()) {
+            PyErr_Clear();
+            Py_DECREF(result);
+            return Py_NewRef(Py_None);
+        }
+    } else if (PyComplex_CheckExact(result)) {
+        Py_DECREF(result);
+        return Py_NewRef(Py_None);
+    }
+    return result;
+}
+
+
 static PyObject *apply_binary_op(BinaryOp op, PyObject *left, PyObject *right)
 {
     PyObject *result = NULL;
@@ -3673,7 +3705,17 @@ static PyObject *apply_binary_op(BinaryOp op, PyObject *left, PyObject *right)
     }
 
 apply_done:
-    return result;
+    switch (op) {
+    case BINARY_ADD:
+    case BINARY_SUB:
+    case BINARY_MUL:
+    case BINARY_DIV:
+    case BINARY_MOD:
+    case BINARY_POW:
+        return arithmetic_result(result);
+    default:
+        return result;
+    }
 }
 
 
@@ -3903,7 +3945,6 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
 {
     PyObject *options = ctx->options;
     PyObject *globals = ctx->globals;
-    PyObject *system_prefix = NULL;
     PyObject *fetch_fn = NULL;
     PyObject *log_fn = NULL;
     PyObject *url_fn = NULL;
@@ -3918,14 +3959,10 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
     }
 
     // Get the include options
-    if (obj_get(options, g.str_systemPrefix, &system_prefix) < 0 ||
-        obj_get(options, g.str_fetchFn, &fetch_fn) < 0 ||
+    if (obj_get(options, g.str_fetchFn, &fetch_fn) < 0 ||
         obj_get(options, g.str_logFn, &log_fn) < 0 ||
         obj_get(options, g.str_urlFn, &url_fn) < 0) {
         goto done;
-    }
-    if (system_prefix == Py_None) {
-        Py_CLEAR(system_prefix);
     }
     if (fetch_fn == Py_None) {
         Py_CLEAR(fetch_fn);
@@ -3951,6 +3988,7 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
         Py_INCREF(include);
 
         PyObject *include_url = NULL;
+        PyObject *include_key = NULL;
         PyObject *system_obj = NULL;
         PyObject *global_includes = NULL;
         PyObject *include_text = NULL;
@@ -3963,7 +4001,7 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
             goto include_done;
         }
 
-        // Fixup system include URL
+        // Fixup the non-system include URL
         int system_include = 0;
         int found = obj_get(include, g.str_system, &system_obj);
         if (found < 0) {
@@ -3975,14 +4013,7 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
                 goto include_done;
             }
         }
-        if (system_include && system_prefix != NULL) {
-            PyObject *fixup_args[2] = {system_prefix, include_url};
-            PyObject *fixed_url = PyObject_Vectorcall(g.url_file_relative, fixup_args, 2, NULL);
-            if (fixed_url == NULL) {
-                goto include_done;
-            }
-            Py_SETREF(include_url, fixed_url);
-        } else if (url_fn != NULL) {
+        if (!system_include && url_fn != NULL) {
             PyObject *fixed_url = PyObject_CallOneArg(url_fn, include_url);
             if (fixed_url == NULL) {
                 goto include_done;
@@ -3990,7 +4021,11 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
             Py_SETREF(include_url, fixed_url);
         }
 
-        // Already included?
+        // Already included? System include keys are bracketed so they can't collide with local include URLs.
+        include_key = system_include ? PyUnicode_FromFormat("<%S>", include_url) : Py_NewRef(include_url);
+        if (include_key == NULL) {
+            goto include_done;
+        }
         found = obj_get(globals, g.str_includes_name, &global_includes);
         if (found < 0) {
             goto include_done;
@@ -4003,7 +4038,7 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
             }
         }
         PyObject *already_included = NULL;
-        found = obj_get(global_includes, include_url, &already_included);
+        found = obj_get(global_includes, include_key, &already_included);
         if (found < 0) {
             goto include_done;
         }
@@ -4018,12 +4053,16 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
                 goto include_done;
             }
         }
-        if (PyDict_SetItem(global_includes, include_url, Py_True) < 0) {
+        if (PyDict_SetItem(global_includes, include_key, Py_True) < 0) {
             goto include_done;
         }
 
-        // Fetch the URL
-        if (fetch_fn != NULL) {
+        // Get the include script text - system includes from the system include map, otherwise fetch
+        if (system_include) {
+            if (dict_get_ref(g.system_includes, include_url, &include_text) < 0) {
+                goto include_done;
+            }
+        } else if (fetch_fn != NULL) {
             PyObject *request = PyDict_New();
             if (request == NULL) {
                 goto include_done;
@@ -4184,6 +4223,7 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
         Py_XDECREF(include_text);
         Py_XDECREF(global_includes);
         Py_XDECREF(system_obj);
+        Py_XDECREF(include_key);
         Py_XDECREF(include_url);
         Py_DECREF(include);
         if (!include_ok) {
@@ -4198,7 +4238,6 @@ done:
     Py_XDECREF(url_fn);
     Py_XDECREF(log_fn);
     Py_XDECREF(fetch_fn);
-    Py_XDECREF(system_prefix);
 
     // Reload the statement counter - the external callables may have changed it
     if (result == 0 && exec_ctx_sync_in(ctx) < 0) {
@@ -5099,7 +5138,6 @@ static int runtime_c_exec(PyObject *module)
     if (intern_string(&g.str_globals, "globals") < 0 ||
         intern_string(&g.str_maxStatements, "maxStatements") < 0 ||
         intern_string(&g.str_statementCount, "statementCount") < 0 ||
-        intern_string(&g.str_systemPrefix, "systemPrefix") < 0 ||
         intern_string(&g.str_fetchFn, "fetchFn") < 0 ||
         intern_string(&g.str_logFn, "logFn") < 0 ||
         intern_string(&g.str_urlFn, "urlFn") < 0 ||
@@ -5181,6 +5219,16 @@ static int runtime_c_exec(PyObject *module)
         return -1;
     }
 
+    PyObject *include_source_module = PyImport_ImportModule("bare_script.include_source");
+    if (include_source_module == NULL) {
+        return -1;
+    }
+    import_ok = import_member(&g.system_includes, include_source_module, "SYSTEM_INCLUDES") == 0;
+    Py_DECREF(include_source_module);
+    if (!import_ok) {
+        return -1;
+    }
+
     PyObject *value_module = PyImport_ImportModule("bare_script.value");
     if (value_module == NULL) {
         return -1;
@@ -5215,12 +5263,12 @@ static int runtime_c_exec(PyObject *module)
         return -1;
     }
 
-    PyObject *model_module = PyImport_ImportModule("bare_script.model");
-    if (model_module == NULL) {
+    PyObject *lint_module = PyImport_ImportModule("bare_script.lint");
+    if (lint_module == NULL) {
         return -1;
     }
-    import_ok = import_member(&g.lint_script, model_module, "lint_script") == 0;
-    Py_DECREF(model_module);
+    import_ok = import_member(&g.lint_script, lint_module, "lint_script") == 0;
+    Py_DECREF(lint_module);
     if (!import_ok) {
         return -1;
     }

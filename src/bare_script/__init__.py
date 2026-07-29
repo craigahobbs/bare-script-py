@@ -7,17 +7,17 @@ bare-script package
 
 import os
 
+from .lint import \
+    lint_script
+
 from .model import \
-    lint_script, \
     validate_expression, \
     validate_script
 
 from .options import \
-    FETCH_SYSTEM_PREFIX, \
     fetch_http, \
     fetch_read_only, \
     fetch_read_write, \
-    fetch_system, \
     log_stdout, \
     url_file_relative
 

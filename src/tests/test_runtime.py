@@ -9,6 +9,7 @@ import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
     validate_expression, validate_script
+from bare_script.include_source import SYSTEM_INCLUDES
 from bare_script.runtime import SYSTEM_GLOBAL_COVERAGE_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import ValueArgsError
 
@@ -274,8 +275,6 @@ class TestExecuteScript(unittest.TestCase):
     def test_execute_script_coverage_include(self):
         def fetch_fn(request):
             url = request['url']
-            if url == os.path.join('system', 'sysutil.bare'):
-                return 'a = 1'
             self.assertEqual(url, 'util.bare')
             return 'b = 2'
 
@@ -293,10 +292,13 @@ class TestExecuteScript(unittest.TestCase):
         })
         options = {
             'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': True}},
-            'fetchFn': fetch_fn,
-            'systemPrefix': 'system' + os.sep
+            'fetchFn': fetch_fn
         }
-        self.assertIsNone(execute_script(script, options))
+        SYSTEM_INCLUDES['sysutil.bare'] = 'a = 1'
+        try:
+            self.assertIsNone(execute_script(script, options))
+        finally:
+            del SYSTEM_INCLUDES['sysutil.bare']
         self.assertEqual(options['globals']['a'], 1)
         self.assertEqual(options['globals']['b'], 2)
         self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {
@@ -337,11 +339,6 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_coverage_disabled(self):
-        def fetch_fn(request):
-            url = request['url']
-            self.assertEqual(url, os.path.join('system', 'sysutil.bare'))
-            return 'b = 7'
-
         script = validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
@@ -357,11 +354,13 @@ class TestExecuteScript(unittest.TestCase):
             ]
         })
         options = {
-            'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': False}},
-            'fetchFn': fetch_fn,
-            'systemPrefix': 'system' + os.sep
+            'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: {'enabled': False}}
         }
-        self.assertEqual(execute_script(script, options), 12)
+        SYSTEM_INCLUDES['sysutil.bare'] = 'b = 7'
+        try:
+            self.assertEqual(execute_script(script, options), 12)
+        finally:
+            del SYSTEM_INCLUDES['sysutil.bare']
         self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], {'enabled': False})
 
 
@@ -814,6 +813,65 @@ class TestExecuteScript(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'test.bare:1: Unknown jump label "unknownLabel"')
 
 
+    def test_jump_label_indexes_cache(self):
+        script = validate_script({
+            'statements': [
+                {
+                    'function': {
+                        'name': 'countTo',
+                        'args': ['n'],
+                        'statements': [
+                            {'expr': {'name': 'i', 'expr': {'number': 0}}},
+                            {'label': {'name': 'loop'}},
+                            {'expr': {
+                                'name': 'i',
+                                'expr': {'binary': {'op': '+', 'left': {'variable': 'i'}, 'right': {'number': 1}}}
+                            }},
+                            {'jump': {
+                                'label': 'loop',
+                                'expr': {'binary': {'op': '<', 'left': {'variable': 'i'}, 'right': {'variable': 'n'}}}
+                            }},
+                            {'return': {'expr': {'variable': 'i'}}}
+                        ]
+                    }
+                }
+            ]
+        })
+        globals_ = {}
+        execute_script(script, {'globals': globals_})
+        options = {'globals': globals_}
+        self.assertEqual(globals_['countTo']([3], options), 3)
+        self.assertEqual(globals_['countTo']([5], options), 5)
+
+
+    def test_jump_prototype_label_names(self):
+        script = validate_script({
+            'statements': [
+                {'expr': {'name': 'a', 'expr': {'number': 1}}},
+                {'jump': {'label': 'skip'}},
+                {'label': {'name': 'skip'}},
+                {'jump': {'label': 'constructor'}},
+                {'label': {'name': 'constructor'}},
+                {'jump': {'label': '__proto__'}},
+                {'label': {'name': '__proto__'}},
+                {'expr': {'name': 'a', 'expr': {'number': 2}}},
+                {'return': {'expr': {'variable': 'a'}}}
+            ]
+        })
+        self.assertEqual(execute_script(script), 2)
+
+
+    def test_unknown_statement_noop(self):
+        # An unvalidated, unknown statement kind executes as a no-op
+        script = {
+            'statements': [
+                {'unknown': {}},
+                {'return': {'expr': {'number': 1}}}
+            ]
+        }
+        self.assertEqual(execute_script(script), 1)
+
+
     def test_return(self):
         script = validate_script({
             'statements': [
@@ -924,31 +982,89 @@ include 'test3.bare'
             ]
         })
 
+        options = {'globals': {}}
+        SYSTEM_INCLUDES['test.bare'] = 'a = 1'
+        try:
+            self.assertIsNone(execute_script(script, options))
+            self.assertEqual(options['globals']['a'], 1)
+            self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'<test.bare>': True})
+        finally:
+            del SYSTEM_INCLUDES['test.bare']
+
+
+    def test_include_system_and_local_same_name(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.bare', 'system': True}, {'url': 'test.bare'}]}}
+            ]
+        })
+
         def fetch_fn(request):
-            url = request['url']
-            self.assertEqual(url, os.path.join('system', 'test.bare'))
-            return 'a = 1'
+            self.assertEqual(request['url'], 'test.bare')
+            return 'b = 2'
 
-        options = {'globals': {}, 'fetchFn': fetch_fn, 'systemPrefix': 'system' + os.sep}
-        self.assertIsNone(execute_script(script, options))
-        self.assertEqual(options['globals']['a'], 1)
+        options = {'globals': {}, 'fetchFn': fetch_fn}
+        SYSTEM_INCLUDES['test.bare'] = 'a = 1'
+        try:
+            self.assertIsNone(execute_script(script, options))
+            self.assertEqual(options['globals']['a'], 1)
+            self.assertEqual(options['globals']['b'], 2)
+            self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'<test.bare>': True, 'test.bare': True})
+        finally:
+            del SYSTEM_INCLUDES['test.bare']
 
 
-    def test_include_system_no_prefix(self):
+    def test_include_local_and_system_same_name(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.bare'}]}},
+                {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
+            ]
+        })
+
+        def fetch_fn(request):
+            self.assertEqual(request['url'], 'test.bare')
+            return 'b = 2'
+
+        options = {'globals': {}, 'fetchFn': fetch_fn}
+        SYSTEM_INCLUDES['test.bare'] = 'a = 1'
+        try:
+            self.assertIsNone(execute_script(script, options))
+            self.assertEqual(options['globals']['a'], 1)
+            self.assertEqual(options['globals']['b'], 2)
+            self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'<test.bare>': True, 'test.bare': True})
+        finally:
+            del SYSTEM_INCLUDES['test.bare']
+
+
+    def test_include_system_unknown(self):
         script = validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
             ]
         })
 
-        def fetch_fn(request):
-            url = request['url']
-            self.assertEqual(url, 'test.bare')
-            return 'a = 1'
+        options = {'globals': {}}
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            execute_script(script, options)
+        self.assertEqual(str(cm_exc.exception), 'Include of "test.bare" failed')
 
-        options = {'globals': {}, 'fetchFn': fetch_fn}
-        self.assertIsNone(execute_script(script, options))
-        self.assertEqual(options['globals']['a'], 1)
+
+    def test_include_system_url_fn(self):
+        script = validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
+            ]
+        })
+
+        options = {'globals': {}, 'urlFn': lambda url: f'/base/{url}'}
+        SYSTEM_INCLUDES['test.bare'] = 'a = 1'
+        try:
+            self.assertIsNone(execute_script(script, options))
+            self.assertEqual(options['globals']['a'], 1)
+            self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'<test.bare>': True})
+        finally:
+            del SYSTEM_INCLUDES['test.bare']
 
 
     def test_include_multiple(self):
@@ -960,13 +1076,17 @@ include 'test3.bare'
 
         def fetch_fn(request):
             url = request['url']
-            self.assertEqual(url in ('test.bare', 'test2.bare'), True)
-            return 'b = a + 1' if url.endswith('test2.bare') else 'a = 1'
+            self.assertEqual(url, 'test2.bare')
+            return 'b = a + 1'
 
         options = {'globals': {}, 'fetchFn': fetch_fn}
-        self.assertIsNone(execute_script(script, options))
-        self.assertEqual(options['globals']['a'], 1)
-        self.assertEqual(options['globals']['b'], 2)
+        SYSTEM_INCLUDES['test.bare'] = 'a = 1'
+        try:
+            self.assertIsNone(execute_script(script, options))
+            self.assertEqual(options['globals']['a'], 1)
+            self.assertEqual(options['globals']['b'], 2)
+        finally:
+            del SYSTEM_INCLUDES['test.bare']
 
 
     def test_include_subdir(self):
@@ -1213,6 +1333,50 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr), None)
 
 
+    def test_variable_inherited_property_name(self):
+        # Inherited property names must not resolve as global variables
+        options = {'globals': {}}
+        self.assertIsNone(evaluate_expression(validate_expression({'variable': '__proto__'}), options))
+        self.assertIsNone(evaluate_expression(validate_expression({'variable': 'constructor'}), options))
+
+
+    def test_variable_proto(self):
+        # Assigning a "__proto__" variable sets an own global, not the object prototype
+        script = validate_script({
+            'statements': [
+                {'expr': {'name': '__proto__', 'expr': {'function': {'name': 'objectNew', 'args': [{'string': 'x'}, {'number': 99}]}}}},
+                {'return': {'expr': {'function': {'name': 'arrayNew', 'args': [
+                    {'variable': 'x'},
+                    {'function': {'name': 'systemType', 'args': [{'variable': '__proto__'}]}}
+                ]}}}}
+            ]
+        })
+        options = {}
+        self.assertListEqual(execute_script(script, options), [None, 'object'])
+        self.assertEqual(options['globals']['__proto__'], {'x': 99})
+
+
+    def test_variable_function_local_proto(self):
+        # A "__proto__" function argument is an own local, not the prototype; an unassigned local
+        # (an inherited property name) does not resolve
+        script = validate_script({
+            'statements': [
+                {'function': {
+                    'name': 'testFn',
+                    'args': ['__proto__'],
+                    'statements': [
+                        {'return': {'expr': {'function': {'name': 'arrayNew', 'args': [
+                            {'variable': '__proto__'},
+                            {'function': {'name': 'systemType', 'args': [{'variable': 'constructor'}]}}
+                        ]}}}}
+                    ]
+                }},
+                {'return': {'expr': {'function': {'name': 'testFn', 'args': [{'number': 5}]}}}}
+            ]
+        })
+        self.assertListEqual(execute_script(script, {}), [5, 'null'])
+
+
     def test_variable_literal_null(self):
         expr = validate_expression({'variable': 'null'})
         self.assertEqual(evaluate_expression(expr), None)
@@ -1226,6 +1390,36 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_variable_literal_false(self):
         expr = validate_expression({'variable': 'false'})
         self.assertEqual(evaluate_expression(expr), False)
+
+
+    def test_variable_literal_binary_operands(self):
+        # Keyword literals as binary expression operands
+        for keyword in ('null', 'false', 'true'):
+            expr = validate_expression({
+                'binary': {
+                    'op': '==',
+                    'left': {'variable': keyword},
+                    'right': {'variable': keyword}
+                }
+            })
+            self.assertEqual(evaluate_expression(expr), True, keyword)
+
+
+    def test_variable_null_binary_operands(self):
+        # Null-valued globals as binary expression operands and function arguments
+        options = {'globals': {'varNull': None, 'myFunc': lambda args, unusedOptions: args[0]}}
+        expr_binary = validate_expression({
+            'binary': {
+                'op': '==',
+                'left': {'variable': 'varNull'},
+                'right': {'variable': 'varNull'}
+            }
+        })
+        self.assertEqual(evaluate_expression(expr_binary, options), True)
+        expr_function = validate_expression({
+            'function': {'name': 'myFunc', 'args': [{'variable': 'varNull'}]}
+        })
+        self.assertEqual(evaluate_expression(expr_function, options), None)
 
 
     def test_function(self):
@@ -1456,6 +1650,15 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertListEqual(logs, ['BareScript: Function "fnLocal" failed with error: \'str\' object is not callable'])
 
 
+    def test_function_inherited_property_name(self):
+        # Inherited property names must not resolve as callable global functions
+        expr = validate_expression({'function': {'name': 'constructor'}})
+        options = {'globals': {}}
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            evaluate_expression(expr, options)
+        self.assertEqual(str(cm_exc.exception), 'Undefined function "constructor"')
+
+
     def test_function_unknown(self):
         expr = validate_expression({
             'function': {
@@ -1518,7 +1721,7 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'debug': True, 'logFn': logs.append}
         self.assertIsNone(execute_script(script, options))
         self.assertListEqual(logs, [
-            'BareScript: Function "stringFromCharCode" failed with error: cannot convert float infinity to integer'
+            'BareScript: Function "stringFromCharCode" failed with error: Invalid "charCodes" argument value, null'
         ])
 
 
@@ -1894,6 +2097,31 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
+    def test_binary_non_finite_result(self):
+        # Non-finite arithmetic results are invalid operation values
+        for bin_op, left, right in [
+            ('/', 1, 0),
+            ('/', 0, 0),
+            ('%', 5, 0),
+            ('**', 10, 1000),
+            ('**', 10.5, 1000.5),
+            ('**', -8, 0.5),
+            ('**', 0, -1),
+            ('*', 1e308, 10),
+            ('+', 1e308, 1e308),
+            ('-', -1e308, 1e308)
+        ]:
+            expr = validate_expression({'binary': {'op': bin_op, 'left': {'number': left}, 'right': {'number': right}}})
+            self.assertIsNone(evaluate_expression(expr), f'{left} {bin_op} {right}')
+
+        # Datetime addition overflow
+        options = {'globals': {'testDatetime': datetime.datetime(2024, 1, 1)}}
+        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'testDatetime'}, 'right': {'number': 1e308}}})
+        self.assertIsNone(evaluate_expression(expr, options))
+        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 1e308}, 'right': {'variable': 'testDatetime'}}})
+        self.assertIsNone(evaluate_expression(expr, options))
+
+
     def test_binary_bitwise_and(self):
         options = {'globals': {'testNumber': _test_number}}
 
@@ -2185,13 +2413,29 @@ class TestIntrinsics(unittest.TestCase):
         self.assertIsNone(run(fn('arrayPush')))                       # array missing
         self.assertIsNone(run(fn('arrayPush', num(5.0), num(1.0))))   # array not a list
 
+    def test_intrinsic_array_length(self):
+        run, fn, num, arr = self._run, self._fn, self._num, self._arr
+        self.assertEqual(run(fn('arrayLength', arr(1, 2, 3))), 3)
+        # error paths - each returns 0, observationally identical to value_args_validate
+        self.assertEqual(run(fn('arrayLength')), 0)                    # array missing
+        self.assertEqual(run(fn('arrayLength', num(5.0))), 0)          # array not a list
+        self.assertEqual(run(fn('arrayLength', arr(1), num(9.0))), 0)  # too many arguments
+
+    def test_intrinsic_array_new(self):
+        run, fn, num = self._run, self._fn, self._num
+        self.assertEqual(run(fn('arrayNew', num(1.0), num(2.0))), [1, 2])
+        self.assertEqual(run(fn('arrayNew')), [])
+        # No arguments at all - the function expression "args" member is absent
+        self.assertIsNone(run({'function': {'name': 'arrayNew'}}))
+
     def test_intrinsic_object_get(self):
         run, fn, num, str_ = self._run, self._fn, self._num, self._str
         obj = fn('objectNew', str_('k'), str_('v'))
-        # valid - present key, missing key (default null), explicit default
+        # valid - present key, missing key (default null), explicit default, null value (not the default)
         self.assertEqual(run(fn('objectGet', obj, str_('k'))), 'v')
         self.assertIsNone(run(fn('objectGet', obj, str_('z'))))
         self.assertEqual(run(fn('objectGet', fn('objectNew'), str_('z'), str_('D'))), 'D')
+        self.assertIsNone(run(fn('objectGet', fn('objectNew', str_('k'), {'variable': 'null'}), str_('k'), str_('D'))))
         # error paths
         self.assertIsNone(run(fn('objectGet')))                             # object missing
         self.assertIsNone(run(fn('objectGet', num(5.0), str_('k'))))        # object not a dict
@@ -2199,6 +2443,28 @@ class TestIntrinsics(unittest.TestCase):
         self.assertIsNone(run(fn('objectGet', fn('objectNew'), num(5.0))))  # key not a string
         # too many arguments - the error return value is the default-value argument
         self.assertEqual(run(fn('objectGet', obj, str_('k'), num(9.0), num(9.0))), 9)
+
+    def test_intrinsic_object_has(self):
+        run, fn, num, str_ = self._run, self._fn, self._num, self._str
+        obj = fn('objectNew', str_('k'), str_('v'))
+        # valid - present key, missing key, null value (key exists)
+        self.assertTrue(run(fn('objectHas', obj, str_('k'))))
+        self.assertFalse(run(fn('objectHas', obj, str_('z'))))
+        self.assertTrue(run(fn('objectHas', fn('objectNew', str_('k'), {'variable': 'null'}), str_('k'))))
+        # error paths - each returns false, observationally identical to value_args_validate
+        self.assertFalse(run(fn('objectHas')))                          # object missing
+        self.assertFalse(run(fn('objectHas', num(5.0), str_('k'))))     # object not a dict
+        self.assertFalse(run(fn('objectHas', obj)))                     # key missing
+        self.assertFalse(run(fn('objectHas', obj, num(5.0))))           # key not a string
+        self.assertFalse(run(fn('objectHas', obj, str_('k'), num(9.0))))  # too many arguments
+
+    def test_intrinsic_object_keys(self):
+        run, fn, num, str_ = self._run, self._fn, self._num, self._str
+        self.assertEqual(run(fn('objectKeys', fn('objectNew', str_('k'), str_('v')))), ['k'])
+        # error paths
+        self.assertIsNone(run(fn('objectKeys')))                             # object missing
+        self.assertIsNone(run(fn('objectKeys', num(5.0))))                   # object not a dict
+        self.assertIsNone(run(fn('objectKeys', fn('objectNew'), num(9.0))))  # too many arguments
 
     def test_intrinsic_array_set(self):
         run, fn, num, str_, arr = self._run, self._fn, self._num, self._str, self._arr
@@ -2216,6 +2482,17 @@ class TestIntrinsics(unittest.TestCase):
         self.assertIsNone(run(fn('arraySet', arr(1, 2), num(0.0), num(9.0), num(9.0))))   # too many arguments
         self.assertIsNone(run(fn('arraySet', arr(1), num(5.0), num(9.0))))                # index out of bounds
 
+    def test_intrinsic_math_sqrt(self):
+        run, fn, num, str_ = self._run, self._fn, self._num, self._str
+        # valid - a float and an int (from mathFloor)
+        self.assertEqual(run(fn('mathSqrt', num(9.0))), 3)
+        self.assertEqual(run(fn('mathSqrt', fn('mathFloor', num(9.5)))), 3)
+        # error paths
+        self.assertIsNone(run(fn('mathSqrt')))                      # x missing
+        self.assertIsNone(run(fn('mathSqrt', str_('x'))))           # x not a number
+        self.assertIsNone(run(fn('mathSqrt', num(-1.0))))           # x negative
+        self.assertIsNone(run(fn('mathSqrt', num(9.0), num(9.0))))  # too many arguments
+
     def test_intrinsic_object_set(self):
         run, fn, num, str_ = self._run, self._fn, self._num, self._str
         # valid - returns the set value, with a value and with a missing value (null)
@@ -2227,6 +2504,14 @@ class TestIntrinsics(unittest.TestCase):
         self.assertIsNone(run(fn('objectSet', fn('objectNew'))))                          # key missing
         self.assertIsNone(run(fn('objectSet', fn('objectNew'), num(5.0), num(1.0))))      # key not a string
         self.assertIsNone(run(fn('objectSet', fn('objectNew'), str_('k'), num(1.0), num(9.0))))  # too many arguments
+
+    def test_intrinsic_string_length(self):
+        run, fn, num, str_ = self._run, self._fn, self._num, self._str
+        self.assertEqual(run(fn('stringLength', str_('abc'))), 3)
+        # error paths - each returns 0, observationally identical to value_args_validate
+        self.assertEqual(run(fn('stringLength')), 0)                      # string missing
+        self.assertEqual(run(fn('stringLength', num(5.0))), 0)            # string not a string
+        self.assertEqual(run(fn('stringLength', str_('a'), str_('b'))), 0)  # too many arguments
 
     def test_intrinsic_debug_logging(self):
         # On bad arguments an intrinsic raises ValueArgsError, which the shared call-error handler

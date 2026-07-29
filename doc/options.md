@@ -44,11 +44,6 @@
       :type: callable, optional
 
       The :func:`URL modifier function <url_fn>`
-
-   .. attribute:: systemPrefix
-      :type: str, optional
-
-      The system include prefix
 ~~~
 
 
@@ -78,18 +73,6 @@
 
 ~~~ {eval-rst}
 .. autofunction:: bare_script.fetch_read_write
-~~~
-
-
-~~~ {eval-rst}
-.. autofunction:: bare_script.fetch_system
-~~~
-
-
-~~~ {eval-rst}
-.. py:data:: bare_script.FETCH_SYSTEM_PREFIX
-
-   The system include prefix to use in conjunction with the `fetchSystem` function.
 ~~~
 
 

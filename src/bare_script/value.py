@@ -11,8 +11,6 @@ import math
 import re
 import uuid
 
-from schema_markdown import parse_schema_markdown, validate_type
-
 
 def value_type(value):
     """
@@ -96,8 +94,8 @@ def value_string(value):
 
 
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
-_R_DATETIME_MICROSECOND = re.compile(r'\.(\d{6})')
-_R_DATETIME_TZ_CLEANUP = re.compile(r'([+-]\d\d:\d\d):\d\d$')
+_R_DATETIME_MICROSECOND = re.compile(r'\.([0-9]{6})')
+_R_DATETIME_TZ_CLEANUP = re.compile(r'([+-][0-9][0-9]:[0-9][0-9]):[0-9][0-9]$')
 
 
 def value_json(value, indent=None):
@@ -112,7 +110,7 @@ def value_json(value, indent=None):
     """
 
     if indent is not None and indent > 0:
-        result = _JSONEncoder(allow_nan=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
+        result = _JSONEncoder(allow_nan=False, ensure_ascii=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
     else:
         result = _JSON_ENCODER_DEFAULT.encode(value)
     result = _R_VALUE_JSON_NUMBER_CLEANUP.sub(r'', result)
@@ -130,7 +128,7 @@ class _JSONEncoder(json.JSONEncoder):
         return None
 
 
-_JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, separators=(',', ':'), sort_keys=True)
+_JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
 
 _R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'\.0*$', re.MULTILINE)
 _R_VALUE_JSON_NUMBER_CLEANUP2 = re.compile(r'\.0*([,}\]])')
@@ -380,67 +378,12 @@ def value_args_model(fn_args):
     :rtype: list[dict]
     """
 
-    validate_type(VALUE_ARGS_TYPES, 'FunctionArguments', fn_args)
-
     # Use nullable instead of default-null
     for fn_arg in fn_args:
         if 'default' in fn_arg and fn_arg['default'] is None:
             raise ValueError(f'Argument "{fn_arg["name"]}" has default value of null - use nullable instead')
 
     return fn_args
-
-
-# Function arguments type model
-VALUE_ARGS_TYPES = parse_schema_markdown('''\
-# A function arguments model
-typedef FunctionArgument[len > 0] FunctionArguments
-
-
-# A function argument model
-struct FunctionArgument
-
-    # The argument name
-    string name
-
-    # The argument type
-    optional FunctionArgumentType type
-
-    # If true, the argument may be null
-    optional bool nullable
-
-    # The default argument value
-    optional any default
-
-    # If true, this argument is the array of remaining arguments
-    optional bool lastArgArray
-
-    # If true, the number argument must be an integer
-    optional bool integer
-
-    # The number argument must be less-than
-    optional any lt
-
-    # The number argument must be less-than-or-equal-to
-    optional any lte
-
-    # The number argument must be greater-than
-    optional any gt
-
-    # The number argument must be greater-than-or-equal-to
-    optional any gte
-
-
-# The function argument types
-enum FunctionArgumentType
-    array
-    boolean
-    datetime
-    function
-    number
-    object
-    regex
-    string
-''')
 
 
 #
@@ -474,13 +417,15 @@ def value_parse_number(text):
     :rtype: float or None
     """
 
-    try:
-        value = float(text)
-        if math.isnan(value) or math.isinf(value):
-            return None
-        return value
-    except ValueError:
+    if not R_NUMBER.match(text):
         return None
+    value = float(text)
+    if not math.isfinite(value):
+        return None
+    return value
+
+
+R_NUMBER = re.compile(r'^\s*[-+]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?\s*$')
 
 
 def value_parse_integer(text, radix=10):
@@ -495,10 +440,49 @@ def value_parse_integer(text, radix=10):
     :rtype: int or None
     """
 
-    try:
-        return int(text, radix)
-    except:
+    if value_type(radix) != 'number' or math.isnan(radix) or math.floor(radix) != radix or radix < 2 or radix > 36 or \
+            not VALUE_PARSE_INTEGER_REGEX_MAP[str(int(radix))].match(text):
         return None
+    return int(text, int(radix))
+
+
+VALUE_PARSE_INTEGER_REGEX_MAP = {
+    '2': re.compile(r'^\s*[-+]?[0-1]+\s*$'),
+    '3': re.compile(r'^\s*[-+]?[0-2]+\s*$'),
+    '4': re.compile(r'^\s*[-+]?[0-3]+\s*$'),
+    '5': re.compile(r'^\s*[-+]?[0-4]+\s*$'),
+    '6': re.compile(r'^\s*[-+]?[0-5]+\s*$'),
+    '7': re.compile(r'^\s*[-+]?[0-6]+\s*$'),
+    '8': re.compile(r'^\s*[-+]?[0-7]+\s*$'),
+    '9': re.compile(r'^\s*[-+]?[0-8]+\s*$'),
+    '10': re.compile(r'^\s*[-+]?[0-9]+\s*$'),
+    '11': re.compile(r'^\s*[-+]?[0-9Aa]+\s*$'),
+    '12': re.compile(r'^\s*[-+]?[0-9A-Ba-b]+\s*$'),
+    '13': re.compile(r'^\s*[-+]?[0-9A-Ca-c]+\s*$'),
+    '14': re.compile(r'^\s*[-+]?[0-9A-Da-d]+\s*$'),
+    '15': re.compile(r'^\s*[-+]?[0-9A-Ea-e]+\s*$'),
+    '16': re.compile(r'^\s*[-+]?[0-9A-Fa-f]+\s*$'),
+    '17': re.compile(r'^\s*[-+]?[0-9A-Ga-g]+\s*$'),
+    '18': re.compile(r'^\s*[-+]?[0-9A-Ha-h]+\s*$'),
+    '19': re.compile(r'^\s*[-+]?[0-9A-Ia-i]+\s*$'),
+    '20': re.compile(r'^\s*[-+]?[0-9A-Ja-j]+\s*$'),
+    '21': re.compile(r'^\s*[-+]?[0-9A-Ka-k]+\s*$'),
+    '22': re.compile(r'^\s*[-+]?[0-9A-La-l]+\s*$'),
+    '23': re.compile(r'^\s*[-+]?[0-9A-Ma-m]+\s*$'),
+    '24': re.compile(r'^\s*[-+]?[0-9A-Na-n]+\s*$'),
+    '25': re.compile(r'^\s*[-+]?[0-9A-Oa-o]+\s*$'),
+    '26': re.compile(r'^\s*[-+]?[0-9A-Pa-p]+\s*$'),
+    '27': re.compile(r'^\s*[-+]?[0-9A-Qa-q]+\s*$'),
+    '28': re.compile(r'^\s*[-+]?[0-9A-Ra-r]+\s*$'),
+    '29': re.compile(r'^\s*[-+]?[0-9A-Sa-s]+\s*$'),
+    '30': re.compile(r'^\s*[-+]?[0-9A-Ta-t]+\s*$'),
+    '31': re.compile(r'^\s*[-+]?[0-9A-Ua-u]+\s*$'),
+    '32': re.compile(r'^\s*[-+]?[0-9A-Va-v]+\s*$'),
+    '33': re.compile(r'^\s*[-+]?[0-9A-Wa-w]+\s*$'),
+    '34': re.compile(r'^\s*[-+]?[0-9A-Xa-x]+\s*$'),
+    '35': re.compile(r'^\s*[-+]?[0-9A-Ya-y]+\s*$'),
+    '36': re.compile(r'^\s*[-+]?[0-9A-Za-z]+\s*$')
+}
 
 
 #
@@ -516,20 +500,23 @@ def value_parse_datetime(text):
     :rtype: datetime.datetime or None
     """
 
-    m_date = _R_DATE.match(text)
-    if m_date is not None:
-        year = int(m_date.group('year'))
-        month = int(m_date.group('month'))
-        day = int(m_date.group('day'))
-        return datetime.datetime(year, month, day)
-    elif _R_DATETIME.match(text):
-        result = datetime.datetime.fromisoformat(_R_DATETIME_ZULU.sub('+00:00', text)).astimezone().replace(tzinfo=None)
-        return result.replace(microsecond=(result.microsecond // 1000) * 1000)
+    try:
+        m_date = _R_DATE.match(text)
+        if m_date is not None:
+            year = int(m_date.group('year'))
+            month = int(m_date.group('month'))
+            day = int(m_date.group('day'))
+            return datetime.datetime(year, month, day)
+        if _R_DATETIME.match(text):
+            result = datetime.datetime.fromisoformat(_R_DATETIME_ZULU.sub('+00:00', text)).astimezone().replace(tzinfo=None)
+            return result.replace(microsecond=(result.microsecond // 1000) * 1000)
+    except ValueError:
+        return None
 
     return None
 
-_R_DATE = re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})$')
-_R_DATETIME = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$')
+_R_DATE = re.compile(r'^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})$')
+_R_DATETIME = re.compile(r'^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|[+-][0-9]{2}:[0-9]{2})$')
 _R_DATETIME_ZULU = re.compile(r'Z$')
 
 
@@ -548,3 +535,12 @@ def value_normalize_datetime(value):
             return value.astimezone().replace(tzinfo=None)
         return value
     return datetime.datetime(value.year, value.month, value.day)
+
+
+#
+# Object value functions
+#
+
+
+# The value interface's optional value_object_set (see value.js) has no Python equivalent - dicts
+# have no special "__proto__" key handling, so callers assign dict keys directly.

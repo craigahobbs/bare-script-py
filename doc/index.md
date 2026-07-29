@@ -7,6 +7,7 @@
 
 scripts
 expressions
+include
 errors
 options
 ~~~
