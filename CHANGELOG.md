@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.0.3 (2026-07-30)
+
+- [9a2f2c8](https://github.com/craigahobbs/bare-script-py/commit/9a2f2c8) - add unittest report summary section with coverage percentage
+
+- [faad135](https://github.com/craigahobbs/bare-script-py/commit/faad135) - fix and cleanup barescript includes
+
+- [0619f5e](https://github.com/craigahobbs/bare-script-py/commit/0619f5e) - cleanup barescript includes
+
 ## 5.0.1 (2026-07-29)
 
 - [974e2f6](https://github.com/craigahobbs/bare-script-py/commit/974e2f6) - fix datetimeISOParse hour-24 handling for Python 3.13
