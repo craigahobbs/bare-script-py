@@ -738,6 +738,7 @@ foo bar
             SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-01-01T24:00:00Z'], None),
             datetime.datetime.fromisoformat('2020-01-02T00:00:00+00:00').astimezone().replace(tzinfo=None)
         )
+        self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-01-01T24:00:00.5Z'], None))
 
         # Rolled-over date components
         self.assertIsNone(SCRIPT_FUNCTIONS['datetimeISOParse'](['2020-02-30'], None))

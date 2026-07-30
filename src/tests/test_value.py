@@ -784,6 +784,17 @@ class TestValue(unittest.TestCase):
             datetime.datetime(50, 1, 1)
         )
 
+        # Hour 24 - the ISO 8601 special case for midnight at the end of the day
+        self.assertEqual(
+            value_parse_datetime('2020-01-01T24:00:00Z'),
+            datetime.datetime(2020, 1, 2, tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+        )
+        self.assertEqual(
+            value_parse_datetime('2020-01-01T24:00:00.000000Z'),
+            datetime.datetime(2020, 1, 2, tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+        )
+        self.assertIsNone(value_parse_datetime('2020-01-01T24:00:00.5Z'))
+
         # Rolled-over date components
         self.assertIsNone(value_parse_datetime('2020-02-30'))
         self.assertIsNone(value_parse_datetime('2020-13-01'))

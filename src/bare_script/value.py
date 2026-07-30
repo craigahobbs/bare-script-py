@@ -507,8 +507,23 @@ def value_parse_datetime(text):
             month = int(m_date.group('month'))
             day = int(m_date.group('day'))
             return datetime.datetime(year, month, day)
-        if _R_DATETIME.match(text):
-            result = datetime.datetime.fromisoformat(_R_DATETIME_ZULU.sub('+00:00', text)).astimezone().replace(tzinfo=None)
+        m_datetime = _R_DATETIME.match(text)
+        if m_datetime is not None:
+            text_zulu = _R_DATETIME_ZULU.sub('+00:00', text)
+
+            # fromisoformat's support for ISO 8601's hour-24 end-of-day special case varies across Python
+            # versions, so handle it explicitly rather than relying on stdlib behavior
+            is_hour24 = m_datetime.group('hour') == '24'
+            if is_hour24:
+                if m_datetime.group('minute') != '00' or m_datetime.group('second') != '00' or \
+                        (m_datetime.group('fraction') is not None and int(m_datetime.group('fraction')) != 0):
+                    return None
+                text_zulu = text_zulu[:11] + '00' + text_zulu[13:]
+
+            result = datetime.datetime.fromisoformat(text_zulu)
+            if is_hour24:
+                result += datetime.timedelta(days=1)
+            result = result.astimezone().replace(tzinfo=None)
             return result.replace(microsecond=(result.microsecond // 1000) * 1000)
     except ValueError:
         return None
@@ -516,7 +531,10 @@ def value_parse_datetime(text):
     return None
 
 _R_DATE = re.compile(r'^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})$')
-_R_DATETIME = re.compile(r'^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|[+-][0-9]{2}:[0-9]{2})$')
+_R_DATETIME = re.compile(
+    r'^[0-9]{4}-[0-9]{2}-[0-9]{2}T(?P<hour>[0-9]{2}):(?P<minute>[0-9]{2}):(?P<second>[0-9]{2})'
+    r'(?:\.(?P<fraction>[0-9]{1,6}))?(?:Z|[+-][0-9]{2}:[0-9]{2})$'
+)
 _R_DATETIME_ZULU = re.compile(r'Z$')
 
 
