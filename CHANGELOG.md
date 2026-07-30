@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.1 (2026-07-29)
+
+- [974e2f6](https://github.com/craigahobbs/bare-script-py/commit/974e2f6) - fix datetimeISOParse hour-24 handling for Python 3.13
+
 ## 5.0.0 (2026-07-29)
 
 - [26a0c06](https://github.com/craigahobbs/bare-script-py/commit/26a0c06) - port schema-markdown to the include library, embed the include library source, and optimize the runtime
