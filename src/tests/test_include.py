@@ -281,6 +281,51 @@ struct TestStruct
         self.assertEqual(str(cm_exc.exception), ':1: error: Syntax error')
         self.assertListEqual(cm_exc.exception.errors, [':1: error: Syntax error'])
 
+    def test_schema_parse_types(self):
+        types = schema_parse('struct S1\n    int a')
+        types2 = schema_parse('struct S2\n    S1 s1', types)
+        self.assertIs(types2, types)
+        self.assertDictEqual(types, {
+            'S1': {
+                'struct': {
+                    'name': 'S1',
+                    'members': [
+                        {'name': 'a', 'type': {'builtin': 'int'}}
+                    ]
+                }
+            },
+            'S2': {
+                'struct': {
+                    'name': 'S2',
+                    'members': [
+                        {'name': 's1', 'type': {'user': 'S1'}}
+                    ]
+                }
+            }
+        })
+
+    def test_schema_parse_filename(self):
+        with self.assertRaises(SchemaParserError) as cm_exc:
+            schema_parse('asdf asdf', None, 'test.smd')
+        self.assertEqual(str(cm_exc.exception), 'test.smd:1: error: Syntax error')
+        self.assertListEqual(cm_exc.exception.errors, ['test.smd:1: error: Syntax error'])
+
+    def test_schema_parse_validate(self):
+        with self.assertRaises(SchemaParserError) as cm_exc:
+            schema_parse('struct S\n    Unknown a')
+        self.assertEqual(str(cm_exc.exception), ':2: error: Unknown type "Unknown" from "S" member "a"')
+        self.assertListEqual(cm_exc.exception.errors, [':2: error: Unknown type "Unknown" from "S" member "a"'])
+        self.assertDictEqual(schema_parse('struct S\n    Unknown a', None, None, False), {
+            'S': {
+                'struct': {
+                    'name': 'S',
+                    'members': [
+                        {'name': 'a', 'type': {'user': 'Unknown'}}
+                    ]
+                }
+            }
+        })
+
     def test_schema_validate(self):
         types = schema_parse('''\
 # A test struct
@@ -303,3 +348,16 @@ struct TestStruct
             schema_validate(types, 'TestStruct', {'a': 'abc'})
         self.assertEqual(str(cm_exc.exception), 'Invalid value "abc" (type "string") for member "a", expected type "int"')
         self.assertEqual(cm_exc.exception.member_fqn, 'a')
+
+    def test_schema_validate_error_member_fqn(self):
+        types = schema_parse('''\
+# A test struct
+struct TestStruct
+
+    # The test member
+    int a
+''')
+        with self.assertRaises(SchemaValidationError) as cm_exc:
+            schema_validate(types, 'TestStruct', {'a': 'abc'}, 'test')
+        self.assertEqual(str(cm_exc.exception), 'Invalid value "abc" (type "string") for member "test.a", expected type "int"')
+        self.assertEqual(cm_exc.exception.member_fqn, 'test.a')

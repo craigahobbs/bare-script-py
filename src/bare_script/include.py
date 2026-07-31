@@ -150,7 +150,8 @@ def data_parse_csv(text):
     """
     Parse CSV text to a data array
 
-    :param str text: The CSV text
+    :param text: The CSV text or array of CSV text
+    :type text: str or list(str)
     :return: The data array
     :rtype: list(dict)
     """
@@ -533,7 +534,7 @@ def schema_get_struct_members(types, struct):
     return _INCLUDE_GLOBALS['schemaGetStructMembers']([types, struct], _include_options())
 
 
-def schema_validate(types, type_name, value):
+def schema_validate(types, type_name, value, member_fqn=None):
     """
     Validate a value using a schema type model
 
@@ -541,11 +542,13 @@ def schema_validate(types, type_name, value):
     :type types: dict
     :param str type_name: The type name
     :param value: The value to validate
+    :param member_fqn: The fully-qualified member name (for error messages)
+    :type member_fqn: str or None, optional
     :return: The validated, transformed value
     :raises SchemaValidationError: A validation error occurred
     """
 
-    result = _INCLUDE_GLOBALS['schemaValidateEx']([types, type_name, value], _include_options())
+    result = _INCLUDE_GLOBALS['schemaValidateEx']([types, type_name, value, member_fqn], _include_options())
     if 'error' in result:
         raise SchemaValidationError(result['error'], result['memberFqn'])
     return result['result']
@@ -577,18 +580,24 @@ def schema_doc_markdown(types, type_name, options=None):
 #
 
 
-def schema_parse(text):
+def schema_parse(text, types=None, filename=None, validate=None):
     """
     Parse Schema Markdown text
 
     :param text: The `Schema Markdown <https://craigahobbs.github.io/schema-markdown-js/language/>`__ text
     :type text: str or list(str)
+    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__ to update
+    :type types: dict or None, optional
+    :param filename: The file name (for error messages)
+    :type filename: str or None, optional
+    :param validate: If True (the default), validate the type model after parsing
+    :type validate: bool or None, optional
     :return: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
     :rtype: dict
     :raises SchemaParserError: A parsing error occurred
     """
 
-    result = _INCLUDE_GLOBALS['schemaParseEx']([text], _include_options())
+    result = _INCLUDE_GLOBALS['schemaParseEx']([text, types, filename, validate], _include_options())
     if 'errors' in result:
         raise SchemaParserError(result['errors'])
     return result['result']
