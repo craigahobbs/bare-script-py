@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.5 (2026-08-02)
+
+- [fb4cd51](https://github.com/craigahobbs/bare-script-py/commit/fb4cd51) - accept Python base-type subclass values \(isinstance type checks\)
+
 ## 5.0.4 (2026-07-31)
 
 - [0fe1d41](https://github.com/craigahobbs/bare-script-py/commit/0fe1d41) - add missing include stub arguments - schema_parse types/filename/validate, schema_validate member_fqn
