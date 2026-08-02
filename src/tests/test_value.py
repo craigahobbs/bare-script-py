@@ -14,6 +14,23 @@ from bare_script.value import ValueArgsError, value_args_model, value_args_valid
     value_normalize_datetime, value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
 
 
+# Python base-type subclasses - treated as their base value type
+class _DictSubclass(dict):
+    pass
+
+class _ListSubclass(list):
+    pass
+
+class _StrSubclass(str):
+    pass
+
+class _IntSubclass(int):
+    pass
+
+class _FloatSubclass(float):
+    pass
+
+
 class TestValue(unittest.TestCase):
 
     def test_value_type(self):
@@ -50,6 +67,13 @@ class TestValue(unittest.TestCase):
 
         # regex
         self.assertEqual(value_type(re.compile('^test')), 'regex')
+
+        # subclass values
+        self.assertEqual(value_type(_StrSubclass('abc')), 'string')
+        self.assertEqual(value_type(_IntSubclass(5)), 'number')
+        self.assertEqual(value_type(_FloatSubclass(5.5)), 'number')
+        self.assertEqual(value_type(_DictSubclass(value=1)), 'object')
+        self.assertEqual(value_type(_ListSubclass([1, 2, 3])), 'array')
 
         # unknown
         self.assertIsNone(value_type((1, 2, 3)))
@@ -115,6 +139,13 @@ class TestValue(unittest.TestCase):
 
         # regex
         self.assertEqual(value_string(re.compile('^test')), '<regex>')
+
+        # subclass values
+        self.assertEqual(value_string(_StrSubclass('abc')), 'abc')
+        self.assertEqual(value_string(_IntSubclass(5)), '5')
+        self.assertEqual(value_string(_FloatSubclass(5.5)), '5.5')
+        self.assertEqual(value_string(_DictSubclass(value=1)), '{"value":1}')
+        self.assertEqual(value_string(_ListSubclass([1, 2, 3])), '[1,2,3]')
 
         # Additional stringify-able values
         self.assertEqual(value_string(uuid.UUID('47f833d3-4414-4c4a-ac02-ceb36898ff87')), '47f833d3-4414-4c4a-ac02-ceb36898ff87')
@@ -206,6 +237,14 @@ class TestValue(unittest.TestCase):
 
         # regex
         self.assertEqual(value_boolean(re.compile('^test')), True)
+
+        # subclass values
+        self.assertEqual(value_boolean(_StrSubclass('abc')), True)
+        self.assertEqual(value_boolean(_StrSubclass('')), False)
+        self.assertEqual(value_boolean(_IntSubclass(5)), True)
+        self.assertEqual(value_boolean(_IntSubclass(0)), False)
+        self.assertEqual(value_boolean(_ListSubclass([1, 2, 3])), True)
+        self.assertEqual(value_boolean(_ListSubclass([])), False)
 
         # unknown
         self.assertEqual(value_boolean((1, 2, 3)), True)
@@ -352,6 +391,13 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_compare({'a': [{'d': 1}]}, {'a': [{'d': 2}]}), -1)
         self.assertEqual(value_compare({'a': [{'d': 2}]}, {'a': [{'d': 1}]}), 1)
 
+        # subclass values
+        self.assertEqual(value_compare(_StrSubclass('abc'), 'abc'), 0)
+        self.assertEqual(value_compare(_IntSubclass(5), 5), 0)
+        self.assertEqual(value_compare(_FloatSubclass(5.5), 5.5), 0)
+        self.assertEqual(value_compare(_DictSubclass(value=1), {'value': 1}), 0)
+        self.assertEqual(value_compare(_ListSubclass([1, 2, 3]), [1, 2, 3]), 0)
+
 
     def test_value_compare_invalid(self):
         # array < boolean
@@ -457,6 +503,25 @@ class TestValue(unittest.TestCase):
                 value_args_validate(fn_args, args[0:ix_arg], -1)
             self.assertEqual(str(cm_exc.exception), f'Invalid "{fn_arg["name"]}" argument value, null')
             self.assertEqual(cm_exc.exception.return_value, -1)
+
+
+    def test_value_args_validate_subclass(self):
+        fn_args = value_args_model([
+            {'name': 'argNumber', 'type': 'number'},
+            {'name': 'argString', 'type': 'string'},
+            {'name': 'argArray', 'type': 'array'},
+            {'name': 'argObject', 'type': 'object'}
+        ])
+        args = [_IntSubclass(5), _StrSubclass('abc'), _ListSubclass([1]), _DictSubclass(value=1)]
+        args_valid = value_args_validate(fn_args, args)
+        self.assertIs(args_valid, args)
+        self.assertListEqual(args_valid, [5, 'abc', [1], {'value': 1}])
+
+        # bool is not a number
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            value_args_validate(fn_args, [True, 'abc', [], {}])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "argNumber" argument value, true')
+        self.assertIsNone(cm_exc.exception.return_value)
 
 
     def test_value_rgs_validate_last_arg_array(self):

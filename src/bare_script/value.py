@@ -23,18 +23,17 @@ def value_type(value):
 
     if value is None:
         return 'null'
-    t = type(value)
-    if t is str:
+    elif isinstance(value, str):
         return 'string'
-    elif t is bool:
+    elif isinstance(value, bool):
         return 'boolean'
-    elif t is int or t is float:
+    elif isinstance(value, (int, float)):
         return 'number'
     elif isinstance(value, datetime.date):
         return 'datetime'
-    elif t is dict:
+    elif isinstance(value, dict):
         return 'object'
-    elif t is list:
+    elif isinstance(value, list):
         return 'array'
     elif callable(value):
         return 'function'
@@ -59,14 +58,13 @@ def value_string(value):
 
     if value is None:
         return 'null'
-    t = type(value)
-    if t is str:
+    elif isinstance(value, str):
         return value
-    elif t is bool:
+    elif isinstance(value, bool):
         return 'true' if value else 'false'
-    elif t is int:
+    elif isinstance(value, int):
         return str(value)
-    elif t is float:
+    elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
     elif isinstance(value, datetime.date):
         iso = value_normalize_datetime(value).astimezone().isoformat()
@@ -76,9 +74,9 @@ def value_string(value):
             millisecond = int(iso[microsecond_begin + 1:microsecond_end]) // 1000
             iso = f'{iso[0:microsecond_begin]}.{millisecond:0{3}d}{iso[microsecond_end:]}'
         return _R_DATETIME_TZ_CLEANUP.sub(r'\1', iso)
-    elif t is dict:
+    elif isinstance(value, dict):
         return value_json(value)
-    elif t is list:
+    elif isinstance(value, list):
         return value_json(value)
     elif callable(value):
         return '<function>'
@@ -143,14 +141,13 @@ def value_boolean(value):
     :rtype: bool
     """
 
-    t = type(value)
-    if t is bool:
+    if isinstance(value, bool):
         return value
-    elif t is str:
+    elif isinstance(value, str):
         return value != ''
-    elif t is int or t is float:
+    elif isinstance(value, (int, float)):
         return value != 0
-    elif t is list:
+    elif isinstance(value, list):
         return len(value) != 0
 
     # Everything else non-null is true
@@ -188,25 +185,24 @@ def value_compare(left, right):
         return 0 if right is None else -1
     elif right is None:
         return 1
-    left_type = type(left)
-    right_type = type(right)
-    if left_type is str and right_type is str:
+    if isinstance(left, str) and isinstance(right, str):
         return -1 if left < right else (0 if left == right else 1)
-    elif left_type is bool and right_type is bool:
+    elif isinstance(left, bool) and isinstance(right, bool):
         return -1 if left < right else (0 if left == right else 1)
-    elif (left_type is int or left_type is float) and (right_type is int or right_type is float):
+    elif isinstance(left, (int, float)) and not isinstance(left, bool) and \
+         isinstance(right, (int, float)) and not isinstance(right, bool):
         return -1 if left < right else (0 if left == right else 1)
     elif isinstance(left, datetime.date) and isinstance(right, datetime.date):
         left_dt = value_normalize_datetime(left)
         right_dt = value_normalize_datetime(right)
         return -1 if left_dt < right_dt else (0 if left_dt == right_dt else 1)
-    elif left_type is list and right_type is list:
+    elif isinstance(left, list) and isinstance(right, list):
         for ix in range(min(len(left), len(right))):
             item_compare = value_compare(left[ix], right[ix])
             if item_compare != 0:
                 return item_compare
         return -1 if len(left) < len(right) else (0 if len(left) == len(right) else 1)
-    elif left_type is dict and right_type is dict:
+    elif isinstance(left, dict) and isinstance(right, dict):
         left_key_values = sorted(left.items())
         right_key_values = sorted(right.items())
         for ix in range(min(len(left_key_values), len(right_key_values))):
@@ -297,8 +293,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
 
         # Type-specific validation
         if arg_type == 'number':
-            arg_value_type = type(arg_value)
-            if not (arg_value_type is int or arg_value_type is float):
+            if not isinstance(arg_value, (int, float)) or isinstance(arg_value, bool):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
             arg_lt = fn_arg.get('lt')
             arg_lte = fn_arg.get('lte')
@@ -316,16 +311,13 @@ def value_args_validate(fn_args, args, error_return_value=None):
             if arg_integer:
                 args[ix] = int(arg_value)
         elif arg_type == 'string':
-            arg_value_type = type(arg_value)
-            if arg_value_type is not str:
+            if not isinstance(arg_value, str):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
         elif arg_type == 'array':
-            arg_value_type = type(arg_value)
-            if arg_value_type is not list:
+            if not isinstance(arg_value, list):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
         elif arg_type == 'object':
-            arg_value_type = type(arg_value)
-            if arg_value_type is not dict:
+            if not isinstance(arg_value, dict):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
         elif arg_type == 'datetime':
             if not isinstance(arg_value, datetime.date):

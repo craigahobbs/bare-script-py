@@ -3,7 +3,9 @@
 
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
+import collections
 import datetime
+import math
 import os
 import unittest
 
@@ -43,6 +45,69 @@ class TestExecuteScript(unittest.TestCase):
             }
         }
         self.assertEqual(execute_script(script, options), 'Hello, the-url!')
+
+
+    # Python base-type subclass globals behave as their base value type (and OrderedDict
+    # mutation keeps the object consistent)
+    def test_execute_script_subclass_values(self):
+        class ListSubclass(list):
+            pass
+
+        class StrSubclass(str):
+            pass
+
+        class IntSubclass(int):
+            pass
+
+        object_value = collections.OrderedDict(a=1)
+        object_default = collections.defaultdict(list, a=1)
+        array_value = ListSubclass([1, 2, 3])
+        script = validate_script({
+            'statements': [
+                {'expr': {'expr': {'function': {'name': 'objectSet', 'args': [
+                    {'variable': 'vObject'},
+                    {'string': 'b'},
+                    {'function': {'name': 'objectGet', 'args': [{'variable': 'vObject'}, {'string': 'a'}]}}
+                ]}}}},
+                {'expr': {'expr': {'function': {'name': 'objectDelete', 'args': [{'variable': 'vObject'}, {'string': 'a'}]}}}},
+                {'expr': {'expr': {'function': {'name': 'arraySet', 'args': [
+                    {'variable': 'vArray'},
+                    {'number': 0},
+                    {'function': {'name': 'arrayGet', 'args': [{'variable': 'vArray'}, {'variable': 'vIndex'}]}}
+                ]}}}},
+                {'expr': {'expr': {'function': {'name': 'arrayPush', 'args': [
+                    {'variable': 'vArray'},
+                    {'function': {'name': 'stringLength', 'args': [{'variable': 'vString'}]}}
+                ]}}}},
+                {'return': {
+                    'expr': {'function': {'name': 'arrayNew', 'args': [
+                        {'function': {'name': 'systemType', 'args': [{'variable': 'vObject'}]}},
+                        {'function': {'name': 'objectHas', 'args': [{'variable': 'vObject'}, {'string': 'a'}]}},
+                        {'function': {'name': 'objectKeys', 'args': [{'variable': 'vObject'}]}},
+                        {'function': {'name': 'objectCopy', 'args': [{'variable': 'vObject'}]}},
+                        {'function': {'name': 'objectGet', 'args': [{'variable': 'vDefault'}, {'string': 'missing'}, {'number': 9}]}},
+                        {'function': {'name': 'arrayLength', 'args': [{'variable': 'vArray'}]}},
+                        {'function': {'name': 'mathSqrt', 'args': [{'variable': 'vIndex'}]}}
+                    ]}}
+                }}
+            ]
+        })
+        options = {
+            'globals': {
+                'vObject': object_value,
+                'vDefault': object_default,
+                'vArray': array_value,
+                'vString': StrSubclass('abc'),
+                'vIndex': IntSubclass(2)
+            }
+        }
+        self.assertEqual(
+            execute_script(script, options),
+            ['object', False, ['b'], {'b': 1}, 9, 4, math.sqrt(2)]
+        )
+        self.assertEqual(list(object_value.items()), [('b', 1)])
+        self.assertEqual(dict(object_default), {'a': 1})
+        self.assertEqual(array_value, [3, 2, 3, 3])
 
 
     def test_execute_script_coverage(self):

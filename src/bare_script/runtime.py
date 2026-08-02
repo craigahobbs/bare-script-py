@@ -337,18 +337,16 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('array', None)
                         array_value = func_args[0]
-                        array_type = type(array_value)
-                        if array_type is not list:
+                        if not isinstance(array_value, list):
                             raise ValueArgsError('array', array_value)
                         if func_args_length < 2:
                             raise ValueArgsError('index', None)
                         index_value = func_args[1]
-                        index_type = type(index_value)
-                        if index_type is float:
+                        if isinstance(index_value, float):
                             if index_value < 0 or not index_value.is_integer():
                                 raise ValueArgsError('index', index_value)
                             index_value = int(index_value)
-                        elif index_type is int:
+                        elif isinstance(index_value, int) and not isinstance(index_value, bool):
                             if index_value < 0:
                                 raise ValueArgsError('index', index_value)
                         else:
@@ -362,8 +360,7 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('array', None, 0)
                         array_value = func_args[0]
-                        array_type = type(array_value)
-                        if array_type is not list:
+                        if not isinstance(array_value, list):
                             raise ValueArgsError('array', array_value, 0)
                         if func_args_length > 1:
                             raise ValueArgsError(None, func_args_length, 0)
@@ -372,8 +369,7 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('array', None)
                         array_value = func_args[0]
-                        array_type = type(array_value)
-                        if array_type is not list:
+                        if not isinstance(array_value, list):
                             raise ValueArgsError('array', array_value)
                         array_value.extend(func_args[1:])
                         return array_value
@@ -381,18 +377,16 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('array', None)
                         array_value = func_args[0]
-                        array_type = type(array_value)
-                        if array_type is not list:
+                        if not isinstance(array_value, list):
                             raise ValueArgsError('array', array_value)
                         if func_args_length < 2:
                             raise ValueArgsError('index', None)
                         index_value = func_args[1]
-                        index_type = type(index_value)
-                        if index_type is float:
+                        if isinstance(index_value, float):
                             if index_value < 0 or not index_value.is_integer():
                                 raise ValueArgsError('index', index_value)
                             index_value = int(index_value)
-                        elif index_type is int:
+                        elif isinstance(index_value, int) and not isinstance(index_value, bool):
                             if index_value < 0:
                                 raise ValueArgsError('index', index_value)
                         else:
@@ -408,8 +402,7 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('x', None)
                         x_value = func_args[0]
-                        x_type = type(x_value)
-                        if (x_type is not int and x_type is not float) or not x_value >= 0:
+                        if not isinstance(x_value, (int, float)) or isinstance(x_value, bool) or not x_value >= 0:
                             raise ValueArgsError('x', x_value)
                         if func_args_length > 1:
                             raise ValueArgsError(None, func_args_length)
@@ -419,14 +412,12 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('object', None, default_value)
                         object_value = func_args[0]
-                        object_type = type(object_value)
-                        if object_type is not dict:
+                        if not isinstance(object_value, dict):
                             raise ValueArgsError('object', object_value, default_value)
                         if func_args_length < 2:
                             raise ValueArgsError('key', None, default_value)
                         key_value = func_args[1]
-                        key_type = type(key_value)
-                        if key_type is not str:
+                        if not isinstance(key_value, str):
                             raise ValueArgsError('key', key_value, default_value)
                         if func_args_length > 3:
                             raise ValueArgsError(None, func_args_length, default_value)
@@ -435,14 +426,12 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('object', None, False)
                         object_value = func_args[0]
-                        object_type = type(object_value)
-                        if object_type is not dict:
+                        if not isinstance(object_value, dict):
                             raise ValueArgsError('object', object_value, False)
                         if func_args_length < 2:
                             raise ValueArgsError('key', None, False)
                         key_value = func_args[1]
-                        key_type = type(key_value)
-                        if key_type is not str:
+                        if not isinstance(key_value, str):
                             raise ValueArgsError('key', key_value, False)
                         if func_args_length > 2:
                             raise ValueArgsError(None, func_args_length, False)
@@ -451,8 +440,7 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('object', None)
                         object_value = func_args[0]
-                        object_type = type(object_value)
-                        if object_type is not dict:
+                        if not isinstance(object_value, dict):
                             raise ValueArgsError('object', object_value)
                         if func_args_length > 1:
                             raise ValueArgsError(None, func_args_length)
@@ -461,14 +449,12 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('object', None)
                         object_value = func_args[0]
-                        object_type = type(object_value)
-                        if object_type is not dict:
+                        if not isinstance(object_value, dict):
                             raise ValueArgsError('object', object_value)
                         if func_args_length < 2:
                             raise ValueArgsError('key', None)
                         key_value = func_args[1]
-                        key_type = type(key_value)
-                        if key_type is not str:
+                        if not isinstance(key_value, str):
                             raise ValueArgsError('key', key_value)
                         if func_args_length > 3:
                             raise ValueArgsError(None, func_args_length)
@@ -479,8 +465,7 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length < 1:
                             raise ValueArgsError('string', None, 0)
                         string_value = func_args[0]
-                        string_type = type(string_value)
-                        if string_type is not str:
+                        if not isinstance(string_value, str):
                             raise ValueArgsError('string', string_value, 0)
                         if func_args_length > 1:
                             raise ValueArgsError(None, func_args_length, 0)

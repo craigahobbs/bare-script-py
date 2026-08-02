@@ -265,6 +265,26 @@ static int obj_setitem(PyObject *obj, PyObject *key, PyObject *value)
 }
 
 
+// key in mapping semantics: 1 = found, 0 = missing, -1 = error
+static int obj_contains(PyObject *obj, PyObject *key)
+{
+    if (PyDict_CheckExact(obj)) {
+        return PyDict_Contains(obj, key);
+    }
+    return PySequence_Contains(obj, key);
+}
+
+
+// del mapping[key] semantics: 0 = success, -1 = error
+static int obj_delitem(PyObject *obj, PyObject *key)
+{
+    if (PyDict_CheckExact(obj)) {
+        return PyDict_DelItem(obj, key);
+    }
+    return PyObject_DelItem(obj, key);
+}
+
+
 //
 // Execution context
 //
@@ -576,18 +596,17 @@ static int value_boolean_c(PyObject *value)
     if (value == Py_False || value == Py_None) {
         return 0;
     }
-    PyTypeObject *type = Py_TYPE(value);
-    if (type == &PyFloat_Type) {
+    if (PyFloat_Check(value)) {
         // NaN != 0 is true, matching the reference implementation
         return PyFloat_AS_DOUBLE(value) != 0.;
     }
-    if (type == &PyLong_Type) {
+    if (PyLong_Check(value)) {
         return PyObject_IsTrue(value);
     }
-    if (type == &PyUnicode_Type) {
+    if (PyUnicode_Check(value)) {
         return PyUnicode_GetLength(value) != 0;
     }
-    if (type == &PyList_Type) {
+    if (PyList_Check(value)) {
         return PyList_GET_SIZE(value) != 0;
     }
 
@@ -597,9 +616,18 @@ static int value_boolean_c(PyObject *value)
 
 
 // Is the value an exact int or float (bool is a subclass of int but has its own exact type)?
+// This is the binary-operator fast-path check, mirroring the reference runtime's exact checks.
 static inline int is_number(PyObject *value)
 {
     return PyLong_CheckExact(value) || PyFloat_CheckExact(value);
+}
+
+
+// Is the value a number per the value model (int/float subclasses count, bool is excluded)?
+// This is the argument-validation check, mirroring value.value_args_validate's isinstance checks.
+static inline int is_number_arg(PyObject *value)
+{
+    return !PyBool_Check(value) && (PyLong_Check(value) || PyFloat_Check(value));
 }
 
 
@@ -810,12 +838,12 @@ static void intrinsic_count_error(Py_ssize_t nargs, PyObject *return_value)
 static PyObject *intrinsic_one_number(PyObject *args, const char *name, int constraint, PyObject *error_return)
 {
     PyObject *value = (PyList_GET_SIZE(args) >= 1) ? PyList_GET_ITEM(args, 0) : NULL;
-    if (value == NULL || value == Py_None || !is_number(value)) {
+    if (value == NULL || value == Py_None || !is_number_arg(value)) {
         intrinsic_args_error(name, value, error_return);
         return NULL;
     }
     if (constraint != 0) {
-        if (PyFloat_CheckExact(value)) {
+        if (PyFloat_Check(value)) {
             // NaN fails both constraints, mirroring the reference's "not (value >= 0)"
             double number = PyFloat_AS_DOUBLE(value);
             if ((constraint == 1) ? !(number >= 0.) : !(number > 0.)) {
@@ -846,20 +874,25 @@ static PyObject *intrinsic_one_number(PyObject *args, const char *name, int cons
 // like passing the int to a math-module function). Returns -1. with an exception set on error.
 static double intrinsic_number_as_double(PyObject *value)
 {
-    if (PyFloat_CheckExact(value)) {
+    if (PyFloat_Check(value)) {
         return PyFloat_AS_DOUBLE(value);
     }
     return PyFloat_AsDouble(value);
 }
 
 
-// Validate an exact-typed argument at position ix: 'a' = array (list), 'o' = object (dict),
-// 's' = string. Returns the argument (borrowed from args) or NULL with ValueArgsError raised.
+// Validate a typed argument at position ix: 'a' = array (list), 'o' = object (dict),
+// 's' = string. Subclasses are accepted, mirroring value.value_args_validate's isinstance
+// checks. Dict subclass values must be accessed through the obj_* mapping helpers (subclasses
+// like OrderedDict keep state that direct PyDict_* mutation corrupts); list/str subclass values
+// are accessed directly (PyList_*/PyUnicode_* operate on the shared base storage, bypassing any
+// overridden methods). Returns the argument (borrowed from args) or NULL with ValueArgsError
+// raised.
 static PyObject *intrinsic_typed_arg(PyObject *args, Py_ssize_t ix, char type, const char *name, PyObject *error_return)
 {
     PyObject *value = (PyList_GET_SIZE(args) > ix) ? PyList_GET_ITEM(args, ix) : NULL;
     int type_ok = (value != NULL) &&
-        ((type == 'a') ? PyList_CheckExact(value) : (type == 'o') ? PyDict_CheckExact(value) : PyUnicode_CheckExact(value));
+        ((type == 'a') ? PyList_Check(value) : (type == 'o') ? PyDict_Check(value) : PyUnicode_Check(value));
     if (!type_ok) {
         intrinsic_args_error(name, value, error_return);
         return NULL;
@@ -879,7 +912,7 @@ static int intrinsic_index_validate(PyObject *args, Py_ssize_t ix, const char *n
         intrinsic_args_error(name, value, NULL);
         return -1;
     }
-    if (PyLong_CheckExact(value)) {
+    if (PyLong_Check(value) && !PyBool_Check(value)) {
         int overflow = 0;
         long long index = PyLong_AsLongLongAndOverflow(value, &overflow);
         if (index == -1 && !overflow && PyErr_Occurred()) {
@@ -892,7 +925,7 @@ static int intrinsic_index_validate(PyObject *args, Py_ssize_t ix, const char *n
         *index_out = (overflow > 0 || index > (long long)PY_SSIZE_T_MAX) ? PY_SSIZE_T_MAX : (Py_ssize_t)index;
         return 0;
     }
-    if (PyFloat_CheckExact(value)) {
+    if (PyFloat_Check(value)) {
         double number = PyFloat_AS_DOUBLE(value);
         // int(value) raises for NaN and infinity, exactly like the reference's integer check
         if (isnan(number)) {
@@ -920,7 +953,7 @@ static void intrinsic_index_bounds_error(PyObject *args, Py_ssize_t ix, const ch
 {
     PyObject *value = PyList_GET_ITEM(args, ix);
     PyObject *normalized =
-        PyLong_CheckExact(value) ? Py_NewRef(value) : PyLong_FromDouble(PyFloat_AS_DOUBLE(value));
+        PyLong_Check(value) ? Py_NewRef(value) : PyLong_FromDouble(PyFloat_AS_DOUBLE(value));
     if (normalized != NULL) {
         intrinsic_args_error(name, normalized, NULL);
         Py_DECREF(normalized);
@@ -962,7 +995,7 @@ static PyObject *intrinsic_math_abs(PyObject *args)
     if (x == NULL) {
         return NULL;
     }
-    if (PyFloat_CheckExact(x)) {
+    if (PyFloat_Check(x)) {
         return PyFloat_FromDouble(fabs(PyFloat_AS_DOUBLE(x)));
     }
     return PyNumber_Absolute(x);
@@ -977,7 +1010,7 @@ static PyObject *intrinsic_math_ceil(PyObject *args)
     if (x == NULL) {
         return NULL;
     }
-    if (PyFloat_CheckExact(x)) {
+    if (PyFloat_Check(x)) {
         return PyLong_FromDouble(ceil(PyFloat_AS_DOUBLE(x)));
     }
     return Py_NewRef(x);
@@ -990,7 +1023,7 @@ static PyObject *intrinsic_math_floor(PyObject *args)
     if (x == NULL) {
         return NULL;
     }
-    if (PyFloat_CheckExact(x)) {
+    if (PyFloat_Check(x)) {
         return PyLong_FromDouble(floor(PyFloat_AS_DOUBLE(x)));
     }
     return Py_NewRef(x);
@@ -1005,7 +1038,7 @@ static PyObject *intrinsic_math_sign(PyObject *args)
         return NULL;
     }
     long sign;
-    if (PyFloat_CheckExact(x)) {
+    if (PyFloat_Check(x)) {
         double number = PyFloat_AS_DOUBLE(x);
         sign = (number < 0.) ? -1 : ((number == 0.) ? 0 : 1);
     } else {
@@ -1169,6 +1202,9 @@ static PyObject *intrinsic_object_get(PyObject *args)
         return NULL;
     }
     PyObject *value;
+    // dict_get_ref reads the shared dict storage, matching the reference's object.get(key) - the
+    // inherited dict.get - for dict subclasses too (PyObject_GetItem would call __getitem__,
+    // which e.g. triggers defaultdict.__missing__)
     int found = dict_get_ref(object, key, &value);
     if (found < 0) {
         return NULL;
@@ -1189,7 +1225,7 @@ static PyObject *intrinsic_object_set(PyObject *args)
         return NULL;
     }
     PyObject *value = (PyList_GET_SIZE(args) > 2) ? PyList_GET_ITEM(args, 2) : Py_None;
-    if (PyDict_SetItem(object, key, value) < 0) {
+    if (obj_setitem(object, key, value) < 0) {
         return NULL;
     }
     return Py_NewRef(value);
@@ -1207,7 +1243,7 @@ static PyObject *intrinsic_object_has(PyObject *args)
     if (key == NULL || intrinsic_count_check(args, 2, Py_False) < 0) {
         return NULL;
     }
-    int has_key = PyDict_Contains(object, key);
+    int has_key = obj_contains(object, key);
     if (has_key < 0) {
         return NULL;
     }
@@ -1222,7 +1258,8 @@ static PyObject *intrinsic_object_keys(PyObject *args)
     if (object == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
         return NULL;
     }
-    return PyDict_Keys(object);
+    // Call keys() for dict subclasses (e.g. OrderedDict iteration order can differ from the dict's)
+    return PyDict_CheckExact(object) ? PyDict_Keys(object) : PyMapping_Keys(object);
 }
 
 
@@ -1237,11 +1274,11 @@ static PyObject *intrinsic_object_delete(PyObject *args)
     if (key == NULL || intrinsic_count_check(args, 2, NULL) < 0) {
         return NULL;
     }
-    int has_key = PyDict_Contains(object, key);
+    int has_key = obj_contains(object, key);
     if (has_key < 0) {
         return NULL;
     }
-    if (has_key && PyDict_DelItem(object, key) < 0) {
+    if (has_key && obj_delitem(object, key) < 0) {
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1255,7 +1292,8 @@ static PyObject *intrinsic_object_copy(PyObject *args)
     if (object == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
         return NULL;
     }
-    return PyDict_Copy(object);
+    // Call dict(object) for dict subclasses, exactly like the reference implementation
+    return PyDict_CheckExact(object) ? PyDict_Copy(object) : PyObject_CallOneArg((PyObject *)&PyDict_Type, object);
 }
 
 
@@ -1340,7 +1378,7 @@ static PyObject *intrinsic_string_from_char_code(PyObject *args)
     for (Py_ssize_t ix = 0; ix < nargs; ix++) {
         PyObject *code = PyList_GET_ITEM(args, ix);
         double number;
-        if (PyFloat_CheckExact(code)) {
+        if (PyFloat_Check(code)) {
             number = PyFloat_AS_DOUBLE(code);
             // The reference's int(code) conversion raises for NaN and infinity (of either sign)
             // before the integral and sign checks
@@ -1356,7 +1394,7 @@ static PyObject *intrinsic_string_from_char_code(PyObject *args)
                 intrinsic_args_error("charCodes", code, NULL);
                 goto done;
             }
-        } else if (PyLong_CheckExact(code)) {
+        } else if (PyLong_Check(code) && !PyBool_Check(code)) {
             int overflow = 0;
             long long code_ll = PyLong_AsLongLongAndOverflow(code, &overflow);
             if (code_ll == -1 && !overflow && PyErr_Occurred()) {
