@@ -7,14 +7,13 @@ The BareScript runtime
 
 import datetime
 import functools
+import json
 import math
 import sys
 
 from .include_source import SYSTEM_INCLUDES
 from .library import EXPRESSION_FUNCTIONS, INTRINSICS, SCRIPT_FUNCTIONS
-from .lint import lint_script
 from .options import url_file_relative
-from .parser import parse_script
 from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
 
 
@@ -168,8 +167,12 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
                 if include_text is None:
                     raise BareScriptRuntimeError(script, statement, f'Include of "{include_url}" failed')
 
-                # Parse the include script
-                include_script = parse_script(include_text, 1, include_url)
+                # Parse the include script. A system include starting with "{" is the
+                # parser-compiled JSON script model (all system includes are embedded pre-compiled).
+                if system_include and include_text.startswith('{'):
+                    include_script = json.loads(include_text)
+                else:
+                    include_script = barescript_parse_script(include_text, 1, include_url)
                 if system_include:
                     include_script['system'] = True
 
@@ -183,7 +186,7 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
 
                 # Run the bare-script linter?
                 if log_fn is not None and options.get('debug'):
-                    warnings = lint_script(include_script, globals_)
+                    warnings = barescript_lint_script(include_script, globals_)
                     if warnings:
                         warning_prefix = f'BareScript: Include "{include_url}" static analysis...'
                         log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
@@ -194,6 +197,119 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
         ix_statement += 1
 
     return None
+
+
+# The barescriptParser.bare include library script globals (lazily initialized)
+_PARSER_GLOBALS = None
+
+
+def _parser_globals_init():
+    # Execute the barescriptParser.bare include library script, if necessary
+    # pylint: disable-next=global-statement
+    global _PARSER_GLOBALS
+    if _PARSER_GLOBALS is None:
+        _PARSER_GLOBALS = {}
+        execute_script(
+            {'statements': [{'include': {'includes': [{'url': 'barescriptParser.bare', 'system': True}]}}]},
+            {'globals': _PARSER_GLOBALS}
+        )
+
+
+def _normalize_statements(statements):
+    # Convert statement line numbers/counts to int. The interpreted parser runs under the
+    # BareScript runtime, whose arithmetic yields JS-parity floats.
+    for statement in statements:
+        statement_value = statement[next(iter(statement))]
+        statement_value['lineNumber'] = int(statement_value['lineNumber'])
+        line_count = statement_value.get('lineCount')
+        if line_count is not None:
+            statement_value['lineCount'] = int(line_count)
+        function_statements = statement_value.get('statements')
+        if function_statements is not None:
+            _normalize_statements(function_statements)
+
+
+def barescript_parse_script(script_text, start_line_number=1, script_name=None):
+    """
+    Parse a BareScript script
+
+    :param script_text: The `script text <https://craigahobbs.github.io/bare-script/language/>`__ (str or list of str)
+    :param start_line_number: The script's starting line number
+    :type start_line_number: int, optional
+    :param script_name: The script name
+    :type script_name: str or None, optional
+    :return: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`__
+    :rtype: dict
+    :raises BareScriptParserError: A parsing error occurred
+    """
+
+    _parser_globals_init()
+    result = _PARSER_GLOBALS['barescriptParseScriptEx']([script_text, start_line_number, script_name], {'globals': _PARSER_GLOBALS})
+    if 'error' in result:
+        error = result['error']
+        line_number = int(error['lineNumber']) if error['lineNumber'] is not None else None
+        raise BareScriptParserError(error['error'], error['line'], int(error['columnNumber']), line_number, error['scriptName'])
+    script = result['result']
+    _normalize_statements(script['statements'])
+    return script
+
+
+def barescript_parse_expression(expr_text, line_number=None, script_name=None, array_literals=False):
+    """
+    Parse a BareScript expression
+
+    :param expr_text: The `expression text <https://craigahobbs.github.io/bare-script/language/#expressions>`__
+    :type expr_text: str
+    :param line_number: The script line number
+    :type line_number: int or None, optional
+    :param script_name: The script name
+    :type script_name: str or None, optional
+    :param array_literals: If True, allow parsing of array literals
+    :type array_literals: bool, optional
+    :return: The `expression model <https://craigahobbs.github.io/bare-script/model/#var.vName='Expression'>`__
+    :rtype: dict
+    :raises BareScriptParserError: A parsing error occurred
+    """
+
+    _parser_globals_init()
+    result = _PARSER_GLOBALS['barescriptParseExpressionEx'](
+        [expr_text, line_number, script_name, array_literals], {'globals': _PARSER_GLOBALS})
+    if 'error' in result:
+        error = result['error']
+        error_line_number = int(error['lineNumber']) if error['lineNumber'] is not None else None
+        raise BareScriptParserError(error['error'], error['line'], int(error['columnNumber']), error_line_number, error['scriptName'])
+    return result['result']
+
+
+# The barescriptLint.bare include library script globals (lazily initialized)
+_LINT_GLOBALS = None
+
+
+def barescript_lint_script(script, globals_=None):
+    """
+    Lint a BareScript model
+
+    :param script: The `BareScript model <./model/#var.vName='BareScript'>`__
+    :type script: dict
+    :param globals_: The script global variables
+    :type globals_: dict or None, optional
+    :return: The list of lint warnings
+    :rtype: list[str]
+    """
+
+    # Execute the barescriptLint.bare include library script, if necessary
+    # pylint: disable-next=global-statement
+    global _LINT_GLOBALS
+    if _LINT_GLOBALS is None:
+        _LINT_GLOBALS = {}
+        execute_script(
+            {'statements': [{'include': {'includes': [{'url': 'barescriptLint.bare', 'system': True}]}}]},
+            {'globals': _LINT_GLOBALS}
+        )
+
+    # Call the barescriptLint.bare lint function. Async function detection is not possible in
+    # Python (all functions execute synchronously), so the async lint checks are skipped.
+    return _LINT_GLOBALS['barescriptLintScript']([script, globals_, None], {'globals': _LINT_GLOBALS})
 
 
 # Helper function to record statement coverage
@@ -702,3 +818,80 @@ class BareScriptRuntimeError(Exception):
         else:
             message_script = message
         super().__init__(message_script)
+
+
+class BareScriptParserError(Exception):
+    """
+    A BareScript parser exception
+
+    .. attribute:: error
+       :type: str
+
+       The error description
+
+    .. attribute:: line
+       :type: str
+
+       The line text
+
+    .. attribute:: column_number
+       :type: int
+
+       The error column number
+
+    .. attribute:: line_number
+       :type: int or None
+
+       The error line number
+
+    .. attribute:: script_name
+       :type: str or None
+
+       The script name
+
+    :param error: The error description
+    :type error: str
+    :param line: The line text
+    :type line: str
+    :param column_number: The error column number
+    :type column_number: int
+    :param line_number: The error line number
+    :type line_number: int or None
+    :param script_name: The script name
+    :type script_name: str or None
+    """
+
+    def __init__(self, error, line, column_number, line_number, script_name):
+        # Parser error constants
+        line_length_max = 120
+        line_suffix = ' ...'
+        line_prefix = '... '
+
+        # Trim the error line, if necessary
+        line_error = line
+        line_column = column_number
+        if len(line) > line_length_max:
+            line_left = column_number - 1 - line_length_max // 2
+            line_right = line_left + line_length_max
+            if line_left < 0:
+                line_error = line[:line_length_max] + line_suffix
+            elif line_right > len(line):
+                line_error = line_prefix + line[-line_length_max:]
+                line_column -= line_left - len(line_prefix) - (line_right - len(line))
+            else:
+                line_error = line_prefix + line[int(line_left):int(line_right)] + line_suffix
+                line_column -= line_left - len(line_prefix)
+
+        # Format the message
+        error_prefix = f'{script_name or ""}:{line_number}: ' if line_number else ''
+        message = f'''\
+{error_prefix}{error}
+{line_error}
+{' ' * (line_column - 1)}^
+'''
+        super().__init__(message)
+        self.error = error
+        self.line = line
+        self.column_number = column_number
+        self.line_number = line_number
+        self.script_name = script_name

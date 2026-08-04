@@ -7,13 +7,6 @@ bare-script package
 
 import os
 
-from .lint import \
-    lint_script
-
-from .model import \
-    validate_expression, \
-    validate_script
-
 from .options import \
     fetch_http, \
     fetch_read_only, \
@@ -21,13 +14,12 @@ from .options import \
     log_stdout, \
     url_file_relative
 
-from .parser import \
-    BareScriptParserError, \
-    parse_expression, \
-    parse_script
-
 from .runtime import \
-    BareScriptRuntimeError
+    BareScriptParserError, \
+    BareScriptRuntimeError, \
+    barescript_lint_script, \
+    barescript_parse_expression, \
+    barescript_parse_script
 
 if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
     try:

@@ -6,6 +6,7 @@
 import unittest
 
 from bare_script.include import SchemaParserError, SchemaValidationError, \
+    barescript_type_model, barescript_validate_expression, barescript_validate_script, \
     data_aggregate, data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, data_parse_csv, \
     data_sort, data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, element_model_to_string, \
     element_model_validate, include_set_log_fn, markdown_elements, markdown_escape, markdown_header_id, markdown_paragraph_text, \
@@ -36,6 +37,37 @@ class TestInclude(unittest.TestCase):
             ])
         finally:
             include_set_log_fn(None)
+
+
+    def test_barescript_type_model(self):
+        type_model = barescript_type_model()
+        self.assertIn('BareScript', type_model)
+        self.assertIn('ScriptStatement', type_model)
+        self.assertIn('Expression', type_model)
+
+
+    def test_barescript_validate_expression(self):
+        expr = {'number': 1}
+        self.assertDictEqual(barescript_validate_expression(expr), expr)
+
+
+    def test_barescript_validate_expression_error(self):
+        with self.assertRaises(SchemaValidationError) as cm_exc:
+            barescript_validate_expression({})
+        self.assertEqual(str(cm_exc.exception), 'Invalid value {} (type "object"), expected type "Expression"')
+        self.assertIsNone(cm_exc.exception.member_fqn)
+
+
+    def test_barescript_validate_script(self):
+        script = {'statements': []}
+        self.assertDictEqual(barescript_validate_script(script), script)
+
+
+    def test_barescript_validate_script_error(self):
+        with self.assertRaises(SchemaValidationError) as cm_exc:
+            barescript_validate_script({})
+        self.assertEqual(str(cm_exc.exception), 'Required member "statements" missing')
+        self.assertIsNone(cm_exc.exception.member_fqn)
 
 
     def test_data_aggregate(self):

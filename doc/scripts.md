@@ -1,10 +1,10 @@
 # Scripts
 
 
-## parse_script
+## barescript_parse_script
 
 ~~~ {eval-rst}
-.. autofunction:: bare_script.parse_script
+.. autofunction:: bare_script.barescript_parse_script
 ~~~
 
 
@@ -15,15 +15,8 @@
 ~~~
 
 
-## validate_script
+## barescript_lint_script
 
 ~~~ {eval-rst}
-.. autofunction:: bare_script.validate_script
-~~~
-
-
-## lint_script
-
-~~~ {eval-rst}
-.. autofunction:: bare_script.lint_script
+.. autofunction:: bare_script.barescript_lint_script
 ~~~

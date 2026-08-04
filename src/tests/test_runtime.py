@@ -9,8 +9,9 @@ import math
 import os
 import unittest
 
-from bare_script import BareScriptParserError, BareScriptRuntimeError, evaluate_expression, execute_script, \
-    validate_expression, validate_script
+from bare_script import BareScriptParserError, BareScriptRuntimeError, barescript_lint_script, barescript_parse_expression, \
+    barescript_parse_script, evaluate_expression, execute_script
+from bare_script.include import barescript_validate_expression, barescript_validate_script
 from bare_script.include_source import SYSTEM_INCLUDES
 from bare_script.runtime import SYSTEM_GLOBAL_COVERAGE_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import ValueArgsError
@@ -19,7 +20,7 @@ from bare_script.value import ValueArgsError
 class TestExecuteScript(unittest.TestCase):
 
     def test_execute_script(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'name': 'a', 'expr': {'number': 5}}},
                 {'expr': {'name': 'b', 'expr': {'number': 7}}},
@@ -32,7 +33,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_global_override(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {
                     'expr': {'function': {'name': 'systemFetch', 'args': [{'string': 'the-url'}]}}
@@ -62,7 +63,7 @@ class TestExecuteScript(unittest.TestCase):
         object_value = collections.OrderedDict(a=1)
         object_default = collections.defaultdict(list, a=1)
         array_value = ListSubclass([1, 2, 3])
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'expr': {'function': {'name': 'objectSet', 'args': [
                     {'variable': 'vObject'},
@@ -111,7 +112,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_coverage(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
                 'function main():',
@@ -343,7 +344,7 @@ class TestExecuteScript(unittest.TestCase):
             self.assertEqual(url, 'util.bare')
             return 'b = 2'
 
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
                 'include <sysutil.bare>',
@@ -404,7 +405,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_coverage_disabled(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
                 'include <sysutil.bare>',
@@ -430,7 +431,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_coverage_non_object(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
                 'a = 5',
@@ -449,7 +450,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_coverage_no_name(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptLines': [
                 'a = 5',
                 'b = 7',
@@ -467,7 +468,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_execute_script_coverage_no_linenos(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptName': 'test.bare',
             'scriptLines': [
                 'a = 5',
@@ -486,7 +487,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -509,7 +510,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_missing_arg(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -531,7 +532,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_last_arg_array(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -554,7 +555,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_last_arg_array_missing(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -577,7 +578,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_last_arg_array_missing_intermediate(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -602,7 +603,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_async(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -626,7 +627,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_async_missing_arg(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -649,7 +650,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_async_last_arg_array(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -673,7 +674,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_async_last_arg_array_missing(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -697,7 +698,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_error(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {
                     'expr': {'function': {'name': 'errorFunction'}}
@@ -713,7 +714,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_argument_error(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {
                     'expr': {'function': {'name': 'errorFunction'}}
@@ -729,7 +730,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_error_log(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {
                     'expr': {'function': {'name': 'errorFunction'}}
@@ -750,7 +751,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_error_log_no_debug(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {
                     'expr': {'function': {'name': 'errorFunction'}}
@@ -772,7 +773,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_function_native_call(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -796,7 +797,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jump(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'name': 'a', 'expr': {'number': 5}}},
                 {'jump': {'label': 'lab2'}},
@@ -814,7 +815,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jumpif(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'name': 'n', 'expr': {'number': 10}}},
                 {'expr': {'name': 'i', 'expr': {'number': 0}}},
@@ -841,7 +842,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jumpif_non_boolean(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'jump': {
                     'label': 'label',
@@ -856,7 +857,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jump_error_unknown_label(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'jump': {'label': 'unknownLabel'}}
             ]
@@ -867,7 +868,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jump_error_unknown_label_script_name(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'scriptName': 'test.bare',
             'statements': [
                 {'jump': {'label': 'unknownLabel', 'lineNumber': 1}}
@@ -879,7 +880,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jump_label_indexes_cache(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -910,7 +911,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_jump_prototype_label_names(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'name': 'a', 'expr': {'number': 1}}},
                 {'jump': {'label': 'skip'}},
@@ -938,7 +939,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_return(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {'expr': {'number': 5}}}
             ]
@@ -947,7 +948,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_return_blank(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {}}
             ]
@@ -956,7 +957,7 @@ class TestExecuteScript(unittest.TestCase):
 
 
     def test_include(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -977,7 +978,7 @@ a = 1
 
 
     def test_include_twice(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}},
                 {'include': {'includes': [{'url': 'test.bare'}]}}
@@ -996,7 +997,7 @@ a = 1
 
 
     def test_include_nested(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}},
                 {'include': {'includes': [{'url': 'test2.bare'}]}},
@@ -1028,7 +1029,7 @@ include 'test3.bare'
 
 
     def test_include_no_fetch_fn(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1041,7 +1042,7 @@ include 'test3.bare'
 
 
     def test_include_system(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
             ]
@@ -1058,7 +1059,7 @@ include 'test3.bare'
 
 
     def test_include_system_and_local_same_name(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}, {'url': 'test.bare'}]}}
             ]
@@ -1080,7 +1081,7 @@ include 'test3.bare'
 
 
     def test_include_local_and_system_same_name(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}},
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
@@ -1103,7 +1104,7 @@ include 'test3.bare'
 
 
     def test_include_system_unknown(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
             ]
@@ -1116,7 +1117,7 @@ include 'test3.bare'
 
 
     def test_include_system_url_fn(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}]}}
             ]
@@ -1133,7 +1134,7 @@ include 'test3.bare'
 
 
     def test_include_multiple(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare', 'system': True}, {'url': 'test2.bare'}]}}
             ]
@@ -1155,7 +1156,7 @@ include 'test3.bare'
 
 
     def test_include_subdir(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'lib/test.bare'}]}}
             ]
@@ -1176,7 +1177,7 @@ a = 1
 
 
     def test_include_absolute(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1197,7 +1198,7 @@ a = 1
 
 
     def test_include_lint(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1224,7 +1225,7 @@ endfunction
 
 
     def test_include_lint_multiple(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1252,7 +1253,7 @@ endfunction
 
 
     def test_include_lint_ok(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1276,8 +1277,117 @@ endfunction
         self.assertListEqual(logs, ['empty'])
 
 
+    def test_barescript_lint_script(self):
+        script = barescript_validate_script({'statements': [], 'scriptName': 'test.bare', 'scriptLines': []})
+        self.assertListEqual(barescript_lint_script(script), ['test.bare:1: Empty script'])
+
+        # Call again (the lint globals are already initialized)
+        self.assertListEqual(barescript_lint_script(script), ['test.bare:1: Empty script'])
+
+
+    def test_barescript_lint_script_globals(self):
+        script = barescript_validate_script({
+            'statements': [
+                {'function': {'name': 'testFn', 'statements': [
+                    {'return': {'expr': {'function': {'name': 'unknownFn'}}}}
+                ]}}
+            ]
+        })
+        self.assertListEqual(barescript_lint_script(script, {}), [
+            ':1: Unknown global variable "unknownFn"'
+        ])
+
+
+    def test_barescript_parse_script(self):
+        script = barescript_parse_script('a = 1 + \\\n    2\nfunction foo():\n    return a\nendfunction', 1, 'test.bare')
+        self.assertDictEqual(script, {
+            'statements': [
+                {'expr': {
+                    'name': 'a',
+                    'expr': {'binary': {'op': '+', 'left': {'number': 1}, 'right': {'number': 2}}},
+                    'lineNumber': 1,
+                    'lineCount': 2
+                }},
+                {'function': {'name': 'foo', 'statements': [{'return': {'lineNumber': 4, 'expr': {'variable': 'a'}}}], 'lineNumber': 3}}
+            ],
+            'scriptLines': ['a = 1 + \\', '    2', 'function foo():', '    return a', 'endfunction'],
+            'scriptName': 'test.bare'
+        })
+
+        # Call again (the parser globals are already initialized)
+        self.assertDictEqual(barescript_parse_script('b = 2'), {
+            'statements': [{'expr': {'name': 'b', 'expr': {'number': 2}, 'lineNumber': 1}}],
+            'scriptLines': ['b = 2']
+        })
+
+
+    def test_barescript_parse_script_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_script('a = ', 1, 'test.bare')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.line, 'a = ')
+        self.assertEqual(cm_exc.exception.column_number, 4)
+        self.assertEqual(cm_exc.exception.line_number, 1)
+        self.assertEqual(cm_exc.exception.script_name, 'test.bare')
+        self.assertEqual(str(cm_exc.exception), 'test.bare:1: Syntax error\na = \n   ^\n')
+
+        # No script name
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_script('a = ')
+        self.assertEqual(str(cm_exc.exception), ':1: Syntax error\na = \n   ^\n')
+
+
+    def test_barescript_parse_script_error_long_line(self):
+        # Long line, error on the left
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_script(f'a = * {"x" * 130}', 1, 'test.bare')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.column_number, 5)
+
+        # Long line, error on the right
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_script(f'a = 1 + {"b * " * 60}', 1, 'test.bare')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.column_number, 248)
+
+        # Long line, error in the middle
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_script(f'a = foo({"1, " * 45}* {"1, " * 45}2)', 1, 'test.bare')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.column_number, 143)
+
+
+    def test_barescript_parse_expression(self):
+        self.assertDictEqual(barescript_parse_expression('1 + 2 * 3'), {
+            'binary': {'op': '+', 'left': {'number': 1}, 'right': {'binary': {'op': '*', 'left': {'number': 2}, 'right': {'number': 3}}}}
+        })
+
+        # Array literals
+        self.assertDictEqual(barescript_parse_expression('[1, 2]', None, None, True), {
+            'function': {'name': 'arrayNew', 'args': [{'number': 1}, {'number': 2}]}
+        })
+
+
+    def test_barescript_parse_expression_error(self):
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_expression('foo bar', 3, 'expr.bare')
+        self.assertEqual(cm_exc.exception.error, 'Syntax error')
+        self.assertEqual(cm_exc.exception.line, 'foo bar')
+        self.assertEqual(cm_exc.exception.column_number, 4)
+        self.assertEqual(cm_exc.exception.line_number, 3)
+        self.assertEqual(cm_exc.exception.script_name, 'expr.bare')
+        self.assertEqual(str(cm_exc.exception), 'expr.bare:3: Syntax error\nfoo bar\n   ^\n')
+
+        # No line number
+        with self.assertRaises(BareScriptParserError) as cm_exc:
+            barescript_parse_expression('foo bar')
+        self.assertIsNone(cm_exc.exception.line_number)
+        self.assertIsNone(cm_exc.exception.script_name)
+        self.assertEqual(str(cm_exc.exception), 'Syntax error\nfoo bar\n   ^\n')
+
+
     def test_include_fetch_fn_error(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1295,7 +1405,7 @@ endfunction
 
 
     def test_include_parser_error(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'include': {'includes': [{'url': 'test.bare'}]}}
             ]
@@ -1317,7 +1427,7 @@ foo bar
 
 
     def test_error_max_statements(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {
                     'function': {
@@ -1341,7 +1451,7 @@ foo bar
 class TestEvaluateExpression(unittest.TestCase):
 
     def test_evaluate_expression(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'binary': {
                 'op': '+',
                 'left': {'number': 7},
@@ -1363,51 +1473,51 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_no_globals(self):
-        expr = validate_expression({'string': 'abc'})
+        expr = barescript_validate_expression({'string': 'abc'})
         options = {}
         self.assertEqual(evaluate_expression(expr, options), 'abc')
 
 
     def test_string(self):
-        expr = validate_expression({'string': 'abc'})
+        expr = barescript_validate_expression({'string': 'abc'})
         self.assertEqual(evaluate_expression(expr), 'abc')
 
 
     def test_variable(self):
-        expr = validate_expression({'variable': 'varName'})
+        expr = barescript_validate_expression({'variable': 'varName'})
         options = {'globals': {'varName': 4}}
         self.assertEqual(evaluate_expression(expr, options), 4)
 
 
     def test_variable_local(self):
-        expr = validate_expression({'variable': 'varName'})
+        expr = barescript_validate_expression({'variable': 'varName'})
         locals_ = {'varName': 4}
         self.assertEqual(evaluate_expression(expr, None, locals_), 4)
         self.assertDictEqual(locals_, {'varName': 4})
 
 
     def test_variable_null_local_non_null_global(self):
-        expr = validate_expression({'variable': 'varName'})
+        expr = barescript_validate_expression({'variable': 'varName'})
         options = {'globals': {'varName': 4}}
         locals_ = {'varName': None}
         self.assertEqual(evaluate_expression(expr, options, locals_), None)
 
 
     def test_variable_unknown(self):
-        expr = validate_expression({'variable': 'varName'})
+        expr = barescript_validate_expression({'variable': 'varName'})
         self.assertEqual(evaluate_expression(expr), None)
 
 
     def test_variable_inherited_property_name(self):
         # Inherited property names must not resolve as global variables
         options = {'globals': {}}
-        self.assertIsNone(evaluate_expression(validate_expression({'variable': '__proto__'}), options))
-        self.assertIsNone(evaluate_expression(validate_expression({'variable': 'constructor'}), options))
+        self.assertIsNone(evaluate_expression(barescript_validate_expression({'variable': '__proto__'}), options))
+        self.assertIsNone(evaluate_expression(barescript_validate_expression({'variable': 'constructor'}), options))
 
 
     def test_variable_proto(self):
         # Assigning a "__proto__" variable sets an own global, not the object prototype
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'name': '__proto__', 'expr': {'function': {'name': 'objectNew', 'args': [{'string': 'x'}, {'number': 99}]}}}},
                 {'return': {'expr': {'function': {'name': 'arrayNew', 'args': [
@@ -1424,7 +1534,7 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_variable_function_local_proto(self):
         # A "__proto__" function argument is an own local, not the prototype; an unassigned local
         # (an inherited property name) does not resolve
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'function': {
                     'name': 'testFn',
@@ -1443,24 +1553,24 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_variable_literal_null(self):
-        expr = validate_expression({'variable': 'null'})
+        expr = barescript_validate_expression({'variable': 'null'})
         self.assertEqual(evaluate_expression(expr), None)
 
 
     def test_variable_literal_true(self):
-        expr = validate_expression({'variable': 'true'})
+        expr = barescript_validate_expression({'variable': 'true'})
         self.assertEqual(evaluate_expression(expr), True)
 
 
     def test_variable_literal_false(self):
-        expr = validate_expression({'variable': 'false'})
+        expr = barescript_validate_expression({'variable': 'false'})
         self.assertEqual(evaluate_expression(expr), False)
 
 
     def test_variable_literal_binary_operands(self):
         # Keyword literals as binary expression operands
         for keyword in ('null', 'false', 'true'):
-            expr = validate_expression({
+            expr = barescript_validate_expression({
                 'binary': {
                     'op': '==',
                     'left': {'variable': keyword},
@@ -1473,7 +1583,7 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_variable_null_binary_operands(self):
         # Null-valued globals as binary expression operands and function arguments
         options = {'globals': {'varNull': None, 'myFunc': lambda args, unusedOptions: args[0]}}
-        expr_binary = validate_expression({
+        expr_binary = barescript_validate_expression({
             'binary': {
                 'op': '==',
                 'left': {'variable': 'varNull'},
@@ -1481,14 +1591,14 @@ class TestEvaluateExpression(unittest.TestCase):
             }
         })
         self.assertEqual(evaluate_expression(expr_binary, options), True)
-        expr_function = validate_expression({
+        expr_function = barescript_validate_expression({
             'function': {'name': 'myFunc', 'args': [{'variable': 'varNull'}]}
         })
         self.assertEqual(evaluate_expression(expr_function, options), None)
 
 
     def test_function(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'myFunc',
                 'args': [{'number': 1}, {'number': 2}]
@@ -1503,7 +1613,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_no_return(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'myFunc'
             }
@@ -1521,7 +1631,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_if(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'if',
                 'args': [
@@ -1553,7 +1663,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_if_non_boolean(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'if',
                 'args': [
@@ -1567,7 +1677,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_if_no_value_expression(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'if'
             }
@@ -1576,7 +1686,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_if_no_true_expression(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'if',
                 'args': [
@@ -1589,7 +1699,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_if_no_false_expression(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'if',
                 'args': [
@@ -1603,7 +1713,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_builtin(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'abs',
                 'args': [
@@ -1616,7 +1726,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_no_builtins(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'abs',
                 'args': [
@@ -1631,7 +1741,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_global(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnName',
                 'args': [
@@ -1649,7 +1759,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_local(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnLocal',
                 'args': [
@@ -1668,7 +1778,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_local_null(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnLocal',
                 'args': [
@@ -1684,7 +1794,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_non_function(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnLocal',
                 'args': [
@@ -1697,7 +1807,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_non_function_log_fn(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnLocal',
                 'args': [
@@ -1717,7 +1827,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
     def test_function_inherited_property_name(self):
         # Inherited property names must not resolve as callable global functions
-        expr = validate_expression({'function': {'name': 'constructor'}})
+        expr = barescript_validate_expression({'function': {'name': 'constructor'}})
         options = {'globals': {}}
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             evaluate_expression(expr, options)
@@ -1725,7 +1835,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_unknown(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnUnknown',
                 'args': [
@@ -1741,7 +1851,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_unknown_no_globals(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'fnUnknown',
                 'args': [
@@ -1757,7 +1867,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
     def test_error_max_statements_library_error(self):
         # Library function argument errors must not disturb the statement counter
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'expr': {'name': 'i', 'expr': {'number': 0}}},
                 {'label': {'name': 'loop'}},
@@ -1775,7 +1885,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
     def test_function_library_error_message(self):
         # Library function error messages must match the reference implementation exactly
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {'expr': {'function': {'name': 'stringFromCharCode', 'args': [
                     {'binary': {'op': '*', 'left': {'number': 1e308}, 'right': {'number': 10}}}
@@ -1792,7 +1902,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
     def test_function_args_model_mutation(self):
         # Mutating a function model's argument names between calls rebinds like the reference
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'function': {
                     'name': 'fn',
@@ -1814,7 +1924,7 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_function_library_override(self):
         # A library function name overridden in globals must be called instead of the library
         # implementation (guards the C runtime's library intrinsics)
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'return': {
                     'expr': {'function': {'name': 'mathSqrt', 'args': [{'number': 16}]}}
@@ -1827,7 +1937,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_script_function_no_globals(self):
-        script = validate_script({
+        script = barescript_validate_script({
             'statements': [
                 {'function': {
                     'name': 'fn',
@@ -1839,7 +1949,7 @@ class TestEvaluateExpression(unittest.TestCase):
         })
         globals_ = {}
         execute_script(script, {'globals': globals_})
-        expr = validate_expression({'function': {'name': 'fn', 'args': []}})
+        expr = barescript_validate_expression({'function': {'name': 'fn', 'args': []}})
 
         # Options with globals - the script function call succeeds
         self.assertEqual(evaluate_expression(expr, {'globals': globals_}), 5)
@@ -1852,7 +1962,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_function_runtime_error(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'function': {
                 'name': 'test'
             }
@@ -1872,7 +1982,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_binary_logical_and(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'binary': {
                 'op': '&&',
                 'left': {'variable': 'leftValue'},
@@ -1900,7 +2010,7 @@ class TestEvaluateExpression(unittest.TestCase):
 
 
     def test_binary_logical_or(self):
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'binary': {
                 'op': '||',
                 'left': {'variable': 'leftValue'},
@@ -1939,55 +2049,99 @@ class TestEvaluateExpression(unittest.TestCase):
         }
 
         # number + number
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 12)
 
         # string + string
-        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'function': {'name': 'testString'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'string': 'foo'},
+            'right': {'function': {'name': 'testString'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 'fooabc')
 
         # string + <non-string>
-        expr = validate_expression({'binary': {'op': '+', 'left': {'string': 'foo'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'string': 'foo'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 'foo2')
 
         # <non-string> + string
-        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testNumber'}}, 'right': {'string': 'foo'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'string': 'foo'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), '2foo')
 
         # datetime + number
-        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testDate'}}, 'right': {'number': 86400000}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'function': {'name': 'testDate'}},
+            'right': {'number': 86400000}
+        }})
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 7))
 
         # datetime (date) + number
-        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'dt3'}, 'right': {'number': 86400000}}})
+        expr = barescript_validate_expression({'binary': {'op': '+', 'left': {'variable': 'dt3'}, 'right': {'number': 86400000}}})
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 7))
 
         # number + datetime
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'function': {'name': 'testDate'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'number': -86400000},
+            'right': {'function': {'name': 'testDate'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 5))
 
         # number + datetime (date)
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'variable': 'dt3'}}})
+        expr = barescript_validate_expression({'binary': {'op': '+', 'left': {'number': -86400000}, 'right': {'variable': 'dt3'}}})
         self.assertEqual(evaluate_expression(expr, options), datetime.datetime(2024, 1, 5))
 
         # Invalid - bool + number
-        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number + bool
-        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - datetime + bool
-        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testDate'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'function': {'name': 'testDate'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - bool + datetime
-        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testDate'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testDate'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '+', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '+',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2002,31 +2156,51 @@ class TestEvaluateExpression(unittest.TestCase):
         }
 
         # number - number
-        expr = validate_expression({'binary': {'op': '-', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '-',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 8)
 
         # datetime - datetime
-        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt2'}, 'right': {'function': {'name': 'testDate'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '-',
+            'left': {'variable': 'dt2'},
+            'right': {'function': {'name': 'testDate'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 86400000)
 
         # datetime (date) - datetime
-        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt2'}, 'right': {'variable': 'dt3'}}})
+        expr = barescript_validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt2'}, 'right': {'variable': 'dt3'}}})
         self.assertEqual(evaluate_expression(expr, options), 86400000)
 
         # datetime - datetime (date)
-        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt3'}, 'right': {'variable': 'dt2'}}})
+        expr = barescript_validate_expression({'binary': {'op': '-', 'left': {'variable': 'dt3'}, 'right': {'variable': 'dt2'}}})
         self.assertEqual(evaluate_expression(expr, options), -86400000)
 
         # Invalid - bool - number
-        expr = validate_expression({'binary': {'op': '-', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '-',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number - bool
-        expr = validate_expression({'binary': {'op': '-', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '-',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '-', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '-',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2034,19 +2208,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number * number
-        expr = validate_expression({'binary': {'op': '*', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '*',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 20)
 
         # Invalid - bool * number
-        expr = validate_expression({'binary': {'op': '*', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '*',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number * bool
-        expr = validate_expression({'binary': {'op': '*', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '*',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '*', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '*',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2054,71 +2244,111 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number / number
-        expr = validate_expression({'binary': {'op': '/', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '/',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 5)
 
         # Invalid - bool / number
-        expr = validate_expression({'binary': {'op': '/', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '/',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number / bool
-        expr = validate_expression({'binary': {'op': '/', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '/',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '/', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '/',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_binary_equality(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'binary': {'op': '==', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '==',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_binary_inequality(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'binary': {'op': '!=', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '!=',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), True)
 
 
     def test_binary_less_than_or_equal_to(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'binary': {'op': '<=', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<=',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_binary_less_than(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'binary': {'op': '<', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), False)
 
 
     def test_binary_greater_than_or_equal_to(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'binary': {'op': '>=', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>=',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), True)
 
 
     def test_binary_greater_than(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'binary': {'op': '>', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), True)
 
 
     def test_binary_comparison_non_number(self):
         # String compare exercises the value_compare fallthrough for all comparison operators
-        expr = validate_expression({'binary': {'op': '==', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        expr = barescript_validate_expression({'binary': {'op': '==', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), False)
-        expr = validate_expression({'binary': {'op': '!=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        expr = barescript_validate_expression({'binary': {'op': '!=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), True)
-        expr = validate_expression({'binary': {'op': '<=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        expr = barescript_validate_expression({'binary': {'op': '<=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), True)
-        expr = validate_expression({'binary': {'op': '<', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        expr = barescript_validate_expression({'binary': {'op': '<', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), True)
-        expr = validate_expression({'binary': {'op': '>=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        expr = barescript_validate_expression({'binary': {'op': '>=', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), False)
-        expr = validate_expression({'binary': {'op': '>', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
+        expr = barescript_validate_expression({'binary': {'op': '>', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), False)
 
 
@@ -2126,19 +2356,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number % number
-        expr = validate_expression({'binary': {'op': '%', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '%',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 0)
 
         # Invalid - bool % number
-        expr = validate_expression({'binary': {'op': '%', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '%',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - number % bool
-        expr = validate_expression({'binary': {'op': '%', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '%',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '%', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '%',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2146,19 +2392,35 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number ** number
-        expr = validate_expression({'binary': {'op': '**', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '**',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 100)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '**', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '**',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '**', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '**',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '**', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '**',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2176,14 +2438,14 @@ class TestEvaluateExpression(unittest.TestCase):
             ('+', 1e308, 1e308),
             ('-', -1e308, 1e308)
         ]:
-            expr = validate_expression({'binary': {'op': bin_op, 'left': {'number': left}, 'right': {'number': right}}})
+            expr = barescript_validate_expression({'binary': {'op': bin_op, 'left': {'number': left}, 'right': {'number': right}}})
             self.assertIsNone(evaluate_expression(expr), f'{left} {bin_op} {right}')
 
         # Datetime addition overflow
         options = {'globals': {'testDatetime': datetime.datetime(2024, 1, 1)}}
-        expr = validate_expression({'binary': {'op': '+', 'left': {'variable': 'testDatetime'}, 'right': {'number': 1e308}}})
+        expr = barescript_validate_expression({'binary': {'op': '+', 'left': {'variable': 'testDatetime'}, 'right': {'number': 1e308}}})
         self.assertIsNone(evaluate_expression(expr, options))
-        expr = validate_expression({'binary': {'op': '+', 'left': {'number': 1e308}, 'right': {'variable': 'testDatetime'}}})
+        expr = barescript_validate_expression({'binary': {'op': '+', 'left': {'number': 1e308}, 'right': {'variable': 'testDatetime'}}})
         self.assertIsNone(evaluate_expression(expr, options))
 
 
@@ -2191,35 +2453,67 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number & number
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'number': 10.},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 6.}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 6.}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '&', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'number': 10.5},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 2.5}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '&', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '&', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '&',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2227,35 +2521,67 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number | number
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 10)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'number': 10.},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 10)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 6.}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 6.}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 6)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '|', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'number': 10.5},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 2.5}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '|', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '|', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '|',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2263,35 +2589,67 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number ^ number
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 8)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'number': 10.},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 8)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 6.}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 6.}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 4)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '^', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'number': 10.5},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 2.5}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '^', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '^', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '^',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2299,35 +2657,67 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number << number
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 40)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'number': 10.},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 40)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 2.}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 8)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'number': 10.5},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 2.5}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '<<', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '<<',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2335,41 +2725,73 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number}}
 
         # number >> number
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'number': 10},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Left float
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10.}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'number': 10.},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 2)
 
         # Right float
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 1.}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 1.}
+        }})
         self.assertEqual(evaluate_expression(expr, options), 1)
 
         # Invalid - left non-integer
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'number': 10.5}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'number': 10.5},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right non-integer
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'number': 2.5}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'number': 2.5}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - left bool
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'variable': 'true'}, 'right': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'variable': 'true'},
+            'right': {'function': {'name': 'testNumber'}}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - right bool
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'true'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'binary': {'op': '>>', 'left': {'function': {'name': 'testNumber'}}, 'right': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'binary': {
+            'op': '>>',
+            'left': {'function': {'name': 'testNumber'}},
+            'right': {'variable': 'null'}
+        }})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_unary_not(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({'unary': {'op': '!', 'expr': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'unary': {'op': '!', 'expr': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), False)
 
 
@@ -2377,11 +2799,11 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number, 'testString': _test_string}}
 
         # - number
-        expr = validate_expression({'unary': {'op': '-', 'expr': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'unary': {'op': '-', 'expr': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), -2)
 
         # Invalid
-        expr = validate_expression({'unary': {'op': '-', 'expr': {'function': {'name': 'testString'}}}})
+        expr = barescript_validate_expression({'unary': {'op': '-', 'expr': {'function': {'name': 'testString'}}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
@@ -2389,29 +2811,29 @@ class TestEvaluateExpression(unittest.TestCase):
         options = {'globals': {'testNumber': _test_number, 'testString': _test_string}}
 
         # ~ number
-        expr = validate_expression({'unary': {'op': '~', 'expr': {'function': {'name': 'testNumber'}}}})
+        expr = barescript_validate_expression({'unary': {'op': '~', 'expr': {'function': {'name': 'testNumber'}}}})
         self.assertEqual(evaluate_expression(expr, options), -3)
 
         # Float
-        expr = validate_expression({'unary': {'op': '~', 'expr': {'number': 2.}}})
+        expr = barescript_validate_expression({'unary': {'op': '~', 'expr': {'number': 2.}}})
         self.assertEqual(evaluate_expression(expr, options), -3)
 
         # Invalid - non-integer
-        expr = validate_expression({'unary': {'op': '~', 'expr': {'number': 2.5}}})
+        expr = barescript_validate_expression({'unary': {'op': '~', 'expr': {'number': 2.5}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid - bool
-        expr = validate_expression({'unary': {'op': '~', 'expr': {'variable': 'true'}}})
+        expr = barescript_validate_expression({'unary': {'op': '~', 'expr': {'variable': 'true'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
         # Invalid
-        expr = validate_expression({'unary': {'op': '~', 'expr': {'variable': 'null'}}})
+        expr = barescript_validate_expression({'unary': {'op': '~', 'expr': {'variable': 'null'}}})
         self.assertEqual(evaluate_expression(expr, options), None)
 
 
     def test_group(self):
         options = {'globals': {'testNumber': _test_number}}
-        expr = validate_expression({
+        expr = barescript_validate_expression({
             'group': {
                 'binary': {
                     'op': '*',
@@ -2435,7 +2857,7 @@ class TestIntrinsics(unittest.TestCase):
 
     @staticmethod
     def _run(expr, options=None):
-        return execute_script(validate_script({'statements': [{'return': {'expr': expr}}]}), options)
+        return execute_script(barescript_validate_script({'statements': [{'return': {'expr': expr}}]}), options)
 
     @staticmethod
     def _fn(name, *args):
@@ -2595,7 +3017,7 @@ class TestIntrinsics(unittest.TestCase):
     def test_intrinsic_aliased_name_falls_through(self):
         # Aliasing a library intrinsic to another name: func_value is in the intrinsic set but the
         # call name matches no inlined branch, so it falls through to the normal call path.
-        script = validate_script({'statements': [
+        script = barescript_validate_script({'statements': [
             {'expr': {'name': 'myGet', 'expr': {'variable': 'arrayGet'}}},
             {'return': {'expr': self._fn('myGet', self._arr(1, 2, 3), self._num(1.0))}}
         ]})
@@ -2605,7 +3027,7 @@ class TestIntrinsics(unittest.TestCase):
         # systemGlobalGet returns the genuine library function (intrinsics are inlined fast paths,
         # not separate objects). Calling it indirectly hits the intrinsic set but matches no inlined
         # branch, so it falls through to the real function (with full argument validation).
-        script = validate_script({'statements': [
+        script = barescript_validate_script({'statements': [
             {'expr': {'name': 'getObj', 'expr': self._fn('systemGlobalGet', self._str('objectGet'))}},
             {'return': {'expr': self._fn('getObj', self._fn('objectNew', self._str('k'), self._str('v')), self._str('k'))}}
         ]})

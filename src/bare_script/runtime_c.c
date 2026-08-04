@@ -198,8 +198,9 @@ typedef struct {
     PyObject *value_round_number;
     PyObject *value_normalize_datetime;
     PyObject *url_file_relative;
-    PyObject *parse_script;
-    PyObject *lint_script;
+    PyObject *barescript_parse_script;
+    PyObject *json_loads;
+    PyObject *barescript_lint_script;
     PyObject *partial;
     PyObject *system_includes;
 
@@ -4121,8 +4122,13 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
             goto include_done;
         }
 
-        // Parse the include script
-        include_script = PyObject_CallFunction(g.parse_script, "OiO", include_text, 1, include_url);
+        // Parse the include script. A system include starting with "{" is the
+        // parser-compiled JSON script model (all system includes are embedded pre-compiled).
+        if (system_include && PyUnicode_GET_LENGTH(include_text) > 0 && PyUnicode_READ_CHAR(include_text, 0) == '{') {
+            include_script = PyObject_CallOneArg(g.json_loads, include_text);
+        } else {
+            include_script = PyObject_CallFunction(g.barescript_parse_script, "OiO", include_text, 1, include_url);
+        }
         if (include_script == NULL) {
             goto include_done;
         }
@@ -4199,7 +4205,7 @@ static int execute_include_statement(PyObject *script, PyObject *statement, PyOb
             }
             if (is_debug) {
                 PyObject *lint_args[2] = {include_script, globals};
-                PyObject *warnings = PyObject_Vectorcall(g.lint_script, lint_args, 2, NULL);
+                PyObject *warnings = PyObject_Vectorcall(g.barescript_lint_script, lint_args, 2, NULL);
                 if (warnings == NULL) {
                     goto include_done;
                 }
@@ -5251,7 +5257,9 @@ static int runtime_c_exec(PyObject *module)
     if (runtime_module == NULL) {
         return -1;
     }
-    import_ok = import_member(&g.runtime_error, runtime_module, "BareScriptRuntimeError") == 0;
+    import_ok = import_member(&g.runtime_error, runtime_module, "BareScriptRuntimeError") == 0 &&
+        import_member(&g.barescript_lint_script, runtime_module, "barescript_lint_script") == 0 &&
+        import_member(&g.barescript_parse_script, runtime_module, "barescript_parse_script") == 0;
     Py_DECREF(runtime_module);
     if (!import_ok) {
         return -1;
@@ -5291,22 +5299,12 @@ static int runtime_c_exec(PyObject *module)
         return -1;
     }
 
-    PyObject *parser_module = PyImport_ImportModule("bare_script.parser");
-    if (parser_module == NULL) {
+    PyObject *json_module = PyImport_ImportModule("json");
+    if (json_module == NULL) {
         return -1;
     }
-    import_ok = import_member(&g.parse_script, parser_module, "parse_script") == 0;
-    Py_DECREF(parser_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    PyObject *lint_module = PyImport_ImportModule("bare_script.lint");
-    if (lint_module == NULL) {
-        return -1;
-    }
-    import_ok = import_member(&g.lint_script, lint_module, "lint_script") == 0;
-    Py_DECREF(lint_module);
+    import_ok = import_member(&g.json_loads, json_module, "loads") == 0;
+    Py_DECREF(json_module);
     if (!import_ok) {
         return -1;
     }

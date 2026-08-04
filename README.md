@@ -31,16 +31,16 @@ confident that BareScript will execute the same regardless of the underlying run
 ## Executing BareScript Scripts
 
 To execute a BareScript script, parse the script using the
-[parse_script](https://craigahobbs.github.io/bare-script-py/scripts.html#parse-script)
+[barescript_parse_script](https://craigahobbs.github.io/bare-script-py/scripts.html#barescript-parse-script)
 function. Then execute the script using the
 [execute_script](https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script)
 function. For example:
 
 ``` python
-from bare_script import execute_script, parse_script
+from bare_script import barescript_parse_script, execute_script
 
 # Parse the script
-script = parse_script('''\
+script = barescript_parse_script('''\
 # Double a number
 function double(n):
     return n * 2
@@ -75,10 +75,10 @@ functions.
 ``` python
 import urllib.request
 
-from bare_script import execute_script, fetch_http, parse_script
+from bare_script import barescript_parse_script, execute_script, fetch_http
 
 # Parse the script
-script = parse_script('''\
+script = barescript_parse_script('''\
 # Fetch the BareScript builtin library documentation JSON
 docs = jsonParse(systemFetch('https://craigahobbs.github.io/bare-script-py/library/library-builtin.json'))
 
@@ -102,7 +102,7 @@ The BareScript Library has 108 builtin functions
 To evaluate a
 [BareScript expression](https://craigahobbs.github.io/bare-script-py/language/#expressions),
 parse the expression using the
-[parse_expression](https://craigahobbs.github.io/bare-script-py/expressions.html#parse-expression)
+[barescript_parse_expression](https://craigahobbs.github.io/bare-script-py/expressions.html#barescript-parse-expression)
 function. Then evaluate the expression using the
 [evaluate_expression](https://craigahobbs.github.io/bare-script-py/expressions.html#evaluate-expression)
 function.
@@ -114,10 +114,10 @@ a set of built-in, spreadsheet-like functions.
 For example:
 
 ``` python
-from bare_script import evaluate_expression, parse_expression
+from bare_script import barescript_parse_expression, evaluate_expression
 
 # Parse the expression
-expr = parse_expression('2 * max(a, b, c)')
+expr = barescript_parse_expression('2 * max(a, b, c)')
 
 # Evaluate the expression
 variables = {'a': 1, 'b': 2, 'c': 3}
@@ -227,21 +227,21 @@ without a native Python equivalent are omitted.
 
 | Test             | Language         | Time (ms) | Multiple |
 | ---------------- | ---------------- | --------: | -------: |
-| mandelbrot       | Python           |    4793.6 |          |
-|                  | BareScript (PyC) |   11400.0 |     2.4x |
-|                  | BareScript (Py)  |  338000.0 |    70.5x |
-| schemaValidate   | Python           |      21.2 |          |
-|                  | BareScript (PyC) |      98.4 |     4.6x |
-|                  | BareScript (Py)  |    1437.6 |    67.7x |
+| mandelbrot       | Python           |    4720.8 |          |
+|                  | BareScript (PyC) |   10800.0 |     2.3x |
+|                  | BareScript (Py)  |  334100.0 |    70.8x |
+| schemaValidate   | Python           |      21.0 |          |
+|                  | BareScript (PyC) |     101.6 |     4.8x |
+|                  | BareScript (Py)  |    1404.8 |    67.0x |
 | urlEncode        | Python           |       1.1 |          |
-|                  | BareScript (PyC) |       5.5 |     5.1x |
-|                  | BareScript (Py)  |      38.5 |    36.3x |
-| schemaParse      | Python           |      17.7 |          |
-|                  | BareScript (PyC) |     128.0 |     7.2x |
-|                  | BareScript (Py)  |     912.8 |    51.5x |
+|                  | BareScript (PyC) |       5.6 |     5.3x |
+|                  | BareScript (Py)  |      39.1 |    37.1x |
+| schemaParse      | Python           |      17.1 |          |
+|                  | BareScript (PyC) |     120.4 |     7.1x |
+|                  | BareScript (Py)  |     882.4 |    51.7x |
 | urlDecode        | Python           |       1.2 |          |
-|                  | BareScript (PyC) |      12.6 |    10.7x |
-|                  | BareScript (Py)  |      64.7 |    55.0x |
+|                  | BareScript (PyC) |      13.1 |    10.8x |
+|                  | BareScript (Py)  |      68.5 |    56.6x |
 
 
 ## Using BareScript with an AI Assistant

@@ -11,7 +11,6 @@ import unittest
 
 from bare_script import BareScriptRuntimeError
 from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
-from bare_script.parser import BareScriptParserError
 from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
 
@@ -616,34 +615,6 @@ class TestLibrary(unittest.TestCase):
         with self.assertRaises(BareScriptRuntimeError) as cm_exc:
             SCRIPT_FUNCTIONS['barescriptEvaluateExpression']([expr, None, False], None)
         self.assertEqual(str(cm_exc.exception), 'Undefined function "pi"')
-
-
-    def test_barescript_parse_expression(self):
-        self.assertDictEqual(
-            SCRIPT_FUNCTIONS['barescriptParseExpression'](['[5, true]'], None),
-            {'function': {'args': [{'number': 5.0}, {'variable': 'true'}], 'name': 'arrayNew'}}
-        )
-
-        # No array literals
-        self.assertDictEqual(
-            SCRIPT_FUNCTIONS['barescriptParseExpression'](['[Field name]', False], None),
-            {'variable': 'Field name'}
-        )
-
-        # Invalid expression
-        with self.assertRaises(BareScriptParserError) as cm_exc:
-            SCRIPT_FUNCTIONS['barescriptParseExpression'](['foo bar', False], None)
-
-        self.assertEqual(str(cm_exc.exception), '''\
-Syntax error
-foo bar
-   ^
-''')
-
-
-    #
-    # Datetime functions
-    #
 
 
     def test_datetime_day(self):

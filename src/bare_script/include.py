@@ -22,6 +22,7 @@ execute_script(
     {
         'statements': [
             {'include': {'includes': [
+                {'url': 'barescriptModel.bare', 'system': True},
                 {'url': 'data.bare', 'system': True},
                 {'url': 'dataLineChart.bare', 'system': True},
                 {'url': 'dataTable.bare', 'system': True},
@@ -67,6 +68,56 @@ def _include_options():
     if _INCLUDE_LOG_FN is not None:
         return {'globals': _INCLUDE_GLOBALS, 'logFn': _INCLUDE_LOG_FN, 'debug': True}
     return {'globals': _INCLUDE_GLOBALS}
+
+
+#
+# barescriptModel.bare
+#
+
+
+def barescript_type_model():
+    """
+    Get the BareScript type model
+
+    :return: The BareScript `type model <https://craigahobbs.github.io/bare-script/model/>`__
+    :rtype: dict
+    """
+
+    return _INCLUDE_GLOBALS['barescriptTypeModel']([], _include_options())
+
+
+def barescript_validate_expression(expr):
+    """
+    Validate an expression model
+
+    :param expr: The `expression model <https://craigahobbs.github.io/bare-script/model/#var.vName='Expression'>`__
+    :type expr: dict
+    :return: The validated expression model
+    :rtype: dict
+    :raises SchemaValidationError: A validation error occurred
+    """
+
+    result = _INCLUDE_GLOBALS['barescriptValidateExpressionEx']([expr], _include_options())
+    if 'error' in result:
+        raise SchemaValidationError(result['error'], result['memberFqn'])
+    return result['result']
+
+
+def barescript_validate_script(script):
+    """
+    Validate a BareScript model
+
+    :param script: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`__
+    :type script: dict
+    :return: The validated BareScript model
+    :rtype: dict
+    :raises SchemaValidationError: A validation error occurred
+    """
+
+    result = _INCLUDE_GLOBALS['barescriptValidateScriptEx']([script], _include_options())
+    if 'error' in result:
+        raise SchemaValidationError(result['error'], result['memberFqn'])
+    return result['result']
 
 
 #

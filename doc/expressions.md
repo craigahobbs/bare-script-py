@@ -1,10 +1,10 @@
 # Expressions
 
 
-## parse_expression
+## barescript_parse_expression
 
 ~~~ {eval-rst}
-.. autofunction:: bare_script.parse_expression
+.. autofunction:: bare_script.barescript_parse_expression
 ~~~
 
 
@@ -12,11 +12,4 @@
 
 ~~~ {eval-rst}
 .. autofunction:: bare_script.evaluate_expression
-~~~
-
-
-## validate_expression
-
-~~~ {eval-rst}
-.. autofunction:: bare_script.validate_expression
 ~~~

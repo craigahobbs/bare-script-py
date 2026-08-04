@@ -11,10 +11,8 @@ import os
 import sys
 import time
 
-from .lint import lint_script
 from .options import fetch_read_write, log_stdout, url_file_relative
-from .parser import parse_expression, parse_script
-from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME
+from .runtime import SYSTEM_GLOBAL_INCLUDES_NAME, barescript_lint_script, barescript_parse_expression, barescript_parse_script
 from .value import value_boolean
 if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
     try:
@@ -56,7 +54,7 @@ def main(argv=None):
         # Evaluate the global variable expression arguments
         globals_ = {}
         for var_name, var_expr in args.var:
-            globals_[var_name] = evaluate_expression(parse_expression(var_expr))
+            globals_[var_name] = evaluate_expression(barescript_parse_expression(var_expr))
 
         # Get the scripts to run
         scripts = args.scripts
@@ -102,7 +100,7 @@ def main(argv=None):
                 script_source = script_value
 
             # Parse the script source
-            script = parse_script(script_source, 1, script_name)
+            script = barescript_parse_script(script_source, 1, script_name)
 
             # Execute?
             static_globals = None
@@ -138,7 +136,7 @@ def main(argv=None):
 
             # Run the bare-script linter?
             if args.static and ix_script >= ix_user_script:
-                warnings = lint_script(script, static_globals)
+                warnings = barescript_lint_script(script, static_globals)
                 if not warnings:
                     print(f'BareScript static analysis "{script_name}" ... OK')
                 else:
