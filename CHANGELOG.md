@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-04
+
+- [a36ec59](https://github.com/craigahobbs/bare-script-py/commit/a36ec59) - self-host the parser - port parser, model, and lint to include libraries and embed all includes as compressed parser-compiled JSON script models
+
+  Breaking change - renamed `parse_script` to `barescript_parse_script`.
+
 ## 5.0.5 (2026-08-02)
 
 - [fb4cd51](https://github.com/craigahobbs/bare-script-py/commit/fb4cd51) - accept Python base-type subclass values \(isinstance type checks\)
