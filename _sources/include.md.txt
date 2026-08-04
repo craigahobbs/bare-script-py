@@ -1,5 +1,28 @@
 # Include
 
+## barescriptModel.bare
+
+### barescript_type_model
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.barescript_type_model
+~~~
+
+
+### barescript_validate_expression
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.barescript_validate_expression
+~~~
+
+
+### barescript_validate_script
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.barescript_validate_script
+~~~
+
+
 ## data.bare
 
 ### data_aggregate

@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Expressions &#8212; bare-script 5.0.5 documentation</title>
+    <title>Expressions &#8212; bare-script 5.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=967d581c"></script>
+    <script src="_static/documentation_options.js?v=bfa18cfb"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -61,9 +61,8 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="scripts.html">Scripts</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Expressions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#parse-expression">parse_expression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#barescript-parse-expression">barescript_parse_expression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#evaluate-expression">evaluate_expression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#validate-expression">validate_expression</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="include.html">Include</a></li>
@@ -98,23 +97,23 @@
             
   <section id="expressions">
 <h1>Expressions<a class="headerlink" href="#expressions" title="Link to this heading">¶</a></h1>
-<section id="parse-expression">
-<h2>parse_expression<a class="headerlink" href="#parse-expression" title="Link to this heading">¶</a></h2>
+<section id="barescript-parse-expression">
+<h2>barescript_parse_expression<a class="headerlink" href="#barescript-parse-expression" title="Link to this heading">¶</a></h2>
 <dl class="py function">
-<dt class="sig sig-object py" id="bare_script.parse_expression">
-<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">parse_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr_text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_number</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">script_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">array_literals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.parse_expression" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="bare_script.barescript_parse_expression">
+<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">barescript_parse_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr_text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_number</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">script_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">array_literals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.barescript_parse_expression" title="Link to this definition">¶</a></dt>
 <dd><p>Parse a BareScript expression</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>expr_text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><em>Iterable</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>)</em>) – The <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/#expressions">expression text</a></p></li>
+<li><p><strong>expr_text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The <a class="reference external" href="https://craigahobbs.github.io/bare-script/language/#expressions">expression text</a></p></li>
 <li><p><strong>line_number</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The script line number</p></li>
 <li><p><strong>script_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The script name</p></li>
 <li><p><strong>array_literals</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, allow parsing of array literals</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The <a class="reference external" href="./model/#var.vName='Expression'">expression model</a></p>
+<dd class="field-even"><p>The <a class="reference external" href="https://craigahobbs.github.io/bare-script/model/#var.vName='Expression'">expression model</a></p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
@@ -146,29 +145,6 @@
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="errors.html#bare_script.BareScriptRuntimeError" title="bare_script.BareScriptRuntimeError"><strong>BareScriptRuntimeError</strong></a> – A script runtime error occurred</p>
-</dd>
-</dl>
-</dd></dl>
-
-</section>
-<section id="validate-expression">
-<h2>validate_expression<a class="headerlink" href="#validate-expression" title="Link to this heading">¶</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="bare_script.validate_expression">
-<span class="sig-prename descclassname"><span class="pre">bare_script.</span></span><span class="sig-name descname"><span class="pre">validate_expression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.validate_expression" title="Link to this definition">¶</a></dt>
-<dd><p>Validate an expression model</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>script</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The <a class="reference external" href="./model/#var.vName='Expression'">expression model</a></p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The validated expression model</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="include.html#bare_script.include.SchemaValidationError" title="bare_script.include.SchemaValidationError"><strong>SchemaValidationError</strong></a> – A validation error occurred</p>
 </dd>
 </dl>
 </dd></dl>

@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>bare-script &#8212; bare-script 5.0.5 documentation</title>
+    <title>bare-script &#8212; bare-script 5.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=967d581c"></script>
+    <script src="_static/documentation_options.js?v=bfa18cfb"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -119,14 +119,14 @@ confident that BareScript will execute the same regardless of the underlying run
 <section id="executing-barescript-scripts">
 <h2>Executing BareScript Scripts<a class="headerlink" href="#executing-barescript-scripts" title="Link to this heading">¶</a></h2>
 <p>To execute a BareScript script, parse the script using the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#parse-script">parse_script</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#barescript-parse-script">barescript_parse_script</a>
 function. Then execute the script using the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script">execute_script</a>
 function. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">parse_script</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span>
 
 <span class="c1"># Parse the script</span>
-<span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
 <span class="s1"># Double a number</span>
 <span class="s1">function double(n):</span>
 <span class="s1">    return n * 2</span>
@@ -156,10 +156,10 @@ of the
 functions.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span><span class="p">,</span> <span class="n">parse_script</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span>
 
 <span class="c1"># Parse the script</span>
-<span class="n">script</span> <span class="o">=</span> <span class="n">parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
 <span class="s1"># Fetch the BareScript builtin library documentation JSON</span>
 <span class="s1">docs = jsonParse(systemFetch(&#39;https://craigahobbs.github.io/bare-script-py/library/library-builtin.json&#39;))</span>
 
@@ -182,7 +182,7 @@ functions.</p>
 <p>To evaluate a
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/#expressions">BareScript expression</a>,
 parse the expression using the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/expressions.html#parse-expression">parse_expression</a>
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/expressions.html#barescript-parse-expression">barescript_parse_expression</a>
 function. Then evaluate the expression using the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/expressions.html#evaluate-expression">evaluate_expression</a>
 function.</p>
@@ -190,10 +190,10 @@ function.</p>
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/expression.html">BareScript Expression Library</a>,
 a set of built-in, spreadsheet-like functions.</p>
 <p>For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">evaluate_expression</span><span class="p">,</span> <span class="n">parse_expression</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_expression</span><span class="p">,</span> <span class="n">evaluate_expression</span>
 
 <span class="c1"># Parse the expression</span>
-<span class="n">expr</span> <span class="o">=</span> <span class="n">parse_expression</span><span class="p">(</span><span class="s1">&#39;2 * max(a, b, c)&#39;</span><span class="p">)</span>
+<span class="n">expr</span> <span class="o">=</span> <span class="n">barescript_parse_expression</span><span class="p">(</span><span class="s1">&#39;2 * max(a, b, c)&#39;</span><span class="p">)</span>
 
 <span class="c1"># Evaluate the expression</span>
 <span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
@@ -297,33 +297,33 @@ without a native Python equivalent are omitted.</p>
 <tbody>
 <tr class="row-even"><td><p>mandelbrot</p></td>
 <td><p>Python</p></td>
-<td class="text-right"><p>4793.6</p></td>
+<td class="text-right"><p>4720.8</p></td>
 <td class="text-right"><p></p></td>
 </tr>
 <tr class="row-odd"><td><p></p></td>
 <td><p>BareScript (PyC)</p></td>
-<td class="text-right"><p>11400.0</p></td>
-<td class="text-right"><p>2.4x</p></td>
+<td class="text-right"><p>10800.0</p></td>
+<td class="text-right"><p>2.3x</p></td>
 </tr>
 <tr class="row-even"><td><p></p></td>
 <td><p>BareScript (Py)</p></td>
-<td class="text-right"><p>338000.0</p></td>
-<td class="text-right"><p>70.5x</p></td>
+<td class="text-right"><p>334100.0</p></td>
+<td class="text-right"><p>70.8x</p></td>
 </tr>
 <tr class="row-odd"><td><p>schemaValidate</p></td>
 <td><p>Python</p></td>
-<td class="text-right"><p>21.2</p></td>
+<td class="text-right"><p>21.0</p></td>
 <td class="text-right"><p></p></td>
 </tr>
 <tr class="row-even"><td><p></p></td>
 <td><p>BareScript (PyC)</p></td>
-<td class="text-right"><p>98.4</p></td>
-<td class="text-right"><p>4.6x</p></td>
+<td class="text-right"><p>101.6</p></td>
+<td class="text-right"><p>4.8x</p></td>
 </tr>
 <tr class="row-odd"><td><p></p></td>
 <td><p>BareScript (Py)</p></td>
-<td class="text-right"><p>1437.6</p></td>
-<td class="text-right"><p>67.7x</p></td>
+<td class="text-right"><p>1404.8</p></td>
+<td class="text-right"><p>67.0x</p></td>
 </tr>
 <tr class="row-even"><td><p>urlEncode</p></td>
 <td><p>Python</p></td>
@@ -332,28 +332,28 @@ without a native Python equivalent are omitted.</p>
 </tr>
 <tr class="row-odd"><td><p></p></td>
 <td><p>BareScript (PyC)</p></td>
-<td class="text-right"><p>5.5</p></td>
-<td class="text-right"><p>5.1x</p></td>
+<td class="text-right"><p>5.6</p></td>
+<td class="text-right"><p>5.3x</p></td>
 </tr>
 <tr class="row-even"><td><p></p></td>
 <td><p>BareScript (Py)</p></td>
-<td class="text-right"><p>38.5</p></td>
-<td class="text-right"><p>36.3x</p></td>
+<td class="text-right"><p>39.1</p></td>
+<td class="text-right"><p>37.1x</p></td>
 </tr>
 <tr class="row-odd"><td><p>schemaParse</p></td>
 <td><p>Python</p></td>
-<td class="text-right"><p>17.7</p></td>
+<td class="text-right"><p>17.1</p></td>
 <td class="text-right"><p></p></td>
 </tr>
 <tr class="row-even"><td><p></p></td>
 <td><p>BareScript (PyC)</p></td>
-<td class="text-right"><p>128.0</p></td>
-<td class="text-right"><p>7.2x</p></td>
+<td class="text-right"><p>120.4</p></td>
+<td class="text-right"><p>7.1x</p></td>
 </tr>
 <tr class="row-odd"><td><p></p></td>
 <td><p>BareScript (Py)</p></td>
-<td class="text-right"><p>912.8</p></td>
-<td class="text-right"><p>51.5x</p></td>
+<td class="text-right"><p>882.4</p></td>
+<td class="text-right"><p>51.7x</p></td>
 </tr>
 <tr class="row-even"><td><p>urlDecode</p></td>
 <td><p>Python</p></td>
@@ -362,13 +362,13 @@ without a native Python equivalent are omitted.</p>
 </tr>
 <tr class="row-odd"><td><p></p></td>
 <td><p>BareScript (PyC)</p></td>
-<td class="text-right"><p>12.6</p></td>
-<td class="text-right"><p>10.7x</p></td>
+<td class="text-right"><p>13.1</p></td>
+<td class="text-right"><p>10.8x</p></td>
 </tr>
 <tr class="row-even"><td><p></p></td>
 <td><p>BareScript (Py)</p></td>
-<td class="text-right"><p>64.7</p></td>
-<td class="text-right"><p>55.0x</p></td>
+<td class="text-right"><p>68.5</p></td>
+<td class="text-right"><p>56.6x</p></td>
 </tr>
 </tbody>
 </table>
