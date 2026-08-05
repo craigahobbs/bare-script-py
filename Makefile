@@ -44,8 +44,13 @@ clean:
 	rm -rf Makefile.base pylintrc src/bare_script/*.so
 
 
-commit:
+# Re-verify with the C runtime - a prerequisite rather than a commit recipe so it runs in parallel with the
+# Python-runtime gate under "make -j"; the explicit prerequisites keep the sub-make from racing the outer
+# make on venv creation and include-source generation
 ifeq '$(BARESCRIPT_RUNTIME_C)' ''
+.PHONY: commit-runtime-c
+commit: commit-runtime-c
+commit-runtime-c: $(DEFAULT_VENV_BUILD) src/bare_script/include_source.py
 	$(MAKE) test test-include BARESCRIPT_RUNTIME_C=1
 endif
 
@@ -62,7 +67,7 @@ $(foreach IMAGE, $(PYTHON_IMAGES), $(eval test-$(call IMAGE_NAME_FN, $(IMAGE)): 
 cover-$(call IMAGE_NAME_FN, $(firstword $(PYTHON_IMAGES))): src/bare_script/include_source.py
 lint-$(call IMAGE_NAME_FN, $(firstword $(PYTHON_IMAGES))): src/bare_script/include_source.py
 doc-$(call IMAGE_NAME_FN, $(firstword $(PYTHON_IMAGES))): src/bare_script/include_source.py
-test-include perf: src/bare_script/include_source.py
+test-include-lint test-include-markdownup test-include-run perf: src/bare_script/include_source.py
 src/bare_script/include_source.py: Makefile $(sort $(wildcard src/bare_script/include/*.bare)) | $(DEFAULT_VENV_BUILD)
 	$(DEFAULT_VENV_PYTHON) -c "$$INCLUDE_SOURCE_PY" $@ $(filter %.bare,$^)
 
@@ -162,11 +167,16 @@ endef
 export INCLUDE_SOURCE_PY
 
 
-.PHONY: test-include
+# The include-test sub-targets are independent so they run in parallel under "make -j"
+.PHONY: test-include test-include-lint test-include-markdownup test-include-run
 commit: test-include
-test-include: $(DEFAULT_VENV_BUILD)
+test-include: test-include-lint test-include-markdownup test-include-run
+test-include-lint test-include-markdownup test-include-run: $(DEFAULT_VENV_BUILD)
+test-include-lint:
 	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/*.bare
+test-include-markdownup:
 	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
+test-include-run:
 	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 
 
