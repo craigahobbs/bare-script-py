@@ -1,2 +1,43 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bare-script"
+version = "5.1.1"
+description = "BareScript; a lightweight scripting and expression language"
+readme = "README.md"
+license = "MIT"
+keywords = ["expression", "language", "script"]
+authors = [
+    {name = "Craig A. Hobbs", email = "craigahobbs@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities"
+]
+dependencies = [
+    "urllib3 >= 2.5.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/craigahobbs/bare-script-py"
+
+[project.scripts]
+bare = "bare_script.bare:main"
+
+[tool.setuptools]
+include-package-data = false
+package-dir = {"" = "src"}
+packages = ["bare_script"]
