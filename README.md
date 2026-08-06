@@ -28,6 +28,15 @@ confident that BareScript will execute the same regardless of the underlying run
 - [Source code](https://github.com/craigahobbs/bare-script-py)
 
 
+## Installation
+
+Install the bare-script package with pip — it includes the `bare` command-line interface:
+
+```
+pip install bare-script
+```
+
+
 ## Executing BareScript Scripts
 
 To execute a BareScript script, parse the script using the
@@ -36,7 +45,7 @@ function. Then execute the script using the
 [execute_script](https://craigahobbs.github.io/bare-script-py/scripts.html#execute-script)
 function. For example:
 
-``` python
+```python
 from bare_script import barescript_parse_script, execute_script
 
 # Parse the script
@@ -72,7 +81,7 @@ of the
 [arrayLength](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='array'&arraylength)
 functions.
 
-``` python
+```python
 import urllib.request
 
 from bare_script import barescript_parse_script, execute_script, fetch_http
@@ -93,7 +102,7 @@ print(execute_script(script, {'fetchFn': fetch_http}))
 This outputs:
 
 ```
-The BareScript Library has 108 builtin functions
+The BareScript Library has 100 builtin functions
 ```
 
 
@@ -113,7 +122,7 @@ a set of built-in, spreadsheet-like functions.
 
 For example:
 
-``` python
+```python
 from bare_script import barescript_parse_expression, evaluate_expression
 
 # Parse the expression
@@ -145,7 +154,7 @@ exported by the
 Each stub function executes its corresponding include library function using the BareScript
 runtime. For example:
 
-``` python
+```python
 from bare_script.include import markdown_parse, markdown_title
 
 # Parse the Markdown text
@@ -175,7 +184,7 @@ files use the ".bare" file extension.
 bare script.bare
 ```
 
-**Note:** In the BareScript CLI, import statements and the
+**Note:** In the BareScript CLI, include statements and the
 [systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch)
 function read non-URL paths from the local file system.
 [systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch)
@@ -193,7 +202,7 @@ dynamically rendering Markdown text, drawing SVG images, etc. For example:
 
 This is a Markdown document with embedded BareScript:
 
-``` markdown-script
+```markdown-script
 markdownPrint('Hello, Markdown!')
 ```
 ~~~
@@ -276,11 +285,17 @@ pip install markdown-up
 markdown-up ticTacToe.md
 ```
 
-The BareScript library is also documented as single-page Markdown, which can be fetched directly
+The BareScript documentation is also published as plain Markdown, which can be fetched directly
 into an assistant's context alongside `SKILL.md`:
 
+- [The BareScript Language](https://craigahobbs.github.io/bare-script-py/language/README.md)
 - [The BareScript Library](https://craigahobbs.github.io/bare-script-py/library/barescript-library.md)
 - [The BareScript Library Models](https://craigahobbs.github.io/bare-script-py/library/barescript-library-model.md)
+- [The BareScript Expression Library](https://craigahobbs.github.io/bare-script-py/library/barescript-expression-library.md)
+- [The BareScript Runtime Model](https://craigahobbs.github.io/bare-script-py/model/barescript-model.md)
+
+`SKILL.md` itself is published at <https://craigahobbs.github.io/bare-script-py/SKILL.md>, and
+<https://craigahobbs.github.io/bare-script-py/llms.txt> indexes all of the fetchable documentation.
 
 
 ## Development

@@ -237,13 +237,16 @@ doc:
 	$(DEFAULT_VENV_PYTHON) -c "$$DOC_RUNTIME_MODEL_PY" build/doc/html/model/model.json
 
     # Generate the single-page runtime model documentation
-	cd build/doc/html/library/ && \
+	cd build/doc/html/model/ && \
 	$(call DEFAULT_VENV_BIN_EX,../../../../)/bare -m \
 		-v 'vSingle' 'true' \
 		-v 'vPublish' 'true' \
 		-c 'include <schemaDoc.bare>' \
 		-c "schemaDocMain('model.json', 'The BareScript Runtime Model')" \
 		> barescript-model.md
+
+    # Publish the AI assistant skill (llms.txt is copied from static/)
+	cp SKILL.md build/doc/html/
 
 
 # Python to generate the expression library documentation

@@ -91,10 +91,10 @@ _ARRAY_EXTEND_ARGS = value_args_model([
 
 # $function: arrayFlat
 # $group: array
-# $doc: Flat an array hierarchy
-# $arg array: The array to flat
-# $arg depth: The maximum depth of the array hierarchy
-# $return: The flated array
+# $doc: Flatten an array hierarchy
+# $arg array: The array to flatten
+# $arg depth: Optional (default is 10). The maximum depth of the array hierarchy.
+# $return: The flattened array
 def _array_flat(args, unused_options):
     array, depth = value_args_validate(_ARRAY_FLAT_ARGS, args)
     return list(_array_flat_helper(array, 0, depth))
@@ -137,11 +137,22 @@ _ARRAY_GET_ARGS = value_args_model([
 
 # $function: arrayIndexOf
 # $group: array
-# $doc: Find the index of a value in an array
+# $doc: Find the index of a value in an array. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: ixValue = arrayIndexOf([5, -3, 7], -3)
+# $doc: # ixValue is 1
+# $doc:
+# $doc: function isNegative(value):
+# $doc:     return value < 0
+# $doc: endfunction
+# $doc: ixNegative = arrayIndexOf([5, -3, 7], isNegative)
+# $doc: # ixNegative is 1
+# $doc: ```
 # $arg array: The array
 # $arg value: The value to find in the array, or a match function, f(value) -> bool
 # $arg index: Optional (default is 0). The index at which to start the search.
-# $return: The first index of the value in the array; -1 if not found.
+# $return: The first index of the value in the array; -1 if not found
 def _array_index_of(args, options):
     array, value, index = value_args_validate(_ARRAY_INDEX_OF_ARGS, args, -1)
 
@@ -186,7 +197,7 @@ _ARRAY_JOIN_ARGS = value_args_model([
 # $arg array: The array
 # $arg value: The value to find in the array, or a match function, f(value) -> bool
 # $arg index: Optional (default is the end of the array). The index at which to start the search.
-# $return: The last index of the value in the array; -1 if not found.
+# $return: The last index of the value in the array; -1 if not found
 def _array_last_index_of(args, options):
     array, value, index = value_args_validate(_ARRAY_LAST_INDEX_OF_ARGS, args, -1)
     if index is None or index >= len(array):
@@ -254,7 +265,7 @@ _ARRAY_NEW_SIZE_ARGS = value_args_model([
 # $group: array
 # $doc: Remove the last element of the array and return it
 # $arg array: The array
-# $return: The last element of the array; null if the array is empty.
+# $return: The last element of the array; null if the array is empty
 def _array_pop(args, unused_options):
     array, = value_args_validate(_ARRAY_POP_ARGS, args)
     if len(array) == 0:
@@ -325,7 +336,7 @@ _ARRAY_SET_ARGS = value_args_model([
 # $group: array
 # $doc: Remove the first element of the array and return it
 # $arg array: The array
-# $return: The first element of the array; null if the array is empty.
+# $return: The first element of the array; null if the array is empty
 def _array_shift(args, unused_options):
     array, = value_args_validate(_ARRAY_SHIFT_ARGS, args)
     if len(array) == 0:
@@ -342,9 +353,18 @@ _ARRAY_SHIFT_ARGS = value_args_model([
 
 # $function: arraySlice
 # $group: array
-# $doc: Copy a portion of an array
+# $doc: Copy a portion of an array. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: numbers = [1, 2, 3, 4, 5]
+# $doc: middle = arraySlice(numbers, 1, 3)
+# $doc: # middle is [2, 3]
+# $doc:
+# $doc: rest = arraySlice(numbers, 2)
+# $doc: # rest is [3, 4, 5]
+# $doc: ```
 # $arg array: The array
-# $arg start: Optional (default is 0). The start index of the slice.
+# $arg start: Optional (default is 0). The start index of the slice. Negative indexes are invalid.
 # $arg end: Optional (default is the end of the array). The end index of the slice.
 # $return: The new array slice
 def _array_slice(args, unused_options):
@@ -367,9 +387,22 @@ _ARRAY_SLICE_ARGS = value_args_model([
 
 # $function: arraySort
 # $group: array
-# $doc: Sort an array in place
+# $doc: Sort an array in place. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: numbers = [3, 1, 4]
+# $doc: arraySort(numbers)
+# $doc: # numbers is [1, 3, 4]
+# $doc:
+# $doc: function compareDesc(a, b):
+# $doc:     return b - a
+# $doc: endfunction
+# $doc: arraySort(numbers, compareDesc)
+# $doc: # numbers is [4, 3, 1]
+# $doc: ```
 # $arg array: The array
-# $arg compareFn: Optional (default is null). The comparison function.
+# $arg compareFn: Optional (default is null). The comparison function, f(a, b) -> number -
+# $arg compareFn: negative if "a" sorts first, positive if "b" sorts first, zero if equal.
 # $return: The sorted array
 def _array_sort(args, options):
     array, compare_fn = value_args_validate(_ARRAY_SORT_ARGS, args)
@@ -444,9 +477,15 @@ _DATETIME_HOUR_ARGS = value_args_model([
 
 # $function: datetimeISOFormat
 # $group: datetime
-# $doc: Format the datetime as an ISO date/time string
+# $doc: Format the datetime as an ISO date/time string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: d = datetimeNew(2026, 8, 6, 7, 30)
+# $doc: date = datetimeISOFormat(d, true)
+# $doc: # date is '2026-08-06'
+# $doc: ```
 # $arg datetime: The datetime
-# $arg isDate: If true, format the datetime as an ISO date
+# $arg isDate: Optional (default is false). If true, format the datetime as an ISO date.
 # $return: The formatted datetime string
 def _datetime_iso_format(args, unused_options):
     datetime_arg, is_date = value_args_validate(_DATETIMEISO_FORMAT_ARGS, args)
@@ -465,7 +504,12 @@ _DATETIMEISO_FORMAT_ARGS = value_args_model([
 
 # $function: datetimeISOParse
 # $group: datetime
-# $doc: Parse an ISO date/time string
+# $doc: Parse an ISO date/time string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: d = datetimeISOParse('2026-08-06T07:30:00Z')
+# $doc: year = datetimeYear(d)
+# $doc: ```
 # $arg string: The ISO date/time string
 # $return: The datetime, or null if parsing fails
 def _datetime_iso_parse(args, unused_options):
@@ -658,7 +702,15 @@ _JSON_PARSE_ARGS = value_args_model([
 
 # $function: jsonStringify
 # $group: json
-# $doc: Convert an object to a JSON string
+# $doc: Convert an object to a JSON string. Object keys are serialized in sorted order. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: json = jsonStringify({'b': 2, 'a': 1})
+# $doc: # json is '{"a":1,"b":2}'
+# $doc:
+# $doc: pretty = jsonStringify({'a': 1}, 4)
+# $doc: # pretty is '{\n    "a": 1\n}'
+# $doc: ```
 # $arg value: The object
 # $arg indent: Optional (default is null). The indentation number.
 # $return: The JSON string
@@ -815,7 +867,7 @@ _MATH_LN_ARGS = value_args_model([
 
 # $function: mathLog
 # $group: math
-# $doc: Compute the logarithm (base 10) of a number
+# $doc: Compute the logarithm of a number
 # $arg x: The number
 # $arg base: Optional (default is 10). The logarithm base.
 # $return: The logarithm of the number
@@ -1042,7 +1094,13 @@ _NUMBER_TO_STRING_DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 # $function: objectAssign
 # $group: object
-# $doc: Assign the keys/values of one object to another
+# $doc: Assign the keys/values of one object to another. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: person = {'name': 'Alice'}
+# $doc: objectAssign(person, {'age': 30})
+# $doc: # person is {'age': 30, 'name': 'Alice'}
+# $doc: ```
 # $arg object: The object to assign to
 # $arg object2: The object to assign
 # $return: The updated object
@@ -1092,7 +1150,7 @@ _OBJECT_DELETE_ARGS = value_args_model([
 # $doc: Get an object key's value
 # $arg object: The object
 # $arg key: The key
-# $arg defaultValue: The default value (optional)
+# $arg defaultValue: Optional (default is null). The default value.
 # $return: The value, or the default value if the key does not exist
 def _object_get(args, unused_options):
     default_value_arg = args[2] if len(args) >= 3 else None
@@ -1192,7 +1250,13 @@ _REGEX_ESCAPE_ARGS = value_args_model([
 
 # $function: regexMatch
 # $group: regex
-# $doc: Find the first match of a regular expression in a string
+# $doc: Find the first match of a regular expression in a string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: match = regexMatch(regexNew('(?<year>[0-9]{4})-[0-9]{2}'), '2026-08-06')
+# $doc: year = objectGet(objectGet(match, 'groups'), 'year')
+# $doc: # year is '2026'
+# $doc: ```
 # $arg regex: The regular expression
 # $arg string: The string
 # $return: The match object, or null if no matches are found.
@@ -1216,7 +1280,7 @@ _REGEX_MATCH_ARGS = value_args_model([
 # $doc: Find all matches of regular expression in a string
 # $arg regex: The regular expression
 # $arg string: The string
-# $return: The array of match objects (see the [regexMatch](#var.vName='regexMatch') function)
+# $return: The array of match objects (see the [regexMatch](#var.vGroup='regex'&regexmatch) function)
 def _regex_match_all(args, unused_options):
     regex, string = value_args_validate(_REGEX_MATCH_ALL_ARGS, args)
     return [_regex_match_groups(match) for match in regex.finditer(string)]
@@ -1244,7 +1308,7 @@ def _regex_match_groups(match):
 # $doc: Create a regular expression
 # pylint: disable-next=line-too-long
 # $arg pattern: The [regular expression pattern string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#writing_a_regular_expression_pattern)
-# $arg flags: The regular expression flags. The string may contain the following characters:
+# $arg flags: Optional (default is null). The regular expression flags. The string may contain the following characters:
 # $arg flags: - **i** - case-insensitive search
 # $arg flags: - **m** - multi-line search - "^" and "$" matches next to newline characters
 # $arg flags: - **s** - "." matches newline characters
@@ -1285,10 +1349,15 @@ _R_REGEX_NEW_BACKREF = re.compile(r'\\k<(\w+)>')
 
 # $function: regexReplace
 # $group: regex
-# $doc: Replace regular expression matches with a string
+# $doc: Replace regular expression matches with a string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: result = regexReplace(regexNew('(\\w+) (\\w+)'), 'John Smith', '$2, $1')
+# $doc: # result is 'Smith, John'
+# $doc: ```
 # $arg regex: The replacement regular expression
 # $arg string: The string
-# $arg substr: The replacement string
+# $arg substr: The replacement string. Use "$1", "$2", ... to insert numbered match groups.
 # $return: The updated string
 def _regex_replace(args, unused_options):
     regex, string, substr = value_args_validate(_REGEX_REPLACE_ARGS, args)
@@ -1441,7 +1510,7 @@ def _string_from_char_code(char_codes, unused_options):
 # $arg string: The string
 # $arg search: The search string
 # $arg index: Optional (default is 0). The index at which to start the search.
-# $return: The first index of the search string; -1 if not found.
+# $return: The first index of the search string; -1 if not found
 def _string_index_of(args, unused_options):
     string, search, index = value_args_validate(_STRING_INDEX_OF_ARGS, args, -1)
     if index > len(string):
@@ -1462,7 +1531,7 @@ _STRING_INDEX_OF_ARGS = value_args_model([
 # $arg string: The string
 # $arg search: The search string
 # $arg index: Optional (default is the end of the string). The index at which to start the search.
-# $return: The last index of the search string; -1 if not found.
+# $return: The last index of the search string; -1 if not found
 def _string_last_index_of(args, unused_options):
     string, search, index = value_args_validate(_STRING_LAST_INDEX_OF_ARGS, args, -1)
     index = index if index is not None else len(string) - 1
@@ -1538,7 +1607,12 @@ _STRING_REPEAT_ARGS = value_args_model([
 
 # $function: stringReplace
 # $group: string
-# $doc: Replace all instances of a string with another string
+# $doc: Replace all instances of a string with another string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: result = stringReplace('a-a-a', '-', '+')
+# $doc: # result is 'a+a+a'
+# $doc: ```
 # $arg string: The string to update
 # $arg substr: The string to replace
 # $arg newSubstr: The replacement string
@@ -1580,7 +1654,12 @@ _STRING_SLICE_ARGS = value_args_model([
 
 # $function: stringSplit
 # $group: string
-# $doc: Split a string
+# $doc: Split a string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: parts = stringSplit('a,b,c', ',')
+# $doc: # parts is ['a', 'b', 'c']
+# $doc: ```
 # $arg string: The string to split
 # $arg separator: The separator string
 # $return: The array of split-out strings
@@ -1691,7 +1770,16 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 
 # $function: systemFetch
 # $group: system
-# $doc: Retrieve a URL resource
+# $async: true
+# $doc: Retrieve a URL resource. Pass an array of URLs (or request models) to fetch in parallel
+# $doc: and receive an array of response strings. In the BareScript CLI, non-URL paths are read
+# $doc: from (or, with a request body, written to) the local file system. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: async function getLibraryCount(url):
+# $doc:     return arrayLength(objectGet(jsonParse(systemFetch(url)), 'functions'))
+# $doc: endfunction
+# $doc: ```
 # $arg url: The resource URL, request model, or array of URL and request model.
 # $arg url: The request model is an object with the following members:
 # $arg url: - **url** - the resource URL
@@ -1769,7 +1857,7 @@ def _system_fetch_request_validate(request):
 # $group: system
 # $doc: Get a global variable value
 # $arg name: The global variable name
-# $arg defaultValue: The default value (optional)
+# $arg defaultValue: Optional (default is null). The default value.
 # $return: The global variable's value, or the default value if it does not exist
 def _system_global_get(args, options):
     name, default_value = value_args_validate(_SYSTEM_GLOBAL_GET_ARGS, args)
@@ -1850,7 +1938,17 @@ _SYSTEM_LOG_DEBUG_ARGS = value_args_model([
 # $function: systemPartial
 # $group: system
 # $doc: Return a new function which behaves like "func" called with "args".
-# $doc: If additional arguments are passed to the returned function, they are appended to "args".
+# $doc: If additional arguments are passed to the returned function, they are appended to "args". For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: function addNumbers(a, b):
+# $doc:     return a + b
+# $doc: endfunction
+# $doc:
+# $doc: addTen = systemPartial(addNumbers, 10)
+# $doc: result = addTen(5)
+# $doc: # result is 15
+# $doc: ```
 # $arg func: The function
 # $arg args...: The function arguments
 # $return: The new function called with "args"
