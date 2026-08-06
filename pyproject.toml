@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bare-script"
-version = "5.1.2"
+version = "5.1.3"
 description = "BareScript; a lightweight scripting and expression language"
 readme = "README.md"
 license = "MIT"

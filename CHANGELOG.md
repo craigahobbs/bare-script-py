@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.3 (2026-08-06)
+
+- [0c89b28](https://github.com/craigahobbs/bare-script-py/commit/0c89b28) - improve documentation \(language reference semantics, library doc examples, $async marking, llms.txt\)
+
 ## 5.1.2 (2026-08-06)
 
 - [35aca8c](https://github.com/craigahobbs/bare-script-py/commit/35aca8c) - migrate package metadata from setup.cfg to pyproject.toml
