@@ -54,7 +54,7 @@
 
    The fetch function interface
 
-   :param request: The `request model <library/model.html#var.vName='SystemFetchRequest'>`__
+   :param request: The `request model <library/#var.vGroup='system'&systemfetch>`__
    :type url: dict
    :returns: The response text
    :rtype: str
