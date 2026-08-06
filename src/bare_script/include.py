@@ -543,7 +543,7 @@ def schema_get_enum_values(types, enum_model):
     """
     Get an enum's values (inherited values first)
 
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :type types: dict
     :param enum_model: The enum model
     :type enum_model: dict
@@ -558,7 +558,7 @@ def schema_get_referenced_types(types, type_name, referenced_types=None):
     """
     Get a user type's referenced type model
 
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :type types: dict
     :param str type_name: The type name
     :param referenced_types: A map of referenced user type name to user type model to update
@@ -574,7 +574,7 @@ def schema_get_struct_members(types, struct):
     """
     Get a struct's members (inherited members first)
 
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :type types: dict
     :param struct: The struct model
     :type struct: dict
@@ -589,7 +589,7 @@ def schema_validate(types, type_name, value, member_fqn=None):
     """
     Validate a value using a schema type model
 
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :type types: dict
     :param str type_name: The type name
     :param value: The value to validate
@@ -614,7 +614,7 @@ def schema_doc_markdown(types, type_name, options=None):
     """
     Generate the Schema Markdown user type documentation as an array of Markdown text lines
 
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :type types: dict
     :param str type_name: The type name
     :param options: The schema documentation options object
@@ -637,13 +637,14 @@ def schema_parse(text, types=None, filename=None, validate=None):
 
     :param text: The `Schema Markdown <https://craigahobbs.github.io/schema-markdown-js/language/>`__ text
     :type text: str or list(str)
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__ to update
+    :param types: The schema's
+        `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__ to update
     :type types: dict or None, optional
     :param filename: The file name (for error messages)
     :type filename: str or None, optional
     :param validate: If True (the default), validate the type model after parsing
     :type validate: bool or None, optional
-    :return: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :return: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :rtype: dict
     :raises SchemaParserError: A parsing error occurred
     """
@@ -663,7 +664,7 @@ def schema_type_model():
     """
     Get the Schema Markdown type model
 
-    :return: The Schema Markdown `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__
+    :return: The Schema Markdown `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__
     :rtype: dict
     """
 
@@ -674,7 +675,8 @@ def schema_type_model_validate(types):
     """
     Validate a Schema Markdown type model
 
-    :param types: The schema's `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'>`__ to validate
+    :param types: The schema's
+        `type model <https://craigahobbs.github.io/bare-script/model/#var.vName='Types'&var.vURL=''>`__ to validate
     :type types: dict
     :return: The validated type model
     :rtype: dict

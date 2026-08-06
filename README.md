@@ -67,9 +67,9 @@ This outputs:
 includes a set of built-in functions for mathematical operations, object manipulation, array
 manipulation, regular expressions, HTTP fetch and more. The following example demonstrates the use
 of the
-[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&systemfetch),
-[objectGet](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Object'&objectget), and
-[arrayLength](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='Array'&arraylength)
+[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch),
+[objectGet](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='object'&objectget), and
+[arrayLength](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='array'&arraylength)
 functions.
 
 ``` python
@@ -176,12 +176,10 @@ bare script.bare
 ```
 
 **Note:** In the BareScript CLI, import statements and the
-[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&systemfetch)
+[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch)
 function read non-URL paths from the local file system.
-[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='System'&systemfetch)
-calls with a non-URL path and a
-[request body](https://craigahobbs.github.io/bare-script-py/library/model.html#var.vName='SystemFetchRequest')
-write the body to the path.
+[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch)
+calls with a non-URL path and a request body write the body to the path.
 
 
 ## MarkdownUp, a Markdown Viewer with BareScript
