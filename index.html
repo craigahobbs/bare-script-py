@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>bare-script &#8212; bare-script 5.1.2 documentation</title>
+    <title>bare-script &#8212; bare-script 5.1.3 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=2c218288"></script>
+    <script src="_static/documentation_options.js?v=88590691"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -116,6 +116,13 @@ confident that BareScript will execute the same regardless of the underlying run
 <li><p><a class="reference external" href="https://github.com/craigahobbs/bare-script-py">Source code</a></p></li>
 </ul>
 </section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
+<p>Install the bare-script package with pip — it includes the <code class="docutils literal notranslate"><span class="pre">bare</span></code> command-line interface:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span>
+</pre></div>
+</div>
+</section>
 <section id="executing-barescript-scripts">
 <h2>Executing BareScript Scripts<a class="headerlink" href="#executing-barescript-scripts" title="Link to this heading">¶</a></h2>
 <p>To execute a BareScript script, parse the script using the
@@ -172,7 +179,7 @@ functions.</p>
 </pre></div>
 </div>
 <p>This outputs:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">BareScript</span> <span class="n">Library</span> <span class="n">has</span> <span class="mi">108</span> <span class="n">builtin</span> <span class="n">functions</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">BareScript</span> <span class="n">Library</span> <span class="n">has</span> <span class="mi">100</span> <span class="n">builtin</span> <span class="n">functions</span>
 </pre></div>
 </div>
 </section>
@@ -243,7 +250,7 @@ files use the “.bare” file extension.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bare</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>
 </pre></div>
 </div>
-<p><strong>Note:</strong> In the BareScript CLI, import statements and the
+<p><strong>Note:</strong> In the BareScript CLI, include statements and the
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&amp;systemfetch">systemFetch</a>
 function read non-URL paths from the local file system.
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&amp;systemfetch">systemFetch</a>
@@ -258,7 +265,7 @@ dynamically rendering Markdown text, drawing SVG images, etc. For example:</p>
 
 This is a Markdown document with embedded BareScript:
 
-``` markdown-script
+```markdown-script
 markdownPrint(&#39;Hello, Markdown!&#39;)
 ```
 </pre></div>
@@ -397,12 +404,17 @@ other assistants, include the file’s contents in your system prompt or rules f
 <span class="n">markdown</span><span class="o">-</span><span class="n">up</span> <span class="n">ticTacToe</span><span class="o">.</span><span class="n">md</span>
 </pre></div>
 </div>
-<p>The BareScript library is also documented as single-page Markdown, which can be fetched directly
+<p>The BareScript documentation is also published as plain Markdown, which can be fetched directly
 into an assistant’s context alongside <code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code>:</p>
 <ul class="simple">
+<li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/README.md">The BareScript Language</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/barescript-library.md">The BareScript Library</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/barescript-library-model.md">The BareScript Library Models</a></p></li>
+<li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/barescript-expression-library.md">The BareScript Expression Library</a></p></li>
+<li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/model/barescript-model.md">The BareScript Runtime Model</a></p></li>
 </ul>
+<p><code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code> itself is published at <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/SKILL.md">https://craigahobbs.github.io/bare-script-py/SKILL.md</a>, and
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/llms.txt">https://craigahobbs.github.io/bare-script-py/llms.txt</a> indexes all of the fetchable documentation.</p>
 </section>
 <section id="development">
 <h2>Development<a class="headerlink" href="#development" title="Link to this heading">¶</a></h2>
