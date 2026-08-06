@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.2 (2026-08-06)
+
+- [35aca8c](https://github.com/craigahobbs/bare-script-py/commit/35aca8c) - migrate package metadata from setup.cfg to pyproject.toml
+
 ## 5.1.1 (2026-08-06)
 
 - [a12d536](https://github.com/craigahobbs/bare-script-py/commit/a12d536) - fix broken documentation links \(debug-mode hashes, Types vURL='', stale README links\)
