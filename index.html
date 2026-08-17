@@ -133,18 +133,18 @@ function. For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span>
 
 <span class="c1"># Parse the script</span>
-<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
 <span class="s1"># Double a number</span>
 <span class="s1">function double(n):</span>
 <span class="s1">    return n * 2</span>
 <span class="s1">endfunction</span>
 
-<span class="s1">return N + &#39; times 2 is &#39; + double(N)</span>
-<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+<span class="s1">return N + ' times 2 is ' + double(N)</span>
+<span class="s1">'''</span><span class="p">)</span>
 
 <span class="c1"># Execute the script</span>
-<span class="nb">globals</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;globals&#39;</span><span class="p">:</span> <span class="nb">globals</span><span class="p">}))</span>
+<span class="nb">globals</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'N'</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">'globals'</span><span class="p">:</span> <span class="nb">globals</span><span class="p">}))</span>
 </pre></div>
 </div>
 <p>This outputs:</p>
@@ -166,16 +166,16 @@ functions.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span>
 
 <span class="c1"># Parse the script</span>
-<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
 <span class="s1"># Fetch the BareScript builtin library documentation JSON</span>
-<span class="s1">docs = jsonParse(systemFetch(&#39;https://craigahobbs.github.io/bare-script-py/library/library-builtin.json&#39;))</span>
+<span class="s1">docs = jsonParse(systemFetch('https://craigahobbs.github.io/bare-script-py/library/library-builtin.json'))</span>
 
 <span class="s1"># Return the number of builtin functions</span>
-<span class="s1">return &#39;The BareScript Library has &#39; + arrayLength(objectGet(docs, &#39;functions&#39;)) + &#39; builtin functions&#39;</span>
-<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+<span class="s1">return 'The BareScript Library has ' + arrayLength(objectGet(docs, 'functions')) + ' builtin functions'</span>
+<span class="s1">'''</span><span class="p">)</span>
 
 <span class="c1"># Execute the script</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;fetchFn&#39;</span><span class="p">:</span> <span class="n">fetch_http</span><span class="p">}))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">'fetchFn'</span><span class="p">:</span> <span class="n">fetch_http</span><span class="p">}))</span>
 </pre></div>
 </div>
 <p>This outputs:</p>
@@ -200,10 +200,10 @@ a set of built-in, spreadsheet-like functions.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_expression</span><span class="p">,</span> <span class="n">evaluate_expression</span>
 
 <span class="c1"># Parse the expression</span>
-<span class="n">expr</span> <span class="o">=</span> <span class="n">barescript_parse_expression</span><span class="p">(</span><span class="s1">&#39;2 * max(a, b, c)&#39;</span><span class="p">)</span>
+<span class="n">expr</span> <span class="o">=</span> <span class="n">barescript_parse_expression</span><span class="p">(</span><span class="s1">'2 * max(a, b, c)'</span><span class="p">)</span>
 
 <span class="c1"># Evaluate the expression</span>
-<span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
+<span class="n">variables</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'a'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'b'</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">'c'</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">evaluate_expression</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variables</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -228,11 +228,11 @@ runtime. For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script.include</span><span class="w"> </span><span class="kn">import</span> <span class="n">markdown_parse</span><span class="p">,</span> <span class="n">markdown_title</span>
 
 <span class="c1"># Parse the Markdown text</span>
-<span class="n">markdown</span> <span class="o">=</span> <span class="n">markdown_parse</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="n">markdown</span> <span class="o">=</span> <span class="n">markdown_parse</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
 <span class="s1"># Hello, Markdown!</span>
 
 <span class="s1">This is some text.</span>
-<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+<span class="s1">'''</span><span class="p">)</span>
 
 <span class="c1"># Print the Markdown title</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">markdown_title</span><span class="p">(</span><span class="n">markdown</span><span class="p">))</span>
@@ -266,7 +266,7 @@ dynamically rendering Markdown text, drawing SVG images, etc. For example:</p>
 This is a Markdown document with embedded BareScript:
 
 ```markdown-script
-markdownPrint(&#39;Hello, Markdown!&#39;)
+markdownPrint('Hello, Markdown!')
 ```
 </pre></div>
 </div>
@@ -395,7 +395,7 @@ convention, install it as a project or user skill:</p>
 <p>Use <code class="docutils literal notranslate"><span class="pre">~/.claude/skills/bare-script/SKILL.md</span></code> instead to make it available across all projects. For
 other assistants, include the file’s contents in your system prompt or rules file.</p>
 <p>Once installed, prompt the assistant with a task like:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">claude</span> <span class="s2">&quot;Build a MarkdownUp application that plays tic-tac-toe against the user, with a reset button and a running win/loss/draw tally rendered as a bar chart. Save it as ticTacToe.md&quot;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">claude</span> <span class="s2">"Build a MarkdownUp application that plays tic-tac-toe against the user, with a reset button and a running win/loss/draw tally rendered as a bar chart. Save it as ticTacToe.md"</span>
 </pre></div>
 </div>
 <p>To run the resulting MarkdownUp application locally, install the
@@ -420,7 +420,7 @@ into an assistant’s context alongside <code class="docutils literal notranslat
 <h2>Development<a class="headerlink" href="#development" title="Link to this heading">¶</a></h2>
 <p>This package is developed using <a class="reference external" href="https://github.com/craigahobbs/python-build#readme">python-build</a>.
 It was started using <a class="reference external" href="https://github.com/craigahobbs/python-template#readme">python-template</a> as follows:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="o">-</span><span class="n">specialize</span> <span class="n">python</span><span class="o">-</span><span class="n">template</span><span class="o">/</span><span class="n">template</span><span class="o">/</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span><span class="o">-</span><span class="n">py</span><span class="o">/</span> <span class="o">-</span><span class="n">k</span> <span class="n">package</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span> <span class="o">-</span><span class="n">k</span> <span class="n">name</span> <span class="s1">&#39;Craig A. Hobbs&#39;</span> <span class="o">-</span><span class="n">k</span> <span class="n">email</span> <span class="s1">&#39;craigahobbs@gmail.com&#39;</span> <span class="o">-</span><span class="n">k</span> <span class="n">github</span> <span class="s1">&#39;craigahobbs&#39;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="o">-</span><span class="n">specialize</span> <span class="n">python</span><span class="o">-</span><span class="n">template</span><span class="o">/</span><span class="n">template</span><span class="o">/</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span><span class="o">-</span><span class="n">py</span><span class="o">/</span> <span class="o">-</span><span class="n">k</span> <span class="n">package</span> <span class="n">bare</span><span class="o">-</span><span class="n">script</span> <span class="o">-</span><span class="n">k</span> <span class="n">name</span> <span class="s1">'Craig A. Hobbs'</span> <span class="o">-</span><span class="n">k</span> <span class="n">email</span> <span class="s1">'craigahobbs@gmail.com'</span> <span class="o">-</span><span class="n">k</span> <span class="n">github</span> <span class="s1">'craigahobbs'</span>
 </pre></div>
 </div>
 <div class="toctree-wrapper compound">
