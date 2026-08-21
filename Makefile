@@ -173,7 +173,8 @@ commit: test-include
 test-include: test-include-lint test-include-markdownup test-include-run
 test-include-lint test-include-markdownup test-include-run: $(DEFAULT_VENV_BUILD)
 test-include-lint:
-	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/*.bare
+	$(DEFAULT_VENV_BIN)/bare -x -m src/bare_script/include/*.bare src/bare_script/include/test/test*.bare
+	$(DEFAULT_VENV_BIN)/bare -s -m src/bare_script/include/test/runTests*.bare
 test-include-markdownup:
 	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 test-include-run:
