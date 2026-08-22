@@ -58,7 +58,7 @@ By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set
 
 ### CLI
 
-`src/bare_script/bare.py` implements the `bare` CLI: argument parsing, `-c`/`-m`/`-d`/`-v`/`-x` flags, HTML/MarkdownUp render modes, and the `-x` lint/syntax-check mode. The package entry point also exposes `python -m bare_script`.
+`src/bare_script/bare.py` implements the `bare` CLI: argument parsing, `-c`/`-m`/`-d`/`-v`/`-s`/`-x` flags, HTML/MarkdownUp render modes, and the `-s`/`-x` lint modes (`-s` parse+lint only, `-x` lint with execution). The package entry point also exposes `python -m bare_script`.
 
 ### Include library (`src/bare_script/include/*.bare`)
 
