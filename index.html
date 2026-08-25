@@ -111,7 +111,6 @@ confident that BareScript will execute the same regardless of the underlying run
 <ul class="simple">
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/">The BareScript Language</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/">The BareScript Library</a></p></li>
-<li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script/include/test/">The BareScript Include Library Tests</a></p></li>
 <li><p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/">API Documentation</a></p></li>
 <li><p><a class="reference external" href="https://github.com/craigahobbs/bare-script-py">Source code</a></p></li>
 </ul>
@@ -151,19 +150,21 @@ function. For example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">10</span> <span class="n">times</span> <span class="mi">2</span> <span class="ow">is</span> <span class="mi">20</span>
 </pre></div>
 </div>
+</section>
 <section id="the-barescript-library">
-<h3>The BareScript Library<a class="headerlink" href="#the-barescript-library" title="Link to this heading">¶</a></h3>
+<h2>The BareScript Library<a class="headerlink" href="#the-barescript-library" title="Link to this heading">¶</a></h2>
 <p><a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/">The BareScript Library</a>
-includes a set of built-in functions for mathematical operations, object manipulation, array
-manipulation, regular expressions, HTTP fetch and more. The following example demonstrates the use
-of the
+documents the built-in functions available to every script and the include libraries loaded with
+the <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/language/#include-statements">include statement</a>.
+Built-in functions cover mathematical operations, object and array manipulation, regular
+expressions, HTTP fetch, and more. Angle-bracket includes (<code class="docutils literal notranslate"><span class="pre">include</span> <span class="pre">&lt;markdown.bare&gt;</span></code>) load libraries
+bundled with the runtime. Quoted includes (<code class="docutils literal notranslate"><span class="pre">include</span> <span class="pre">'util.bare'</span></code>) load a local file or URL.</p>
+<p>The following example uses the built-in
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&amp;systemfetch">systemFetch</a>,
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='object'&amp;objectget">objectGet</a>, and
 <a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='array'&amp;arraylength">arrayLength</a>
-functions.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span>
+functions:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_http</span>
 
 <span class="c1"># Parse the script</span>
 <span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
@@ -180,6 +181,68 @@ functions.</p>
 </div>
 <p>This outputs:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">BareScript</span> <span class="n">Library</span> <span class="n">has</span> <span class="mi">100</span> <span class="n">builtin</span> <span class="n">functions</span>
+</pre></div>
+</div>
+<p>Include libraries are loaded before use:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span>
+
+<span class="c1"># Parse the script</span>
+<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
+<span class="s1">include &lt;markdownParser.bare&gt;</span>
+<span class="s1">include &lt;markdown.bare&gt;</span>
+
+<span class="s1">markdown = markdownParse('# Hello, Markdown!')</span>
+<span class="s1">return markdownTitle(markdown)</span>
+<span class="s1">'''</span><span class="p">)</span>
+
+<span class="c1"># Execute the script</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Hello, Markdown!
+</pre></div>
+</div>
+<p>Quoted includes and
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&amp;systemfetch">systemFetch</a>
+calls with a non-URL path need a filesystem-aware fetch function. Pass
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/options.html#bare_script.fetch_read_only">fetch_read_only</a>
+or
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/options.html#bare_script.fetch_read_write">fetch_read_write</a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script</span><span class="w"> </span><span class="kn">import</span> <span class="n">barescript_parse_script</span><span class="p">,</span> <span class="n">execute_script</span><span class="p">,</span> <span class="n">fetch_read_write</span>
+
+<span class="n">script</span> <span class="o">=</span> <span class="n">barescript_parse_script</span><span class="p">(</span><span class="s2">"include 'util.bare'"</span><span class="p">)</span>
+<span class="n">execute_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="p">{</span><span class="s1">'fetchFn'</span><span class="p">:</span> <span class="n">fetch_read_write</span><span class="p">})</span>
+</pre></div>
+</div>
+<section id="stub-functions">
+<h3>Stub Functions<a class="headerlink" href="#stub-functions" title="Link to this heading">¶</a></h3>
+<p>Include library functions are also callable directly from Python using the native stub functions
+exported by the
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html">include module</a> — for example,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#data-aggregate">data_aggregate</a>,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#markdown-parse">markdown_parse</a>,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#qrcode-matrix">qrcode_matrix</a>,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#schema-parse">schema_parse</a>,
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#schema-validate">schema_validate</a>, and
+<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#url-encode">url_encode</a>.
+Each stub function executes its corresponding include library function using the BareScript
+runtime. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script.include</span><span class="w"> </span><span class="kn">import</span> <span class="n">markdown_parse</span><span class="p">,</span> <span class="n">markdown_title</span>
+
+<span class="c1"># Parse the Markdown text</span>
+<span class="n">markdown</span> <span class="o">=</span> <span class="n">markdown_parse</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
+<span class="s1"># Hello, Markdown!</span>
+
+<span class="s1">This is some text.</span>
+<span class="s1">'''</span><span class="p">)</span>
+
+<span class="c1"># Print the Markdown title</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">markdown_title</span><span class="p">(</span><span class="n">markdown</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Hello, Markdown!
 </pre></div>
 </div>
 </section>
@@ -212,42 +275,18 @@ a set of built-in, spreadsheet-like functions.</p>
 </pre></div>
 </div>
 </section>
-<section id="the-include-library-stub-functions">
-<h2>The Include Library Stub Functions<a class="headerlink" href="#the-include-library-stub-functions" title="Link to this heading">¶</a></h2>
-<p>BareScript include library functions are callable directly from Python using the native stub functions
-exported by the
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html">include module</a> — for example,
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#data-aggregate">data_aggregate</a>,
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#markdown-parse">markdown_parse</a>,
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#qrcode-matrix">qrcode_matrix</a>,
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#schema-parse">schema_parse</a>,
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#schema-validate">schema_validate</a>, and
-<a class="reference external" href="https://craigahobbs.github.io/bare-script-py/include.html#url-encode">url_encode</a>.
-Each stub function executes its corresponding include library function using the BareScript
-runtime. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bare_script.include</span><span class="w"> </span><span class="kn">import</span> <span class="n">markdown_parse</span><span class="p">,</span> <span class="n">markdown_title</span>
-
-<span class="c1"># Parse the Markdown text</span>
-<span class="n">markdown</span> <span class="o">=</span> <span class="n">markdown_parse</span><span class="p">(</span><span class="s1">'''</span><span class="se">\</span>
-<span class="s1"># Hello, Markdown!</span>
-
-<span class="s1">This is some text.</span>
-<span class="s1">'''</span><span class="p">)</span>
-
-<span class="c1"># Print the Markdown title</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">markdown_title</span><span class="p">(</span><span class="n">markdown</span><span class="p">))</span>
-</pre></div>
-</div>
-<p>This outputs:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Hello, Markdown!
-</pre></div>
-</div>
-</section>
 <section id="the-barescript-command-line-interface-cli">
 <h2>The BareScript Command-Line Interface (CLI)<a class="headerlink" href="#the-barescript-command-line-interface-cli" title="Link to this heading">¶</a></h2>
 <p>You can run BareScript from the command line using the BareScript CLI, “bare”. BareScript script
 files use the “.bare” file extension.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bare</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bare</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>                      <span class="c1"># run a script</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">c</span> <span class="s1">'systemLog("Hello, World!")'</span>  <span class="c1"># execute inline code</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">v</span> <span class="n">N</span> <span class="mi">10</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>              <span class="c1"># set the global N to 10</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">d</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>                   <span class="c1"># debug mode</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">m</span> <span class="n">app</span><span class="o">.</span><span class="n">bare</span>                      <span class="c1"># MarkdownUp text output</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">l</span> <span class="n">app</span><span class="o">.</span><span class="n">bare</span>                      <span class="c1"># MarkdownUp HTML output</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">s</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>                   <span class="c1"># parse and lint only</span>
+<span class="n">bare</span> <span class="o">-</span><span class="n">x</span> <span class="n">script</span><span class="o">.</span><span class="n">bare</span>                   <span class="c1"># lint with execution</span>
 </pre></div>
 </div>
 <p><strong>Note:</strong> In the BareScript CLI, include statements and the
@@ -270,6 +309,10 @@ markdownPrint('Hello, Markdown!')
 ```
 </pre></div>
 </div>
+<p>To run a MarkdownUp script (<code class="docutils literal notranslate"><span class="pre">.bare</span></code>) from this package, use <code class="docutils literal notranslate"><span class="pre">bare</span> <span class="pre">-m</span></code> (Markdown text) or <code class="docutils literal notranslate"><span class="pre">bare</span> <span class="pre">-l</span></code>
+(HTML). To view a MarkdownUp document (<code class="docutils literal notranslate"><span class="pre">.md</span></code> with <code class="docutils literal notranslate"><span class="pre">markdown-script</span></code> blocks), install the
+<a class="reference external" href="https://github.com/craigahobbs/markdown-up-py#readme">markdown-up</a> viewer or open the file in the
+<a class="reference external" href="https://craigahobbs.github.io/markdown-up/">MarkdownUp web app</a>.</p>
 </section>
 <section id="c-runtime">
 <h2>C Runtime<a class="headerlink" href="#c-runtime" title="Link to this heading">¶</a></h2>
@@ -384,7 +427,8 @@ without a native Python equivalent are omitted.</p>
 <a class="reference external" href="https://github.com/craigahobbs/bare-script-py/blob/main/SKILL.md"><code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code></a>
 file that teaches an AI coding assistant how to write idiomatic BareScript — language syntax, the
 built-in and include libraries, the MarkdownUp application pattern, and the unit-test conventions.
-It is plain Markdown and applies to either BareScript implementation.</p>
+It is plain Markdown and applies to either BareScript implementation. Assistants that discover
+<code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code> at the repository root can use it without copying.</p>
 <p>For <a class="reference external" href="https://claude.com/claude-code">Claude Code</a> and other tools that follow the
 <a class="reference external" href="https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview">Agent Skills</a>
 convention, install it as a project or user skill:</p>
@@ -399,7 +443,7 @@ other assistants, include the file’s contents in your system prompt or rules f
 </pre></div>
 </div>
 <p>To run the resulting MarkdownUp application locally, install the
-<a class="reference external" href="https://pypi.org/project/markdown-up/">markdown-up</a> viewer and point it at the Markdown file:</p>
+<a class="reference external" href="https://github.com/craigahobbs/markdown-up-py#readme">markdown-up</a> viewer and point it at the Markdown file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">markdown</span><span class="o">-</span><span class="n">up</span>
 <span class="n">markdown</span><span class="o">-</span><span class="n">up</span> <span class="n">ticTacToe</span><span class="o">.</span><span class="n">md</span>
 </pre></div>
