@@ -23,7 +23,6 @@ confident that BareScript will execute the same regardless of the underlying run
 
 - [The BareScript Language](https://craigahobbs.github.io/bare-script-py/language/)
 - [The BareScript Library](https://craigahobbs.github.io/bare-script-py/library/)
-- [The BareScript Include Library Tests](https://craigahobbs.github.io/bare-script/include/test/)
 - [API Documentation](https://craigahobbs.github.io/bare-script-py/)
 - [Source code](https://github.com/craigahobbs/bare-script-py)
 
@@ -70,20 +69,22 @@ This outputs:
 ```
 
 
-### The BareScript Library
+## The BareScript Library
 
 [The BareScript Library](https://craigahobbs.github.io/bare-script-py/library/)
-includes a set of built-in functions for mathematical operations, object manipulation, array
-manipulation, regular expressions, HTTP fetch and more. The following example demonstrates the use
-of the
+documents the built-in functions available to every script and the include libraries loaded with
+the [include statement](https://craigahobbs.github.io/bare-script-py/language/#include-statements).
+Built-in functions cover mathematical operations, object and array manipulation, regular
+expressions, HTTP fetch, and more. Angle-bracket includes (`include <markdown.bare>`) load libraries
+bundled with the runtime. Quoted includes (`include 'util.bare'`) load a local file or URL.
+
+The following example uses the built-in
 [systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch),
 [objectGet](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='object'&objectget), and
 [arrayLength](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='array'&arraylength)
-functions.
+functions:
 
 ```python
-import urllib.request
-
 from bare_script import barescript_parse_script, execute_script, fetch_http
 
 # Parse the script
@@ -103,6 +104,79 @@ This outputs:
 
 ```
 The BareScript Library has 100 builtin functions
+```
+
+Include libraries are loaded before use:
+
+```python
+from bare_script import barescript_parse_script, execute_script
+
+# Parse the script
+script = barescript_parse_script('''\
+include <markdownParser.bare>
+include <markdown.bare>
+
+markdown = markdownParse('# Hello, Markdown!')
+return markdownTitle(markdown)
+''')
+
+# Execute the script
+print(execute_script(script))
+```
+
+This outputs:
+
+```
+Hello, Markdown!
+```
+
+Quoted includes and
+[systemFetch](https://craigahobbs.github.io/bare-script-py/library/#var.vGroup='system'&systemfetch)
+calls with a non-URL path need a filesystem-aware fetch function. Pass
+[fetch_read_only](https://craigahobbs.github.io/bare-script-py/options.html#bare_script.fetch_read_only)
+or
+[fetch_read_write](https://craigahobbs.github.io/bare-script-py/options.html#bare_script.fetch_read_write):
+
+```python
+from bare_script import barescript_parse_script, execute_script, fetch_read_write
+
+script = barescript_parse_script("include 'util.bare'")
+execute_script(script, {'fetchFn': fetch_read_write})
+```
+
+
+### Stub Functions
+
+Include library functions are also callable directly from Python using the native stub functions
+exported by the
+[include module](https://craigahobbs.github.io/bare-script-py/include.html) — for example,
+[data_aggregate](https://craigahobbs.github.io/bare-script-py/include.html#data-aggregate),
+[markdown_parse](https://craigahobbs.github.io/bare-script-py/include.html#markdown-parse),
+[qrcode_matrix](https://craigahobbs.github.io/bare-script-py/include.html#qrcode-matrix),
+[schema_parse](https://craigahobbs.github.io/bare-script-py/include.html#schema-parse),
+[schema_validate](https://craigahobbs.github.io/bare-script-py/include.html#schema-validate), and
+[url_encode](https://craigahobbs.github.io/bare-script-py/include.html#url-encode).
+Each stub function executes its corresponding include library function using the BareScript
+runtime. For example:
+
+```python
+from bare_script.include import markdown_parse, markdown_title
+
+# Parse the Markdown text
+markdown = markdown_parse('''\
+# Hello, Markdown!
+
+This is some text.
+''')
+
+# Print the Markdown title
+print(markdown_title(markdown))
+```
+
+This outputs:
+
+```
+Hello, Markdown!
 ```
 
 
@@ -140,48 +214,20 @@ This outputs:
 ```
 
 
-## The Include Library Stub Functions
-
-BareScript include library functions are callable directly from Python using the native stub functions
-exported by the
-[include module](https://craigahobbs.github.io/bare-script-py/include.html) — for example,
-[data_aggregate](https://craigahobbs.github.io/bare-script-py/include.html#data-aggregate),
-[markdown_parse](https://craigahobbs.github.io/bare-script-py/include.html#markdown-parse),
-[qrcode_matrix](https://craigahobbs.github.io/bare-script-py/include.html#qrcode-matrix),
-[schema_parse](https://craigahobbs.github.io/bare-script-py/include.html#schema-parse),
-[schema_validate](https://craigahobbs.github.io/bare-script-py/include.html#schema-validate), and
-[url_encode](https://craigahobbs.github.io/bare-script-py/include.html#url-encode).
-Each stub function executes its corresponding include library function using the BareScript
-runtime. For example:
-
-```python
-from bare_script.include import markdown_parse, markdown_title
-
-# Parse the Markdown text
-markdown = markdown_parse('''\
-# Hello, Markdown!
-
-This is some text.
-''')
-
-# Print the Markdown title
-print(markdown_title(markdown))
-```
-
-This outputs:
-
-```
-Hello, Markdown!
-```
-
-
 ## The BareScript Command-Line Interface (CLI)
 
 You can run BareScript from the command line using the BareScript CLI, "bare". BareScript script
 files use the ".bare" file extension.
 
 ```
-bare script.bare
+bare script.bare                      # run a script
+bare -c 'systemLog("Hello, World!")'  # execute inline code
+bare -v N 10 script.bare              # set the global N to 10
+bare -d script.bare                   # debug mode
+bare -m app.bare                      # MarkdownUp text output
+bare -l app.bare                      # MarkdownUp HTML output
+bare -s script.bare                   # parse and lint only
+bare -x script.bare                   # lint with execution
 ```
 
 **Note:** In the BareScript CLI, include statements and the
@@ -206,6 +252,11 @@ This is a Markdown document with embedded BareScript:
 markdownPrint('Hello, Markdown!')
 ```
 ~~~
+
+To run a MarkdownUp script (`.bare`) from this package, use `bare -m` (Markdown text) or `bare -l`
+(HTML). To view a MarkdownUp document (`.md` with `markdown-script` blocks), install the
+[markdown-up](https://github.com/craigahobbs/markdown-up-py#readme) viewer or open the file in the
+[MarkdownUp web app](https://craigahobbs.github.io/markdown-up/).
 
 
 ## C Runtime
@@ -257,7 +308,8 @@ This repository ships a
 [`SKILL.md`](https://github.com/craigahobbs/bare-script-py/blob/main/SKILL.md)
 file that teaches an AI coding assistant how to write idiomatic BareScript — language syntax, the
 built-in and include libraries, the MarkdownUp application pattern, and the unit-test conventions.
-It is plain Markdown and applies to either BareScript implementation.
+It is plain Markdown and applies to either BareScript implementation. Assistants that discover
+`SKILL.md` at the repository root can use it without copying.
 
 For [Claude Code](https://claude.com/claude-code) and other tools that follow the
 [Agent Skills](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview)
@@ -278,7 +330,7 @@ claude "Build a MarkdownUp application that plays tic-tac-toe against the user, 
 ```
 
 To run the resulting MarkdownUp application locally, install the
-[markdown-up](https://pypi.org/project/markdown-up/) viewer and point it at the Markdown file:
+[markdown-up](https://github.com/craigahobbs/markdown-up-py#readme) viewer and point it at the Markdown file:
 
 ```
 pip install markdown-up

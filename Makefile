@@ -184,8 +184,6 @@ test-include-run:
 doc:
     # Copy statics
 	cp -R static/* build/doc/html/
-	cp -R src/bare_script/include build/doc/html/
-	rm -rf build/doc/html/include/__pycache__
 
     # Generate the builtin library documentation
 	$(DEFAULT_VENV_BIN)/bare -m \
