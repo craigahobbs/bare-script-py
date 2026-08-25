@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Notes for coding agents working in this repository.
 
 ## Project overview
 
@@ -10,35 +10,33 @@ BareScript is a lightweight, embeddable scripting and expression language with a
 
 When writing, modifying, or reviewing BareScript code (`.bare` files, `markdown-script` blocks, MarkdownUp apps, or BareScript unit tests), first read `SKILL.md` at the repo root. It's the model-agnostic reference for the language, built-in library, include library, MarkdownUp app pattern, and unit-test / mocking pattern.
 
-## Common commands
+## python-build
 
-Build driven by `Makefile` + `Makefile.base` (the latter downloaded from `python-build`). Set `USE_DOCKER=1` or `USE_PODMAN=1` to containerize.
+This is a [python-build](https://github.com/craigahobbs/python-build#readme) package. Read the python-build skill before running tests, lint, coverage, or changing the Makefile: [`../python-build/SKILL.md`](../python-build/SKILL.md) if that file exists, otherwise [https://raw.githubusercontent.com/craigahobbs/python-build/main/SKILL.md](https://raw.githubusercontent.com/craigahobbs/python-build/main/SKILL.md).
 
-- `make test` — run Python unit tests
-- `TEST=src/tests/test_runtime.py make test` — run a single Python test module
-- `make lint` — pylint (100% compliance required)
-- `make cover` — coverage (100% line + branch required)
-- `make doc` — Sphinx docs + library docs build (writes to `build/doc/`)
-- `make commit` — full pre-publish gate (test + lint + doc + cover), re-runs test + test-include with the C runtime
+Local Makefile overrides:
+
+- `SPHINX_DOC` — `doc`
+- `TESTS_REQUIRE` — `schema-markdown`
+- `commit` also depends on `commit-runtime-c` (re-runs `test` + `test-include` with the C runtime)
+- `clean` also removes `src/bare_script/*.so`
+
+By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set `BARESCRIPT_RUNTIME_C=1` to exercise the compiled C runtime instead; `make commit` runs both.
+
+Package-specific targets:
+
 - `make test-include` — run the `.bare` test suite under `src/bare_script/include/test/` via the `bare` CLI
-- `TEST=<name> make test-include` — single `.bare` test. This is an **exact** test name, not a glob or pattern
+- `make test-include TEST=<name>` — single `.bare` test. This is an **exact** test name, not a glob or pattern
   (`unittest.bare` compares with `!=`), so a prefix like `testSchemaValidate` silently runs 0 tests
 - `make perf` — benchmark BareScript (PyC), BareScript (Py), and Python across the `perf/` test suite (mandelbrot,
   schemaParse, schemaValidate, markdownParse, markdownElements, urlEncode, urlDecode, and the BareScript-only
   qrcodeMatrix; the markdown and qrcode tests aren't supported by the native Python program. urlEncode/urlDecode race
   `urlEncodeQueryString`/`urlDecodeQueryString` against schema-markdown's `encode_query_string`/`decode_query_string`,
   the closest native analog even though they differ in percent-encoding scheme); if `../bare-script` exists, its
-  `make perf` (BareScript (JS)
-  and JavaScript) also runs and its data is merged into the report. Each `perf/test.*` program takes a language label and an optional test name (all tests when omitted;
-  iteration counts are tuned per test) and outputs `language,test,runs,timeMs` CSV rows — e.g.
-  `build/venv/system/bin/python3 perf/test.py "Python" mandelbrot` (the venv provides `schema-markdown`) or
-  `bare perf/test.bare -v vLanguage "'BareScript (PyC)'" -v vTest "'schemaParse'"`
+  `make perf` (BareScript (JS) and JavaScript) also runs and its data is merged into the report
 - `make perf TEST=<name>` — run a single perf test across all languages (a program silently skips a test it doesn't
   implement; an unknown test name fails the run)
 - `make sync` — push `src/bare_script/include/` and `static/` to the JavaScript repo
-- `make clean` / `make superclean` — remove `build/`, downloaded base files, container images
-
-By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set `BARESCRIPT_RUNTIME_C=1` to exercise the compiled C runtime instead; `make commit` runs both.
 
 `make perf` benchmarks the runtime itself. For optimizing an individual include file, write a throwaway `.bare` harness under `perf/` and run with `bare perf/<file>.bare` — `perf/` is outside the shipped package and isn't synced cross-repo, so harnesses can live there until you're done and then be removed (regenerate as needed).
 
