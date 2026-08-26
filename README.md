@@ -285,21 +285,21 @@ without a native Python equivalent are omitted.
 
 | Test             | Language         | Time (ms) | Multiple |
 | ---------------- | ---------------- | --------: | -------: |
-| mandelbrot       | Python           |    4720.8 |          |
-|                  | BareScript (PyC) |   10800.0 |     2.3x |
-|                  | BareScript (Py)  |  334100.0 |    70.8x |
-| schemaValidate   | Python           |      21.0 |          |
-|                  | BareScript (PyC) |     101.6 |     4.8x |
-|                  | BareScript (Py)  |    1404.8 |    67.0x |
+| mandelbrot       | Python           |    4630.9 |          |
+|                  | BareScript (PyC) |   10900.0 |     2.4x |
+|                  | BareScript (Py)  |  341300.0 |    73.7x |
+| schemaValidate   | Python           |      20.7 |          |
+|                  | BareScript (PyC) |     105.6 |     5.1x |
+|                  | BareScript (Py)  |    1433.2 |    69.2x |
 | urlEncode        | Python           |       1.1 |          |
-|                  | BareScript (PyC) |       5.6 |     5.3x |
-|                  | BareScript (Py)  |      39.1 |    37.1x |
-| schemaParse      | Python           |      17.1 |          |
-|                  | BareScript (PyC) |     120.4 |     7.1x |
-|                  | BareScript (Py)  |     882.4 |    51.7x |
+|                  | BareScript (PyC) |       5.7 |     5.4x |
+|                  | BareScript (Py)  |      39.6 |    37.5x |
+| schemaParse      | Python           |      17.2 |          |
+|                  | BareScript (PyC) |     123.6 |     7.2x |
+|                  | BareScript (Py)  |     904.8 |    52.7x |
 | urlDecode        | Python           |       1.2 |          |
-|                  | BareScript (PyC) |      13.1 |    10.8x |
-|                  | BareScript (Py)  |      68.5 |    56.6x |
+|                  | BareScript (PyC) |      13.2 |    11.2x |
+|                  | BareScript (Py)  |      68.8 |    58.3x |
 
 
 ## Using BareScript with an AI Assistant
