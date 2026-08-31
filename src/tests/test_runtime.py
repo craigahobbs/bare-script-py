@@ -996,6 +996,30 @@ a = 1
         self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'test.bare': True})
 
 
+    def test_include_grouped_nested(self):
+        script = barescript_validate_script({
+            'statements': [
+                {'include': {'includes': [{'url': 'test.bare'}, {'url': 'test2.bare'}]}}
+            ]
+        })
+
+        urls = []
+        def fetch_fn(request):
+            url = request['url']
+            urls.append(url)
+            return 'a = 1' if url == 'test2.bare' else '''\
+include 'test2.bare'
+b = a
+'''
+
+        options = {'globals': {}, 'fetchFn': fetch_fn}
+        self.assertIsNone(execute_script(script, options))
+        self.assertEqual(options['globals']['a'], 1)
+        self.assertEqual(options['globals']['b'], 1)
+        self.assertListEqual(urls, ['test.bare', 'test2.bare'])
+        self.assertDictEqual(options['globals'][SYSTEM_GLOBAL_INCLUDES_NAME], {'test.bare': True, 'test2.bare': True})
+
+
     def test_include_nested(self):
         script = barescript_validate_script({
             'statements': [
