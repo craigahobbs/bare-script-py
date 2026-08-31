@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.6 (2026-08-31)
+
+- [3ff81ce](https://github.com/craigahobbs/bare-script-py/commit/3ff81ce) - add markdownToString and fix markdown parser escape handling
+
 ## 5.1.5 (2026-08-31)
 
 - [aead939](https://github.com/craigahobbs/bare-script-py/commit/aead939) - improve include-model dictionary compression
