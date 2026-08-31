@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.5 (2026-08-31)
+
+- [aead939](https://github.com/craigahobbs/bare-script-py/commit/aead939) - improve include-model dictionary compression
+
 ## 5.1.3 (2026-08-06)
 
 - [0c89b28](https://github.com/craigahobbs/bare-script-py/commit/0c89b28) - improve documentation \(language reference semantics, library doc examples, $async marking, llms.txt\)
