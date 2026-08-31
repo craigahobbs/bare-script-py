@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Include &#8212; bare-script 5.1.5 documentation</title>
+    <title>Include &#8212; bare-script 5.1.6 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=e7a81245"></script>
+    <script src="_static/documentation_options.js?v=d050982f"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -70,6 +70,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#markdown-bare">markdown.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdownelements-bare">markdownElements.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdownparser-bare">markdownParser.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#markdownstring-bare">markdownString.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#qrcode-bare">qrcode.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#schema-bare">schema.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#schemadoc-bare">schemaDoc.bare</a></li>
@@ -691,6 +692,34 @@
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="markdownstring-bare">
+<h2>markdownString.bare<a class="headerlink" href="#markdownstring-bare" title="Link to this heading">¶</a></h2>
+<section id="markdown-to-string">
+<h3>markdown_to_string<a class="headerlink" href="#markdown-to-string" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.markdown_to_string">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">markdown_to_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">markdown</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.markdown_to_string" title="Link to this definition">¶</a></dt>
+<dd><p>Render a Markdown model as Markdown text</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>markdown</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The Markdown model</p></li>
+<li><p><strong>wrap_width</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The text wrap width (default is 100). If zero or less, text is not wrapped.</p></li>
+<li><p><strong>ref_count</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – The minimum number of occurrences of a link/image URL for which a link/image
+reference is rendered (default is 0). If zero or less, all links/images are rendered inline.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Markdown text</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
 </dd>
 </dl>
 </dd></dl>

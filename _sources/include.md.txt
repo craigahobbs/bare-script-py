@@ -191,6 +191,15 @@
 ~~~
 
 
+## markdownString.bare
+
+### markdown_to_string
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.markdown_to_string
+~~~
+
+
 ## qrcode.bare
 
 ### qrcode_elements
