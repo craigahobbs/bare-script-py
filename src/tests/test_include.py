@@ -10,7 +10,8 @@ from bare_script.include import SchemaParserError, SchemaValidationError, \
     data_aggregate, data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, data_parse_csv, \
     data_sort, data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, element_model_to_string, \
     element_model_validate, include_set_log_fn, markdown_elements, markdown_escape, markdown_header_id, markdown_paragraph_text, \
-    markdown_parse, markdown_title, markdown_validate, qrcode_elements, qrcode_matrix, schema_doc_markdown, schema_get_enum_values, \
+    markdown_parse, markdown_title, markdown_to_string, markdown_validate, qrcode_elements, qrcode_matrix, schema_doc_markdown, \
+    schema_get_enum_values, \
     schema_get_referenced_types, schema_get_struct_members, schema_parse, schema_type_model, schema_type_model_validate, schema_validate, \
     url_decode_component, url_decode_query_string, url_encode, url_encode_component, url_encode_query_string
 
@@ -206,6 +207,21 @@ class TestInclude(unittest.TestCase):
 
     def test_markdown_parse(self):
         self.assertDictEqual(markdown_parse('# Title'), {'parts': [{'paragraph': {'spans': [{'text': 'Title'}], 'style': 'h1'}}]})
+
+
+    def test_markdown_to_string(self):
+        self.assertEqual(markdown_to_string(markdown_parse('#  Title\n\nSome\ntext')), '# Title\n\nSome text\n')
+
+
+    def test_markdown_to_string_wrap_width(self):
+        self.assertEqual(markdown_to_string(markdown_parse('aaa bbb ccc'), 7), 'aaa bbb\nccc\n')
+
+
+    def test_markdown_to_string_ref_count(self):
+        self.assertEqual(
+            markdown_to_string(markdown_parse('[a](u.html) [b](u.html)'), 0, 2),
+            '[a][1] [b][1]\n\n[1]: u.html\n'
+        )
 
 
     def test_qrcode_elements(self):

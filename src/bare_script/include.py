@@ -30,6 +30,7 @@ execute_script(
                 {'url': 'markdown.bare', 'system': True},
                 {'url': 'markdownElements.bare', 'system': True},
                 {'url': 'markdownParser.bare', 'system': True},
+                {'url': 'markdownString.bare', 'system': True},
                 {'url': 'qrcode.bare', 'system': True},
                 {'url': 'schema.bare', 'system': True},
                 {'url': 'schemaDoc.bare', 'system': True},
@@ -497,6 +498,28 @@ def markdown_parse(text):
     """
 
     return _INCLUDE_GLOBALS['markdownParse']([text], _include_options())
+
+
+#
+# markdownString.bare
+#
+
+
+def markdown_to_string(markdown, wrap_width=None, ref_count=None):
+    """
+    Render a Markdown model as Markdown text
+
+    :param dict markdown: The Markdown model
+    :param wrap_width: The text wrap width (default is 100). If zero or less, text is not wrapped.
+    :type wrap_width: int or None, optional
+    :param ref_count: The minimum number of occurrences of a link/image URL for which a link/image
+        reference is rendered (default is 0). If zero or less, all links/images are rendered inline.
+    :type ref_count: int or None, optional
+    :return: The Markdown text
+    :rtype: str
+    """
+
+    return _INCLUDE_GLOBALS['markdownToString']([markdown, wrap_width, ref_count], _include_options())
 
 
 #
