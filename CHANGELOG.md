@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.9 (2026-09-04)
+
+- [425640a](https://github.com/craigahobbs/bare-script-py/commit/425640a) - embed the include library models with gzip and base64 instead of dictionary compression \(mirror of bare-script\)
+
 ## 5.1.8 (2026-09-04)
 
 - [b80d916](https://github.com/craigahobbs/bare-script-py/commit/b80d916) - simplify datetimeNew rollover and the datetime string format
