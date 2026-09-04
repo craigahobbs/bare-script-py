@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>bare-script &#8212; bare-script 5.1.6 documentation</title>
+    <title>bare-script &#8212; bare-script 5.1.7 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=d050982f"></script>
+    <script src="_static/documentation_options.js?v=74281c36"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -322,6 +322,16 @@ set the environment variable <code class="docutils literal notranslate"><span cl
 <p>The extension supports CPython 3.10 and later on both the default (GIL) and free-threaded Python
 builds. See the Performance section below for benchmark results comparing the C runtime, the
 pure-Python runtime, and native Python.</p>
+</section>
+<section id="thread-safety">
+<h2>Thread Safety<a class="headerlink" href="#thread-safety" title="Link to this heading">¶</a></h2>
+<p>Both runtimes may be used from multiple threads, including on the free-threaded (no-GIL) Python
+builds. Script models and a <code class="docutils literal notranslate"><span class="pre">globals</span></code> dict may be shared across threads once populated - for example,
+execute a script that defines functions once, then call those functions concurrently. Each
+concurrently executing thread must pass its own <code class="docutils literal notranslate"><span class="pre">options</span></code> dict to <code class="docutils literal notranslate"><span class="pre">execute_script</span></code>, since the runtime
+records the running <code class="docutils literal notranslate"><span class="pre">statementCount</span></code> there. The parser, linter, and include library stubs initialize
+lazily and are safe to call from any thread. As in Python, unsynchronized concurrent mutation of a
+shared array or object from several threads has unspecified results but never crashes the runtime.</p>
 </section>
 <section id="performance">
 <h2>Performance<a class="headerlink" href="#performance" title="Link to this heading">¶</a></h2>
