@@ -11,28 +11,12 @@ import functools
 import importlib
 import json
 import math
-import os
 import random
 import re
 
 from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_args_validate, \
     value_boolean, value_compare, value_is, value_json, value_normalize_datetime, value_parse_datetime, \
     value_parse_integer, value_parse_number, value_round_number, value_string, value_type
-
-
-# Helper to dynamically import evaluate_expression to avoid the circular dependency
-def _import_evaluate_expression():
-    if not _EVALUATE_EXPRESSION:
-        if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
-            try:
-                _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime_c').evaluate_expression)
-            except (ImportError, AttributeError):
-                _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
-        else:
-            _EVALUATE_EXPRESSION.append(importlib.import_module('bare_script.runtime').evaluate_expression)
-    return _EVALUATE_EXPRESSION[0]
-
-_EVALUATE_EXPRESSION = []
 
 
 #
@@ -431,15 +415,23 @@ _ARRAY_SORT_ARGS = value_args_model([
 # $arg builtins: Optional (default is true). If true, include the [built-in expression functions](expression.html).
 # $return: The expression result
 def _barescript_evaluate_expression(args, options):
+    # pylint: disable-next=global-statement
+    global _EVALUATE_EXPRESSION
     expr, locals_, builtins = value_args_validate(_BARESCRIPT_EVALUATE_EXPRESSION_ARGS, args)
-    evaluate_expression = _import_evaluate_expression()
-    return evaluate_expression(expr, options, locals_, builtins)
+
+    # Import the package's runtime-selected evaluate_expression on first use - the library and runtime modules
+    # form an import cycle, so it cannot be imported at module load
+    if _EVALUATE_EXPRESSION is None:
+        _EVALUATE_EXPRESSION = importlib.import_module('bare_script').evaluate_expression
+    return _EVALUATE_EXPRESSION(expr, options, locals_, builtins)
 
 _BARESCRIPT_EVALUATE_EXPRESSION_ARGS = value_args_model([
     {'name': 'expr', 'type': 'object'},
     {'name': 'locals', 'type': 'object', 'nullable': True},
     {'name': 'builtins', 'type': 'boolean', 'default': True}
 ])
+
+_EVALUATE_EXPRESSION = None
 
 
 #

@@ -5,15 +5,7 @@
 Include library script globals and native stub functions
 """
 
-import os
-
-if not os.environ.get('BARESCRIPT_RUNTIME_PY'): # pragma: no cover
-    try:
-        from .runtime_c import execute_script
-    except ImportError:
-        from .runtime import execute_script
-else:
-    from .runtime import execute_script
+from . import execute_script
 
 
 # The include library script globals - execute the include library script
