@@ -438,43 +438,14 @@ def value_parse_integer(text, radix=10):
     return int(text, int(radix))
 
 
-VALUE_PARSE_INTEGER_REGEX_MAP = {
-    '2': re.compile(r'^\s*[-+]?[0-1]+\s*$'),
-    '3': re.compile(r'^\s*[-+]?[0-2]+\s*$'),
-    '4': re.compile(r'^\s*[-+]?[0-3]+\s*$'),
-    '5': re.compile(r'^\s*[-+]?[0-4]+\s*$'),
-    '6': re.compile(r'^\s*[-+]?[0-5]+\s*$'),
-    '7': re.compile(r'^\s*[-+]?[0-6]+\s*$'),
-    '8': re.compile(r'^\s*[-+]?[0-7]+\s*$'),
-    '9': re.compile(r'^\s*[-+]?[0-8]+\s*$'),
-    '10': re.compile(r'^\s*[-+]?[0-9]+\s*$'),
-    '11': re.compile(r'^\s*[-+]?[0-9Aa]+\s*$'),
-    '12': re.compile(r'^\s*[-+]?[0-9A-Ba-b]+\s*$'),
-    '13': re.compile(r'^\s*[-+]?[0-9A-Ca-c]+\s*$'),
-    '14': re.compile(r'^\s*[-+]?[0-9A-Da-d]+\s*$'),
-    '15': re.compile(r'^\s*[-+]?[0-9A-Ea-e]+\s*$'),
-    '16': re.compile(r'^\s*[-+]?[0-9A-Fa-f]+\s*$'),
-    '17': re.compile(r'^\s*[-+]?[0-9A-Ga-g]+\s*$'),
-    '18': re.compile(r'^\s*[-+]?[0-9A-Ha-h]+\s*$'),
-    '19': re.compile(r'^\s*[-+]?[0-9A-Ia-i]+\s*$'),
-    '20': re.compile(r'^\s*[-+]?[0-9A-Ja-j]+\s*$'),
-    '21': re.compile(r'^\s*[-+]?[0-9A-Ka-k]+\s*$'),
-    '22': re.compile(r'^\s*[-+]?[0-9A-La-l]+\s*$'),
-    '23': re.compile(r'^\s*[-+]?[0-9A-Ma-m]+\s*$'),
-    '24': re.compile(r'^\s*[-+]?[0-9A-Na-n]+\s*$'),
-    '25': re.compile(r'^\s*[-+]?[0-9A-Oa-o]+\s*$'),
-    '26': re.compile(r'^\s*[-+]?[0-9A-Pa-p]+\s*$'),
-    '27': re.compile(r'^\s*[-+]?[0-9A-Qa-q]+\s*$'),
-    '28': re.compile(r'^\s*[-+]?[0-9A-Ra-r]+\s*$'),
-    '29': re.compile(r'^\s*[-+]?[0-9A-Sa-s]+\s*$'),
-    '30': re.compile(r'^\s*[-+]?[0-9A-Ta-t]+\s*$'),
-    '31': re.compile(r'^\s*[-+]?[0-9A-Ua-u]+\s*$'),
-    '32': re.compile(r'^\s*[-+]?[0-9A-Va-v]+\s*$'),
-    '33': re.compile(r'^\s*[-+]?[0-9A-Wa-w]+\s*$'),
-    '34': re.compile(r'^\s*[-+]?[0-9A-Xa-x]+\s*$'),
-    '35': re.compile(r'^\s*[-+]?[0-9A-Ya-y]+\s*$'),
-    '36': re.compile(r'^\s*[-+]?[0-9A-Za-z]+\s*$')
-}
+# Helper to create the integer-string regex for a radix (2 - 36) - digits, then letters for radix > 10
+def _value_parse_integer_regex(radix):
+    letter_max = radix - 11
+    digits = f'0-{radix - 1}' if radix <= 10 else f'0-9A-{chr(ord("A") + letter_max)}a-{chr(ord("a") + letter_max)}'
+    return re.compile(rf'^\s*[-+]?[{digits}]+\s*$')
+
+
+VALUE_PARSE_INTEGER_REGEX_MAP = {str(radix): _value_parse_integer_regex(radix) for radix in range(2, 37)}
 
 
 #
