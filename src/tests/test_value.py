@@ -713,7 +713,16 @@ class TestValue(unittest.TestCase):
             {'name': 'str', 'type': 'string'},
             {'name': 'num', 'type': 'number', 'default': 0}
         ]
-        self.assertEqual(value_args_model(fn_args), fn_args)
+        self.assertListEqual(value_args_model(fn_args), [
+            {
+                'name': 'str', 'type': 'string', 'default': None, 'nullable': False, 'lastArgArray': False,
+                'integer': False, 'lt': None, 'lte': None, 'gt': None, 'gte': None
+            },
+            {
+                'name': 'num', 'type': 'number', 'default': 0, 'nullable': False, 'lastArgArray': False,
+                'integer': False, 'lt': None, 'lte': None, 'gt': None, 'gte': None
+            }
+        ])
 
         # Null default argument value error
         with self.assertRaises(ValueError) as cm_exc:

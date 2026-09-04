@@ -238,19 +238,19 @@ def value_args_validate(fn_args, args, error_return_value=None):
     :rtype: list
     """
 
+    args_length = len(args)
     for ix, fn_arg in enumerate(fn_args):
-        arg_type = fn_arg.get('type')
-        last_arg_array = fn_arg.get('lastArgArray', False)
+        arg_type = fn_arg['type']
 
         # Missing argument?
-        if ix >= len(args):
+        if ix >= args_length:
             # Last argument array?
-            if last_arg_array:
+            if fn_arg['lastArgArray']:
                 args.append([])
                 continue
 
             # Argument default?
-            arg_default = fn_arg.get('default')
+            arg_default = fn_arg['default']
             if arg_default is not None:
                 args.append(arg_default)
                 continue
@@ -261,7 +261,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
                 continue
 
             # Argument nullable?
-            if arg_type is None or fn_arg.get('nullable'):
+            if arg_type is None or fn_arg['nullable']:
                 args.append(None)
                 continue
 
@@ -269,7 +269,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
             raise ValueArgsError(fn_arg['name'], None, error_return_value)
 
         # Last arg array?
-        if last_arg_array:
+        if fn_arg['lastArgArray']:
             args[ix] = args[ix:]
             del args[ix + 1:]
             continue
@@ -287,7 +287,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
         # Null value?
         if arg_value is None:
             # Argument nullable?
-            if not fn_arg.get('nullable'):
+            if not fn_arg['nullable']:
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
             continue
 
@@ -295,11 +295,11 @@ def value_args_validate(fn_args, args, error_return_value=None):
         if arg_type == 'number':
             if not isinstance(arg_value, (int, float)) or isinstance(arg_value, bool):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
-            arg_lt = fn_arg.get('lt')
-            arg_lte = fn_arg.get('lte')
-            arg_gt = fn_arg.get('gt')
-            arg_gte = fn_arg.get('gte')
-            arg_integer = fn_arg.get('integer')
+            arg_lt = fn_arg['lt']
+            arg_lte = fn_arg['lte']
+            arg_gt = fn_arg['gt']
+            arg_gte = fn_arg['gte']
+            arg_integer = fn_arg['integer']
             if ((arg_integer and int(arg_value) != arg_value) or
                 (arg_lt is not None and not (arg_value < arg_lt)) or
                 (arg_lte is not None and not (arg_value <= arg_lte)) or
@@ -329,7 +329,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
             if not callable(arg_value):
                 raise ValueArgsError(fn_arg['name'], arg_value, error_return_value)
 
-    # Extra arguments?
+    # Extra arguments? (a last-argument array collapses the extra arguments, so re-read the length)
     if len(args) > len(fn_args):
         raise ValueArgsError(None, len(args), error_return_value)
 
@@ -366,16 +366,29 @@ def value_args_model(fn_args):
 
     :param fn_args: The function arguments model
     :type fn_args: list[dict]
-    :return: The validated function arguments model
+    :return: The validated function arguments model - each argument model is normalized to have every
+        member so that value_args_validate reads members directly
     :rtype: list[dict]
     """
 
-    # Use nullable instead of default-null
+    fn_args_model = []
     for fn_arg in fn_args:
+        # Use nullable instead of default-null
         if 'default' in fn_arg and fn_arg['default'] is None:
             raise ValueError(f'Argument "{fn_arg["name"]}" has default value of null - use nullable instead')
-
-    return fn_args
+        fn_args_model.append({
+            'name': fn_arg['name'],
+            'type': fn_arg.get('type'),
+            'default': fn_arg.get('default'),
+            'nullable': fn_arg.get('nullable', False),
+            'lastArgArray': fn_arg.get('lastArgArray', False),
+            'integer': fn_arg.get('integer', False),
+            'lt': fn_arg.get('lt'),
+            'lte': fn_arg.get('lte'),
+            'gt': fn_arg.get('gt'),
+            'gte': fn_arg.get('gte')
+        })
+    return fn_args_model
 
 
 #
