@@ -15,7 +15,8 @@ import threading
 from .include_source import SYSTEM_INCLUDES
 from .library import EXPRESSION_FUNCTIONS, INTRINSICS, SCRIPT_FUNCTIONS
 from .options import url_file_relative
-from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string
+from .value import ValueArgsError, value_boolean, value_compare, value_normalize_datetime, value_round_number, value_string, \
+    value_type
 
 
 # The default maximum statements for executeScript
@@ -466,6 +467,35 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                     if func_name == 'arrayNew':
                         return func_args
                     func_args_length = len(func_args)
+                    if func_name == 'objectGet':
+                        default_value = func_args[2] if func_args_length >= 3 else None
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None, default_value)
+                        object_value = func_args[0]
+                        if not isinstance(object_value, dict):
+                            raise ValueArgsError('object', object_value, default_value)
+                        if func_args_length < 2:
+                            raise ValueArgsError('key', None, default_value)
+                        key_value = func_args[1]
+                        if not isinstance(key_value, str):
+                            raise ValueArgsError('key', key_value, default_value)
+                        if func_args_length > 3:
+                            raise ValueArgsError(None, func_args_length, default_value)
+                        return object_value.get(key_value, default_value)
+                    if func_name == 'objectHas':
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None, False)
+                        object_value = func_args[0]
+                        if not isinstance(object_value, dict):
+                            raise ValueArgsError('object', object_value, False)
+                        if func_args_length < 2:
+                            raise ValueArgsError('key', None, False)
+                        key_value = func_args[1]
+                        if not isinstance(key_value, str):
+                            raise ValueArgsError('key', key_value, False)
+                        if func_args_length > 2:
+                            raise ValueArgsError(None, func_args_length, False)
+                        return key_value in object_value
                     if func_name == 'arrayGet':
                         if func_args_length < 1:
                             raise ValueArgsError('array', None)
@@ -506,6 +536,45 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                             raise ValueArgsError('array', array_value)
                         array_value.extend(func_args[1:])
                         return array_value
+                    if func_name == 'objectSet':
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None)
+                        object_value = func_args[0]
+                        if not isinstance(object_value, dict):
+                            raise ValueArgsError('object', object_value)
+                        if func_args_length < 2:
+                            raise ValueArgsError('key', None)
+                        key_value = func_args[1]
+                        if not isinstance(key_value, str):
+                            raise ValueArgsError('key', key_value)
+                        if func_args_length > 3:
+                            raise ValueArgsError(None, func_args_length)
+                        set_value = func_args[2] if func_args_length >= 3 else None
+                        object_value[key_value] = set_value
+                        return set_value
+                    if func_name == 'stringLength':
+                        if func_args_length < 1:
+                            raise ValueArgsError('string', None, 0)
+                        string_value = func_args[0]
+                        if not isinstance(string_value, str):
+                            raise ValueArgsError('string', string_value, 0)
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length, 0)
+                        return len(string_value)
+
+                    if func_name == 'systemType':
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length)
+                        return value_type(func_args[0] if func_args_length >= 1 else None)
+                    if func_name == 'objectKeys':
+                        if func_args_length < 1:
+                            raise ValueArgsError('object', None)
+                        object_value = func_args[0]
+                        if not isinstance(object_value, dict):
+                            raise ValueArgsError('object', object_value)
+                        if func_args_length > 1:
+                            raise ValueArgsError(None, func_args_length)
+                        return list(object_value.keys())
                     if func_name == 'arraySet':
                         if func_args_length < 1:
                             raise ValueArgsError('array', None)
@@ -540,69 +609,6 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
                         if func_args_length > 1:
                             raise ValueArgsError(None, func_args_length)
                         return math.sqrt(x_value)
-                    if func_name == 'objectGet':
-                        default_value = func_args[2] if func_args_length >= 3 else None
-                        if func_args_length < 1:
-                            raise ValueArgsError('object', None, default_value)
-                        object_value = func_args[0]
-                        if not isinstance(object_value, dict):
-                            raise ValueArgsError('object', object_value, default_value)
-                        if func_args_length < 2:
-                            raise ValueArgsError('key', None, default_value)
-                        key_value = func_args[1]
-                        if not isinstance(key_value, str):
-                            raise ValueArgsError('key', key_value, default_value)
-                        if func_args_length > 3:
-                            raise ValueArgsError(None, func_args_length, default_value)
-                        return object_value.get(key_value, default_value)
-                    if func_name == 'objectHas':
-                        if func_args_length < 1:
-                            raise ValueArgsError('object', None, False)
-                        object_value = func_args[0]
-                        if not isinstance(object_value, dict):
-                            raise ValueArgsError('object', object_value, False)
-                        if func_args_length < 2:
-                            raise ValueArgsError('key', None, False)
-                        key_value = func_args[1]
-                        if not isinstance(key_value, str):
-                            raise ValueArgsError('key', key_value, False)
-                        if func_args_length > 2:
-                            raise ValueArgsError(None, func_args_length, False)
-                        return key_value in object_value
-                    if func_name == 'objectKeys':
-                        if func_args_length < 1:
-                            raise ValueArgsError('object', None)
-                        object_value = func_args[0]
-                        if not isinstance(object_value, dict):
-                            raise ValueArgsError('object', object_value)
-                        if func_args_length > 1:
-                            raise ValueArgsError(None, func_args_length)
-                        return list(object_value.keys())
-                    if func_name == 'objectSet':
-                        if func_args_length < 1:
-                            raise ValueArgsError('object', None)
-                        object_value = func_args[0]
-                        if not isinstance(object_value, dict):
-                            raise ValueArgsError('object', object_value)
-                        if func_args_length < 2:
-                            raise ValueArgsError('key', None)
-                        key_value = func_args[1]
-                        if not isinstance(key_value, str):
-                            raise ValueArgsError('key', key_value)
-                        if func_args_length > 3:
-                            raise ValueArgsError(None, func_args_length)
-                        set_value = func_args[2] if func_args_length >= 3 else None
-                        object_value[key_value] = set_value
-                        return set_value
-                    if func_name == 'stringLength':
-                        if func_args_length < 1:
-                            raise ValueArgsError('string', None, 0)
-                        string_value = func_args[0]
-                        if not isinstance(string_value, str):
-                            raise ValueArgsError('string', string_value, 0)
-                        if func_args_length > 1:
-                            raise ValueArgsError(None, func_args_length, 0)
-                        return len(string_value)
 
                 return func_value(func_args, options)
             except BareScriptRuntimeError:

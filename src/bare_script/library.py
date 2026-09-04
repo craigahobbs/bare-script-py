@@ -167,6 +167,10 @@ _ARRAY_INDEX_OF_ARGS = value_args_model([
 # $return: The joined string
 def _array_join(args, unused_options):
     array, separator = value_args_validate(_ARRAY_JOIN_ARGS, args)
+
+    # Strings join natively
+    if all(isinstance(value, str) for value in array):
+        return separator.join(array)
     return separator.join(value_string(value) for value in array)
 
 _ARRAY_JOIN_ARGS = value_args_model([
@@ -1286,7 +1290,8 @@ _REGEX_MATCH_ALL_ARGS = value_args_model([
 # Helper function to create a match model from a metch object
 def _regex_match_groups(match):
     groups = {'0': match[0]}
-    groups.update((f'{match_ix + 1}', match_text) for match_ix, match_text in enumerate(match.groups()))
+    for ix_group, group_text in enumerate(match.groups(), 1):
+        groups[str(ix_group)] = group_text
     groups.update(match.groupdict())
     return {
         'index': match.start(),
@@ -2152,4 +2157,5 @@ INTRINSICS = frozenset((
     SCRIPT_FUNCTIONS['objectKeys'],
     SCRIPT_FUNCTIONS['objectSet'],
     SCRIPT_FUNCTIONS['stringLength'],
+    SCRIPT_FUNCTIONS['systemType'],
 ))
