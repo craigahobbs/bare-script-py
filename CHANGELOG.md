@@ -1,5 +1,35 @@
 # Changelog
 
+## 5.1.8 (2026-09-04)
+
+- [b80d916](https://github.com/craigahobbs/bare-script-py/commit/b80d916) - simplify datetimeNew rollover and the datetime string format
+
+- [762c23b](https://github.com/craigahobbs/bare-script-py/commit/762c23b) - share the include-tracking and include-lint helpers, sync the include library simplifications, and test the systemType intrinsic
+
+- [5406d38](https://github.com/craigahobbs/bare-script-py/commit/5406d38) - default the CLI scripts list with argparse set_defaults
+
+- [8024f99](https://github.com/craigahobbs/bare-script-py/commit/8024f99) - arrayJoin fast path, systemType intrinsic, intrinsic chain order, and match-groups loop \(mirror of bare-script\)
+
+- [adfaf60](https://github.com/craigahobbs/bare-script-py/commit/adfaf60) - compute the QR code mask penalty with row/column strings and chunked bit arithmetic \(sync from bare-script\)
+
+- [b166c01](https://github.com/craigahobbs/bare-script-py/commit/b166c01) - runtime and library micro-optimizations - string equality fast path, objectNew key check \(mirror of bare-script\)
+
+- [0cd6d49](https://github.com/craigahobbs/bare-script-py/commit/0cd6d49) - normalize argument models once so the validator reads members directly \(mirror of bare-script\)
+
+- [a35c4f9](https://github.com/craigahobbs/bare-script-py/commit/a35c4f9) - share the fetch implementation between fetch_read_only and fetch_read_write \(mirror of bare-script\)
+
+- [4934e64](https://github.com/craigahobbs/bare-script-py/commit/4934e64) - simplify the parser's function label depth tracking and the line chart axis computation \(sync from bare-script\)
+
+- [9f7d2f7](https://github.com/craigahobbs/bare-script-py/commit/9f7d2f7) - select the C or pure-Python runtime in one place
+
+- [001081f](https://github.com/craigahobbs/bare-script-py/commit/001081f) - simplify the include library - shared helpers and merged branches \(sync from bare-script\)
+
+- [21e53af](https://github.com/craigahobbs/bare-script-py/commit/21e53af) - split the execute-script prologue and script-function locals into helpers \(mirror of bare-script\)
+
+- [480ca41](https://github.com/craigahobbs/bare-script-py/commit/480ca41) - generate the integer-parse radix regex table
+
+- [9676266](https://github.com/craigahobbs/bare-script-py/commit/9676266) - share the system-include bootstrap between the parser and linter and unwrap parse results in one place
+
 ## 5.1.7 (2026-09-04)
 
 - [f7e5dd5](https://github.com/craigahobbs/bare-script-py/commit/f7e5dd5) - fix parser/lint lazy-initialization race and free-threaded C runtime shared-array crash, add threading tests and thread-safety docs
