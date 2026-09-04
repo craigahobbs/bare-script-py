@@ -138,7 +138,6 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
         # Include?
         elif 'include' in statement:
             fetch_fn = options.get('fetchFn')
-            log_fn = options.get('logFn')
             url_fn = options.get('urlFn')
             for include in statement['include']['includes']:
                 include_url = include['url']
@@ -150,10 +149,7 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
 
                 # Already included? System include keys are bracketed so they can't collide with local include URLs.
                 include_key = f'<{include_url}>' if system_include else include_url
-                global_includes = globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME)
-                if global_includes is None or not isinstance(global_includes, dict):
-                    global_includes = {}
-                    globals_[SYSTEM_GLOBAL_INCLUDES_NAME] = global_includes
+                global_includes = _system_global_includes(globals_)
                 if global_includes.get(include_key):
                     continue
                 global_includes[include_key] = True
@@ -187,18 +183,32 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
                 )
 
                 # Run the bare-script linter?
-                if log_fn is not None and options.get('debug'):
-                    warnings = barescript_lint_script(include_script, globals_)
-                    if warnings:
-                        warning_prefix = f'BareScript: Include "{include_url}" static analysis...'
-                        log_fn(f'{warning_prefix} {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
-                        for warning in warnings:
-                            log_fn(f'BareScript: {warning}')
+                _lint_include(options, include_script, include_url)
 
         # Increment the statement counter
         ix_statement += 1
 
     return None
+
+
+# Get the globals' system includes dict (the map of include key to True), creating it if necessary
+def _system_global_includes(globals_):
+    global_includes = globals_.get(SYSTEM_GLOBAL_INCLUDES_NAME)
+    if global_includes is None or not isinstance(global_includes, dict):
+        global_includes = {}
+        globals_[SYSTEM_GLOBAL_INCLUDES_NAME] = global_includes
+    return global_includes
+
+
+# Lint an include script in debug mode and log its warnings
+def _lint_include(options, include_script, include_url):
+    log_fn = options.get('logFn')
+    if log_fn is not None and options.get('debug'):
+        warnings = barescript_lint_script(include_script, options['globals'])
+        if warnings:
+            log_fn(f'BareScript: Include "{include_url}" static analysis... {len(warnings)} warning{"s" if len(warnings) > 1 else ""}:')
+            for warning in warnings:
+                log_fn(f'BareScript: {warning}')
 
 
 # Helper to execute a system include library script into a new globals dict

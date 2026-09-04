@@ -3097,6 +3097,13 @@ endwhile
         self.assertEqual(run(fn('stringLength', num(5.0))), 0)            # string not a string
         self.assertEqual(run(fn('stringLength', str_('a'), str_('b'))), 0)  # too many arguments
 
+    def test_intrinsic_system_type(self):
+        run, fn, str_, arr = self._run, self._fn, self._str, self._arr
+        self.assertEqual(run(fn('systemType', str_('abc'))), 'string')
+        self.assertEqual(run(fn('systemType', arr(1))), 'array')
+        self.assertEqual(run(fn('systemType')), 'null')                            # value missing
+        self.assertIsNone(run(fn('systemType', str_('a'), str_('b'))))          # too many arguments
+
     def test_intrinsic_debug_logging(self):
         # On bad arguments an intrinsic raises ValueArgsError, which the shared call-error handler
         # logs exactly as the normal call path would (value_args_validate is never entered).
