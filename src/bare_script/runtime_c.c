@@ -187,6 +187,7 @@ typedef struct {
     PyObject *str_method_upper;
     PyObject *str_method_lower;
     PyObject *str_method_strip;
+    PyObject *str_method_pop;
 
     // Imported objects
     PyObject *script_functions;
@@ -783,7 +784,12 @@ static UnaryOp parse_unary_op(PyObject *op)
 // value.value_args_validate model exactly and raise errors by calling the Python ValueArgsError
 // class so messages and error return values match. Intrinsics never touch the options object, so
 // no statement-counter sync is required around them. The table is populated once at module exec
-// and immutable afterwards (free-threading safe).
+// and immutable afterwards (free-threading safe). A per-call args list is private to the calling
+// thread, but the arrays and objects it references may be shared with other threads, so handlers
+// touch those only through the bounds-checked, locking list/dict APIs (list_get_ref,
+// PyList_SetItem, list.pop, dict_get_ref, ...) under the free-threaded build, where an
+// unsynchronized concurrent mutation then raises instead of reading freed storage. The default
+// (GIL) build keeps the direct macro accessors - the GIL already serializes those operations.
 //
 
 
@@ -1083,7 +1089,17 @@ static PyObject *intrinsic_array_get(PyObject *args)
         intrinsic_index_bounds_error(args, 1, "index");
         return NULL;
     }
+#ifdef Py_GIL_DISABLED
+    // Bounds-checked under the list's lock - an unsynchronized concurrent shrink by another thread
+    // raises IndexError instead of reading freed storage
+    PyObject *value;
+    if (list_get_ref(array, index, &value) < 0) {
+        return NULL;
+    }
+    return value;
+#else
     return Py_NewRef(PyList_GET_ITEM(array, index));
+#endif
 }
 
 
@@ -1150,12 +1166,19 @@ static PyObject *intrinsic_array_pop(PyObject *args)
         intrinsic_args_error("array", array, NULL);
         return NULL;
     }
+#ifdef Py_GIL_DISABLED
+    // list.pop() is atomic under the list's lock, like the reference implementation's array.pop() -
+    // an unsynchronized concurrent pop by another thread then raises IndexError (empty list) rather
+    // than returning an element this call did not remove
+    return PyObject_CallMethodNoArgs(array, g.str_method_pop);
+#else
     PyObject *value = Py_NewRef(PyList_GET_ITEM(array, length - 1));
     if (PyList_SetSlice(array, length - 1, length, NULL) < 0) {
         Py_DECREF(value);
         return NULL;
     }
     return value;
+#endif
 }
 
 
@@ -5223,7 +5246,8 @@ static int runtime_c_exec(PyObject *module)
         intern_string(&g.str_copy, "copy") < 0 ||
         intern_string(&g.str_method_upper, "upper") < 0 ||
         intern_string(&g.str_method_lower, "lower") < 0 ||
-        intern_string(&g.str_method_strip, "strip") < 0) {
+        intern_string(&g.str_method_strip, "strip") < 0 ||
+        intern_string(&g.str_method_pop, "pop") < 0) {
         return -1;
     }
 

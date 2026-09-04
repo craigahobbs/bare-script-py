@@ -270,6 +270,17 @@ builds. See the Performance section below for benchmark results comparing the C 
 pure-Python runtime, and native Python.
 
 
+## Thread Safety
+
+Both runtimes may be used from multiple threads, including on the free-threaded (no-GIL) Python
+builds. Script models and a `globals` dict may be shared across threads once populated - for example,
+execute a script that defines functions once, then call those functions concurrently. Each
+concurrently executing thread must pass its own `options` dict to `execute_script`, since the runtime
+records the running `statementCount` there. The parser, linter, and include library stubs initialize
+lazily and are safe to call from any thread. As in Python, unsynchronized concurrent mutation of a
+shared array or object from several threads has unspecified results but never crashes the runtime.
+
+
 ## Performance
 
 The `make perf` target benchmarks the BareScript runtime with a suite of compute-intensive tests —

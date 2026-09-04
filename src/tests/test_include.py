@@ -3,6 +3,7 @@
 
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
+import concurrent.futures
 import unittest
 
 from bare_script.include import SchemaParserError, SchemaValidationError, \
@@ -17,6 +18,28 @@ from bare_script.include import SchemaParserError, SchemaValidationError, \
 
 
 class TestInclude(unittest.TestCase):
+
+    # The include library stubs share one globals dict - concurrent calls must not interfere
+    def test_include_threads(self):
+        types = schema_parse('''\
+# A test struct
+struct TestStruct
+    int a
+''')
+        data = [{'a': 1, 'b': 2}, {'a': 1, 'b': 4}]
+        aggregation = {'categories': ['a'], 'measures': [{'field': 'b', 'function': 'sum'}]}
+
+        def run(unused_ix):
+            return (
+                schema_validate(types, 'TestStruct', {'a': 5}),
+                markdown_parse('# Title\n\nSome *text*'),
+                data_aggregate(data, aggregation)
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            results = list(executor.map(run, range(8)))
+        self.assertListEqual(results, [run(0)] * 8)
+        self.assertListEqual(results[0][2], [{'a': 1, 'b': 6}])
 
     def test_include_set_log_fn(self):
         data = [{'a': 1, 'b': 2}, {'a': 1, 'b': 4}]

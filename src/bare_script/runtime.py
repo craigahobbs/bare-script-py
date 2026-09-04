@@ -10,6 +10,7 @@ import functools
 import json
 import math
 import sys
+import threading
 
 from .include_source import SYSTEM_INCLUDES
 from .library import EXPRESSION_FUNCTIONS, INTRINSICS, SCRIPT_FUNCTIONS
@@ -199,20 +200,25 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
     return None
 
 
-# The barescriptParser.bare include library script globals (lazily initialized)
+# The barescriptParser.bare include library script globals (lazily initialized under a lock)
 _PARSER_GLOBALS = None
+_PARSER_GLOBALS_INIT_LOCK = threading.Lock()
 
 
 def _parser_globals_init():
-    # Execute the barescriptParser.bare include library script, if necessary
+    # Execute the barescriptParser.bare include library script, if necessary. The globals are built
+    # locally and published only once complete so a concurrent first-use caller never observes a
+    # partially-initialized parser; the lock serializes the one-time initialization.
     # pylint: disable-next=global-statement
     global _PARSER_GLOBALS
-    if _PARSER_GLOBALS is None:
-        _PARSER_GLOBALS = {}
-        execute_script(
-            {'statements': [{'include': {'includes': [{'url': 'barescriptParser.bare', 'system': True}]}}]},
-            {'globals': _PARSER_GLOBALS}
-        )
+    with _PARSER_GLOBALS_INIT_LOCK:
+        if _PARSER_GLOBALS is None:
+            parser_globals = {}
+            execute_script(
+                {'statements': [{'include': {'includes': [{'url': 'barescriptParser.bare', 'system': True}]}}]},
+                {'globals': parser_globals}
+            )
+            _PARSER_GLOBALS = parser_globals
 
 
 def _normalize_statements(statements):
@@ -281,8 +287,9 @@ def barescript_parse_expression(expr_text, line_number=None, script_name=None, a
     return result['result']
 
 
-# The barescriptLint.bare include library script globals (lazily initialized)
+# The barescriptLint.bare include library script globals (lazily initialized under a lock)
 _LINT_GLOBALS = None
+_LINT_GLOBALS_INIT_LOCK = threading.Lock()
 
 
 def barescript_lint_script(script, globals_=None):
@@ -297,15 +304,17 @@ def barescript_lint_script(script, globals_=None):
     :rtype: list[str]
     """
 
-    # Execute the barescriptLint.bare include library script, if necessary
+    # Execute the barescriptLint.bare include library script, if necessary (see _parser_globals_init)
     # pylint: disable-next=global-statement
     global _LINT_GLOBALS
-    if _LINT_GLOBALS is None:
-        _LINT_GLOBALS = {}
-        execute_script(
-            {'statements': [{'include': {'includes': [{'url': 'barescriptLint.bare', 'system': True}]}}]},
-            {'globals': _LINT_GLOBALS}
-        )
+    with _LINT_GLOBALS_INIT_LOCK:
+        if _LINT_GLOBALS is None:
+            lint_globals = {}
+            execute_script(
+                {'statements': [{'include': {'includes': [{'url': 'barescriptLint.bare', 'system': True}]}}]},
+                {'globals': lint_globals}
+            )
+            _LINT_GLOBALS = lint_globals
 
     # Call the barescriptLint.bare lint function. Async function detection is not possible in
     # Python (all functions execute synchronously), so the async lint checks are skipped.

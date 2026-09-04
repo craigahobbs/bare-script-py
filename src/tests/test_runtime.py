@@ -4,17 +4,34 @@
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
 import collections
+import concurrent.futures
 import datetime
 import math
 import os
+import threading
 import unittest
 
 from bare_script import BareScriptParserError, BareScriptRuntimeError, barescript_lint_script, barescript_parse_expression, \
     barescript_parse_script, evaluate_expression, execute_script
 from bare_script.include import barescript_validate_expression, barescript_validate_script
 from bare_script.include_source import SYSTEM_INCLUDES
+import bare_script.runtime
 from bare_script.runtime import SYSTEM_GLOBAL_COVERAGE_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import ValueArgsError
+
+
+# Run a function concurrently on several threads released together - returns each thread's result
+# (an exception in any thread propagates from its future)
+def _run_threads(fn, count=8):
+    barrier = threading.Barrier(count)
+
+    def worker():
+        barrier.wait()
+        return fn()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:
+        futures = [executor.submit(worker) for _ in range(count)]
+        return [future.result() for future in futures]
 
 
 class TestExecuteScript(unittest.TestCase):
@@ -1408,6 +1425,46 @@ endfunction
         self.assertIsNone(cm_exc.exception.line_number)
         self.assertIsNone(cm_exc.exception.script_name)
         self.assertEqual(str(cm_exc.exception), 'Syntax error\nfoo bar\n   ^\n')
+
+
+    # Script models and globals may be shared across threads once populated; each thread uses its own
+    # options (the runtime records the statement count there)
+    def test_execute_script_threads(self):
+        script = barescript_parse_script('''\
+function fn(n):
+    total = 0
+    for i in arrayNew(1, 2, 3, 4, 5):
+        total = total + i * n
+    endfor
+    return total + arrayLength(vArr) + objectGet(vObj, 'a')
+endfunction
+''')
+        globals_ = {'vArr': [1, 2, 3], 'vObj': {'a': 10}}
+        execute_script(script, {'globals': globals_})
+        call_script = barescript_parse_script('return fn(vN)')
+
+        def run():
+            options = {'globals': dict(globals_, vN=2)}
+            return execute_script(call_script, options), options['statementCount']
+
+        # Run concurrently first so the threads race on the shared function's first call
+        results = _run_threads(run)
+        self.assertListEqual(results, [run()] * 8)
+        self.assertEqual(results[0][0], 43)
+
+
+    # The parser globals initialize lazily on first use - concurrent first-use callers must all observe
+    # the complete parser
+    def test_barescript_parse_script_threads(self):
+        bare_script.runtime._PARSER_GLOBALS = None # pylint: disable=protected-access
+        results = _run_threads(lambda: barescript_parse_script('a = 1 + 2'))
+        self.assertListEqual(results, [barescript_parse_script('a = 1 + 2')] * 8)
+
+
+    def test_barescript_lint_script_threads(self):
+        bare_script.runtime._LINT_GLOBALS = None # pylint: disable=protected-access
+        script = barescript_validate_script({'statements': [], 'scriptName': 'test.bare', 'scriptLines': []})
+        self.assertListEqual(_run_threads(lambda: barescript_lint_script(script)), [['test.bare:1: Empty script']] * 8)
 
 
     def test_include_fetch_fn_error(self):
@@ -2914,6 +2971,22 @@ class TestIntrinsics(unittest.TestCase):
         self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), str_('x'))))                   # index not a number
         self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), num(0.0), num(9.0))))          # too many arguments
         self.assertIsNone(run(fn('arrayGet', arr(1, 2, 3), num(9.0))))                    # index out of bounds
+
+    # Unsynchronized concurrent mutation of a shared array is a script-level data race with unspecified
+    # results, but it must never crash the runtime (free-threaded build)
+    def test_intrinsic_array_shared_threads(self):
+        script = barescript_parse_script('''\
+i = 0
+while i < 200:
+    arrayPush(vShared, [i], {'i': i})
+    arraySet(vShared, 0, arrayGet(vShared, arrayLength(vShared) - 1))
+    arrayPop(vShared)
+    arrayPop(vShared)
+    i = i + 1
+endwhile
+''')
+        shared = [0]
+        self.assertListEqual(_run_threads(lambda: execute_script(script, {'globals': {'vShared': shared}})), [None] * 8)
 
     def test_intrinsic_array_push(self):
         run, fn, num, arr = self._run, self._fn, self._num, self._arr
