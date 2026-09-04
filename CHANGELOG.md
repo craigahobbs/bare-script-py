@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.7 (2026-09-04)
+
+- [f7e5dd5](https://github.com/craigahobbs/bare-script-py/commit/f7e5dd5) - fix parser/lint lazy-initialization race and free-threaded C runtime shared-array crash, add threading tests and thread-safety docs
+
 ## 5.1.6 (2026-08-31)
 
 - [3ff81ce](https://github.com/craigahobbs/bare-script-py/commit/3ff81ce) - add markdownToString and fix markdown parser escape handling
