@@ -722,12 +722,14 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
             return value_compare(left_value, right_value) >= 0
 
         elif bin_op == '==':
-            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
+            if ((left_type is int or left_type is float) and (right_type is int or right_type is float)) or \
+               (left_type is str and right_type is str):
                 return left_value == right_value
             return value_compare(left_value, right_value) == 0
 
         elif bin_op == '!=':
-            if (left_type is int or left_type is float) and (right_type is int or right_type is float):
+            if ((left_type is int or left_type is float) and (right_type is int or right_type is float)) or \
+               (left_type is str and right_type is str):
                 return left_value != right_value
             return value_compare(left_value, right_value) != 0
 

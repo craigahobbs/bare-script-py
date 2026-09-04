@@ -1196,7 +1196,7 @@ def _object_new(args, unused_options):
     for ix in range(0, len(args), 2):
         key = args[ix]
         value = args[ix + 1] if ix + 1 < len(args) else None
-        if value_type(key) != 'string':
+        if not isinstance(key, str):
             raise ValueArgsError('keyValues', key)
         object_[key] = value
     return object_
