@@ -200,25 +200,37 @@ def _execute_script_helper(script, statements, options, locals_, label_indexes):
     return None
 
 
+# Helper to execute a system include library script into a new globals dict
+def _system_include_globals(url):
+    globals_ = {}
+    execute_script({'statements': [{'include': {'includes': [{'url': url, 'system': True}]}}]}, {'globals': globals_})
+    return globals_
+
+
 # The barescriptParser.bare include library script globals (lazily initialized under a lock)
 _PARSER_GLOBALS = None
 _PARSER_GLOBALS_INIT_LOCK = threading.Lock()
 
 
 def _parser_globals_init():
-    # Execute the barescriptParser.bare include library script, if necessary. The globals are built
-    # locally and published only once complete so a concurrent first-use caller never observes a
-    # partially-initialized parser; the lock serializes the one-time initialization.
+    # Execute the barescriptParser.bare include library script, if necessary. The globals are published
+    # only once complete so a concurrent first-use caller never observes a partially-initialized parser;
+    # the lock serializes the one-time initialization.
     # pylint: disable-next=global-statement
     global _PARSER_GLOBALS
     with _PARSER_GLOBALS_INIT_LOCK:
         if _PARSER_GLOBALS is None:
-            parser_globals = {}
-            execute_script(
-                {'statements': [{'include': {'includes': [{'url': 'barescriptParser.bare', 'system': True}]}}]},
-                {'globals': parser_globals}
-            )
-            _PARSER_GLOBALS = parser_globals
+            _PARSER_GLOBALS = _system_include_globals('barescriptParser.bare')
+
+
+# Helper to unwrap a barescriptParser.bare parse result - raise on error. The interpreted parser runs
+# under the BareScript runtime, whose arithmetic yields JS-parity floats, so line/column numbers are int-normalized.
+def _parser_result(result):
+    if 'error' in result:
+        error = result['error']
+        line_number = int(error['lineNumber']) if error['lineNumber'] is not None else None
+        raise BareScriptParserError(error['error'], error['line'], int(error['columnNumber']), line_number, error['scriptName'])
+    return result['result']
 
 
 def _normalize_statements(statements):
@@ -250,12 +262,9 @@ def barescript_parse_script(script_text, start_line_number=1, script_name=None):
     """
 
     _parser_globals_init()
-    result = _PARSER_GLOBALS['barescriptParseScriptEx']([script_text, start_line_number, script_name], {'globals': _PARSER_GLOBALS})
-    if 'error' in result:
-        error = result['error']
-        line_number = int(error['lineNumber']) if error['lineNumber'] is not None else None
-        raise BareScriptParserError(error['error'], error['line'], int(error['columnNumber']), line_number, error['scriptName'])
-    script = result['result']
+    script = _parser_result(
+        _PARSER_GLOBALS['barescriptParseScriptEx']([script_text, start_line_number, script_name], {'globals': _PARSER_GLOBALS})
+    )
     _normalize_statements(script['statements'])
     return script
 
@@ -278,18 +287,23 @@ def barescript_parse_expression(expr_text, line_number=None, script_name=None, a
     """
 
     _parser_globals_init()
-    result = _PARSER_GLOBALS['barescriptParseExpressionEx'](
-        [expr_text, line_number, script_name, array_literals], {'globals': _PARSER_GLOBALS})
-    if 'error' in result:
-        error = result['error']
-        error_line_number = int(error['lineNumber']) if error['lineNumber'] is not None else None
-        raise BareScriptParserError(error['error'], error['line'], int(error['columnNumber']), error_line_number, error['scriptName'])
-    return result['result']
+    return _parser_result(
+        _PARSER_GLOBALS['barescriptParseExpressionEx']([expr_text, line_number, script_name, array_literals], {'globals': _PARSER_GLOBALS})
+    )
 
 
 # The barescriptLint.bare include library script globals (lazily initialized under a lock)
 _LINT_GLOBALS = None
 _LINT_GLOBALS_INIT_LOCK = threading.Lock()
+
+
+def _lint_globals_init():
+    # Execute the barescriptLint.bare include library script, if necessary (see _parser_globals_init)
+    # pylint: disable-next=global-statement
+    global _LINT_GLOBALS
+    with _LINT_GLOBALS_INIT_LOCK:
+        if _LINT_GLOBALS is None:
+            _LINT_GLOBALS = _system_include_globals('barescriptLint.bare')
 
 
 def barescript_lint_script(script, globals_=None):
@@ -304,20 +318,9 @@ def barescript_lint_script(script, globals_=None):
     :rtype: list[str]
     """
 
-    # Execute the barescriptLint.bare include library script, if necessary (see _parser_globals_init)
-    # pylint: disable-next=global-statement
-    global _LINT_GLOBALS
-    with _LINT_GLOBALS_INIT_LOCK:
-        if _LINT_GLOBALS is None:
-            lint_globals = {}
-            execute_script(
-                {'statements': [{'include': {'includes': [{'url': 'barescriptLint.bare', 'system': True}]}}]},
-                {'globals': lint_globals}
-            )
-            _LINT_GLOBALS = lint_globals
-
     # Call the barescriptLint.bare lint function. Async function detection is not possible in
     # Python (all functions execute synchronously), so the async lint checks are skipped.
+    _lint_globals_init()
     return _LINT_GLOBALS['barescriptLintScript']([script, globals_, None], {'globals': _LINT_GLOBALS})
 
 
