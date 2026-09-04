@@ -43,19 +43,7 @@ def fetch_read_only(request):
     and POST for URLs, otherwise read-only file system access
     """
 
-    # HTTP GET/POST?
-    url = request['url']
-    if _R_URL.match(url):
-        return fetch_http(request)
-
-    # File write?
-    body = request.get('body')
-    if body is not None:
-        return None
-
-    # File read
-    with open(url, 'r', encoding='utf-8') as fh:
-        return fh.read()
+    return _fetch_helper(request, False)
 
 
 def fetch_read_write(request):
@@ -64,6 +52,11 @@ def fetch_read_write(request):
     and POST for URLs, otherwise read-write file system access
     """
 
+    return _fetch_helper(request, True)
+
+
+# Helper to fetch a URL or read/write a file - file writes fail unless writable
+def _fetch_helper(request, writable):
     # HTTP GET/POST?
     url = request['url']
     if _R_URL.match(url):
@@ -72,6 +65,8 @@ def fetch_read_write(request):
     # File write?
     body = request.get('body')
     if body is not None:
+        if not writable:
+            return None
         with open(url, 'w', encoding='utf-8') as fh:
             fh.write(body)
         return '{}'
