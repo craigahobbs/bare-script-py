@@ -26,6 +26,7 @@ def main(argv=None):
     if sys.version_info >= (3, 14): # pragma: no cover
         argument_parser_args['color'] = False
     parser = argparse.ArgumentParser(**argument_parser_args)
+    parser.set_defaults(scripts=[])
     parser.add_argument('file', nargs='*', action=_FileScriptAction, help='files to process')
     parser.add_argument('-c', '--code', action=_InlineScriptAction, help='execute the BareScript code')
     parser.add_argument('-d', '--debug', action='store_true', help='enable debug mode')
@@ -152,13 +153,9 @@ def main(argv=None):
 
 class _InlineScriptAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        if 'scripts' not in namespace:
-            setattr(namespace, 'scripts', [])
         namespace.scripts.append(('code', values))
 
 
 class _FileScriptAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        if 'scripts' not in namespace:
-            setattr(namespace, 'scripts', [])
         namespace.scripts.extend(('file', value) for value in values)
