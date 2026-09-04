@@ -5,7 +5,6 @@
 The BareScript library
 """
 
-import calendar
 import datetime
 import functools
 import importlib
@@ -573,53 +572,11 @@ _DATETIME_MONTH_ARGS = value_args_model([
 def _datetime_new(args, unused_options):
     year, month, day, hour, minute, second, millisecond = value_args_validate(_DATETIME_NEW_ARGS, args)
 
-    # Adjust millisecond
-    if millisecond < 0 or millisecond >= 1000:
-        extra_seconds = millisecond // 1000
-        millisecond -= extra_seconds * 1000
-        second += extra_seconds
-
-    # Adjust seconds
-    if second < 0 or second >= 60:
-        extra_minutes = second // 60
-        second -= extra_minutes * 60
-        minute += extra_minutes
-
-    # Adjust minutes
-    if minute < 0 or minute >= 60:
-        extra_hours = minute // 60
-        minute -= extra_hours * 60
-        hour += extra_hours
-
-    # Adjust hours
-    if hour < 0 or hour >= 24:
-        extra_days = hour // 24
-        hour -= extra_days * 24
-        day += extra_days
-
-    # Adjust month
-    if month < 1 or month > 12:
-        extra_years = (month - 1) // 12
-        month -= extra_years * 12
-        year += extra_years
-
-    # Adjust day
-    if day < 1:
-        while day < 1:
-            year = year if month != 1 else year - 1
-            month = month - 1 if month != 1 else 12
-            _, month_days = calendar.monthrange(year, month)
-            day += month_days
-    elif day > 28:
-        _, month_days = calendar.monthrange(year, month)
-        while day > month_days:
-            day -= month_days
-            year = year if month != 12 else year + 1
-            month = month + 1 if month != 12 else 1
-            _, month_days = calendar.monthrange(year, month)
-
-    # Return the datetime
-    return datetime.datetime(year, month, day, hour, minute, second, millisecond * 1000)
+    # Roll the month into the year, then add the remaining components as a duration - out-of-range
+    # components roll over as they do for the JavaScript Date constructor
+    extra_years, month = divmod(month - 1, 12)
+    return datetime.datetime(year + extra_years, month + 1, 1) + \
+        datetime.timedelta(days=day - 1, hours=hour, minutes=minute, seconds=second, milliseconds=millisecond)
 
 _DATETIME_NEW_ARGS = value_args_model([
     {'name': 'year', 'type': 'number', 'integer': True, 'gte': 100},

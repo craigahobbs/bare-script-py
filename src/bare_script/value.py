@@ -67,12 +67,9 @@ def value_string(value):
     elif isinstance(value, float):
         return R_NUMBER_CLEANUP.sub('', str(value))
     elif isinstance(value, datetime.date):
-        iso = value_normalize_datetime(value).astimezone().isoformat()
-        match_microsecond = _R_DATETIME_MICROSECOND.search(iso)
-        if match_microsecond is not None:
-            microsecond_begin, microsecond_end = match_microsecond.span()
-            millisecond = int(iso[microsecond_begin + 1:microsecond_end]) // 1000
-            iso = f'{iso[0:microsecond_begin]}.{millisecond:0{3}d}{iso[microsecond_end:]}'
+        # ISO format with millisecond precision (omitted when zero) and a "+HH:MM" timezone offset
+        datetime_local = value_normalize_datetime(value).astimezone()
+        iso = datetime_local.isoformat(timespec='milliseconds' if datetime_local.microsecond else 'seconds')
         return _R_DATETIME_TZ_CLEANUP.sub(r'\1', iso)
     elif isinstance(value, dict):
         return value_json(value)
@@ -92,7 +89,6 @@ def value_string(value):
 
 
 R_NUMBER_CLEANUP = re.compile(r'\.0*$')
-_R_DATETIME_MICROSECOND = re.compile(r'\.([0-9]{6})')
 _R_DATETIME_TZ_CLEANUP = re.compile(r'([+-][0-9][0-9]:[0-9][0-9]):[0-9][0-9]$')
 
 
