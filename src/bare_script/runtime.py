@@ -44,19 +44,19 @@ def execute_script(script, options=None):
 
     if options is None:
         options = {}
+    _execute_script_init(options)
+    return _execute_script_helper(script, script['statements'], options, None, _compute_label_indexes(script['statements']))
 
-    # Create the global variable object, if necessary
+
+# Initialize the script execution options - create the globals dict, if necessary, set the built-in
+# script function globals, and reset the statement counter
+def _execute_script_init(options):
     globals_ = options.get('globals')
     if globals_ is None:
         globals_ = {}
         options['globals'] = globals_
-
-    # Set the script function globals variables
     globals_.update(name_func for name_func in SCRIPT_FUNCTIONS.items() if name_func[0] not in globals_)
-
-    # Execute the script
     options['statementCount'] = 0
-    return _execute_script_helper(script, script['statements'], options, None, _compute_label_indexes(script['statements']))
 
 
 # Compute a statements array's map of label name to statement index
@@ -351,6 +351,11 @@ def _record_statement_coverage(script, statement, statement_key, coverage_global
 
 # Runtime script function implementation
 def _script_function(script, function, label_indexes, args, options):
+    return _execute_script_helper(script, function['statements'], options, _script_function_locals(function, args), label_indexes)
+
+
+# Helper to create a script function's local variables dict from its call arguments
+def _script_function_locals(function, args):
     func_locals = {}
     func_args = function.get('args')
     if func_args is not None:
@@ -367,7 +372,7 @@ def _script_function(script, function, label_indexes, args, options):
         else:
             for ix_arg in range(func_args_length):
                 func_locals[func_args[ix_arg]] = args[ix_arg] if ix_arg < args_length else None
-    return _execute_script_helper(script, function['statements'], options, func_locals, label_indexes)
+    return func_locals
 
 
 def evaluate_expression(expr, options=None, locals_=None, builtins=True, script=None, statement=None):
