@@ -12,6 +12,7 @@ import json
 import math
 import random
 import re
+import sys
 
 from .value import R_NUMBER_CLEANUP, ValueArgsError, value_args_model, value_args_validate, \
     value_boolean, value_compare, value_is, value_json, value_normalize_datetime, value_parse_datetime, \
@@ -646,11 +647,29 @@ _DATETIME_YEAR_ARGS = value_args_model([
 # $return: The object
 def _json_parse(args, unused_options):
     string, = value_args_validate(_JSON_PARSE_ARGS, args)
-    return json.loads(string)
+    return _JSON_DECODER.decode(string)
 
 _JSON_PARSE_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'}
 ])
+
+
+# A number past the double range is null, the value jsonStringify writes for a non-finite number,
+# and the non-finite constants Python's decoder accepts - "NaN", "Infinity", "-Infinity" - are invalid
+def _json_parse_float(text):
+    value = float(text)
+    return value if math.isfinite(value) else None
+
+def _json_parse_int(text):
+    value = int(text)
+    return value if -sys.float_info.max <= value <= sys.float_info.max else None
+
+def _json_parse_constant(text):
+    raise ValueError(f'"{text}" is not valid JSON')
+
+
+# The decoder, built once - json.loads builds one per call when it is given a hook
+_JSON_DECODER = json.JSONDecoder(parse_float=_json_parse_float, parse_int=_json_parse_int, parse_constant=_json_parse_constant)
 
 
 # $function: jsonStringify
@@ -699,28 +718,28 @@ _MATH_ABS_ARGS = value_args_model([
 # $function: mathAcos
 # $group: math
 # $doc: Compute the arccosine, in radians, of a number
-# $arg x: The number
+# $arg x: The number, -1 to 1
 # $return: The arccosine, in radians, of the number
 def _math_acos(args, unused_options):
     x, = value_args_validate(_MATH_ACOS_ARGS, args)
     return math.acos(x)
 
 _MATH_ACOS_ARGS = value_args_model([
-    {'name': 'x', 'type': 'number'}
+    {'name': 'x', 'type': 'number', 'gte': -1, 'lte': 1}
 ])
 
 
 # $function: mathAsin
 # $group: math
 # $doc: Compute the arcsine, in radians, of a number
-# $arg x: The number
+# $arg x: The number, -1 to 1
 # $return: The arcsine, in radians, of the number
 def _math_asin(args, unused_options):
     x, = value_args_validate(_MATH_ASIN_ARGS, args)
     return math.asin(x)
 
 _MATH_ASIN_ARGS = value_args_model([
-    {'name': 'x', 'type': 'number'}
+    {'name': 'x', 'type': 'number', 'gte': -1, 'lte': 1}
 ])
 
 
@@ -807,7 +826,7 @@ _MATH_FLOOR_ARGS = value_args_model([
 # $function: mathLn
 # $group: math
 # $doc: Compute the natural logarithm (base e) of a number
-# $arg x: The number
+# $arg x: The number, greater than 0
 # $return: The natural logarithm of the number
 def _math_ln(args, unused_options):
     x, = value_args_validate(_MATH_LN_ARGS, args)
@@ -821,8 +840,8 @@ _MATH_LN_ARGS = value_args_model([
 # $function: mathLog
 # $group: math
 # $doc: Compute the logarithm of a number
-# $arg x: The number
-# $arg base: Optional (default is 10). The logarithm base.
+# $arg x: The number, greater than 0
+# $arg base: Optional (default is 10). The logarithm base, greater than 0 and not 1.
 # $return: The logarithm of the number
 def _math_log(args, unused_options):
     x, base = value_args_validate(_MATH_LOG_ARGS, args)
@@ -934,7 +953,7 @@ _MATH_SIN_ARGS = value_args_model([
 # $function: mathSqrt
 # $group: math
 # $doc: Compute the square root of a number
-# $arg x: The number
+# $arg x: The number, 0 or greater
 # $return: The square root of the number
 def _math_sqrt(args, unused_options):
     x, = value_args_validate(_MATH_SQRT_ARGS, args)
@@ -1003,7 +1022,10 @@ _NUMBER_PARSE_INT_ARGS = value_args_model([
 # $return: The fixed-point notation string
 def _number_to_fixed(args, unused_options):
     x, digits, trim = value_args_validate(_NUMBER_TO_FIXED_ARGS, args)
-    result = f'{value_round_number(x, digits):.{digits}f}'
+    rounded = value_round_number(x, digits)
+    if rounded is None:
+        return None
+    result = f'{rounded:.{digits}f}'
     if trim:
         return R_NUMBER_CLEANUP.sub('', result)
     return result

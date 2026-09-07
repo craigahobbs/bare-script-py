@@ -1004,6 +1004,23 @@ class TestLibrary(unittest.TestCase):
     def test_json_parse(self):
         self.assertDictEqual(SCRIPT_FUNCTIONS['jsonParse'](['{"a": 1, "b": 2}'], None), {'a': 1, 'b': 2})
 
+        # Numbers past the double range are null
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['jsonParse'](['[1e999, -1e999, 1.5e308, {"a": 1E999}, 1' + '0' * 308 + ', 1' + '0' * 309 + ']'], None),
+            [None, None, 1.5e308, {'a': None}, 10 ** 308, None]
+        )
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonParse'](['1e999'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['jsonParse'](['1' + '0' * 309], None))
+        self.assertEqual(SCRIPT_FUNCTIONS['jsonParse'](['1' + '0' * 308], None), 10 ** 308)
+
+        # Non-finite constants
+        with self.assertRaises(ValueError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonParse'](['NaN'], None)
+        self.assertEqual(str(cm_exc.exception), '"NaN" is not valid JSON')
+        with self.assertRaises(ValueError) as cm_exc:
+            SCRIPT_FUNCTIONS['jsonParse'](['[-Infinity]'], None)
+        self.assertEqual(str(cm_exc.exception), '"-Infinity" is not valid JSON')
+
         # Invalid JSON
         with self.assertRaises(json.decoder.JSONDecodeError):
             SCRIPT_FUNCTIONS['jsonParse'](['asdf'], None)
@@ -1084,6 +1101,13 @@ class TestLibrary(unittest.TestCase):
 
     def test_math_acos(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAcos']([1], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['mathAcos']([-1], None), math.pi)
+
+        # Out of domain
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAcos']([2], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, 2')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -1094,6 +1118,13 @@ class TestLibrary(unittest.TestCase):
 
     def test_math_asin(self):
         self.assertEqual(SCRIPT_FUNCTIONS['mathAsin']([0], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['mathAsin']([-1], None), -math.pi / 2)
+
+        # Out of domain
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['mathAsin']([-2], None)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "x" argument value, -2')
+        self.assertIsNone(cm_exc.exception.return_value)
 
         # Non-number
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -1271,6 +1302,11 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.25, 1.], None), 5.3)
         self.assertEqual(SCRIPT_FUNCTIONS['mathRound']([5.15, 1], None), 5.2)
 
+        # Scaled past the double range
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([1e308, 1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([0, 400], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['mathRound']([1, 2147483647], None))
+
         # Non-number value
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['mathRound'](['abc'], None)
@@ -1383,6 +1419,9 @@ class TestLibrary(unittest.TestCase):
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['١٢٣'], None))
         self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1_000'], None))
 
+        # Past the double range
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberParseInt'](['1' + '0' * 309], None))
+
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['numberParseInt']([10], None)
@@ -1421,6 +1460,10 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 0.], None), '1')
         self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1], None), '1.1')
         self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1, 1], None), '1.0')
+
+        # Scaled past the double range
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1e308, 1], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['numberToFixed']([1e300, 100], None))
 
         # Trim
         self.assertEqual(SCRIPT_FUNCTIONS['numberToFixed']([1.125, 1, True], None), '1.1')

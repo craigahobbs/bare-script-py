@@ -9,6 +9,7 @@ import datetime
 import json
 import math
 import re
+import sys
 import uuid
 
 
@@ -400,12 +401,18 @@ def value_round_number(value, digits):
     :type value: int or float
     :param digits: The number of digits of precision
     :type digits: int
-    :return: The rounded number
-    :rtype: float
+    :return: The rounded number, or None if the scaled number is past the double range
+    :rtype: float or None
     """
 
-    multiplier = 10 ** digits
-    return int(value * multiplier + (0.5 if value >= 0 else -0.5)) / multiplier
+    try:
+        multiplier = 10. ** digits
+    except OverflowError:
+        return None
+    scaled = value * multiplier
+    if not math.isfinite(scaled):
+        return None
+    return int(scaled + (0.5 if value >= 0 else -0.5)) / multiplier
 
 
 def value_parse_number(text):
@@ -437,14 +444,15 @@ def value_parse_integer(text, radix=10):
     :type text: str
     :param radix: The integer's radix (2 - 36). Default is 10.
     :type radix: int
-    :return: An integer value or None if parsing fails
+    :return: An integer value or None if parsing fails or the integer is past the double range
     :rtype: int or None
     """
 
     if value_type(radix) != 'number' or math.isnan(radix) or math.floor(radix) != radix or radix < 2 or radix > 36 or \
             not VALUE_PARSE_INTEGER_REGEX_MAP[str(int(radix))].match(text):
         return None
-    return int(text, int(radix))
+    value = int(text, int(radix))
+    return value if -sys.float_info.max <= value <= sys.float_info.max else None
 
 
 # Helper to create the integer-string regex for a radix (2 - 36) - digits, then letters for radix > 10

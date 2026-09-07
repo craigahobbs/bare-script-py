@@ -738,6 +738,12 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_round_number(1.25, 1), 1.3)
         self.assertEqual(value_round_number(1.35, 1), 1.4)
 
+        # Scaled past the double range
+        self.assertIsNone(value_round_number(1e308, 1))
+        self.assertIsNone(value_round_number(1, 400))
+        self.assertIsNone(value_round_number(0, 400))
+        self.assertIsNone(value_round_number(1, 2147483647))
+
 
     def test_value_parse_number(self):
         self.assertEqual(value_parse_number('123.45'), 123.45)
@@ -799,6 +805,11 @@ class TestValue(unittest.TestCase):
         # Special values
         self.assertEqual(value_parse_integer('NaN'), None)
         self.assertEqual(value_parse_integer('Infinity'), None)
+
+        # Past the double range
+        self.assertEqual(value_parse_integer('1' + '0' * 308), 10 ** 308)
+        self.assertEqual(value_parse_integer('1' + '0' * 309), None)
+        self.assertEqual(value_parse_integer('-1' + '0' * 309), None)
 
         # Parse failure
         self.assertEqual(value_parse_integer('invalid'), None)
