@@ -1871,6 +1871,15 @@ class TestLibrary(unittest.TestCase):
 
 
     def test_regex_match(self):
+        # Unicode - "." with the "s" flag, and simple case folding under "i"
+        def match(pattern, flags, text):
+            found = SCRIPT_FUNCTIONS['regexMatch']([SCRIPT_FUNCTIONS['regexNew']([pattern, flags], None), text], None)
+            return None if found is None else found['groups']['0']
+        self.assertEqual(match('a.b', 's', 'a\u2028b'), 'a\u2028b')
+        self.assertEqual(match('\u00e9', 'i', 'x\u00c9'), '\u00c9')
+        self.assertEqual(match('[\u00e0-\u00ff]', 'i', '\u00c0'), '\u00c0')
+        self.assertEqual(match('\u03c3', 'i', '\u03c2'), '\u03c2')
+
         self.assertDictEqual(
             SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), 'foo bar'], None),
             {
@@ -2331,6 +2340,9 @@ class TestLibrary(unittest.TestCase):
     def test_string_lower(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringLower'](['Foo'], None), 'foo')
 
+        # Unicode - a capital sigma lowers to the final sigma only where it ends a word
+        self.assertEqual(SCRIPT_FUNCTIONS['stringLower'](['\u039f\u0394\u039f\u03a3 \u03a3'], None), '\u03bf\u03b4\u03bf\u03c2 \u03c3')
+
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['stringLower']([None], None)
@@ -2500,6 +2512,7 @@ class TestLibrary(unittest.TestCase):
 
     def test_string_split_lines(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines'](['foo\nbar'], None), ['foo', 'bar'])
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines'](['foo\r\nbar\r'], None), ['foo', 'bar\r'])
         self.assertListEqual(SCRIPT_FUNCTIONS['stringSplitLines'](['foo\n\nbar\nbonk'], None), ['foo', '', 'bar', 'bonk'])
 
         # Single line
@@ -2546,6 +2559,9 @@ class TestLibrary(unittest.TestCase):
 
     def test_string_upper(self):
         self.assertEqual(SCRIPT_FUNCTIONS['stringUpper'](['Foo'], None), 'FOO')
+
+        # Unicode - the full mapping, so the sharp s and the ligature expand
+        self.assertEqual(SCRIPT_FUNCTIONS['stringUpper'](['\u00e9\u00df\ufb01 x'], None), '\u00c9SSFI X')
 
         # Non-string value
         with self.assertRaises(ValueArgsError) as cm_exc:
