@@ -60,9 +60,6 @@ sync:
 	cp SKILL.md ../bare-script/
 	rsync -rv --delete --exclude=.git/ --exclude=__pycache__ src/bare_script/include/ ../bare-script/lib/include/
 	rsync -rv --delete --exclude=.git/ static/ ../bare-script/static/
-	rsync -rv --delete --exclude=.git/ --exclude=__pycache__ src/bare_script/include/ ../bare-script-c/lib/include/
-	mkdir -p ../bare-script-c/static/perf
-	if [ -d static/perf ]; then rsync -rv --delete static/perf/ ../bare-script-c/static/perf/; fi
 
 
 # Generate the include library source module
