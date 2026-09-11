@@ -60,6 +60,9 @@ sync:
 	cp SKILL.md ../bare-script/
 	rsync -rv --delete --exclude=.git/ --exclude=__pycache__ src/bare_script/include/ ../bare-script/lib/include/
 	rsync -rv --delete --exclude=.git/ static/ ../bare-script/static/
+	rsync -rv --delete --exclude=.git/ --exclude=__pycache__ src/bare_script/include/ ../bare-script-c/lib/include/
+	mkdir -p ../bare-script-c/static/perf
+	if [ -d static/perf ]; then rsync -rv --delete static/perf/ ../bare-script-c/static/perf/; fi
 
 
 # Generate the include library source module
@@ -302,6 +305,7 @@ PERF_CSV_TMP := build/perf-$$PPID.csv
 PERF_MERGE := 1
 PERF_REPORT := 1
 PERF_RUNS := 2
+PERF_TIME_FLOOR := 100
 
 
 # Run performance tests - write to a temporary CSV ($$PPID is the make process ID) and move it into
@@ -310,17 +314,25 @@ PERF_RUNS := 2
 perf: $(DEFAULT_VENV_BUILD)
 	mkdir -p $(dir $(PERF_CSV_TMP))
 	echo "language,test,runs,timeMs" > $(PERF_CSV_TMP)
-	set -e; for X in $$(seq 1 $(PERF_RUNS)); do \
+	set -e; set -o pipefail; for X in $$(seq 1 $(PERF_RUNS)); do \
 		echo "Run $$X of $(PERF_RUNS) - BareScript (PyC)"; \
-		BARESCRIPT_RUNTIME_PY= $(DEFAULT_VENV_BIN)/bare perf/test.bare -v vLanguage "'BareScript (PyC)'"$(if $(TEST), -v vTest "'$(TEST)'") >> $(PERF_CSV_TMP); \
+		BARESCRIPT_RUNTIME_PY= $(DEFAULT_VENV_BIN)/bare perf/test.bare -v vLanguage "'BareScript (PyC)'" \
+		    -v vTimeFloor $(PERF_TIME_FLOOR)$(if $(TEST), -v vTest "'$(TEST)'") >> $(PERF_CSV_TMP); \
 		echo "Run $$X of $(PERF_RUNS) - BareScript (Py)"; \
-		BARESCRIPT_RUNTIME_PY=1 $(DEFAULT_VENV_BIN)/bare perf/test.bare -v vLanguage "'BareScript (Py)'"$(if $(TEST), -v vTest "'$(TEST)'") >> $(PERF_CSV_TMP); \
+		BARESCRIPT_RUNTIME_PY=1 $(DEFAULT_VENV_BIN)/bare perf/test.bare -v vLanguage "'BareScript (Py)'" \
+		    -v vTimeFloor $(PERF_TIME_FLOOR)$(if $(TEST), -v vTest "'$(TEST)'") >> $(PERF_CSV_TMP); \
 		echo "Run $$X of $(PERF_RUNS) - Python"; \
 		$(DEFAULT_VENV_PYTHON) perf/test.py "Python"$(if $(TEST), "$(TEST)") >> $(PERF_CSV_TMP); \
-	done
+$(if $(TEST),,		echo "Run $$X of $(PERF_RUNS) - BareScript (PyC) testSuite"; \
+		{ BARESCRIPT_RUNTIME_PY= /usr/bin/time -p $(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare > /dev/null; } 2>&1 \
+		    | awk '/^real/ { printf "BareScript (PyC),testSuite,1000,%.0f\n", $$2 * 1000 }' >> $(PERF_CSV_TMP); \
+		echo "Run $$X of $(PERF_RUNS) - BareScript (Py) testSuite"; \
+		{ BARESCRIPT_RUNTIME_PY=1 /usr/bin/time -p $(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare > /dev/null; } 2>&1 \
+		    | awk '/^real/ { printf "BareScript (Py),testSuite,1000,%.0f\n", $$2 * 1000 }' >> $(PERF_CSV_TMP); \
+)	done
 ifneq '$(PERF_MERGE)' ''
 ifneq '$(wildcard $(PERF_BARE_JS_DIR))' ''
-	$(MAKE) -C $(PERF_BARE_JS_DIR) perf PERF_RUNS=$(PERF_RUNS) TEST=$(TEST) PERF_MERGE= PERF_REPORT=
+	$(MAKE) -C $(PERF_BARE_JS_DIR) perf PERF_RUNS=$(PERF_RUNS) PERF_TIME_FLOOR=$(PERF_TIME_FLOOR) TEST=$(TEST) PERF_MERGE= PERF_REPORT=
 	tail -n +2 $(PERF_BARE_JS_DIR)/$(PERF_CSV) >> $(PERF_CSV_TMP)
 endif
 endif

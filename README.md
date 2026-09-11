@@ -266,8 +266,8 @@ runtime for faster script execution. The compiled extension is used automaticall
 set the environment variable `BARESCRIPT_RUNTIME_PY=1` to force the pure-Python runtime.
 
 The extension supports CPython 3.10 and later on both the default (GIL) and free-threaded Python
-builds. See the Performance section below for benchmark results comparing the C runtime, the
-pure-Python runtime, and native Python.
+builds. Benchmarks comparing the C runtime, the pure-Python runtime, and native Python are on the
+[BareScript (C) Performance](https://craigahobbs.github.io/bare-script-c/perf/).
 
 
 ## Thread Safety
@@ -283,34 +283,16 @@ shared array or object from several threads has unspecified results but never cr
 
 ## Performance
 
-The `make perf` target benchmarks the BareScript runtime with a suite of compute-intensive tests —
-Mandelbrot set computation, Markdown parsing and rendering, QR code generation, Schema Markdown
-parsing and validation, and URL encoding and decoding — and compares each test with an equivalent
-native Python program (using the
-[schema-markdown](https://pypi.org/project/schema-markdown/) package).
+The C, JavaScript, and Python implementations share two benchmark suites: `make perf` (the include
+library, compared with native Python via
+[schema-markdown](https://pypi.org/project/schema-markdown/)) and `make perfx` (applications ported
+to six languages). Results live on the
+[BareScript (C) Performance](https://craigahobbs.github.io/bare-script-c/perf/).
 
-The following results are from `make perf PERF_MERGE=` (CPython 3.14, Apple M-series). "BareScript
-(PyC)" is the C runtime; "BareScript (Py)" is the pure-Python runtime. Times are the best per-run
-timing in milliseconds per 100 runs. Multiples are relative to the native Python time. Tests
-without a native Python equivalent are omitted.
-
-| Test             | Language         | Time (ms) | Multiple |
-| ---------------- | ---------------- | --------: | -------: |
-| mandelbrot       | Python           |    4588.0 |          |
-|                  | BareScript (PyC) |   11100.0 |     2.4x |
-|                  | BareScript (Py)  |  340300.0 |    74.2x |
-| schemaParse      | Python           |      17.2 |          |
-|                  | BareScript (PyC) |     110.0 |     6.4x |
-|                  | BareScript (Py)  |     878.4 |    51.1x |
-| schemaValidate   | Python           |      20.4 |          |
-|                  | BareScript (PyC) |     103.6 |     5.1x |
-|                  | BareScript (Py)  |    1421.2 |    69.6x |
-| urlDecode        | Python           |       1.2 |          |
-|                  | BareScript (PyC) |      11.1 |     9.3x |
-|                  | BareScript (Py)  |      66.0 |    55.5x |
-| urlEncode        | Python           |       1.1 |          |
-|                  | BareScript (PyC) |       5.2 |     4.9x |
-|                  | BareScript (Py)  |      37.4 |    35.5x |
+```sh
+make perf
+make perf PERF_MERGE=   # this implementation only
+```
 
 
 ## Using BareScript with an AI Assistant

@@ -36,6 +36,13 @@ Package-specific targets:
   `make perf` (BareScript (JS) and JavaScript) also runs and its data is merged into the report
 - `make perf TEST=<name>` — run a single perf test across all languages (a program silently skips a test it doesn't
   implement; an unknown test name fails the run)
+- `make perf PERF_TIME_FLOOR=<ms>` — `perf/test.bare` can read the clock only in whole milliseconds, so `make perf`
+  passes it a floor (100 ms by default) and it multiplies a test's iteration count until the run it times reaches
+  that, then reports the count it used. Run the program directly and it keeps the tuned counts, which is what a
+  build-to-build comparison wants; `perf/test.py` times with `datetime.now()` and needs none of this. 100 ms is where precision
+  stops costing time: above about 25 ms the machine's own noise dominates, so the spread across runs stays 2-4%
+  whatever the floor, while 500 ms takes five times as long and reads 1-5% slower. Only figures measured at one
+  floor compare
 - `make sync` — push `src/bare_script/include/` and `static/` to the JavaScript repo
 
 `make perf` benchmarks the runtime itself. For optimizing an individual include file, write a throwaway `.bare` harness under `perf/` and run with `bare perf/<file>.bare` — `perf/` is outside the shipped package and isn't synced cross-repo, so harnesses can live there until you're done and then be removed (regenerate as needed).
@@ -132,6 +139,10 @@ When an optimization is behaviorally correct but fails a test, consider whether 
 
 ### Finding the hot spots: the statement profiler
 
+`SKILL.md`'s *Optimizing and simplifying BareScript* has the portable version of what follows - the
+profiler recipe, the loop it belongs to, and the simplification loop - written for BareScript in any
+runtime. This section is the repo-specific half.
+
 `cProfile` finds hot spots in the *runtime*; it cannot tell you which lines of a `.bare` include file are hot. For that, use the runtime's coverage recorder as a per-line statement profiler. Coverage is skipped for system includes (`not script.system`), so the target must be included as a *local* file — copy it into `perf/` and include it by path, which also overrides the system definitions loaded earlier:
 
 ```
@@ -160,6 +171,27 @@ Reducing recorded statements does **not** reliably reduce time. Measured on `sch
 So before trusting a statement-count estimate, check *what kind* of statement the change removes. Prioritize eliminating built-in calls (especially `regexMatch`/`regexReplace`), allocations, and interpreted function calls. Deprioritize eliminating jumps, `endif` labels, and plain assignments — and always confirm with an interleaved A/B before committing to the idea. Pure Python rewards statement elimination somewhat more than V8 does, but the ranking of *which* statements matter is the same in both.
 
 Two related traps worth remembering: the perf report's non-BareScript languages (`Python`, `JavaScript`) never touch the include library, so their deltas in the same runs are a free noise control — if they move as much as the BareScript numbers, you have measured nothing. And a candidate that adds a per-call memo only pays when one call does repeated work; it is a net loss on small inputs.
+
+## Simplification loop for `src/bare_script/include/*.bare`
+
+Separate from the perf work above, and never mixed with it: the aim is less code, more consistency,
+and clearer expression, with the include suite's output and timings unchanged. `SKILL.md` carries the
+method - review the whole file rather than the diff, run a repeated-window scan and an
+unused-declaration scan, and take only candidates that are a shared helper for a repeated sequence,
+an unread parameter or variable, a special case a general path already covers, a guard that restates
+what the callee handles, or a name that does not match its neighbors. What is specific here:
+
+- Gate every batch with `make commit`, and diff the include suite's output (`make test-include`)
+  against a baseline captured before the batch - byte-identical, or it is a behavior change.
+- The include tests pass `'coverageMin': 100`, so a removed branch must take its test with it and a
+  new one must arrive with a test. Prefer deleting unreachable code to leaving it uncovered.
+- Anything that changes the include library needs the same change in `../bare-script`, and the same
+  files are vendored into `../bare-script-c` - run its `make test-include` before assuming a refactor
+  is invisible.
+- Confirm the timings did not move: a "simplification" that costs 5% on `schemaValidate` or
+  `markdownParse` is an optimization question, not a simplification, and belongs in the other loop.
+- The C extension does not change how a `.bare` file should read; measure with
+  `BARESCRIPT_RUNTIME_PY=1` and without, so a change is not judged on one runtime alone.
 
 ## Cross-repo workflow / tandem development
 
