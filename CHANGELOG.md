@@ -2,6 +2,8 @@
 
 ## 5.1.12 (2026-09-12)
 
+- [109fc68](https://github.com/craigahobbs/bare-script-py/commit/109fc68) - document that an automatic axis spans its data
+
 - [d676a48](https://github.com/craigahobbs/bare-script-py/commit/d676a48) - sync the include library from bare-script
 
 ## 5.1.11 (2026-09-12)
