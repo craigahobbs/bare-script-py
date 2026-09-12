@@ -1,5 +1,25 @@
 # Changelog
 
+## 5.1.11 (2026-09-12)
+
+- [89a0c4a](https://github.com/craigahobbs/bare-script-py/commit/89a0c4a) - rework dataLineChart axes, and draw the chart through draw.bare
+
+- [aa7d123](https://github.com/craigahobbs/bare-script-py/commit/aa7d123) - optimize the markdown element and syntax-highlight passes
+
+- [b9bd04c](https://github.com/craigahobbs/bare-script-py/commit/b9bd04c) - note that the include library no longer syncs to bare-script-c
+
+- [80d655d](https://github.com/craigahobbs/bare-script-py/commit/80d655d) - stop syncing the include library to bare-script-c
+
+- [228865b](https://github.com/craigahobbs/bare-script-py/commit/228865b) - optimize the markdown parser - markdownParse is 3.0% faster
+
+- [7cf9dac](https://github.com/craigahobbs/bare-script-py/commit/7cf9dac) - Time the perf suite to a floor, and document the BareScript optimization and simplification loops
+
+- [58cdc83](https://github.com/craigahobbs/bare-script-py/commit/58cdc83) - add tests for the Unicode case behavior shared with bare-script - stringUpper and stringLower, stringSplitLines, and the i flag \(mirror of bare-script\)
+
+- [8d0a82b](https://github.com/craigahobbs/bare-script-py/commit/8d0a82b) - return null instead of inf, nan, or an int past the double range - mathRound, numberToFixed, numberParseInt, jsonParse numbers and the NaN and Infinity constants - bound mathAcos and mathAsin to -1 to 1, and make a number literal past the double range a parse error \(mirror of bare-script\)
+
+- [b561c9b](https://github.com/craigahobbs/bare-script-py/commit/b561c9b) - update README performance numbers
+
 ## 5.1.9 (2026-09-04)
 
 - [425640a](https://github.com/craigahobbs/bare-script-py/commit/425640a) - embed the include library models with gzip and base64 instead of dictionary compression \(mirror of bare-script\)
