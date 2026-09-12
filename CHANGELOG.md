@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.12 (2026-09-12)
+
+- [d676a48](https://github.com/craigahobbs/bare-script-py/commit/d676a48) - sync the include library from bare-script
+
 ## 5.1.11 (2026-09-12)
 
 - [89a0c4a](https://github.com/craigahobbs/bare-script-py/commit/89a0c4a) - rework dataLineChart axes, and draw the chart through draw.bare
