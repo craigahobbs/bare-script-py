@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.1.13 (2026-09-14)
+
+- [fa842a0](https://github.com/craigahobbs/bare-script-py/commit/fa842a0) - sync the include library from bare-script
+
+- [bc18ce7](https://github.com/craigahobbs/bare-script-py/commit/bc18ce7) - dataLineChart - an eight color categorical palette
+
+- [5de3537](https://github.com/craigahobbs/bare-script-py/commit/5de3537) - draw.bare - measure text with per-character font metrics
+
+- [3b837f2](https://github.com/craigahobbs/bare-script-py/commit/3b837f2) - dataLineChart - axis padding, and annotation labels that match their axis
+
 ## 5.1.12 (2026-09-12)
 
 - [109fc68](https://github.com/craigahobbs/bare-script-py/commit/109fc68) - document that an automatic axis spans its data
