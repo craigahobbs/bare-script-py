@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.14 (2026-09-30)
+
+- [adfd8d4](https://github.com/craigahobbs/bare-script-py/commit/adfd8d4) - binary data, the base64, gzip, and tar includes, and the BareScript Creator
+
 ## 5.1.13 (2026-09-14)
 
 - [fa842a0](https://github.com/craigahobbs/bare-script-py/commit/fa842a0) - sync the include library from bare-script
