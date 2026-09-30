@@ -37,11 +37,15 @@ include Makefile.base
 
 
 help:
-	@echo "            [perf|runtime-c|sync|test-include]"
+	@echo "            [perf|runtime-c|sync|test-creator|test-include]"
 
 
 clean:
 	rm -rf Makefile.base pylintrc src/bare_script/*.so
+
+
+# The C runtime extension is built by the venv's editable install - rebuild the venv when its source changes
+$(DEFAULT_VENV_BUILD): src/bare_script/runtime_c.c
 
 
 # Re-verify with the C runtime - a prerequisite rather than a commit recipe so it runs in parallel with the
@@ -141,6 +145,15 @@ test-include-markdownup:
 	$(DEFAULT_VENV_BIN)/bare -d -v vUnittestReport true src/bare_script/include/test/runTestsMarkdownUp.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 test-include-run:
 	$(DEFAULT_VENV_BIN)/bare -d -m src/bare_script/include/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
+
+
+# The BareScript application creator (static/creator) unit tests
+.PHONY: test-creator
+commit: test-creator
+test-creator: $(DEFAULT_VENV_BUILD) src/bare_script/include_source.py
+	$(DEFAULT_VENV_BIN)/bare -x -m static/creator/*.bare static/creator/test/test*.bare
+	$(DEFAULT_VENV_BIN)/bare -s -m static/creator/test/runTests.bare
+	$(DEFAULT_VENV_BIN)/bare -d -m static/creator/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 
 
 doc:

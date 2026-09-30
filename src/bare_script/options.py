@@ -31,10 +31,10 @@ def fetch_http(request):
         response = FETCH_POOL_MANAGER.request(method, url, body=body, headers=headers, retries=0)
         if response.status != 200:
             raise urllib3.exceptions.HTTPError(f'Fetch "{method}" "{url}" failed ({response.status})')
-        response_text = response.data.decode('utf-8')
+        response_data = response.data if request.get('binary', False) else response.data.decode('utf-8')
     finally:
         response.close()
-    return response_text
+    return response_data
 
 
 def fetch_read_only(request):
@@ -62,16 +62,23 @@ def _fetch_helper(request, writable):
     if _R_URL.match(url):
         return fetch_http(request)
 
-    # File write?
+    # File write? A bytes body is written as-is, and a binary request's response is bytes
     body = request.get('body')
     if body is not None:
         if not writable:
             return None
-        with open(url, 'w', encoding='utf-8') as fh:
-            fh.write(body)
-        return '{}'
+        if isinstance(body, bytes):
+            with open(url, 'wb') as fh:
+                fh.write(body)
+        else:
+            with open(url, 'w', encoding='utf-8') as fh:
+                fh.write(body)
+        return b'{}' if request.get('binary', False) else '{}'
 
-    # File read
+    # File read - a binary request's response is bytes
+    if request.get('binary', False):
+        with open(url, 'rb') as fh:
+            return fh.read()
     with open(url, 'r', encoding='utf-8') as fh:
         return fh.read()
 

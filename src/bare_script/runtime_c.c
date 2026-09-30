@@ -3718,7 +3718,23 @@ static PyObject *apply_binary_op(BinaryOp op, PyObject *left, PyObject *right)
     }
 
     case BINARY_MOD:
-        result = (is_number(left) && is_number(right)) ? PyNumber_Remainder(left, right) : Py_NewRef(Py_None);
+        // number % number - the remainder has the dividend's sign, as in JavaScript
+        if (is_number(left) && is_number(right)) {
+            double left_double = PyFloat_AsDouble(left);
+            double right_double = PyFloat_AsDouble(right);
+            if (PyErr_Occurred()) {
+                // An int too large for a double
+                PyErr_Clear();
+                result = Py_NewRef(Py_None);
+            } else {
+                // Adding zero turns fmod's negative zero (a negative dividend's zero remainder) into zero
+                double remainder = fmod(left_double, right_double) + 0.;
+                result = (isfinite(remainder) && PyLong_CheckExact(left) && PyLong_CheckExact(right)) ?
+                    PyLong_FromDouble(remainder) : PyFloat_FromDouble(remainder);
+            }
+        } else {
+            result = Py_NewRef(Py_None);
+        }
         break;
 
     case BINARY_POW:

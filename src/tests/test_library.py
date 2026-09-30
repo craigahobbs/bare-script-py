@@ -10,7 +10,7 @@ import re
 import unittest
 
 from bare_script import BareScriptRuntimeError
-from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS
+from bare_script.library import EXPRESSION_FUNCTIONS, SCRIPT_FUNCTIONS, _system_fetch_is_byte
 from bare_script.value import REGEX_TYPE, ValueArgsError, value_json, value_parse_datetime, value_string
 
 
@@ -132,6 +132,10 @@ class TestLibrary(unittest.TestCase):
         result = SCRIPT_FUNCTIONS['arrayExtend']([array, array2], None)
         self.assertListEqual(result, [1, 2, 3, 4, 5, 6])
         self.assertIs(result, array)
+
+        # Large array
+        large = [0] * 200000
+        self.assertEqual(len(SCRIPT_FUNCTIONS['arrayExtend']([[1], large], None)), 200001)
 
         # Non-array
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -2629,9 +2633,10 @@ class TestLibrary(unittest.TestCase):
             body = request.get('body')
             headers = request.get('headers')
             method = 'GET' if body is None else 'POST'
-            body_msg = '' if body is None else f' - {body}'
+            body_msg = '' if body is None else (f' - bytes {",".join(str(b) for b in body)}' if isinstance(body, bytes) else f' - {body}')
             headers_msg = '' if headers is None else f' - {value_json(headers)}'
-            return f'{method} {url}{body_msg}{headers_msg}'
+            response = f'{method} {url}{body_msg}{headers_msg}'
+            return response.encode('utf-8') if request.get('binary', False) else response
 
         def log_fn(message):
             logs.append(message)
@@ -2671,6 +2676,42 @@ class TestLibrary(unittest.TestCase):
         logs = []
         self.assertListEqual(SCRIPT_FUNCTIONS['systemFetch']([[]], options), [])
         self.assertListEqual(logs, [])
+
+        # Binary response
+        logs = []
+        self.assertListEqual(
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.bin', 'binary': True}], options),
+            list('GET test.bin'.encode('utf-8'))
+        )
+        self.assertListEqual(logs, [])
+
+        # Binary false
+        logs = []
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.bin', 'binary': False}], options), 'GET test.bin')
+        self.assertListEqual(logs, [])
+
+        # Byte array body
+        logs = []
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.bin', 'body': [0, 128, 255]}], options),
+            'POST test.bin - bytes 0,128,255'
+        )
+        self.assertListEqual(logs, [])
+
+        # Byte array body, empty
+        logs = []
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.bin', 'body': []}], options), 'POST test.bin - bytes ')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.bin', 'body': [1.0, 2.0]}], options), 'POST test.bin - bytes 1,2')
+        self.assertListEqual(logs, [])
+
+        # Binary response error
+        logs = []
+        self.assertIsNone(
+            SCRIPT_FUNCTIONS['systemFetch'](
+                [{'url': 'test.bin', 'binary': True}], {'debug': True, 'fetchFn': lambda request: '{}', 'logFn': log_fn}
+            )
+        )
+        self.assertListEqual(logs, ['BareScript: Function "systemFetch" failed for resource "test.bin"'])
 
         # URL function
         logs = []
@@ -2729,6 +2770,27 @@ class TestLibrary(unittest.TestCase):
         with self.assertRaises(ValueArgsError) as cm_exc:
             SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'body': 7}], options)
         self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"body":7,"url":"test.txt"}')
+        self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(logs, [])
+
+        # Invalid request model body byte
+        logs = []
+        for byte in [256, -1, 1.5, 'x', None, True]:
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'body': [0, byte]}], options)
+            self.assertEqual(str(cm_exc.exception), f'Invalid "url" argument value, {{"body":[0,{value_json(byte)}],"url":"test.txt"}}')
+            self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(logs, [])
+
+        # Invalid request model body byte, non-finite (the range check must come before the int() comparison)
+        self.assertFalse(_system_fetch_is_byte(float('inf')))
+        self.assertFalse(_system_fetch_is_byte(float('nan')))
+
+        # Invalid request model binary
+        logs = []
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'binary': 1}], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"binary":1,"url":"test.txt"}')
         self.assertIsNone(cm_exc.exception.return_value)
         self.assertListEqual(logs, [])
 

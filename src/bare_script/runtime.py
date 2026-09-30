@@ -750,12 +750,14 @@ def _evaluate_expression_helper(expr, options, globals_, locals_, builtins, scri
             return value_compare(left_value, right_value) != 0
 
         elif bin_op == '%':
-            # number % number
+            # number % number - the remainder has the dividend's sign, as in JavaScript
             if ((left_type is int or left_type is float) and
                 (right_type is int or right_type is float)):
                 try:
-                    return _arithmetic_result(left_value % right_value)
-                except ZeroDivisionError:
+                    # Adding zero turns fmod's negative zero (a negative dividend's zero remainder) into zero
+                    result = math.fmod(left_value, right_value) + 0.0
+                    return _arithmetic_result(int(result) if left_type is int and right_type is int else result)
+                except (OverflowError, ValueError):
                     return None
 
         elif bin_op == '**':

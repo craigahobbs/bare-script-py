@@ -1748,7 +1748,7 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 # $group: system
 # $async: true
 # $doc: Retrieve a URL resource. Pass an array of URLs (or request models) to fetch in parallel
-# $doc: and receive an array of response strings. In the BareScript CLI, non-URL paths are read
+# $doc: and receive an array of responses. In the BareScript CLI, non-URL paths are read
 # $doc: from (or, with a request body, written to) the local file system. For example:
 # $doc:
 # $doc: ```bare-script
@@ -1759,9 +1759,10 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 # $arg url: The resource URL, request model, or array of URL and request model.
 # $arg url: The request model is an object with the following members:
 # $arg url: - **url** - the resource URL
-# $arg url: - **body** - the optional request body string
+# $arg url: - **body** - the optional request body string or byte value array
 # $arg url: - **headers** - the optional request headers (an object of string values)
-# $return: The response string or array of strings; null if an error occurred
+# $arg url: - **binary** - if true, the response is a byte value array (default is false)
+# $return: The response string (or byte value array) or array of responses; null if an error occurred
 def _system_fetch(args, options):
     url, = value_args_validate(_SYSTEM_FETCH_ARGS, args)
 
@@ -1797,11 +1798,18 @@ def _system_fetch(args, options):
         if url_fn is not None:
             request_fetch['url'] = url_fn(request_fetch['url'])
 
-        # Fetch the URL
+        # A byte value array body is sent as bytes
+        body = request_fetch.get('body')
+        if body is not None and value_type(body) == 'array':
+            request_fetch['body'] = bytes(int(byte) for byte in body)
+
+        # Fetch the URL - a binary request's response is bytes, returned as a byte value array
         response = None
         if fetch_fn is not None:
             try:
                 response = fetch_fn(request_fetch)
+                if request_fetch.get('binary', False):
+                    response = list(response) if isinstance(response, bytes) else None
             except:
                 pass
         responses.append(response)
@@ -1822,11 +1830,20 @@ def _system_fetch_request_validate(request):
     request_url = request.get('url')
     body = request.get('body')
     headers = request.get('headers')
-    if value_type(request_url) != 'string' or (body is not None and value_type(body) != 'string') or \
+    binary = request.get('binary')
+    if value_type(request_url) != 'string' or \
+       (body is not None and value_type(body) != 'string' and
+        not (value_type(body) == 'array' and all(_system_fetch_is_byte(byte) for byte in body))) or \
        (headers is not None and (value_type(headers) != 'object' or
-                                 any(value_type(header_value) != 'string' for header_value in headers.values()))):
+                                 any(value_type(header_value) != 'string' for header_value in headers.values()))) or \
+       (binary is not None and value_type(binary) != 'boolean'):
         raise ValueArgsError('url', request)
     return request
+
+
+# Helper to test if a value is a byte value (an integer 0 to 255)
+def _system_fetch_is_byte(value):
+    return value_type(value) == 'number' and 0 <= value <= 255 and value == int(value)
 
 
 # $function: systemGlobalGet

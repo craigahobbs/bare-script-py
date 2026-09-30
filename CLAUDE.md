@@ -1,4 +1,4 @@
-# AGENTS.md
+# CLAUDE.md
 
 Notes for coding agents working in this repository.
 
@@ -18,7 +18,7 @@ Local Makefile overrides:
 
 - `SPHINX_DOC` — `doc`
 - `TESTS_REQUIRE` — `schema-markdown`
-- `commit` also depends on `commit-runtime-c` (re-runs `test` + `test-include` with the C runtime)
+- `commit` also depends on `test-creator` and `commit-runtime-c` (re-runs `test` + `test-include` with the C runtime)
 - `clean` also removes `src/bare_script/*.so`
 
 By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set `BARESCRIPT_RUNTIME_C=1` to exercise the compiled C runtime instead; `make commit` runs both.
@@ -43,6 +43,10 @@ Package-specific targets:
   stops costing time: above about 25 ms the machine's own noise dominates, so the spread across runs stays 2-4%
   whatever the floor, while 500 ms takes five times as long and reads 1-5% slower. Only figures measured at one
   floor compare
+- `make test-creator` — run the BareScript application creator's unit tests (`static/creator/test/`, synced from the
+  JavaScript repo) via the `bare` CLI; `TEST=<name>` runs one test (an exact name, as with `test-include`). The
+  creator is a MarkdownUp app that generates a BareScript project as a `.tar.gz` archive - see the JavaScript
+  repo's CLAUDE.md for its layout
 - `make sync` — push `src/bare_script/include/` and `static/` to the JavaScript repo
 
 `make perf` benchmarks the runtime itself. For optimizing an individual include file, write a throwaway `.bare` harness under `perf/` and run with `bare perf/<file>.bare` — `perf/` is outside the shipped package and isn't synced cross-repo, so harnesses can live there until you're done and then be removed (regenerate as needed).
@@ -71,7 +75,7 @@ Pure-BareScript libraries (args parsing, data aggregation/charts, markdown rende
 
 ### C extension
 
-`runtime_c.c` implements the core execution loop in C for performance. It is compiled via `setup.py` using `OptionalBuildExt`, which swallows build failures so the package still installs and the pure-Python runtime takes over. Only `runtime_c.c` is checked in; the compiled `.so` is gitignored and built locally (e.g. via `pip install -e .` or the standard `make` venv build).
+`runtime_c.c` implements the core execution loop in C for performance. It is compiled via `setup.py` using `OptionalBuildExt`, which swallows build failures so the package still installs and the pure-Python runtime takes over. Only `runtime_c.c` is checked in; the compiled `.so` is gitignored and built locally by the `make` venv build's editable install, which depends on `runtime_c.c` so that editing it rebuilds the extension on the next `make` (there is no separate build step - a stale `.so` would otherwise be tested silently).
 
 When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as coverage recording (`record_statement_coverage`). `make test-include` runs in debug mode (`bare -d`), so coverage shows up hot in profiles, but production BareScript runs without it. Optimize the non-debug execution path: expression evaluation, statement dispatch, function call setup, dict lookups, value coercion.
 

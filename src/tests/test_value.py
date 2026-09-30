@@ -98,6 +98,24 @@ class TestValue(unittest.TestCase):
         self.assertEqual(value_string(5.5), '5.5')
         self.assertEqual(value_string(0), '0')
         self.assertEqual(value_string(0.), '0')
+        self.assertEqual(value_string(-0.), '0')
+        self.assertEqual(value_string(0.1 + 0.2), '0.30000000000000004')
+        self.assertEqual(value_string(-123.456), '-123.456')
+
+        # Numbers format as in JavaScript - decimal form from 1e-6 to below 1e21, exponent form otherwise
+        self.assertEqual(value_string(0.0001), '0.0001')
+        self.assertEqual(value_string(0.00001), '0.00001')
+        self.assertEqual(value_string(0.000001), '0.000001')
+        self.assertEqual(value_string(1e-7), '1e-7')
+        self.assertEqual(value_string(-1.5e-8), '-1.5e-8')
+        self.assertEqual(value_string(1e-100), '1e-100')
+        self.assertEqual(value_string(1e16), '10000000000000000')
+        self.assertEqual(value_string(123456789012345680000.), '123456789012345680000')
+        self.assertEqual(value_string(1e21), '1e+21')
+        self.assertEqual(value_string(1.5e21), '1.5e+21')
+        self.assertEqual(value_string(float('inf')), 'Infinity')
+        self.assertEqual(value_string(float('-inf')), '-Infinity')
+        self.assertEqual(value_string(float('nan')), 'NaN')
 
         # datetime
         d1 = datetime.datetime(2024, 1, 12, 6, 9)
@@ -164,6 +182,20 @@ class TestValue(unittest.TestCase):
 
         # Indent
         self.assertEqual(value_json({'value': 1}, 2), '{\n  "value": 1\n}')
+        self.assertEqual(value_json({'value': 1.0}, 2), '{\n  "value": 1\n}')
+
+        # Numbers format as in JavaScript - integral floats and negative zero as ints, non-finite as null
+        self.assertEqual(
+            value_json([5.0, -0.0, 1e21, 1.5, float('inf'), float('-inf'), float('nan'), {'a': -0.0}]),
+            '[5,0,1e+21,1.5,null,null,null,{"a":0}]'
+        )
+
+        # Strings that look like number cleanup candidates are unchanged
+        self.assertEqual(value_json({'a': 'x.0,', 'b': 'y.0'}), '{"a":"x.0,","b":"y.0"}')
+
+        # Small floats format as in JavaScript
+        self.assertEqual(value_json([1e-7, 0.00001, {'a': -1.5e-8, 'b': 'x'}, 1e-7]), '[1e-7,0.00001,{"a":-1.5e-8,"b":"x"},1e-7]')
+        self.assertEqual(value_json({'value': 1e-7}, 2), '{\n  "value": 1e-7\n}')
 
         # Datetime
         d1 = datetime.datetime(2024, 1, 12, 6, 9)
@@ -707,6 +739,12 @@ class TestValue(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Invalid "myArg" argument value, null')
         self.assertEqual(cm_exc.exception.return_value, -1)
 
+
+
+    def test_value_args_error_non_finite(self):
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            raise ValueArgsError('myArg', [1, float('inf')])
+        self.assertEqual(str(cm_exc.exception), 'Invalid "myArg" argument value, [1,null]')
 
     def test_value_args_model(self):
         fn_args = [

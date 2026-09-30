@@ -15,10 +15,12 @@ execute_script(
         'statements': [
             {'include': {'includes': [
                 {'url': 'barescriptModel.bare', 'system': True},
+                {'url': 'base64.bare', 'system': True},
                 {'url': 'data.bare', 'system': True},
                 {'url': 'dataLineChart.bare', 'system': True},
                 {'url': 'dataTable.bare', 'system': True},
                 {'url': 'elementModel.bare', 'system': True},
+                {'url': 'gzip.bare', 'system': True},
                 {'url': 'markdown.bare', 'system': True},
                 {'url': 'markdownElements.bare', 'system': True},
                 {'url': 'markdownParser.bare', 'system': True},
@@ -28,6 +30,7 @@ execute_script(
                 {'url': 'schemaDoc.bare', 'system': True},
                 {'url': 'schemaParser.bare', 'system': True},
                 {'url': 'schemaTypeModel.bare', 'system': True},
+                {'url': 'tar.bare', 'system': True},
                 {'url': 'url.bare', 'system': True}
             ]}}
         ]
@@ -111,6 +114,36 @@ def barescript_validate_script(script):
     if 'error' in result:
         raise SchemaValidationError(result['error'], result['memberFqn'])
     return result['result']
+
+
+#
+# base64.bare
+#
+
+
+def base64_decode(text):
+    """
+    Decode a base64 string to a byte value array
+
+    :param str text: The base64-encoded string
+    :return: The byte value array, or None if decoding fails
+    :rtype: list(int) or None
+    """
+
+    return _INCLUDE_GLOBALS['base64Decode']([text], _include_options())
+
+
+def base64_encode(bytes_):
+    """
+    Encode a byte value array (or a string, as UTF-8) as a base64 string
+
+    :param bytes_: The byte value array (integers 0 to 255) or string
+    :type bytes_: list(int) or str
+    :return: The base64-encoded string, or None if encoding fails
+    :rtype: str or None
+    """
+
+    return _INCLUDE_GLOBALS['base64Encode']([bytes_], _include_options())
 
 
 #
@@ -380,6 +413,39 @@ def element_model_validate(elements):
     if 'error' in result:
         raise SchemaValidationError(result['error'])
     return result['result']
+
+
+#
+# gzip.bare
+#
+
+
+def gzip_compress(bytes_, level=None):
+    """
+    Compress a byte value array (or a string, as UTF-8) with gzip
+
+    :param bytes_: The byte value array (integers 0 to 255) or string
+    :type bytes_: list(int) or str
+    :param level: The compression level, 0 (store) through 9 (best); default is 6
+    :type level: int or None
+    :return: The gzip-compressed byte value array, or None if compression fails
+    :rtype: list(int) or None
+    """
+
+    return _INCLUDE_GLOBALS['gzipCompress']([bytes_, level], _include_options())
+
+
+def gzip_uncompress(bytes_):
+    """
+    Uncompress a gzip-compressed byte value array
+
+    :param bytes_: The gzip-compressed byte value array (integers 0 to 255)
+    :type bytes_: list(int)
+    :return: The uncompressed byte value array, or None if uncompression fails
+    :rtype: list(int) or None
+    """
+
+    return _INCLUDE_GLOBALS['gzipUncompress']([bytes_], _include_options())
 
 
 #
@@ -702,6 +768,43 @@ def schema_type_model_validate(types):
     if 'errors' in result:
         raise SchemaValidationError('\n'.join(result['errors']))
     return result['result']
+
+
+#
+# tar.bare
+#
+
+
+def tar_create(files):
+    """
+    Create a tar archive (USTAR format) from an array of regular files. Each file has mode 644, and no directory
+    entries are written.
+
+    :param files: The array of file objects. Each file object has the following members:
+
+        - "name" - the file path
+        - "bytes" - the file content byte value array (integers 0 to 255) or string (as UTF-8)
+        - "mtime" - the optional file modification datetime (default is the Unix epoch)
+    :type files: list(dict)
+    :return: The tar archive byte value array, or None if creation fails
+    :rtype: list(int) or None
+    """
+
+    return _INCLUDE_GLOBALS['tarCreate']([files], _include_options())
+
+
+def tar_extract(bytes_):
+    """
+    Extract the regular files of a tar archive (USTAR, GNU, or PAX format)
+
+    :param bytes_: The tar archive byte value array (integers 0 to 255)
+    :type bytes_: list(int)
+    :return: The array of file objects, each with "name", "bytes", and "mtime" (the modification datetime) members,
+        or None if extraction fails
+    :rtype: list(dict) or None
+    """
+
+    return _INCLUDE_GLOBALS['tarExtract']([bytes_], _include_options())
 
 
 #

@@ -66,7 +66,7 @@ def value_string(value):
     elif isinstance(value, int):
         return str(value)
     elif isinstance(value, float):
-        return R_NUMBER_CLEANUP.sub('', str(value))
+        return _value_string_float(value)
     elif isinstance(value, datetime.date):
         # ISO format with millisecond precision (omitted when zero) and a "+HH:MM" timezone offset
         datetime_local = value_normalize_datetime(value).astimezone()
@@ -93,6 +93,37 @@ R_NUMBER_CLEANUP = re.compile(r'\.0*$')
 _R_DATETIME_TZ_CLEANUP = re.compile(r'([+-][0-9][0-9]:[0-9][0-9]):[0-9][0-9]$')
 
 
+# Format a float as JavaScript's Number.prototype.toString does - the shortest round-trip digits, in decimal
+# form for values from 1e-6 to below 1e21 and in exponent form (e.g. "1e-7", "1.5e+21") otherwise
+def _value_string_float(value):
+    if not math.isfinite(value):
+        return 'NaN' if math.isnan(value) else ('Infinity' if value > 0 else '-Infinity')
+    if value == 0:
+        return '0'
+
+    # The digits and the decimal point's position from Python's shortest round-trip representation
+    mantissa, _, exponent = repr(value).partition('e')
+    sign, mantissa = ('-', mantissa[1:]) if mantissa[0] == '-' else ('', mantissa)
+    int_part, _, frac_part = mantissa.partition('.')
+    digits = int_part + frac_part
+    digits_stripped = digits.lstrip('0')
+    point = len(int_part) + (int(exponent) if exponent else 0) - (len(digits) - len(digits_stripped))
+    digits = digits_stripped.rstrip('0')
+    count = len(digits)
+
+    # Lay out the digits as JavaScript does
+    if count <= point <= 21:
+        text = digits + '0' * (point - count)
+    elif 0 < point <= 21:
+        text = digits[:point] + '.' + digits[point:]
+    elif -6 < point <= 0:
+        text = '0.' + '0' * -point + digits
+    else:
+        exponent = point - 1
+        text = digits[0] + ('.' + digits[1:] if count > 1 else '') + 'e' + ('+' if exponent >= 0 else '-') + str(abs(exponent))
+    return sign + text
+
+
 def value_json(value, indent=None):
     """
     Get a value's JSON string representation
@@ -104,12 +135,42 @@ def value_json(value, indent=None):
     :rtype: str
     """
 
+    small_floats = []
+    value = _value_json_normalize(value, small_floats)
     if indent is not None and indent > 0:
         result = _JSONEncoder(allow_nan=False, ensure_ascii=False, indent=indent, separators=(',', ': '), sort_keys=True).encode(value)
     else:
         result = _JSON_ENCODER_DEFAULT.encode(value)
-    result = _R_VALUE_JSON_NUMBER_CLEANUP.sub(r'', result)
-    return _R_VALUE_JSON_NUMBER_CLEANUP2.sub(r'\1', result)
+
+    # Replace the small floats' markers with their JavaScript-formatted values
+    for ix_float, small_float in enumerate(small_floats):
+        marker_json = _JSON_ENCODER_DEFAULT.encode(_value_json_small_float_marker(small_floats, ix_float))
+        result = result.replace(marker_json, _value_string_float(small_float))
+    return result
+
+
+# Normalize a value for JSON encoding, as JavaScript's JSON.stringify formats numbers - an integral float
+# (including negative zero) is an int, and a non-finite float is null. A small float, which Python formats
+# differently than JavaScript (e.g. "1e-07" versus "1e-7"), is replaced with a marker string and added to
+# the "small_floats" array for formatting after encoding.
+def _value_json_normalize(value, small_floats):
+    if isinstance(value, float):
+        if value.is_integer() and abs(value) < 1e21:
+            return int(value)
+        if abs(value) < 1e-4:
+            small_floats.append(value)
+            return _value_json_small_float_marker(small_floats, len(small_floats) - 1)
+        return value if math.isfinite(value) else None
+    elif isinstance(value, list):
+        return [_value_json_normalize(item, small_floats) for item in value]
+    elif isinstance(value, dict):
+        return {key: _value_json_normalize(item, small_floats) for key, item in value.items()}
+    return value
+
+
+# Helper to create a small float's marker string - unique to the small-floats array so no other string matches
+def _value_json_small_float_marker(small_floats, ix_float):
+    return f'\x00{id(small_floats)}:{ix_float}\x00'
 
 
 class _JSONEncoder(json.JSONEncoder):
@@ -124,9 +185,6 @@ class _JSONEncoder(json.JSONEncoder):
 
 
 _JSON_ENCODER_DEFAULT = _JSONEncoder(allow_nan=False, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
-
-_R_VALUE_JSON_NUMBER_CLEANUP = re.compile(r'\.0*$', re.MULTILINE)
-_R_VALUE_JSON_NUMBER_CLEANUP2 = re.compile(r'\.0*([,}\]])')
 
 
 def value_boolean(value):

@@ -4,17 +4,19 @@
 # pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
 
 import concurrent.futures
+import datetime
 import unittest
 
 from bare_script.include import SchemaParserError, SchemaValidationError, \
-    barescript_type_model, barescript_validate_expression, barescript_validate_script, \
+    barescript_type_model, barescript_validate_expression, barescript_validate_script, base64_decode, base64_encode, \
     data_aggregate, data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, data_parse_csv, \
     data_sort, data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, element_model_to_string, \
-    element_model_validate, include_set_log_fn, markdown_elements, markdown_escape, markdown_header_id, markdown_paragraph_text, \
+    element_model_validate, gzip_compress, gzip_uncompress, include_set_log_fn, markdown_elements, markdown_escape, markdown_header_id, \
+    markdown_paragraph_text, \
     markdown_parse, markdown_title, markdown_to_string, markdown_validate, qrcode_elements, qrcode_matrix, schema_doc_markdown, \
     schema_get_enum_values, \
     schema_get_referenced_types, schema_get_struct_members, schema_parse, schema_type_model, schema_type_model_validate, schema_validate, \
-    url_decode_component, url_decode_query_string, url_encode, url_encode_component, url_encode_query_string
+    tar_create, tar_extract, url_decode_component, url_decode_query_string, url_encode, url_encode_component, url_encode_query_string
 
 
 class TestInclude(unittest.TestCase):
@@ -304,6 +306,53 @@ struct TestStruct
             schema_type_model_validate({'Bad': {'struct': {}}})
         self.assertEqual(str(cm_exc.exception), 'Required member "Bad.struct.name" missing')
         self.assertIsNone(cm_exc.exception.member_fqn)
+
+
+    def test_base64_decode(self):
+        self.assertListEqual(base64_decode('aGVsbG8='), [104, 101, 108, 108, 111])
+        self.assertIsNone(base64_decode('!!!!'))
+
+
+    def test_base64_encode(self):
+        self.assertEqual(base64_encode([104, 101, 108, 108, 111]), 'aGVsbG8=')
+        self.assertEqual(base64_encode('hello'), 'aGVsbG8=')
+        self.assertIsNone(base64_encode([256]))
+
+
+    def test_gzip_compress(self):
+        bytes_ = list('hello hello hello'.encode('utf-8'))
+        compressed = gzip_compress(bytes_)
+        self.assertListEqual(compressed[:3], [31, 139, 8])
+        self.assertListEqual(gzip_uncompress(compressed), bytes_)
+        self.assertListEqual(gzip_uncompress(gzip_compress(bytes_, 0)), bytes_)
+        self.assertListEqual(gzip_uncompress(gzip_compress('hello hello hello')), bytes_)
+        self.assertIsNone(gzip_compress(bytes_, 10))
+
+
+    def test_gzip_uncompress(self):
+        self.assertListEqual(gzip_uncompress(base64_decode('H4sIAAAAAAAC/8tIzcnJBwCGphA2BQAAAA==')), [104, 101, 108, 108, 111])
+        self.assertIsNone(gzip_uncompress([1, 2, 3]))
+
+
+    def test_tar_create(self):
+        files = [{'name': 'hello.txt', 'bytes': [104, 105]}]
+        tar_bytes = tar_create(files)
+        self.assertEqual(len(tar_bytes), 2048)
+        self.assertListEqual(
+            tar_extract(tar_bytes), [{'name': 'hello.txt', 'bytes': [104, 105], 'mtime': datetime.datetime.fromtimestamp(0)}]
+        )
+        self.assertListEqual(tar_create([{'name': 'hello.txt', 'bytes': 'hi'}]), tar_bytes)
+        mtime = datetime.datetime(2024, 3, 5, 12, 34, 56)
+        self.assertListEqual(
+            tar_extract(tar_create([{'name': 'hello.txt', 'bytes': [104, 105], 'mtime': mtime}])),
+            [{'name': 'hello.txt', 'bytes': [104, 105], 'mtime': mtime}]
+        )
+        self.assertIsNone(tar_create([{'name': 'hello.txt'}]))
+
+
+    def test_tar_extract(self):
+        self.assertListEqual(tar_extract([0] * 1024), [])
+        self.assertIsNone(tar_extract([1] * 512))
 
 
     def test_url_decode_component(self):

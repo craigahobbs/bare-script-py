@@ -2444,6 +2444,17 @@ class TestEvaluateExpression(unittest.TestCase):
         }})
         self.assertEqual(evaluate_expression(expr, options), 0)
 
+        # The remainder has the dividend's sign
+        for left, right, expected in [(7, 512, 7), (-7, 512, -7), (7, -512, 7), (-7, -512, -7), (-7.5, 2, -1.5), (-4, 2, 0)]:
+            expr = barescript_validate_expression({'binary': {'op': '%', 'left': {'number': left}, 'right': {'number': right}}})
+            result = evaluate_expression(expr, options)
+            self.assertEqual(result, expected, f'{left} % {right}')
+            self.assertIs(type(result), type(expected))
+
+        # An int too large for a double
+        expr = barescript_validate_expression({'binary': {'op': '%', 'left': {'number': 10 ** 400}, 'right': {'number': 3}}})
+        self.assertIsNone(evaluate_expression(expr, options))
+
         # Invalid - bool % number
         expr = barescript_validate_expression({'binary': {
             'op': '%',

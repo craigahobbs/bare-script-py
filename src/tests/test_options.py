@@ -24,6 +24,16 @@ class TestOptions(unittest.TestCase):
             response.close.assert_called_once_with()
 
 
+    def test_fetch_http_binary(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            response = unittest.mock.MagicMock(status=200, data=b'\x00\x80\xff')
+            mock_pool_manager.request.return_value = response
+            result = fetch_http({'url': 'http://example.com', 'binary': True})
+            self.assertEqual(result, b'\x00\x80\xff')
+            mock_pool_manager.request.assert_called_once_with('GET', 'http://example.com', body=None, headers={}, retries=0)
+            response.close.assert_called_once_with()
+
+
     def test_fetch_http_status(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
             response = unittest.mock.MagicMock(status=500, data=b'BAD')
@@ -152,7 +162,31 @@ class TestOptions(unittest.TestCase):
         with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file:
             result = fetch_read_write({'url': 'test.txt', 'body': 'Hello!'})
             self.assertEqual(result, '{}')
+            mock_file.assert_called_with('test.txt', 'w', encoding='utf-8')
             mock_file().write.assert_called_with('Hello!')
+
+
+    def test_fetch_read_write_relative_binary(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open(read_data=b'\x00\x80\xff')) as mock_file:
+            result = fetch_read_write({'url': 'test.bin', 'binary': True})
+            self.assertEqual(result, b'\x00\x80\xff')
+            mock_file.assert_called_with('test.bin', 'rb')
+
+
+    def test_fetch_read_write_relative_post_binary_response(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file:
+            result = fetch_read_write({'url': 'test.txt', 'body': 'Hello!', 'binary': True})
+            self.assertEqual(result, b'{}')
+            mock_file.assert_called_with('test.txt', 'w', encoding='utf-8')
+            mock_file().write.assert_called_with('Hello!')
+
+
+    def test_fetch_read_write_relative_post_binary(self):
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file:
+            result = fetch_read_write({'url': 'test.bin', 'body': b'\x00\x80\xff'})
+            self.assertEqual(result, '{}')
+            mock_file.assert_called_with('test.bin', 'wb')
+            mock_file().write.assert_called_with(b'\x00\x80\xff')
 
 
     def test_log_stdout(self):
