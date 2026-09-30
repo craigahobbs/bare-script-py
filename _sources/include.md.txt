@@ -23,6 +23,22 @@
 ~~~
 
 
+## base64.bare
+
+### base64_decode
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.base64_decode
+~~~
+
+
+### base64_encode
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.base64_encode
+~~~
+
+
 ## data.bare
 
 ### data_aggregate
@@ -133,6 +149,22 @@
 
 ~~~ {eval-rst}
 .. autofunction:: bare_script.include.element_model_validate
+~~~
+
+
+## gzip.bare
+
+### gzip_compress
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.gzip_compress
+~~~
+
+
+### gzip_uncompress
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.gzip_uncompress
 ~~~
 
 
@@ -277,6 +309,22 @@
 
 ~~~ {eval-rst}
 .. autofunction:: bare_script.include.schema_type_model_validate
+~~~
+
+
+## tar.bare
+
+### tar_create
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.tar_create
+~~~
+
+
+### tar_extract
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.tar_extract
 ~~~
 
 

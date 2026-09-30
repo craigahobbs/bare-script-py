@@ -36,6 +36,7 @@ logged for each invalid-argument failure.
 | [barescriptLint.bare](#var.vPublish=true&var.vSingle=true&barescriptlint-bare) | Lint BareScript models |
 | [barescriptModel.bare](#var.vPublish=true&var.vSingle=true&barescriptmodel-bare) | The BareScript type model and model validation |
 | [barescriptParser.bare](#var.vPublish=true&var.vSingle=true&barescriptparser-bare) | Parse BareScript text into BareScript models |
+| [base64.bare](#var.vPublish=true&var.vSingle=true&base64-bare) | Encode and decode base64 text |
 | [data.bare](#var.vPublish=true&var.vSingle=true&data-bare) | Filter, sort, aggregate, and join tabular data |
 | [dataLineChart.bare](#var.vPublish=true&var.vSingle=true&datalinechart-bare) | Render tabular data as line charts |
 | [dataTable.bare](#var.vPublish=true&var.vSingle=true&datatable-bare) | Render tabular data as tables |
@@ -43,6 +44,7 @@ logged for each invalid-argument failure.
 | [draw.bare](#var.vPublish=true&var.vSingle=true&draw-bare) | Draw SVG images |
 | [elementModel.bare](#var.vPublish=true&var.vSingle=true&elementmodel-bare) | Render element model to the browser or HTML and SVG |
 | [forms.bare](#var.vPublish=true&var.vSingle=true&forms-bare) | Web forms and controls element model helpers |
+| [gzip.bare](#var.vPublish=true&var.vSingle=true&gzip-bare) | Compress and uncompress gzip data |
 | [markdown.bare](#var.vPublish=true&var.vSingle=true&markdown-bare) | Markdown escaping, header IDs, and utilities |
 | [markdownElements.bare](#var.vPublish=true&var.vSingle=true&markdownelements-bare) | Convert a Markdown model to an element model |
 | [markdownParser.bare](#var.vPublish=true&var.vSingle=true&markdownparser-bare) | Parse Markdown text into a Markdown model |
@@ -54,6 +56,7 @@ logged for each invalid-argument failure.
 | [schemaDoc.bare](#var.vPublish=true&var.vSingle=true&schemadoc-bare) | Schema Markdown documentation application |
 | [schemaParser.bare](#var.vPublish=true&var.vSingle=true&schemaparser-bare) | Parse Schema Markdown text into type models |
 | [schemaTypeModel.bare](#var.vPublish=true&var.vSingle=true&schematypemodel-bare) | The Schema Markdown type model and type model validation |
+| [tar.bare](#var.vPublish=true&var.vSingle=true&tar-bare) | Create and extract tar archives |
 | [unittest.bare](#var.vPublish=true&var.vSingle=true&unittest-bare) | Unit test framework |
 | [unittestMock.bare](#var.vPublish=true&var.vSingle=true&unittestmock-bare) | Mock library functions during unit tests |
 | [url.bare](#var.vPublish=true&var.vSingle=true&url-bare) | Encode and decode URL query strings |
@@ -2390,7 +2393,7 @@ The right value
 **async** - The calling function must be declared with "async function"
 
 Retrieve a URL resource. Pass an array of URLs (or request models) to fetch in parallel
-and receive an array of response strings. In the BareScript CLI, non-URL paths are read
+and receive an array of responses. In the BareScript CLI, non-URL paths are read
 from (or, with a request body, written to) the local file system. For example:
 
 ```bare-script
@@ -2405,12 +2408,13 @@ endfunction
 The resource URL, request model, or array of URL and request model.
 The request model is an object with the following members:
 - **url** - the resource URL
-- **body** - the optional request body string
+- **body** - the optional request body string or byte value array
 - **headers** - the optional request headers (an object of string values)
+- **binary** - if true, the response is a byte value array (default is false)
 
 #### Returns
 
-The response string or array of strings; null if an error occurred
+The response string (or byte value array) or array of responses; null if an error occurred
 
 ---
 
@@ -3239,6 +3243,86 @@ and "message" keys.
 
 ---
 
+## base64.bare
+
+The "base64.bare" include library provides functions for encoding byte value arrays as base64 text
+and decoding base64 text back to bytes. A byte value array is an ordinary array of integers 0 to
+255, the same representation the
+[stringEncode](#var.vGroup='string'&stringencode) and
+[stringDecode](#var.vGroup='string'&stringdecode) functions use.
+
+To encode bytes (or a string, as UTF-8) as base64:
+
+```bare-script
+include <base64.bare>
+
+encoded = base64Encode([104, 101, 108, 108, 111])
+# aGVsbG8=
+
+encoded = base64Encode('hello')
+# aGVsbG8=
+```
+
+To decode base64 text to a byte value array:
+
+```bare-script
+bytes = base64Decode('aGVsbG8=')
+# [104, 101, 108, 108, 111]
+
+text = stringDecode(bytes)
+# hello
+```
+
+The [base64Decode](#var.vGroup='base64.bare'&base64decode) function returns null on invalid
+input (characters outside the base64 alphabet, a length that is not a multiple of four, or
+misplaced padding) and logs the error in
+[debug mode](https://craigahobbs.github.io/markdown-up/#debug-mode).
+
+Base64 text is the way to carry binary data through string-only channels such as
+[localStorageSet](#var.vGroup='markdownUp.bare'&localstorageset), JSON, and data URLs:
+
+```bare-script
+dataURL = 'data:application/octet-stream;base64,' + base64Encode(bytes)
+```
+
+
+### Function Index
+
+- [base64Decode](#var.vPublish=true&var.vSingle=true&base64decode)
+- [base64Encode](#var.vPublish=true&var.vSingle=true&base64encode)
+
+---
+
+### base64Decode
+
+Decode a base64 string to a byte value array
+
+#### Arguments
+
+**text -**
+The base64-encoded string
+
+#### Returns
+
+The byte value array, or null if decoding fails
+
+---
+
+### base64Encode
+
+Encode a byte value array (or a string, as UTF-8) as a base64 string
+
+#### Arguments
+
+**bytes -**
+The byte value array (integers 0 to 255) or string
+
+#### Returns
+
+The base64-encoded string, or null if encoding fails
+
+---
+
 ## data.bare
 
 The "data.bare" include library contains functions for manipulating and analyzing data arrays. A
@@ -3407,7 +3491,7 @@ with a "2" suffix. For example:
 people = [{'name': 'Alice', 'city': 'NY'}, {'name': 'Bob', 'city': 'SF'}]
 cities = [{'city': 'NY', 'state': 'NY'}, {'city': 'SF', 'state': 'CA'}]
 joined = dataJoin(people, cities, 'city')
-# joined is [{'city': 'NY', 'city2': 'NY', 'name': 'Alice', 'state': 'NY'}, ..]
+# joined is [{'city': 'NY', 'city2': 'NY', 'name': 'Alice', 'state': 'NY'}, ...]
 ```
 
 #### Arguments
@@ -4798,6 +4882,87 @@ The text input [element model](https://github.com/craigahobbs/element-model#read
 
 ---
 
+## gzip.bare
+
+The "gzip.bare" include library provides functions for compressing and uncompressing byte value
+arrays with the gzip format. A byte value array is an ordinary array of integers 0 to 255, the same
+representation the [stringEncode](#var.vGroup='string'&stringencode) and
+[stringDecode](#var.vGroup='string'&stringdecode) functions use.
+
+To compress bytes (or a string, as UTF-8):
+
+```bare-script
+include <gzip.bare>
+
+compressed = gzipCompress(stringEncode('hello hello hello'))
+compressed = gzipCompress('hello hello hello')
+```
+
+The optional second argument is the compression level, 0 (store only) through 9 (the most
+thorough match search); the default is 6. To uncompress gzip data:
+
+```bare-script
+bytes = gzipUncompress(compressed)
+text = stringDecode(bytes)
+# hello hello hello
+```
+
+The [gzipUncompress](#var.vGroup='gzip.bare'&gzipuncompress) function checks the gzip header,
+the DEFLATE stream, and the trailer's CRC-32 and size. It returns null on invalid data and logs
+the error in [debug mode](https://craigahobbs.github.io/markdown-up/#debug-mode).
+
+The compressor and uncompressor are written in BareScript. The output is a standard gzip stream
+that any gzip tool can read, and any single-member gzip stream can be uncompressed. To fetch a
+gzip file, pass a binary request model to the
+[systemFetch](#var.vGroup='system'&systemfetch) function:
+
+```bare-script
+async function fetchCompressed(url):
+    return gzipUncompress(systemFetch({'url': url, 'binary': true}))
+endfunction
+```
+
+
+### Function Index
+
+- [gzipCompress](#var.vPublish=true&var.vSingle=true&gzipcompress)
+- [gzipUncompress](#var.vPublish=true&var.vSingle=true&gzipuncompress)
+
+---
+
+### gzipCompress
+
+Compress a byte value array (or a string, as UTF-8) with gzip
+
+#### Arguments
+
+**bytes -**
+The byte value array (integers 0 to 255) or string
+
+**level -**
+Optional (default is 6). The compression level, 0 (store) through 9 (best).
+
+#### Returns
+
+The gzip-compressed byte value array, or null if compression fails
+
+---
+
+### gzipUncompress
+
+Uncompress a gzip-compressed byte value array
+
+#### Arguments
+
+**bytes -**
+The gzip-compressed byte value array (integers 0 to 255)
+
+#### Returns
+
+The uncompressed byte value array, or null if uncompression fails
+
+---
+
 ## markdown.bare
 
 The "markdown.bare" include library contains utility functions for working with Markdown text and
@@ -5316,9 +5481,9 @@ myAppMain()
 **callback -**
 The keydown event callback function, which takes a single `event` object that has
 the following attributes:
-- `key` - The key value (e.g, "a", "Enter", "ArrowUp")
-- `code` - The physical key code (e.g, "KeyA", "Enter")
-- `keyCode` - The legacy numeric code (e.g, 65 for 'a')
+- `key` - The key value (e.g., "a", "Enter", "ArrowUp")
+- `code` - The physical key code (e.g., "KeyA", "Enter")
+- `keyCode` - The legacy numeric code (e.g., 65 for 'a')
 - `ctrlKey` - If true, the control key is pressed
 - `altKey` - If true, the alt key is pressed
 - `shiftKey` - If true, the shift key is pressed
@@ -5381,7 +5546,7 @@ The fixed-up URL
 
 Render an [element model](https://github.com/craigahobbs/element-model#readme)
 
-**Note:** Element model "callback" members are a map of event name (e.g, "click") to
+**Note:** Element model "callback" members are a map of event name (e.g., "click") to
 event callback function. The following events have callback arguments:
 - **click** - For an SVG element, the click's x and y coordinates and the SVG's width and height
 - **keydown** - keyCode
@@ -5554,15 +5719,15 @@ The clipboard text
 
 ### windowClipboardWrite
 
-Write text to the clipboard
+Write text (or binary data) to the clipboard
 
 #### Arguments
 
 **text -**
-The text to write
+The text string or byte value array (integers 0 to 255) to write
 
 **type -**
-The clipboard content type (default is "text/plain")
+The clipboard content type (default is "text/plain"). Binary data needs its content type, e.g. "image/png".
 
 #### Returns
 
@@ -5600,12 +5765,12 @@ if windowKeyState('ArrowRight'):
 endif
 ```
 
-The key is matched against the physical key code (e.g, "ArrowUp", "KeyW", "Space", "Enter").
+The key is matched against the physical key code (e.g., "ArrowUp", "KeyW", "Space", "Enter").
 
 #### Arguments
 
 **key -**
-The physical key code (e.g, "ArrowUp", "ArrowDown", "KeyA", "KeyW", "Space")
+The physical key code (e.g., "ArrowUp", "ArrowDown", "KeyA", "KeyW", "Space")
 
 **ctrl -**
 If true, the control key must be down; if false (the default), it must be up
@@ -5702,7 +5867,7 @@ Create an object URL (i.e. a file download URL)
 #### Arguments
 
 **data -**
-The object data string
+The object data string or byte value array
 
 **contentType -**
 Optional (default is "text/plain"). The object content type.
@@ -6384,6 +6549,94 @@ On failure, an object with the "errors" key set to the array of error message st
 
 ---
 
+## tar.bare
+
+The "tar.bare" include library provides functions for creating and extracting tar archives. The
+archive and each file's content are byte value arrays - ordinary arrays of integers 0 to 255, the
+same representation the [stringEncode](#var.vGroup='string'&stringencode) and
+[stringDecode](#var.vGroup='string'&stringdecode) functions use.
+
+To create a tar archive from an array of file objects, each with a "name" (the file path), "bytes"
+(the file content as a byte value array or a string, as UTF-8), and an optional "mtime" (the
+modification datetime; the default is the Unix epoch):
+
+```bare-script
+include <tar.bare>
+
+tarBytes = tarCreate([ \
+    {'name': 'README.md', 'bytes': '# My Project\n'}, \
+    {'name': 'data/values.bin', 'bytes': [0, 128, 255]} \
+])
+```
+
+To extract an archive's regular files:
+
+```bare-script
+files = tarExtract(tarBytes)
+# [{'name': 'README.md', 'bytes': [35, 32, ...], 'mtime': <datetime>}, {'name': 'data/values.bin', ...}]
+```
+
+The [tarExtract](#var.vGroup='tar.bare'&tarextract) function reads USTAR, GNU, and PAX archives,
+skipping directory and link entries. It returns null on invalid data and logs the error in
+[debug mode](https://craigahobbs.github.io/markdown-up/#debug-mode).
+
+Combine with the [gzip.bare](#var.vGroup='gzip.bare') include library to create or read
+".tar.gz" files. In MarkdownUp, the
+[windowURLObject](#var.vGroup='markdownUp.bare'&windowurlobject) function creates a download
+URL for the archive bytes:
+
+```bare-script
+include <gzip.bare>
+include <tar.bare>
+
+tarGzBytes = gzipCompress(tarCreate(files))
+downloadURL = windowURLObject(tarGzBytes, 'application/gzip')
+```
+
+
+### Function Index
+
+- [tarCreate](#var.vPublish=true&var.vSingle=true&tarcreate)
+- [tarExtract](#var.vPublish=true&var.vSingle=true&tarextract)
+
+---
+
+### tarCreate
+
+Create a tar archive (USTAR format) from an array of regular files. Each file has mode 644,
+and no directory entries are written.
+
+#### Arguments
+
+**files -**
+The array of file objects. Each file object has the following members:
+- **name** - the file path
+- **bytes** - the file content byte value array (integers 0 to 255) or string (as UTF-8)
+- **mtime** - the optional file modification datetime (default is the Unix epoch)
+
+#### Returns
+
+The tar archive byte value array, or null if creation fails
+
+---
+
+### tarExtract
+
+Extract the regular files of a tar archive (USTAR, GNU, or PAX format). Directory, link,
+and other entries are skipped.
+
+#### Arguments
+
+**bytes -**
+The tar archive byte value array (integers 0 to 255)
+
+#### Returns
+
+The array of file objects, each with **name**, **bytes**, and **mtime** (the modification datetime)
+members, or null if extraction fails
+
+---
+
 ## unittest.bare
 
 The "unittest.bare" include library contains functions for unit testing code. The typical project
@@ -6685,7 +6938,7 @@ To stop mocking, call the [unittestMockEnd](#var.vGroup='unittestMock.bare'&unit
 Optional (default is null). The map of function name to mock function data.
 The following functions make use of mock data:
 - **documentInputValue** - map of id to return value
-- **systemFetch** - map of URL to response text
+- **systemFetch** - map of URL to response text (or byte value array, for a binary request)
 
 #### Returns
 
