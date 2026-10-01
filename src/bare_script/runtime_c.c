@@ -1,66 +1,64 @@
 // Licensed under the MIT License
 // https://github.com/craigahobbs/bare-script-py/blob/main/LICENSE
 
-//
-// The BareScript runtime C extension
-//
-// This module is a from-scratch C port of runtime.py, the reference implementation. It implements
-// execute_script and evaluate_expression with observably identical behavior: same results, same
-// errors, and the same edge cases. The pure-Python implementations of the parser, library, and
-// value utilities are reused via imports; only the runtime execution core is implemented in C.
-//
-// How this file was created
-//
-// The module began as a direct, statement-for-statement port of runtime.py: a dict-walking
-// statement loop and recursive expression evaluator, multi-phase module initialization with the
-// Py_mod_gil slot, strong-reference dict access shims for Python 3.10+, and a ScriptFunction
-// callable type replacing functools.partial(_script_function, ...). The port was then optimized
-// iteratively, with each change measured against a same-session baseline (the Mandelbrot benchmark
-// in perf/test.bare plus call-heavy and string-comparison harnesses) and gated on the full Python
-// unit test suite and the 10,000+ assertion BareScript include test suite:
-//
-// 1. Execution context (-10%) - the per-statement options['statementCount'] dict
-//    get/increment/set/compare was replaced with a C integer counter in an ExecCtx struct, synced
-//    to the options dict only where external code can observe it (around function calls, includes,
-//    and at execution exit). The context also caches the globals dict and the maxStatements limit.
-// 2. First-key model dispatch (-38%) - valid statement and expression models are single-key dicts,
-//    so kinds are dispatched on the dict's first key via interned-pointer identity instead of up
-//    to 5-7 hash lookups per node, and inner fields (op/left/right, name/args, ...) are prefetched
-//    in a single dict walk with lazy hashed fallback at each exact use point.
-// 3. Direct ScriptFunction invocation (-13% call-heavy) - BareScript-to-BareScript calls bypass
-//    the generic vectorcall machinery and execute on the caller's execution context.
-// 4. Compiled model ASTs (-52%) - statements lists are compiled once into C node trees (see the
-//    "Compiled model" section): literals, operator enums, keyword variables, and jump label
-//    indexes resolve at compile time, and variable/assignment names are interned so locals/globals
-//    dict probes hit on pointer equality. Compiled bodies cache write-once on ScriptFunction
-//    objects; anything irregular compiles to a fallback node that defers to the dict-based
-//    evaluator, which remains the semantic reference.
-// 5. C value comparison fast path (-14% string workloads) - None/string/bool comparisons are
-//    handled in C, with value.value_compare as the fallback for all other types.
-// 6. Slot-based locals (-21%) - function bodies whose statements all compile cleanly use a C
-//    pointer array for locals instead of a dict; local names (declared arguments plus assignment
-//    targets, a statically known set) resolve to slot indexes at compile time, so reads are an
-//    array load and assignments a pointer swap, with NULL slots mirroring dict misses.
-// 7. Bounded-depth guard-free evaluation (-9%) - compiled expression trees are depth-capped at
-//    compile time (deeper trees become fallback nodes), removing the per-node recursion guard
-//    from compiled evaluation; the statement loop reuses the compiled slot's strong statement
-//    reference instead of taking a reference per statement.
-// 8. Guarded library intrinsics (-58% math-heavy, -78% accessor-heavy) - 26 trivial library.py
-//    functions (math/array/object/string accessors) have C implementations that run only when a
-//    compiled call resolves to the original library function object (pointer identity, captured
-//    at module init); overrides take the generic path. Handlers replicate each function's
-//    value_args_validate model exactly, raising through the Python ValueArgsError class.
-//
-// Overall, the optimized runtime executes the Mandelbrot benchmark roughly 33x faster than the
-// pure-Python runtime. The compiled fast path assumes script models are immutable during
-// execution (true of parser output); mutating a model mid-execution is unsupported.
-//
+/*
+ * The BareScript C runtime - a CPython extension port of runtime.py's execute_script and
+ * evaluate_expression
+ *
+ * runtime.py is the reference implementation: this module is observably identical to it - the same
+ * results, errors, log messages, and statement counts. Script models compile to a flat register
+ * bytecode, a function body lazily on its first call. A model the compiler cannot represent exactly
+ * (a hand-built model the parser never produces) runs on runtime.py itself. Two behaviors are
+ * implementation-defined: changing a model during execution (a function's compiled body is reused until
+ * its model's keys or list lengths change), and recursion depth (nested BareScript calls are limited by
+ * the C stack rather than by Python's recursion limit).
+ *
+ * How it was made
+ *
+ * Claude (Opus) ported runtime.py to this file from scratch, then alternated two loops until a full
+ * round of both kept nothing: a profile-guided optimization loop, keeping a change only when it moved
+ * instructions, cycles, wall time, or memory beyond noise with the other axes flat, and a
+ * simplification loop for less code at flat performance. Every change passed the full "make commit"
+ * gate, the four include and unit suites byte-for-byte against runtime.py, and differential fuzzing,
+ * on GIL and free-threaded builds. An independent adversarial review then found four divergences,
+ * each fixed with a regression test in test_runtime.py; its other two findings, an in-place model edit
+ * going unseen and a deeper recursion limit, are the implementation-defined behaviors above.
+ *
+ * The kept optimizations, in order, with their effect when made:
+ *
+ *   - Definite assignment: locals definitely assigned on every path read as direct register
+ *     operands (mandelbrot -5%, call -3%)
+ *   - Float results reuse a float only their register holds, in place (mandelbrot -16%)
+ *   - objectNew in C, and a call's own intrinsic checked first (markdownElements -23%)
+ *   - Include scripts parse with the parser running on this runtime (include suite -45%)
+ *   - "!" and comparisons fold into conditional jumps (mandelbrot -7%, schemaValidate -2%)
+ *   - A dict watcher epoch checks a function against its model (call -24%)
+ *   - runtime.py's per-call setup reads cached on the execution context (call -25%)
+ *   - Library function replicas - exact-type happy paths that defer to the library otherwise - in
+ *     three batches (accessor -78%, urlDecode -52%, schemaParse -42%, strcmp -62%, qrcode -31%)
+ *   - Global call resolutions cached on the execution context (accessor -14%, schemaValidate -8%)
+ *   - value_compare in C for exact types (schemaValidate -19%, schemaParse -10%)
+ *   - Resident registers for a function called more than once (call -3%)
+ *   - Intrinsic call sites' common shapes run inline on the cached function (schemaValidate -4%)
+ *   - A float copy into a float only its register holds, in place (mandelbrot -3%)
+ *   - jsonParse and jsonStringify through the library's own JSON coders (qrcode -11%)
+ *   - regexReplace group-number replacements translated in C (qrcode -3%)
+ *
+ * Tried and rejected: block-level statement counting (exactness needed a second code copy), frames
+ * borrowing the context's setup references, an arraySort replica, objectSet and objectNew call-site
+ * shapes, an in-place mathSqrt result, and a call cache shared across execution contexts.
+ */
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <datetime.h>
+
+#include <float.h>
+#include <limits.h>
+#include <stddef.h>
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifdef Py_GIL_DISABLED
 #include <stdatomic.h>
@@ -68,53 +66,43 @@
 
 
 //
-// Python version compatibility shims
-//
-// These wrap APIs added in newer CPython versions so the same source builds on Python 3.10+ and
-// behaves correctly on both the default (GIL) and free-threaded (no-GIL) builds. The _ref variants
-// always return strong references - never rely on the GIL to keep a borrowed reference alive.
+// Python version compatibility
 //
 
 
-// dict get returning a strong reference: 1 = found, 0 = missing, -1 = error
-static inline int dict_get_ref(PyObject *dict, PyObject *key, PyObject **value)
-{
+// Get a dict item as a new reference - 1 found, 0 absent, -1 error
 #if PY_VERSION_HEX >= 0x030D0000
-    return PyDict_GetItemRef(dict, key, value);
+#define bs_dict_get PyDict_GetItemRef
 #else
-    PyObject *borrowed = PyDict_GetItemWithError(dict, key);
-    if (borrowed != NULL) {
-        Py_INCREF(borrowed);
-        *value = borrowed;
-        return 1;
-    }
-    *value = NULL;
-    return PyErr_Occurred() ? -1 : 0;
-#endif
-}
-
-
-// list item returning a strong reference: 0 = success, -1 = error
-static inline int list_get_ref(PyObject *list, Py_ssize_t index, PyObject **value)
+static int bs_dict_get(PyObject *dict, PyObject *key, PyObject **result)
 {
-#if PY_VERSION_HEX >= 0x030D0000
-    *value = PyList_GetItemRef(list, index);
-    return (*value != NULL) ? 0 : -1;
-#else
-    PyObject *borrowed = PyList_GetItem(list, index);
-    if (borrowed == NULL) {
-        *value = NULL;
-        return -1;
-    }
-    Py_INCREF(borrowed);
-    *value = borrowed;
-    return 0;
-#endif
+    PyObject *value = PyDict_GetItemWithError(dict, key);
+    *result = Py_XNewRef(value);
+    return value != NULL ? 1 : (PyErr_Occurred() ? -1 : 0);
 }
+#endif
 
 
-// Capture the currently-raised exception as a strong reference to the exception instance
-static PyObject *get_raised_exception(void)
+// Get a list item as a new reference, or NULL with IndexError
+#if PY_VERSION_HEX >= 0x030D0000
+#define bs_list_get PyList_GetItemRef
+#else
+static PyObject *bs_list_get(PyObject *list, Py_ssize_t index)
+{
+    return Py_XNewRef(PyList_GetItem(list, index));
+}
+#endif
+
+
+// Critical sections exist from 3.13 - before that there is no free-threaded build to need them
+#if PY_VERSION_HEX < 0x030D0000
+#define Py_BEGIN_CRITICAL_SECTION(object) {
+#define Py_END_CRITICAL_SECTION() }
+#endif
+
+
+// Fetch the raised exception (a new reference), clearing it
+static PyObject *bs_err_fetch(void)
 {
 #if PY_VERSION_HEX >= 0x030C0000
     return PyErr_GetRaisedException();
@@ -122,7 +110,7 @@ static PyObject *get_raised_exception(void)
     PyObject *type, *value, *traceback;
     PyErr_Fetch(&type, &value, &traceback);
     PyErr_NormalizeException(&type, &value, &traceback);
-    if (value != NULL && traceback != NULL) {
+    if (traceback != NULL) {
         PyException_SetTraceback(value, traceback);
     }
     Py_XDECREF(type);
@@ -132,465 +120,225 @@ static PyObject *get_raised_exception(void)
 }
 
 
-//
-// Module state
-//
-// All members are populated once during module exec and are immutable afterwards, so they are safe
-// to read concurrently under the free-threaded build (the module is marked as not supporting
-// multiple interpreters, so a single initialization is guaranteed per process).
-//
-
-typedef struct {
-    // Interned key strings
-    PyObject *str_globals;
-    PyObject *str_maxStatements;
-    PyObject *str_statementCount;
-    PyObject *str_fetchFn;
-    PyObject *str_logFn;
-    PyObject *str_urlFn;
-    PyObject *str_debug;
-    PyObject *str_statements;
-    PyObject *str_scriptName;
-    PyObject *str_system;
-    PyObject *str_expr;
-    PyObject *str_jump;
-    PyObject *str_return;
-    PyObject *str_function;
-    PyObject *str_include;
-    PyObject *str_label;
-    PyObject *str_name;
-    PyObject *str_args;
-    PyObject *str_lastArgArray;
-    PyObject *str_includes;
-    PyObject *str_url;
-    PyObject *str_number;
-    PyObject *str_string;
-    PyObject *str_variable;
-    PyObject *str_binary;
-    PyObject *str_unary;
-    PyObject *str_group;
-    PyObject *str_op;
-    PyObject *str_left;
-    PyObject *str_right;
-    PyObject *str_lineNumber;
-    PyObject *str_enabled;
-    PyObject *str_scripts;
-    PyObject *str_script;
-    PyObject *str_covered;
-    PyObject *str_statement;
-    PyObject *str_count;
-    PyObject *str_coverage_name;
-    PyObject *str_includes_name;
-    PyObject *str_return_value;
-    PyObject *str_total_seconds;
-    PyObject *str_copy;
-    PyObject *str_method_upper;
-    PyObject *str_method_lower;
-    PyObject *str_method_strip;
-    PyObject *str_method_pop;
-
-    // Imported objects
-    PyObject *script_functions;
-    PyObject *expression_functions;
-    PyObject *runtime_error;
-    PyObject *value_args_error;
-    PyObject *value_string;
-    PyObject *value_compare;
-    PyObject *value_round_number;
-    PyObject *value_normalize_datetime;
-    PyObject *url_file_relative;
-    PyObject *barescript_parse_script;
-    PyObject *json_loads;
-    PyObject *barescript_lint_script;
-    PyObject *partial;
-    PyObject *system_includes;
-
-    // Constants
-    PyObject *default_max_statements;
-    PyObject *zero;
-    PyObject *one;
-} RuntimeState;
-
-static RuntimeState g;
-
-
-//
-// Generic mapping helpers
-//
-// The runtime's dicts (options, globals, script models) are exact dicts in practice, but these
-// helpers fall back to the generic mapping protocol so duck-typed inputs behave like the Python
-// reference implementation.
-//
-
-
-// mapping.get(key) semantics: 1 = found (strong reference in *value), 0 = missing, -1 = error
-static int obj_get(PyObject *obj, PyObject *key, PyObject **value)
+// Re-raise an exception fetched by bs_err_fetch (steals the reference)
+static void bs_err_restore(PyObject *exc)
 {
-    if (PyDict_CheckExact(obj)) {
-        return dict_get_ref(obj, key, value);
-    }
-    *value = PyObject_GetItem(obj, key);
-    if (*value != NULL) {
-        return 1;
-    }
-    if (PyErr_ExceptionMatches(PyExc_KeyError)) {
-        PyErr_Clear();
-        return 0;
-    }
-    return -1;
-}
-
-
-// mapping[key] semantics (KeyError if missing): 0 = success (strong reference), -1 = error
-static int obj_subscript(PyObject *obj, PyObject *key, PyObject **value)
-{
-    if (PyDict_CheckExact(obj)) {
-        int found = dict_get_ref(obj, key, value);
-        if (found == 0) {
-            PyErr_SetObject(PyExc_KeyError, key);
-            return -1;
-        }
-        return (found < 0) ? -1 : 0;
-    }
-    *value = PyObject_GetItem(obj, key);
-    return (*value != NULL) ? 0 : -1;
-}
-
-
-// mapping[key] = value: 0 = success, -1 = error
-static int obj_setitem(PyObject *obj, PyObject *key, PyObject *value)
-{
-    if (PyDict_CheckExact(obj)) {
-        return PyDict_SetItem(obj, key, value);
-    }
-    return PyObject_SetItem(obj, key, value);
-}
-
-
-// key in mapping semantics: 1 = found, 0 = missing, -1 = error
-static int obj_contains(PyObject *obj, PyObject *key)
-{
-    if (PyDict_CheckExact(obj)) {
-        return PyDict_Contains(obj, key);
-    }
-    return PySequence_Contains(obj, key);
-}
-
-
-// del mapping[key] semantics: 0 = success, -1 = error
-static int obj_delitem(PyObject *obj, PyObject *key)
-{
-    if (PyDict_CheckExact(obj)) {
-        return PyDict_DelItem(obj, key);
-    }
-    return PyObject_DelItem(obj, key);
-}
-
-
-//
-// Execution context
-//
-// The reference implementation counts statements by incrementing options['statementCount'] in the
-// options dict for every statement. The execution context keeps the counter in a C integer instead
-// and syncs it to the options dict only when external code can observe it - before calling any
-// Python callable (which may read the count or call back into the runtime) and when execution
-// completes. The maxStatements limit and the script globals are read once and cached.
-//
-
-
-// Classification of the maxStatements option value for the fast counting path
-typedef enum {
-    MAX_KIND_LONG,   // exact int that fits in long long
-    MAX_KIND_DOUBLE, // exact float
-    MAX_KIND_OBJECT  // anything else - per-statement Python object comparisons
-} MaxKind;
-
-
-typedef struct {
-    PyObject *options;   // borrowed - the options mapping or Py_None
-    PyObject *globals;   // strong or NULL - the cached options globals
-    PyObject *max_obj;   // strong or NULL - the original maxStatements object
-    long long max_long;
-    double max_double;
-    long long count;     // the authoritative statement count when count_in_c
-    MaxKind max_kind;
-    int max_gt_zero;
-    int count_in_c;      // 1 = the C counter is authoritative (the options dict may be stale)
-    int is_exec;         // 1 = initialized for execution (globals/limit/counter are set up)
-} ExecCtx;
-
-
-// Counts above this bound fall back to dict-based counting to avoid long long overflow
-#define COUNT_IN_C_BOUND (1LL << 62)
-
-
-// Initialize a context for expression evaluation only (no statement counting). options may be
-// Py_None.
-static int exec_ctx_init_eval(ExecCtx *ctx, PyObject *options)
-{
-    ctx->options = options;
-    ctx->globals = NULL;
-    ctx->max_obj = NULL;
-    ctx->count = 0;
-    ctx->max_kind = MAX_KIND_OBJECT;
-    ctx->max_gt_zero = 0;
-    ctx->count_in_c = 0;
-    ctx->is_exec = 0;
-    if (options != Py_None) {
-        if (obj_get(options, g.str_globals, &ctx->globals) < 0) {
-            return -1;
-        }
-        if (ctx->globals == Py_None) {
-            Py_CLEAR(ctx->globals);
-        }
-    }
-    return 0;
-}
-
-
-// Initialize a context for script execution - requires options['globals'], reads maxStatements,
-// and initializes the statement counter
-static int exec_ctx_init_exec(ExecCtx *ctx, PyObject *options)
-{
-    ctx->options = options;
-    ctx->globals = NULL;
-    ctx->max_obj = NULL;
-    ctx->count = 0;
-    ctx->max_kind = MAX_KIND_OBJECT;
-    ctx->max_gt_zero = 0;
-    ctx->count_in_c = 0;
-    ctx->is_exec = 1;
-
-    // Get the script globals
-    if (obj_subscript(options, g.str_globals, &ctx->globals) < 0) {
-        return -1;
-    }
-
-    // Get the maximum statements option
-    int found = obj_get(options, g.str_maxStatements, &ctx->max_obj);
-    if (found < 0) {
-        return -1;
-    }
-    if (!found) {
-        ctx->max_obj = Py_NewRef(g.default_max_statements);
-    }
-    if (PyLong_CheckExact(ctx->max_obj)) {
-        int overflow = 0;
-        long long max_long = PyLong_AsLongLongAndOverflow(ctx->max_obj, &overflow);
-        if (max_long == -1 && !overflow && PyErr_Occurred()) {
-            return -1;
-        }
-        if (!overflow) {
-            ctx->max_kind = MAX_KIND_LONG;
-            ctx->max_long = max_long;
-            ctx->max_gt_zero = (max_long > 0);
-        }
-    } else if (PyFloat_CheckExact(ctx->max_obj)) {
-        ctx->max_kind = MAX_KIND_DOUBLE;
-        ctx->max_double = PyFloat_AS_DOUBLE(ctx->max_obj);
-        ctx->max_gt_zero = (ctx->max_double > 0.);
-    }
-    if (ctx->max_kind == MAX_KIND_OBJECT) {
-        int max_gt_zero = PyObject_RichCompareBool(ctx->max_obj, g.zero, Py_GT);
-        if (max_gt_zero < 0) {
-            return -1;
-        }
-        ctx->max_gt_zero = max_gt_zero;
-    }
-
-    // Initialize the statement counter, if necessary
-    if (PyDict_CheckExact(options)) {
-#if PY_VERSION_HEX >= 0x030D0000
-        PyObject *count_value = NULL;
-        if (PyDict_SetDefaultRef(options, g.str_statementCount, g.zero, &count_value) < 0) {
-            return -1;
-        }
-        Py_XDECREF(count_value);
+#if PY_VERSION_HEX >= 0x030C0000
+    PyErr_SetRaisedException(exc);
 #else
-        if (PyDict_SetDefault(options, g.str_statementCount, g.zero) == NULL) {
-            return -1;
-        }
+    PyErr_Restore(Py_NewRef((PyObject *)Py_TYPE(exc)), exc, PyException_GetTraceback(exc));
 #endif
-    } else {
-        PyObject *count_value = NULL;
-        found = obj_get(options, g.str_statementCount, &count_value);
-        if (found < 0) {
-            return -1;
-        }
-        if (found) {
-            Py_DECREF(count_value);
-        } else if (obj_setitem(options, g.str_statementCount, g.zero) < 0) {
-            return -1;
-        }
-    }
+}
 
-    // Load the statement counter into C if it (and the maximum) supports fast counting
-    PyObject *count_obj;
-    if (obj_subscript(options, g.str_statementCount, &count_obj) < 0) {
-        return -1;
-    }
-    if (ctx->max_kind != MAX_KIND_OBJECT && PyLong_CheckExact(count_obj)) {
-        int overflow = 0;
-        long long count = PyLong_AsLongLongAndOverflow(count_obj, &overflow);
-        if (count == -1 && !overflow && PyErr_Occurred()) {
-            Py_DECREF(count_obj);
-            return -1;
+
+// Keep a function out of line - a cold path, or one the interpreter loop must not grow by
+#if defined(__GNUC__) || defined(__clang__)
+#define BS_NOINLINE __attribute__((noinline))
+#define BS_INLINE inline __attribute__((always_inline))
+#else
+#define BS_NOINLINE
+#define BS_INLINE inline
+#endif
+
+
+// A pointer published once, lazily - an atomic compare-and-swap on the free-threaded build, where two
+// threads can race to publish; the losing builder frees its copy
+#ifdef Py_GIL_DISABLED
+#define BS_ATOMIC_PTR(type) _Atomic(type *)
+#define bs_atomic_load(ptr) atomic_load_explicit((ptr), memory_order_acquire)
+#define bs_atomic_publish(ptr, expected, value) atomic_compare_exchange_strong((ptr), (expected), (value))
+#define BS_ATOMIC_U64 _Atomic uint64_t
+#define BS_ATOMIC_INT _Atomic int
+#define bs_atomic_claim(ptr) atomic_exchange_explicit((ptr), 1, memory_order_acquire) == 0
+#define bs_atomic_add(ptr) atomic_fetch_add_explicit((ptr), 1, memory_order_release)
+#define bs_atomic_store(ptr, value) atomic_store_explicit((ptr), (value), memory_order_release)
+#else
+#define BS_ATOMIC_PTR(type) type *
+#define BS_ATOMIC_U64 uint64_t
+#define BS_ATOMIC_INT int
+#define bs_atomic_claim(ptr) (*(ptr) == 0 ? (*(ptr) = 1) : 0)
+#define bs_atomic_add(ptr) ((*(ptr))++)
+#define bs_atomic_store(ptr, value) (*(ptr) = (value))
+#define bs_atomic_load(ptr) (*(ptr))
+#define bs_atomic_publish(ptr, expected, value) \
+    (*(ptr) == *(expected) ? (*(ptr) = (value), 1) : (*(expected) = *(ptr), 0))
+#endif
+
+
+//
+// Module state - populated once at module execution and immutable thereafter
+//
+
+
+// Interned strings
+static PyObject *S_args, *S_binary, *S_coverage, *S_debug, *S_empty, *S_enabled, *S_expr, *S_false,
+    *S_fetchFn, *S_function, *S_get, *S_globals, *S_group, *S_include, *S_includes, *S_jump, *S_label,
+    *S_lastArgArray, *S_left, *S_lineNumber, *S_logFn, *S_maxStatements, *S_milliseconds, *S_name, *S_null,
+    *S_number, *S_op, *S_return, *S_return_value, *S_right, *S_scriptName, *S_scripts, *S_covered, *S_count,
+    *S_startswith, *S_brace, *S_dollar, *S_backslash, *S_statementCount, *S_statements, *S_string, *S_system,
+    *S_total_seconds, *S_true, *S_unary, *S_url, *S_urlFn, *S_variable, *S_search, *S_finditer, *S_groups,
+    *S_groupdict, *S_start, *S_index, *S_input, *S_lower, *S_upper, *S_sub, *S_unknown;
+
+// The value type names
+static PyObject *S_t_array, *S_t_boolean, *S_t_datetime, *S_t_function, *S_t_null, *S_t_number, *S_t_object,
+    *S_t_regex, *S_t_string;
+
+// Python objects from the pure-Python implementation
+static PyObject *g_runtime;                  // the bare_script.runtime module - cold paths look up its names at use
+static PyObject *g_BareScriptRuntimeError;
+static PyObject *g_ValueArgsError;
+static PyObject *g_SCRIPT_FUNCTIONS;
+static PyObject *g_EXPRESSION_FUNCTIONS;
+static PyObject *g_INTRINSICS;
+static PyObject *g_value_string;
+static PyObject *g_value_compare;
+static PyObject *g_value_normalize_datetime;
+static PyObject *g_value_round_number;
+static PyObject *g_REGEX_TYPE;
+static PyObject *g_json_loads;
+static PyObject *g_json_encode;              // value._JSON_ENCODER_DEFAULT.encode
+static PyObject *g_json_decode;              // library jsonParse's decoder, with Python's integer parsing
+static PyObject *g_re_escape;
+static PyObject *g_group_keys[10];          // the regex match group keys '0' to '9'
+static PyObject *g_partial;
+static PyObject *g_url_file_relative;
+static PyObject *g_timedelta;
+static PyObject *g_default_max_statements;   // runtime.DEFAULT_MAX_STATEMENTS
+static PyObject *g_zero;                     // 0
+static PyObject *g_one;                      // 1
+static PyObject *g_thousand;                 // 1000
+static PyObject *g_dbl_max;                  // sys.float_info.max
+static PyObject *g_dbl_max_neg;              // -sys.float_info.max
+
+
+// The library intrinsics - the library functions runtime.py runs inline when called by their own names, then the
+// library functions replicated here, run when the call resolves to the library function itself
+#define BS_INTRINSICS(X) \
+    X(ARRAY_NEW, "arrayNew") X(OBJECT_GET, "objectGet") X(OBJECT_HAS, "objectHas") X(ARRAY_GET, "arrayGet") \
+    X(ARRAY_LENGTH, "arrayLength") X(ARRAY_PUSH, "arrayPush") X(OBJECT_SET, "objectSet") \
+    X(STRING_LENGTH, "stringLength") X(SYSTEM_TYPE, "systemType") X(OBJECT_KEYS, "objectKeys") \
+    X(ARRAY_SET, "arraySet") X(MATH_SQRT, "mathSqrt") \
+    X(OBJECT_NEW, "objectNew") X(STRING_SLICE, "stringSlice") X(STRING_INDEX_OF, "stringIndexOf") \
+    X(STRING_STARTS_WITH, "stringStartsWith") X(STRING_TRIM, "stringTrim") X(STRING_CHAR_CODE_AT, "stringCharCodeAt") \
+    X(MATH_FLOOR, "mathFloor") X(MATH_MIN, "mathMin") X(MATH_MAX, "mathMax") X(ARRAY_JOIN, "arrayJoin") \
+    X(ARRAY_EXTEND, "arrayExtend") X(REGEX_MATCH, "regexMatch") X(REGEX_MATCH_ALL, "regexMatchAll") \
+    X(NUMBER_PARSE_INT, "numberParseInt") X(NUMBER_PARSE_FLOAT, "numberParseFloat") X(STRING_SPLIT, "stringSplit") \
+    X(STRING_ENCODE, "stringEncode") X(STRING_DECODE, "stringDecode") X(STRING_REPLACE, "stringReplace") \
+    X(STRING_LOWER, "stringLower") X(STRING_UPPER, "stringUpper") X(STRING_ENDS_WITH, "stringEndsWith") \
+    X(STRING_CHAR_AT, "stringCharAt") X(STRING_NEW, "stringNew") X(ARRAY_REVERSE, "arrayReverse") \
+    X(ARRAY_SLICE, "arraySlice") X(ARRAY_COPY, "arrayCopy") X(OBJECT_DELETE, "objectDelete") \
+    X(OBJECT_ASSIGN, "objectAssign") X(OBJECT_COPY, "objectCopy") X(SYSTEM_BOOLEAN, "systemBoolean") \
+    X(MATH_ABS, "mathAbs") X(MATH_CEIL, "mathCeil") X(SYSTEM_GLOBAL_GET, "systemGlobalGet") \
+    X(SYSTEM_GLOBAL_SET, "systemGlobalSet") X(REGEX_REPLACE, "regexReplace") X(REGEX_ESCAPE, "regexEscape") \
+    X(ARRAY_NEW_SIZE, "arrayNewSize") X(NUMBER_TO_STRING, "numberToString") X(JSON_PARSE, "jsonParse") \
+    X(JSON_STRINGIFY, "jsonStringify")
+
+#define BS_INTRINSIC_ENUM(id, name) IN_##id,
+enum { IN_NONE = 0, BS_INTRINSICS(BS_INTRINSIC_ENUM) IN_COUNT };
+
+// The first library function replica
+#define IN_LIBRARY IN_OBJECT_NEW
+
+#define BS_INTRINSIC_NAME(id, name) name,
+static const char *const intrinsic_names[] = { NULL, BS_INTRINSICS(BS_INTRINSIC_NAME) };
+
+static PyObject *g_intrinsic_names[IN_COUNT];   // interned
+static PyObject *g_intrinsic_fns[IN_COUNT];     // the library function objects
+
+
+// Is a function one of runtime.py's library intrinsic functions?
+static int is_intrinsic_fn(PyObject *func)
+{
+    for (int id = 1; id < IN_LIBRARY; id++) {
+        if (func == g_intrinsic_fns[id]) {
+            return 1;
         }
-        if (!overflow && count < COUNT_IN_C_BOUND) {
-            ctx->count = count;
-            ctx->count_in_c = 1;
-        }
     }
-    Py_DECREF(count_obj);
     return 0;
 }
 
 
-static void exec_ctx_fini(ExecCtx *ctx)
+// Get an attribute of the runtime module (a new reference)
+static PyObject *runtime_attr(const char *name)
 {
-    Py_XDECREF(ctx->max_obj);
-    Py_XDECREF(ctx->globals);
+    return PyObject_GetAttrString(g_runtime, name);
 }
 
 
-// Write the C statement counter to the options dict (before external code can observe it)
-static int exec_ctx_sync_out(ExecCtx *ctx)
+// Call a runtime module function with its arguments (a NULL-terminated list) - a new reference
+static PyObject *runtime_call(const char *name, ...)
 {
-    if (!ctx->count_in_c) {
-        return 0;
+    PyObject *func = runtime_attr(name);
+    if (func == NULL) {
+        return NULL;
     }
-    PyObject *count_obj = PyLong_FromLongLong(ctx->count);
-    if (count_obj == NULL) {
-        return -1;
+    PyObject *args[6];
+    size_t nargs = 0;
+    va_list vargs;
+    va_start(vargs, name);
+    for (PyObject *arg = va_arg(vargs, PyObject *); arg != NULL && nargs < 6; arg = va_arg(vargs, PyObject *)) {
+        args[nargs++] = arg;
     }
-    int result = obj_setitem(ctx->options, g.str_statementCount, count_obj);
-    Py_DECREF(count_obj);
+    va_end(vargs);
+    PyObject *result = PyObject_Vectorcall(func, args, nargs, NULL);
+    Py_DECREF(func);
     return result;
 }
 
 
-// Reload the statement counter from the options dict (after external code may have changed it)
-static int exec_ctx_sync_in(ExecCtx *ctx)
+// Get a mapping value as the Python "value.get(key)" - a new reference to the value, or to None if absent
+static PyObject *object_get(PyObject *object, PyObject *key)
 {
-    if (!ctx->count_in_c) {
-        return 0;
+    if (PyDict_CheckExact(object)) {
+        PyObject *value;
+        int found = bs_dict_get(object, key, &value);
+        return found < 0 ? NULL : (found ? value : Py_NewRef(Py_None));
     }
-    PyObject *count_obj;
-    if (obj_subscript(ctx->options, g.str_statementCount, &count_obj) < 0) {
-        return -1;
-    }
-    if (PyLong_CheckExact(count_obj)) {
-        int overflow = 0;
-        long long count = PyLong_AsLongLongAndOverflow(count_obj, &overflow);
-        if (count == -1 && !overflow && PyErr_Occurred()) {
-            Py_DECREF(count_obj);
-            return -1;
-        }
-        if (!overflow && count < COUNT_IN_C_BOUND) {
-            ctx->count = count;
-        } else {
-            ctx->count_in_c = 0;
-        }
-    } else {
-        // The count was replaced with a non-int - fall back to dict-based counting
-        ctx->count_in_c = 0;
-    }
-    Py_DECREF(count_obj);
-    return 0;
+    return PyObject_CallMethodObjArgs(object, S_get, key, NULL);
 }
 
 
-// Write the C statement counter to the options dict, preserving any pending exception. Used at
-// context-owner exit so the options dict is current whether execution succeeded or failed.
-static void exec_ctx_sync_out_final(ExecCtx *ctx)
+// Create a list from an argument array
+static PyObject *list_new(PyObject *const *items, Py_ssize_t count)
 {
-    if (!ctx->count_in_c) {
+    PyObject *list = PyList_New(count);
+    if (list != NULL) {
+        for (Py_ssize_t ix = 0; ix < count; ix++) {
+            PyList_SET_ITEM(list, ix, Py_NewRef(items[ix]));
+        }
+    }
+    return list;
+}
+
+
+//
+// Errors
+//
+
+
+// Raise a BareScriptRuntimeError for a script statement (steals the message reference)
+static void raise_runtime_error(PyObject *script, PyObject *statement, PyObject *message)
+{
+    if (message == NULL) {
         return;
     }
-    PyObject *exc_type;
-    PyObject *exc_value;
-    PyObject *exc_traceback;
-    PyErr_Fetch(&exc_type, &exc_value, &exc_traceback);
-    if (exec_ctx_sync_out(ctx) < 0) {
-        PyErr_Clear();
+    PyObject *exc = PyObject_CallFunctionObjArgs(g_BareScriptRuntimeError, script != NULL ? script : Py_None,
+                                                 statement != NULL ? statement : Py_None, message, NULL);
+    Py_DECREF(message);
+    if (exc != NULL) {
+        PyErr_SetObject((PyObject *)Py_TYPE(exc), exc);
+        Py_DECREF(exc);
     }
-    PyErr_Restore(exc_type, exc_value, exc_traceback);
-}
-
-
-// Forward declaration (set_runtime_error is defined below)
-static void set_runtime_error(PyObject *script, PyObject *statement, PyObject *message);
-
-
-// Count a statement and check the maximum statements limit: 0 = success, -1 = error (limit
-// exceeded or comparison failure)
-static int exec_ctx_count_statement(ExecCtx *ctx, PyObject *script, PyObject *statement)
-{
-    // Fast path - C integer counting
-    if (ctx->count_in_c) {
-        ctx->count++;
-        if (ctx->max_gt_zero) {
-            int over_max = (ctx->max_kind == MAX_KIND_LONG)
-                ? (ctx->count > ctx->max_long)
-                : ((double)ctx->count > ctx->max_double);
-            if (over_max) {
-                set_runtime_error(
-                    script, statement,
-                    PyUnicode_FromFormat("Exceeded maximum script statements (%S)", ctx->max_obj)
-                );
-                return -1;
-            }
-        }
-        if (ctx->count >= COUNT_IN_C_BOUND) {
-            // Avoid long long overflow - fall back to dict-based counting
-            if (exec_ctx_sync_out(ctx) < 0) {
-                return -1;
-            }
-            ctx->count_in_c = 0;
-        }
-        return 0;
-    }
-
-    // Slow path - dict-based counting, mirroring the reference implementation directly
-    PyObject *count_obj;
-    if (obj_subscript(ctx->options, g.str_statementCount, &count_obj) < 0) {
-        return -1;
-    }
-    PyObject *new_count = PyNumber_Add(count_obj, g.one);
-    Py_DECREF(count_obj);
-    if (new_count == NULL) {
-        return -1;
-    }
-    if (obj_setitem(ctx->options, g.str_statementCount, new_count) < 0) {
-        Py_DECREF(new_count);
-        return -1;
-    }
-    if (ctx->max_gt_zero) {
-        int over_max = PyObject_RichCompareBool(new_count, ctx->max_obj, Py_GT);
-        if (over_max != 0) {
-            if (over_max > 0) {
-                set_runtime_error(
-                    script, statement,
-                    PyUnicode_FromFormat("Exceeded maximum script statements (%S)", ctx->max_obj)
-                );
-            }
-            Py_DECREF(new_count);
-            return -1;
-        }
-    }
-    Py_DECREF(new_count);
-    return 0;
 }
 
 
 //
-// Value helpers
+// Value helpers - value.py's value_boolean, value_string, value_compare, and value_type
 //
 
 
-// Mirror of value.value_boolean - BareScript truthiness (note: unlike Python truthiness, any
-// non-null value that is not a bool, string, number, or array is true - including empty objects)
-static int value_boolean_c(PyObject *value)
+// value_boolean - 1 true, 0 false, -1 error
+static int value_boolean(PyObject *value)
 {
     if (value == Py_True) {
         return 1;
@@ -598,44 +346,535 @@ static int value_boolean_c(PyObject *value)
     if (value == Py_False || value == Py_None) {
         return 0;
     }
-    if (PyFloat_Check(value)) {
-        // NaN != 0 is true, matching the reference implementation
-        return PyFloat_AS_DOUBLE(value) != 0.;
+    if (PyUnicode_CheckExact(value)) {
+        return PyUnicode_GET_LENGTH(value) != 0;
     }
-    if (PyLong_Check(value)) {
+    if (PyFloat_CheckExact(value)) {
+        return PyFloat_AS_DOUBLE(value) != 0.0;
+    }
+    if (PyLong_CheckExact(value)) {
         return PyObject_IsTrue(value);
     }
     if (PyUnicode_Check(value)) {
-        return PyUnicode_GetLength(value) != 0;
+        return PyObject_RichCompareBool(value, S_empty, Py_NE);
+    }
+    if (PyLong_Check(value) || PyFloat_Check(value)) {
+        return PyObject_RichCompareBool(value, g_zero, Py_NE);
     }
     if (PyList_Check(value)) {
-        return PyList_GET_SIZE(value) != 0;
+        Py_ssize_t length = PyObject_Length(value);
+        return length < 0 ? -1 : length != 0;
     }
-
-    // Everything else non-null is true
     return 1;
 }
 
 
-// Is the value an exact int or float (bool is a subclass of int but has its own exact type)?
-// This is the binary-operator fast-path check, mirroring the reference runtime's exact checks.
-static inline int is_number(PyObject *value)
+// An integer's digits in a radix (2 to 36), as a string
+static PyObject *digits_string(unsigned long long magnitude, int negative, int radix)
 {
-    return PyLong_CheckExact(value) || PyFloat_CheckExact(value);
+    static const char digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+    char text[72];
+    int ix = (int)sizeof(text);
+    do {
+        text[--ix] = digits[magnitude % (unsigned)radix];
+        magnitude /= (unsigned)radix;
+    } while (magnitude > 0);
+    if (negative) {
+        text[--ix] = '-';
+    }
+    return PyUnicode_FromStringAndSize(text + ix, (Py_ssize_t)sizeof(text) - ix);
 }
 
 
-// Is the value a number per the value model (int/float subclasses count, bool is excluded)?
-// This is the argument-validation check, mirroring value.value_args_validate's isinstance checks.
-static inline int is_number_arg(PyObject *value)
+// value_string - a new reference
+static PyObject *value_string(PyObject *value)
 {
-    return !PyBool_Check(value) && (PyLong_Check(value) || PyFloat_Check(value));
+    if (PyUnicode_CheckExact(value)) {
+        return Py_NewRef(value);
+    }
+    if (value == Py_None) {
+        return Py_NewRef(S_null);
+    }
+    if (value == Py_True) {
+        return Py_NewRef(S_true);
+    }
+    if (value == Py_False) {
+        return Py_NewRef(S_false);
+    }
+    if (PyLong_CheckExact(value)) {
+        return PyObject_Str(value);
+    }
+    if (PyFloat_CheckExact(value)) {
+        // An integral float a double represents with every smaller integer formats as the integer
+        double number = PyFloat_AS_DOUBLE(value);
+        if (floor(number) == number && fabs(number) < 9007199254740992.0) {
+            return digits_string((unsigned long long)fabs(number), number < 0, 10);
+        }
+    }
+    return PyObject_CallOneArg(g_value_string, value);
 }
 
 
-// Convert an int, or a float with an integral value, to a new int reference. Returns NULL with no
-// exception set if the value is not an integral number.
-static PyObject *integral_long(PyObject *value)
+// value_type - a borrowed reference to the type name, or None for an unknown type
+static PyObject *value_type(PyObject *value)
+{
+    if (value == Py_None) {
+        return S_t_null;
+    }
+    if (PyUnicode_Check(value)) {
+        return S_t_string;
+    }
+    if (PyBool_Check(value)) {
+        return S_t_boolean;
+    }
+    if (PyLong_Check(value) || PyFloat_Check(value)) {
+        return S_t_number;
+    }
+    if (PyDate_Check(value)) {
+        return S_t_datetime;
+    }
+    if (PyDict_Check(value)) {
+        return S_t_object;
+    }
+    if (PyList_Check(value)) {
+        return S_t_array;
+    }
+    if (PyCallable_Check(value)) {
+        return S_t_function;
+    }
+    if (PyObject_TypeCheck(value, (PyTypeObject *)g_REGEX_TYPE)) {
+        return S_t_regex;
+    }
+    return Py_None;
+}
+
+
+//
+// Operators - runtime.py's binary and unary expression semantics
+//
+
+
+// Is the value a number to the operators - an exact int or float (bool and subclasses are not)?
+#define IS_NUMBER(value) (PyFloat_CheckExact(value) || PyLong_CheckExact(value))
+
+// The largest integer magnitude every smaller integer of which a double represents exactly
+#define BS_EXACT_INT_MAX 9007199254740992LL
+
+
+// Get an exact int's value - 1 if it fits in a long long, 0 otherwise
+static inline int small_int(PyObject *value, long long *result)
+{
+    int overflow;
+    *result = PyLong_AsLongLongAndOverflow(value, &overflow);
+    return !overflow;
+}
+
+
+// A number operand as a double (an exact int or float) - -1 on error (an int too large for a float)
+static inline int number_double(PyObject *value, double *result)
+{
+    if (PyFloat_CheckExact(value)) {
+        *result = PyFloat_AS_DOUBLE(value);
+        return 0;
+    }
+    *result = PyLong_AsDouble(value);
+    return *result == -1.0 && PyErr_Occurred() ? -1 : 0;
+}
+
+
+// runtime.py's _arithmetic_result - non-finite numbers (including out-of-double-range integers and complex
+// results) are invalid operation values. Steals the result reference.
+static PyObject *arithmetic_result(PyObject *result)
+{
+    if (result == NULL) {
+        return NULL;
+    }
+    if (PyFloat_CheckExact(result)) {
+        if (isfinite(PyFloat_AS_DOUBLE(result))) {
+            return result;
+        }
+    } else if (PyLong_CheckExact(result)) {
+        long long small;
+        if (small_int(result, &small)) {
+            return result;
+        }
+        int in_range = PyObject_RichCompareBool(result, g_dbl_max, Py_LE);
+        if (in_range > 0) {
+            in_range = PyObject_RichCompareBool(result, g_dbl_max_neg, Py_GE);
+        }
+        if (in_range < 0) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        if (in_range) {
+            return result;
+        }
+    }
+    Py_DECREF(result);
+    return Py_NewRef(Py_None);
+}
+
+
+// A finite double as a float, or None
+static inline PyObject *float_result(double value)
+{
+    return isfinite(value) ? PyFloat_FromDouble(value) : Py_NewRef(Py_None);
+}
+
+
+// Numeric +, -, and * of two number operands
+static PyObject *number_arith(int op, PyObject *left, PyObject *right)
+{
+    if (PyLong_CheckExact(left) && PyLong_CheckExact(right)) {
+        long long left_int, right_int, result;
+        if (small_int(left, &left_int) && small_int(right, &right_int)) {
+            int overflow = op == '+' ? __builtin_add_overflow(left_int, right_int, &result) :
+                (op == '-' ? __builtin_sub_overflow(left_int, right_int, &result) :
+                 __builtin_mul_overflow(left_int, right_int, &result));
+            if (!overflow) {
+                return PyLong_FromLongLong(result);
+            }
+        }
+        return arithmetic_result(op == '+' ? PyNumber_Add(left, right) :
+                                 (op == '-' ? PyNumber_Subtract(left, right) : PyNumber_Multiply(left, right)));
+    }
+    double left_num, right_num;
+    if (number_double(left, &left_num) < 0 || number_double(right, &right_num) < 0) {
+        return NULL;
+    }
+    return float_result(op == '+' ? left_num + right_num : (op == '-' ? left_num - right_num : left_num * right_num));
+}
+
+
+// Datetime + number (milliseconds) - None on overflow
+static PyObject *datetime_add(PyObject *datetime_value, PyObject *milliseconds)
+{
+    PyObject *datetime_norm = PyObject_CallOneArg(g_value_normalize_datetime, datetime_value);
+    if (datetime_norm == NULL) {
+        return NULL;
+    }
+    PyObject *result = NULL;
+    PyObject *args = PyTuple_New(0);
+    PyObject *kwargs = Py_BuildValue("{OO}", S_milliseconds, milliseconds);
+    if (args != NULL && kwargs != NULL) {
+        PyObject *delta = PyObject_Call(g_timedelta, args, kwargs);
+        if (delta != NULL) {
+            result = PyNumber_Add(datetime_norm, delta);
+            Py_DECREF(delta);
+        }
+        if (result == NULL && PyErr_ExceptionMatches(PyExc_OverflowError)) {
+            PyErr_Clear();
+            result = Py_NewRef(Py_None);
+        }
+    }
+    Py_XDECREF(args);
+    Py_XDECREF(kwargs);
+    Py_DECREF(datetime_norm);
+    return result;
+}
+
+
+// Datetime - datetime (milliseconds)
+static PyObject *datetime_sub(PyObject *left, PyObject *right)
+{
+    PyObject *left_dt = PyObject_CallOneArg(g_value_normalize_datetime, left);
+    PyObject *right_dt = left_dt != NULL ? PyObject_CallOneArg(g_value_normalize_datetime, right) : NULL;
+    PyObject *delta = right_dt != NULL ? PyNumber_Subtract(left_dt, right_dt) : NULL;
+    PyObject *seconds = delta != NULL ? PyObject_CallMethodNoArgs(delta, S_total_seconds) : NULL;
+    PyObject *ms = seconds != NULL ? PyNumber_Multiply(seconds, g_thousand) : NULL;
+    PyObject *result = ms != NULL ? PyObject_CallFunctionObjArgs(g_value_round_number, ms, g_zero, NULL) : NULL;
+    Py_XDECREF(left_dt);
+    Py_XDECREF(right_dt);
+    Py_XDECREF(delta);
+    Py_XDECREF(seconds);
+    Py_XDECREF(ms);
+    return result;
+}
+
+
+// Binary +
+static PyObject *op_add(PyObject *left, PyObject *right)
+{
+    int left_number = IS_NUMBER(left), right_number = IS_NUMBER(right);
+    if (left_number && right_number) {
+        return number_arith('+', left, right);
+    }
+    int left_string = PyUnicode_CheckExact(left), right_string = PyUnicode_CheckExact(right);
+    if (left_string && right_string) {
+        return PyUnicode_Concat(left, right);
+    }
+    if (left_string || right_string) {
+        PyObject *string = value_string(left_string ? right : left);
+        if (string == NULL) {
+            return NULL;
+        }
+        PyObject *result = left_string ? PyNumber_Add(left, string) : PyNumber_Add(string, right);
+        Py_DECREF(string);
+        return result;
+    }
+    if (right_number && PyDate_Check(left)) {
+        return datetime_add(left, right);
+    }
+    if (left_number && PyDate_Check(right)) {
+        return datetime_add(right, left);
+    }
+    return Py_NewRef(Py_None);
+}
+
+
+// Binary -
+static PyObject *op_sub(PyObject *left, PyObject *right)
+{
+    if (IS_NUMBER(left) && IS_NUMBER(right)) {
+        return number_arith('-', left, right);
+    }
+    if (PyDate_Check(left) && PyDate_Check(right)) {
+        return datetime_sub(left, right);
+    }
+    return Py_NewRef(Py_None);
+}
+
+
+// Binary *
+static PyObject *op_mul(PyObject *left, PyObject *right)
+{
+    return IS_NUMBER(left) && IS_NUMBER(right) ? number_arith('*', left, right) : Py_NewRef(Py_None);
+}
+
+
+// Binary / - None on division by zero
+static PyObject *op_div(PyObject *left, PyObject *right)
+{
+    if (!IS_NUMBER(left) || !IS_NUMBER(right)) {
+        return Py_NewRef(Py_None);
+    }
+    if (PyLong_CheckExact(left) && PyLong_CheckExact(right)) {
+        // Integers a double represents exactly divide as doubles, as Python's int true division does
+        long long left_int, right_int;
+        if (small_int(left, &left_int) && small_int(right, &right_int) &&
+            left_int <= BS_EXACT_INT_MAX && left_int >= -BS_EXACT_INT_MAX &&
+            right_int <= BS_EXACT_INT_MAX && right_int >= -BS_EXACT_INT_MAX) {
+            return right_int != 0 ? float_result((double)left_int / (double)right_int) : Py_NewRef(Py_None);
+        }
+        PyObject *result = PyNumber_TrueDivide(left, right);
+        if (result == NULL && PyErr_ExceptionMatches(PyExc_ZeroDivisionError)) {
+            PyErr_Clear();
+            return Py_NewRef(Py_None);
+        }
+        return arithmetic_result(result);
+    }
+    double left_num, right_num;
+    if (number_double(left, &left_num) < 0 || number_double(right, &right_num) < 0) {
+        return NULL;
+    }
+    return right_num != 0.0 ? float_result(left_num / right_num) : Py_NewRef(Py_None);
+}
+
+
+// Binary % - the remainder has the dividend's sign (math.fmod), as in JavaScript
+static PyObject *op_mod(PyObject *left, PyObject *right)
+{
+    if (!IS_NUMBER(left) || !IS_NUMBER(right)) {
+        return Py_NewRef(Py_None);
+    }
+    double left_num, right_num;
+    if (number_double(left, &left_num) < 0 || number_double(right, &right_num) < 0) {
+        if (PyErr_ExceptionMatches(PyExc_OverflowError)) {
+            PyErr_Clear();
+            return Py_NewRef(Py_None);
+        }
+        return NULL;
+    }
+
+    // math.fmod - fmod(x, +/-inf) is x for finite x; a NaN result from non-NaN operands is a domain error
+    double result;
+    if (isinf(right_num) && isfinite(left_num)) {
+        result = left_num;
+    } else {
+        result = fmod(left_num, right_num);
+        if (isnan(result) && !isnan(left_num) && !isnan(right_num)) {
+            return Py_NewRef(Py_None);
+        }
+    }
+
+    // Adding zero turns fmod's negative zero (a negative dividend's zero remainder) into zero
+    result = result + 0.0;
+    if (PyLong_CheckExact(left) && PyLong_CheckExact(right)) {
+        return arithmetic_result(PyLong_FromDouble(result));
+    }
+    return float_result(result);
+}
+
+
+// Binary ** - None on overflow and division by zero
+static PyObject *op_pow(PyObject *left, PyObject *right)
+{
+    if (!IS_NUMBER(left) || !IS_NUMBER(right)) {
+        return Py_NewRef(Py_None);
+    }
+    PyObject *result = PyNumber_Power(left, right, Py_None);
+    if (result == NULL && (PyErr_ExceptionMatches(PyExc_OverflowError) ||
+                           PyErr_ExceptionMatches(PyExc_ZeroDivisionError))) {
+        PyErr_Clear();
+        return Py_NewRef(Py_None);
+    }
+    return arithmetic_result(result);
+}
+
+
+// Compare two number operands with a Python rich comparison - 1 true, 0 false, -1 error
+static int number_compare(PyObject *left, PyObject *right, int op)
+{
+    double left_num, right_num;
+    long long left_int, right_int;
+    int left_exact, right_exact;
+    if (PyFloat_CheckExact(left)) {
+        left_num = PyFloat_AS_DOUBLE(left);
+        left_exact = 1;
+    } else {
+        left_exact = small_int(left, &left_int);
+        left_num = (double)left_int;
+        if (left_exact && PyLong_CheckExact(right) && small_int(right, &right_int)) {
+            switch (op) {
+            case Py_LT: return left_int < right_int;
+            case Py_LE: return left_int <= right_int;
+            case Py_GT: return left_int > right_int;
+            case Py_GE: return left_int >= right_int;
+            case Py_EQ: return left_int == right_int;
+            default: return left_int != right_int;
+            }
+        }
+        left_exact = left_exact && left_int <= BS_EXACT_INT_MAX && left_int >= -BS_EXACT_INT_MAX;
+    }
+    if (PyFloat_CheckExact(right)) {
+        right_num = PyFloat_AS_DOUBLE(right);
+        right_exact = 1;
+    } else {
+        right_exact = small_int(right, &right_int) && right_int <= BS_EXACT_INT_MAX && right_int >= -BS_EXACT_INT_MAX;
+        right_num = (double)right_int;
+    }
+    if (!left_exact || !right_exact) {
+        return PyObject_RichCompareBool(left, right, op);
+    }
+    switch (op) {
+    case Py_LT: return left_num < right_num;
+    case Py_LE: return left_num <= right_num;
+    case Py_GT: return left_num > right_num;
+    case Py_GE: return left_num >= right_num;
+    case Py_EQ: return left_num == right_num;
+    default: return left_num != right_num;
+    }
+}
+
+
+// value.py's value_compare - sets *result to -1, 0, or 1; returns -1 on error. Exact types compare here; subclasses,
+// datetimes, and objects compare with value.py's.
+enum { KIND_STRING, KIND_BOOLEAN, KIND_NUMBER, KIND_DATETIME, KIND_ARRAY, KIND_OBJECT, KIND_OTHER };
+
+static int value_kind(PyObject *value)
+{
+    return PyUnicode_Check(value) ? KIND_STRING : (PyBool_Check(value) ? KIND_BOOLEAN :
+        (PyLong_Check(value) || PyFloat_Check(value) ? KIND_NUMBER : (PyDate_Check(value) ? KIND_DATETIME :
+        (PyList_Check(value) ? KIND_ARRAY : (PyDict_Check(value) ? KIND_OBJECT : KIND_OTHER)))));
+}
+
+static int value_compare(PyObject *left, PyObject *right, int *result)
+{
+    if (left == Py_None || right == Py_None) {
+        *result = left == right ? 0 : (left == Py_None ? -1 : 1);
+        return 0;
+    }
+    int kind = value_kind(left), cmp;
+    if (kind != value_kind(right) || kind == KIND_OTHER) {
+        // Invalid comparison - compare by type name
+        PyObject *left_type = value_type(left), *right_type = value_type(right);
+        cmp = PyUnicode_Compare(left_type != Py_None ? left_type : S_unknown, right_type != Py_None ? right_type : S_unknown);
+    } else if (kind == KIND_BOOLEAN) {
+        cmp = (left == Py_True) - (right == Py_True);
+    } else if (kind == KIND_STRING && PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {
+        cmp = left == right ? 0 : PyUnicode_Compare(left, right);
+    } else if (kind == KIND_NUMBER && IS_NUMBER(left) && IS_NUMBER(right)) {
+        int less = number_compare(left, right, Py_LT);
+        int equal = less == 0 ? number_compare(left, right, Py_EQ) : 0;
+        if (less < 0 || equal < 0) {
+            return -1;
+        }
+        cmp = less ? -1 : !equal;
+    } else if (kind == KIND_ARRAY && PyList_CheckExact(left) && PyList_CheckExact(right)) {
+        Py_ssize_t count = Py_MIN(PyList_GET_SIZE(left), PyList_GET_SIZE(right));
+        if (Py_EnterRecursiveCall(" in comparison") < 0) {
+            return -1;
+        }
+        cmp = 0;
+        for (Py_ssize_t ix = 0; cmp == 0 && ix < count; ix++) {
+            PyObject *left_item = bs_list_get(left, ix);
+            PyObject *right_item = left_item != NULL ? bs_list_get(right, ix) : NULL;
+            int rc = right_item != NULL ? value_compare(left_item, right_item, &cmp) : -1;
+            Py_XDECREF(left_item);
+            Py_XDECREF(right_item);
+            if (rc < 0) {
+                Py_LeaveRecursiveCall();
+                return -1;
+            }
+        }
+        Py_LeaveRecursiveCall();
+        if (cmp == 0) {
+            Py_ssize_t left_size = PyList_GET_SIZE(left), right_size = PyList_GET_SIZE(right);
+            cmp = left_size < right_size ? -1 : (left_size == right_size ? 0 : 1);
+        }
+    } else {
+        PyObject *value = PyObject_CallFunctionObjArgs(g_value_compare, left, right, NULL);
+        long number = value != NULL ? PyLong_AsLong(value) : -1;
+        Py_XDECREF(value);
+        if (number == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        cmp = (int)number;
+    }
+    if (cmp == -1 && PyErr_Occurred()) {
+        return -1;
+    }
+    *result = cmp < 0 ? -1 : (cmp > 0 ? 1 : 0);
+    return 0;
+}
+
+
+// Compare two values for a comparison operator - 1 true, 0 false, -1 error. Numbers compare as Python numbers,
+// strings for == and != as strings, and anything else with value_compare.
+static int compare_truth(int op, PyObject *left, PyObject *right)
+{
+    if (IS_NUMBER(left) && IS_NUMBER(right)) {
+        return number_compare(left, right, op);
+    }
+    if ((op == Py_EQ || op == Py_NE) && PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {
+        return PyObject_RichCompareBool(left, right, op);
+    }
+    int cmp;
+    if (value_compare(left, right, &cmp) < 0) {
+        return -1;
+    }
+    switch (op) {
+    case Py_LT: return cmp < 0;
+    case Py_LE: return cmp <= 0;
+    case Py_GT: return cmp > 0;
+    case Py_GE: return cmp >= 0;
+    case Py_EQ: return cmp == 0;
+    default: return cmp != 0;
+    }
+}
+
+
+// Binary <, <=, >, >=, ==, and !=
+static PyObject *op_compare(int op, PyObject *left, PyObject *right)
+{
+    int truth = compare_truth(op, left, right);
+    return truth < 0 ? NULL : PyBool_FromLong(truth);
+}
+
+
+// A bitwise operand's integer - an exact int, or an exact integral float, as a new int reference; NULL with no
+// error for any other value
+static PyObject *bitwise_int(PyObject *value)
 {
     if (PyLong_CheckExact(value)) {
         return Py_NewRef(value);
@@ -650,2272 +889,1899 @@ static PyObject *integral_long(PyObject *value)
 }
 
 
-// Compare a unicode object to an ASCII string literal
-static inline int unicode_eq_ascii(PyObject *unicode, const char *str, Py_ssize_t length)
+// Binary &, |, ^, <<, and >> (the op is the operator's first character, '>' for >>)
+static PyObject *op_bitwise(int op, PyObject *left, PyObject *right)
 {
-    if (PyUnicode_GetLength(unicode) != length) {
-        return 0;
-    }
-    return PyUnicode_CompareWithASCIIString(unicode, str) == 0;
-}
-
-
-// Set a BareScriptRuntimeError with the given message (steals nothing; message may be NULL if an
-// error is already set from its construction)
-static void set_runtime_error(PyObject *script, PyObject *statement, PyObject *message)
-{
-    if (message == NULL) {
-        return;
-    }
-    PyObject *exc = PyObject_CallFunctionObjArgs(
-        g.runtime_error, (script != NULL) ? script : Py_None, (statement != NULL) ? statement : Py_None, message, NULL
-    );
-    if (exc != NULL) {
-        PyErr_SetObject(g.runtime_error, exc);
-        Py_DECREF(exc);
-    }
-    Py_DECREF(message);
-}
-
-
-//
-// Binary and unary operator parsing
-//
-
-
-typedef enum {
-    BINARY_AND,
-    BINARY_OR,
-    BINARY_ADD,
-    BINARY_SUB,
-    BINARY_MUL,
-    BINARY_DIV,
-    BINARY_LT,
-    BINARY_LTE,
-    BINARY_GT,
-    BINARY_GTE,
-    BINARY_EQ,
-    BINARY_NEQ,
-    BINARY_MOD,
-    BINARY_POW,
-    BINARY_BIT_AND,
-    BINARY_BIT_OR,
-    BINARY_BIT_XOR,
-    BINARY_SHL,
-    BINARY_SHR
-} BinaryOp;
-
-
-// Parse a binary operator string. Unrecognized operators map to BINARY_SHR, mirroring the
-// reference implementation's trailing else branch.
-static BinaryOp parse_binary_op(PyObject *op)
-{
-    if (!PyUnicode_Check(op)) {
-        return BINARY_SHR;
-    }
-    Py_ssize_t length = PyUnicode_GetLength(op);
-    if (length < 1 || length > 2) {
-        return BINARY_SHR;
-    }
-    Py_UCS4 char0 = PyUnicode_ReadChar(op, 0);
-    Py_UCS4 char1 = (length == 2) ? PyUnicode_ReadChar(op, 1) : 0;
-    switch (char0) {
-    case '&':
-        return (length == 2 && char1 == '&') ? BINARY_AND : BINARY_BIT_AND;
-    case '|':
-        return (length == 2 && char1 == '|') ? BINARY_OR : BINARY_BIT_OR;
-    case '+':
-        return BINARY_ADD;
-    case '-':
-        return BINARY_SUB;
-    case '*':
-        return (length == 2) ? BINARY_POW : BINARY_MUL;
-    case '/':
-        return BINARY_DIV;
-    case '<':
-        return (length == 1) ? BINARY_LT : ((char1 == '=') ? BINARY_LTE : BINARY_SHL);
-    case '>':
-        return (length == 1) ? BINARY_GT : ((char1 == '=') ? BINARY_GTE : BINARY_SHR);
-    case '=':
-        return BINARY_EQ;
-    case '!':
-        return BINARY_NEQ;
-    case '%':
-        return BINARY_MOD;
-    case '^':
-        return BINARY_BIT_XOR;
-    default:
-        return BINARY_SHR;
-    }
-}
-
-
-typedef enum {
-    UNARY_NOT,
-    UNARY_NEG,
-    UNARY_INVERT
-} UnaryOp;
-
-
-// Parse a unary operator string. Unrecognized operators map to UNARY_INVERT, mirroring the
-// reference implementation's trailing else branch.
-static UnaryOp parse_unary_op(PyObject *op)
-{
-    if (PyUnicode_Check(op) && PyUnicode_GetLength(op) == 1) {
-        Py_UCS4 char0 = PyUnicode_ReadChar(op, 0);
-        if (char0 == '!') {
-            return UNARY_NOT;
-        }
-        if (char0 == '-') {
-            return UNARY_NEG;
-        }
-    }
-    return UNARY_INVERT;
-}
-
-
-//
-// Library intrinsics
-//
-// C implementations of hot, trivial library.py functions. An intrinsic runs only when a compiled
-// call resolves to the original library function object (pointer identity, captured once at
-// module init) - any override or shadowing takes the generic call path, so behavior is
-// observably identical to the reference. Handlers replicate their function's
-// value.value_args_validate model exactly and raise errors by calling the Python ValueArgsError
-// class so messages and error return values match. Intrinsics never touch the options object, so
-// no statement-counter sync is required around them. The table is populated once at module exec
-// and immutable afterwards (free-threading safe). A per-call args list is private to the calling
-// thread, but the arrays and objects it references may be shared with other threads, so handlers
-// touch those only through the bounds-checked, locking list/dict APIs (list_get_ref,
-// PyList_SetItem, list.pop, dict_get_ref, ...) under the free-threaded build, where an
-// unsynchronized concurrent mutation then raises instead of reading freed storage. The default
-// (GIL) build keeps the direct macro accessors - the GIL already serializes those operations.
-//
-
-
-typedef PyObject *(*IntrinsicHandler)(PyObject *args);
-
-typedef struct {
-    const char *name;
-    IntrinsicHandler handler;
-    PyObject *py_func;  // strong - the original library function, or NULL when unavailable
-} IntrinsicDef;
-
-
-// Raise a ValueArgsError exactly like value.value_args_validate (cold path)
-static void intrinsic_args_error(const char *arg_name, PyObject *arg_value, PyObject *return_value)
-{
-    PyObject *name_obj = (arg_name != NULL) ? PyUnicode_FromString(arg_name) : Py_NewRef(Py_None);
-    if (name_obj == NULL) {
-        return;
-    }
-    PyObject *exc = PyObject_CallFunctionObjArgs(
-        g.value_args_error, name_obj, (arg_value != NULL) ? arg_value : Py_None,
-        (return_value != NULL) ? return_value : Py_None, NULL
-    );
-    Py_DECREF(name_obj);
-    if (exc != NULL) {
-        PyErr_SetObject(g.value_args_error, exc);
-        Py_DECREF(exc);
-    }
-}
-
-
-// Raise the too-many-arguments ValueArgsError (arg_name None, arg_value is the argument count)
-static void intrinsic_count_error(Py_ssize_t nargs, PyObject *return_value)
-{
-    PyObject *nargs_obj = PyLong_FromSsize_t(nargs);
-    if (nargs_obj == NULL) {
-        return;
-    }
-    PyObject *exc = PyObject_CallFunctionObjArgs(
-        g.value_args_error, Py_None, nargs_obj, (return_value != NULL) ? return_value : Py_None, NULL
-    );
-    Py_DECREF(nargs_obj);
-    if (exc != NULL) {
-        PyErr_SetObject(g.value_args_error, exc);
-        Py_DECREF(exc);
-    }
-}
-
-
-// Validate the single-number-argument model {'name': name, 'type': 'number' [, 'gte'/'gt': 0]}.
-// constraint: 0 = none, 1 = gte 0, 2 = gt 0. Returns the argument (borrowed from args) or NULL
-// with an exception set.
-static PyObject *intrinsic_one_number(PyObject *args, const char *name, int constraint, PyObject *error_return)
-{
-    PyObject *value = (PyList_GET_SIZE(args) >= 1) ? PyList_GET_ITEM(args, 0) : NULL;
-    if (value == NULL || value == Py_None || !is_number_arg(value)) {
-        intrinsic_args_error(name, value, error_return);
-        return NULL;
-    }
-    if (constraint != 0) {
-        if (PyFloat_Check(value)) {
-            // NaN fails both constraints, mirroring the reference's "not (value >= 0)"
-            double number = PyFloat_AS_DOUBLE(value);
-            if ((constraint == 1) ? !(number >= 0.) : !(number > 0.)) {
-                intrinsic_args_error(name, value, error_return);
-                return NULL;
+    long long left_int, right_int;
+    if (PyLong_CheckExact(left) && PyLong_CheckExact(right) && small_int(left, &left_int) &&
+        small_int(right, &right_int)) {
+        switch (op) {
+        case '&': return PyLong_FromLongLong(left_int & right_int);
+        case '|': return PyLong_FromLongLong(left_int | right_int);
+        case '^': return PyLong_FromLongLong(left_int ^ right_int);
+        case '<':
+            if (right_int >= 0 && right_int < 63 &&
+                (left_int >= 0 ? left_int <= (LLONG_MAX >> right_int) : left_int >= (LLONG_MIN >> right_int))) {
+                return PyLong_FromLongLong(left_int * (1LL << right_int));
             }
-        } else {
-            // Exact comparison for ints (arbitrary precision)
-            int compare = PyObject_RichCompareBool(value, g.zero, (constraint == 1) ? Py_GE : Py_GT);
-            if (compare < 0) {
-                return NULL;
+            break;
+        default:
+            if (right_int >= 0) {
+                return PyLong_FromLongLong(left_int >> (right_int < 63 ? right_int : 63));
             }
-            if (!compare) {
-                intrinsic_args_error(name, value, error_return);
-                return NULL;
-            }
+            break;
         }
     }
-    if (PyList_GET_SIZE(args) > 1) {
-        intrinsic_count_error(PyList_GET_SIZE(args), error_return);
-        return NULL;
+    PyObject *left_value = bitwise_int(left);
+    if (left_value == NULL) {
+        return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
     }
-    return value;
-}
-
-
-// Convert a validated number argument to double (int conversion may raise OverflowError, exactly
-// like passing the int to a math-module function). Returns -1. with an exception set on error.
-static double intrinsic_number_as_double(PyObject *value)
-{
-    if (PyFloat_Check(value)) {
-        return PyFloat_AS_DOUBLE(value);
+    PyObject *right_value = bitwise_int(right);
+    if (right_value == NULL) {
+        Py_DECREF(left_value);
+        return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
     }
-    return PyFloat_AsDouble(value);
-}
-
-
-// Validate a typed argument at position ix: 'a' = array (list), 'o' = object (dict),
-// 's' = string. Subclasses are accepted, mirroring value.value_args_validate's isinstance
-// checks. Dict subclass values must be accessed through the obj_* mapping helpers (subclasses
-// like OrderedDict keep state that direct PyDict_* mutation corrupts); list/str subclass values
-// are accessed directly (PyList_*/PyUnicode_* operate on the shared base storage, bypassing any
-// overridden methods). Returns the argument (borrowed from args) or NULL with ValueArgsError
-// raised.
-static PyObject *intrinsic_typed_arg(PyObject *args, Py_ssize_t ix, char type, const char *name, PyObject *error_return)
-{
-    PyObject *value = (PyList_GET_SIZE(args) > ix) ? PyList_GET_ITEM(args, ix) : NULL;
-    int type_ok = (value != NULL) &&
-        ((type == 'a') ? PyList_Check(value) : (type == 'o') ? PyDict_Check(value) : PyUnicode_Check(value));
-    if (!type_ok) {
-        intrinsic_args_error(name, value, error_return);
-        return NULL;
+    PyObject *result;
+    switch (op) {
+    case '&': result = PyNumber_And(left_value, right_value); break;
+    case '|': result = PyNumber_Or(left_value, right_value); break;
+    case '^': result = PyNumber_Xor(left_value, right_value); break;
+    case '<': result = PyNumber_Lshift(left_value, right_value); break;
+    default: result = PyNumber_Rshift(left_value, right_value); break;
     }
-    return value;
-}
-
-
-// Validate an {'type': 'number', 'integer': True, 'gte': 0} argument at position ix. Sets
-// *index_out (clamped to PY_SSIZE_T_MAX when numerically larger) and returns 0, or returns -1
-// with an exception set. Bounds checking happens separately (after the argument-count check,
-// matching the reference's validation order).
-static int intrinsic_index_validate(PyObject *args, Py_ssize_t ix, const char *name, Py_ssize_t *index_out)
-{
-    PyObject *value = (PyList_GET_SIZE(args) > ix) ? PyList_GET_ITEM(args, ix) : NULL;
-    if (value == NULL || value == Py_None) {
-        intrinsic_args_error(name, value, NULL);
-        return -1;
-    }
-    if (PyLong_Check(value) && !PyBool_Check(value)) {
-        int overflow = 0;
-        long long index = PyLong_AsLongLongAndOverflow(value, &overflow);
-        if (index == -1 && !overflow && PyErr_Occurred()) {
-            return -1;
-        }
-        if (overflow < 0 || (!overflow && index < 0)) {
-            intrinsic_args_error(name, value, NULL);
-            return -1;
-        }
-        *index_out = (overflow > 0 || index > (long long)PY_SSIZE_T_MAX) ? PY_SSIZE_T_MAX : (Py_ssize_t)index;
-        return 0;
-    }
-    if (PyFloat_Check(value)) {
-        double number = PyFloat_AS_DOUBLE(value);
-        // int(value) raises for NaN and infinity, exactly like the reference's integer check
-        if (isnan(number)) {
-            PyErr_SetString(PyExc_ValueError, "cannot convert float NaN to integer");
-            return -1;
-        }
-        if (isinf(number)) {
-            PyErr_SetString(PyExc_OverflowError, "cannot convert float infinity to integer");
-            return -1;
-        }
-        if (floor(number) != number || number < 0.) {
-            intrinsic_args_error(name, value, NULL);
-            return -1;
-        }
-        *index_out = (number >= (double)PY_SSIZE_T_MAX) ? PY_SSIZE_T_MAX : (Py_ssize_t)number;
-        return 0;
-    }
-    intrinsic_args_error(name, value, NULL);
-    return -1;
-}
-
-
-// Raise the reference's bounds error - ValueArgsError(name, normalized_index)
-static void intrinsic_index_bounds_error(PyObject *args, Py_ssize_t ix, const char *name)
-{
-    PyObject *value = PyList_GET_ITEM(args, ix);
-    PyObject *normalized =
-        PyLong_Check(value) ? Py_NewRef(value) : PyLong_FromDouble(PyFloat_AS_DOUBLE(value));
-    if (normalized != NULL) {
-        intrinsic_args_error(name, normalized, NULL);
-        Py_DECREF(normalized);
-    }
-}
-
-
-// Check the argument count against the model's argument count (no lastArgArray)
-static int intrinsic_count_check(PyObject *args, Py_ssize_t count, PyObject *error_return)
-{
-    if (PyList_GET_SIZE(args) > count) {
-        intrinsic_count_error(PyList_GET_SIZE(args), error_return);
-        return -1;
-    }
-    return 0;
-}
-
-
-// mathSqrt(x) - x: number, gte 0. The gte constraint excludes the math-module error paths;
-// big-int conversion raises the same OverflowError as math.sqrt.
-static PyObject *intrinsic_math_sqrt(PyObject *args)
-{
-    PyObject *x = intrinsic_one_number(args, "x", 1, NULL);
-    if (x == NULL) {
-        return NULL;
-    }
-    double number = intrinsic_number_as_double(x);
-    if (number == -1. && PyErr_Occurred()) {
-        return NULL;
-    }
-    return PyFloat_FromDouble(sqrt(number));
-}
-
-
-// mathAbs(x) - abs() preserves int/float type
-static PyObject *intrinsic_math_abs(PyObject *args)
-{
-    PyObject *x = intrinsic_one_number(args, "x", 0, NULL);
-    if (x == NULL) {
-        return NULL;
-    }
-    if (PyFloat_Check(x)) {
-        return PyFloat_FromDouble(fabs(PyFloat_AS_DOUBLE(x)));
-    }
-    return PyNumber_Absolute(x);
-}
-
-
-// mathCeil(x) / mathFloor(x) - math.ceil/floor return ints; PyLong_FromDouble raises the same
-// errors for NaN and infinity
-static PyObject *intrinsic_math_ceil(PyObject *args)
-{
-    PyObject *x = intrinsic_one_number(args, "x", 0, NULL);
-    if (x == NULL) {
-        return NULL;
-    }
-    if (PyFloat_Check(x)) {
-        return PyLong_FromDouble(ceil(PyFloat_AS_DOUBLE(x)));
-    }
-    return Py_NewRef(x);
-}
-
-
-static PyObject *intrinsic_math_floor(PyObject *args)
-{
-    PyObject *x = intrinsic_one_number(args, "x", 0, NULL);
-    if (x == NULL) {
-        return NULL;
-    }
-    if (PyFloat_Check(x)) {
-        return PyLong_FromDouble(floor(PyFloat_AS_DOUBLE(x)));
-    }
-    return Py_NewRef(x);
-}
-
-
-// mathSign(x) - "-1 if x < 0 else (0 if x == 0 else 1)" (NaN yields 1, like the reference)
-static PyObject *intrinsic_math_sign(PyObject *args)
-{
-    PyObject *x = intrinsic_one_number(args, "x", 0, NULL);
-    if (x == NULL) {
-        return NULL;
-    }
-    long sign;
-    if (PyFloat_Check(x)) {
-        double number = PyFloat_AS_DOUBLE(x);
-        sign = (number < 0.) ? -1 : ((number == 0.) ? 0 : 1);
-    } else {
-        int is_negative = PyObject_RichCompareBool(x, g.zero, Py_LT);
-        if (is_negative < 0) {
-            return NULL;
-        }
-        if (is_negative) {
-            sign = -1;
-        } else {
-            int is_zero = PyObject_RichCompareBool(x, g.zero, Py_EQ);
-            if (is_zero < 0) {
-                return NULL;
-            }
-            sign = is_zero ? 0 : 1;
-        }
-    }
-    return PyLong_FromLong(sign);
-}
-
-
-// arrayNew(values...) - returns the (fresh, per-call) arguments list itself
-static PyObject *intrinsic_array_new(PyObject *args)
-{
-    return Py_NewRef(args);
-}
-
-
-// arrayGet(array, index)
-static PyObject *intrinsic_array_get(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", NULL);
-    if (array == NULL) {
-        return NULL;
-    }
-    Py_ssize_t index;
-    if (intrinsic_index_validate(args, 1, "index", &index) < 0 || intrinsic_count_check(args, 2, NULL) < 0) {
-        return NULL;
-    }
-    if (index >= PyList_GET_SIZE(array)) {
-        intrinsic_index_bounds_error(args, 1, "index");
-        return NULL;
-    }
-#ifdef Py_GIL_DISABLED
-    // Bounds-checked under the list's lock - an unsynchronized concurrent shrink by another thread
-    // raises IndexError instead of reading freed storage
-    PyObject *value;
-    if (list_get_ref(array, index, &value) < 0) {
-        return NULL;
-    }
-    return value;
-#else
-    return Py_NewRef(PyList_GET_ITEM(array, index));
-#endif
-}
-
-
-// arraySet(array, index, value) - returns the value
-static PyObject *intrinsic_array_set(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", NULL);
-    if (array == NULL) {
-        return NULL;
-    }
-    Py_ssize_t index;
-    if (intrinsic_index_validate(args, 1, "index", &index) < 0 || intrinsic_count_check(args, 3, NULL) < 0) {
-        return NULL;
-    }
-    if (index >= PyList_GET_SIZE(array)) {
-        intrinsic_index_bounds_error(args, 1, "index");
-        return NULL;
-    }
-    PyObject *value = (PyList_GET_SIZE(args) > 2) ? PyList_GET_ITEM(args, 2) : Py_None;
-    if (PyList_SetItem(array, index, Py_NewRef(value)) < 0) {
-        return NULL;
-    }
-    return Py_NewRef(value);
-}
-
-
-// arrayLength(array) - error return value 0
-static PyObject *intrinsic_array_length(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", g.zero);
-    if (array == NULL || intrinsic_count_check(args, 1, g.zero) < 0) {
-        return NULL;
-    }
-    return PyLong_FromSsize_t(PyList_GET_SIZE(array));
-}
-
-
-// arrayPush(array, values...) - extends and returns the array
-static PyObject *intrinsic_array_push(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", NULL);
-    if (array == NULL) {
-        return NULL;
-    }
-    Py_ssize_t nargs = PyList_GET_SIZE(args);
-    for (Py_ssize_t ix = 1; ix < nargs; ix++) {
-        if (PyList_Append(array, PyList_GET_ITEM(args, ix)) < 0) {
-            return NULL;
-        }
-    }
-    return Py_NewRef(array);
-}
-
-
-// arrayPop(array) - an empty array raises ValueArgsError('array', array)
-static PyObject *intrinsic_array_pop(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", NULL);
-    if (array == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
-        return NULL;
-    }
-    Py_ssize_t length = PyList_GET_SIZE(array);
-    if (length == 0) {
-        intrinsic_args_error("array", array, NULL);
-        return NULL;
-    }
-#ifdef Py_GIL_DISABLED
-    // list.pop() is atomic under the list's lock, like the reference implementation's array.pop() -
-    // an unsynchronized concurrent pop by another thread then raises IndexError (empty list) rather
-    // than returning an element this call did not remove
-    return PyObject_CallMethodNoArgs(array, g.str_method_pop);
-#else
-    PyObject *value = Py_NewRef(PyList_GET_ITEM(array, length - 1));
-    if (PyList_SetSlice(array, length - 1, length, NULL) < 0) {
-        Py_DECREF(value);
-        return NULL;
-    }
-    return value;
-#endif
-}
-
-
-// arrayCopy(array)
-static PyObject *intrinsic_array_copy(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", NULL);
-    if (array == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
-        return NULL;
-    }
-    return PyList_GetSlice(array, 0, PyList_GET_SIZE(array));
-}
-
-
-// arrayExtend(array, array2) - extends and returns the first array
-static PyObject *intrinsic_array_extend(PyObject *args)
-{
-    PyObject *array = intrinsic_typed_arg(args, 0, 'a', "array", NULL);
-    if (array == NULL) {
-        return NULL;
-    }
-    PyObject *array2 = intrinsic_typed_arg(args, 1, 'a', "array2", NULL);
-    if (array2 == NULL || intrinsic_count_check(args, 2, NULL) < 0) {
-        return NULL;
-    }
-    // list.extend semantics (handles array2 is array, like the reference)
-    PyObject *extended = PySequence_InPlaceConcat(array, array2);
-    if (extended == NULL) {
-        return NULL;
-    }
-    return extended;
-}
-
-
-// objectGet(object, key, defaultValue) - the error return value is the default value argument
-static PyObject *intrinsic_object_get(PyObject *args)
-{
-    PyObject *default_value = (PyList_GET_SIZE(args) >= 3) ? PyList_GET_ITEM(args, 2) : Py_None;
-    PyObject *object = intrinsic_typed_arg(args, 0, 'o', "object", default_value);
-    if (object == NULL) {
-        return NULL;
-    }
-    PyObject *key = intrinsic_typed_arg(args, 1, 's', "key", default_value);
-    if (key == NULL || intrinsic_count_check(args, 3, default_value) < 0) {
-        return NULL;
-    }
-    PyObject *value;
-    // dict_get_ref reads the shared dict storage, matching the reference's object.get(key) - the
-    // inherited dict.get - for dict subclasses too (PyObject_GetItem would call __getitem__,
-    // which e.g. triggers defaultdict.__missing__)
-    int found = dict_get_ref(object, key, &value);
-    if (found < 0) {
-        return NULL;
-    }
-    return found ? value : Py_NewRef(default_value);
-}
-
-
-// objectSet(object, key, value) - returns the value
-static PyObject *intrinsic_object_set(PyObject *args)
-{
-    PyObject *object = intrinsic_typed_arg(args, 0, 'o', "object", NULL);
-    if (object == NULL) {
-        return NULL;
-    }
-    PyObject *key = intrinsic_typed_arg(args, 1, 's', "key", NULL);
-    if (key == NULL || intrinsic_count_check(args, 3, NULL) < 0) {
-        return NULL;
-    }
-    PyObject *value = (PyList_GET_SIZE(args) > 2) ? PyList_GET_ITEM(args, 2) : Py_None;
-    if (obj_setitem(object, key, value) < 0) {
-        return NULL;
-    }
-    return Py_NewRef(value);
-}
-
-
-// objectHas(object, key) - error return value false
-static PyObject *intrinsic_object_has(PyObject *args)
-{
-    PyObject *object = intrinsic_typed_arg(args, 0, 'o', "object", Py_False);
-    if (object == NULL) {
-        return NULL;
-    }
-    PyObject *key = intrinsic_typed_arg(args, 1, 's', "key", Py_False);
-    if (key == NULL || intrinsic_count_check(args, 2, Py_False) < 0) {
-        return NULL;
-    }
-    int has_key = obj_contains(object, key);
-    if (has_key < 0) {
-        return NULL;
-    }
-    return Py_NewRef(has_key ? Py_True : Py_False);
-}
-
-
-// objectKeys(object)
-static PyObject *intrinsic_object_keys(PyObject *args)
-{
-    PyObject *object = intrinsic_typed_arg(args, 0, 'o', "object", NULL);
-    if (object == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
-        return NULL;
-    }
-    // Call keys() for dict subclasses (e.g. OrderedDict iteration order can differ from the dict's)
-    return PyDict_CheckExact(object) ? PyDict_Keys(object) : PyMapping_Keys(object);
-}
-
-
-// objectDelete(object, key) - returns null
-static PyObject *intrinsic_object_delete(PyObject *args)
-{
-    PyObject *object = intrinsic_typed_arg(args, 0, 'o', "object", NULL);
-    if (object == NULL) {
-        return NULL;
-    }
-    PyObject *key = intrinsic_typed_arg(args, 1, 's', "key", NULL);
-    if (key == NULL || intrinsic_count_check(args, 2, NULL) < 0) {
-        return NULL;
-    }
-    int has_key = obj_contains(object, key);
-    if (has_key < 0) {
-        return NULL;
-    }
-    if (has_key && obj_delitem(object, key) < 0) {
-        return NULL;
-    }
-    Py_RETURN_NONE;
-}
-
-
-// objectCopy(object)
-static PyObject *intrinsic_object_copy(PyObject *args)
-{
-    PyObject *object = intrinsic_typed_arg(args, 0, 'o', "object", NULL);
-    if (object == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
-        return NULL;
-    }
-    // Call dict(object) for dict subclasses, exactly like the reference implementation
-    return PyDict_CheckExact(object) ? PyDict_Copy(object) : PyObject_CallOneArg((PyObject *)&PyDict_Type, object);
-}
-
-
-// stringLength(string) - error return value 0
-static PyObject *intrinsic_string_length(PyObject *args)
-{
-    PyObject *string = intrinsic_typed_arg(args, 0, 's', "string", g.zero);
-    if (string == NULL || intrinsic_count_check(args, 1, g.zero) < 0) {
-        return NULL;
-    }
-    return PyLong_FromSsize_t(PyUnicode_GetLength(string));
-}
-
-
-// stringUpper / stringLower / stringTrim - delegate to the str methods for exact Unicode
-// case-mapping and whitespace semantics (still avoids the Python frame and validate loop)
-static PyObject *intrinsic_string_method(PyObject *args, PyObject *method_name)
-{
-    PyObject *string = intrinsic_typed_arg(args, 0, 's', "string", NULL);
-    if (string == NULL || intrinsic_count_check(args, 1, NULL) < 0) {
-        return NULL;
-    }
-    return PyObject_CallMethodNoArgs(string, method_name);
-}
-
-
-static PyObject *intrinsic_string_upper(PyObject *args)
-{
-    return intrinsic_string_method(args, g.str_method_upper);
-}
-
-
-static PyObject *intrinsic_string_lower(PyObject *args)
-{
-    return intrinsic_string_method(args, g.str_method_lower);
-}
-
-
-static PyObject *intrinsic_string_trim(PyObject *args)
-{
-    return intrinsic_string_method(args, g.str_method_strip);
-}
-
-
-// stringCharCodeAt(string, index)
-static PyObject *intrinsic_string_char_code_at(PyObject *args)
-{
-    PyObject *string = intrinsic_typed_arg(args, 0, 's', "string", NULL);
-    if (string == NULL) {
-        return NULL;
-    }
-    Py_ssize_t index;
-    if (intrinsic_index_validate(args, 1, "index", &index) < 0 || intrinsic_count_check(args, 2, NULL) < 0) {
-        return NULL;
-    }
-    if (index >= PyUnicode_GetLength(string)) {
-        intrinsic_index_bounds_error(args, 1, "index");
-        return NULL;
-    }
-    Py_UCS4 char_code = PyUnicode_ReadChar(string, index);
-    if (char_code == (Py_UCS4)-1 && PyErr_Occurred()) {
-        return NULL;
-    }
-    return PyLong_FromUnsignedLong(char_code);
-}
-
-
-// stringFromCharCode(charCodes...) - validates each code is an integral non-negative number;
-// chr() range errors raise the same ValueError as the reference
-static PyObject *intrinsic_string_from_char_code(PyObject *args)
-{
-    Py_ssize_t nargs = PyList_GET_SIZE(args);
-    Py_UCS4 buffer_stack[32];
-    Py_UCS4 *buffer = buffer_stack;
-    if (nargs > 32) {
-        buffer = PyMem_Malloc((size_t)nargs * sizeof(Py_UCS4));
-        if (buffer == NULL) {
-            return PyErr_NoMemory();
-        }
-    }
-    PyObject *result = NULL;
-    for (Py_ssize_t ix = 0; ix < nargs; ix++) {
-        PyObject *code = PyList_GET_ITEM(args, ix);
-        double number;
-        if (PyFloat_Check(code)) {
-            number = PyFloat_AS_DOUBLE(code);
-            // The reference's int(code) conversion raises for NaN and infinity (of either sign)
-            // before the integral and sign checks
-            if (isnan(number)) {
-                PyErr_SetString(PyExc_ValueError, "cannot convert float NaN to integer");
-                goto done;
-            }
-            if (isinf(number)) {
-                PyErr_SetString(PyExc_OverflowError, "cannot convert float infinity to integer");
-                goto done;
-            }
-            if (floor(number) != number || number < 0.) {
-                intrinsic_args_error("charCodes", code, NULL);
-                goto done;
-            }
-        } else if (PyLong_Check(code) && !PyBool_Check(code)) {
-            int overflow = 0;
-            long long code_ll = PyLong_AsLongLongAndOverflow(code, &overflow);
-            if (code_ll == -1 && !overflow && PyErr_Occurred()) {
-                goto done;
-            }
-            if (overflow < 0 || (!overflow && code_ll < 0)) {
-                intrinsic_args_error("charCodes", code, NULL);
-                goto done;
-            }
-            number = (overflow > 0) ? 4294967296. : (double)code_ll;
-        } else {
-            intrinsic_args_error("charCodes", code, NULL);
-            goto done;
-        }
-        if (number > 1114111.) {
-            // chr() range error, exactly like the reference
-            PyErr_SetString(PyExc_ValueError, "chr() arg not in range(0x110000)");
-            goto done;
-        }
-        buffer[ix] = (Py_UCS4)number;
-    }
-    result = PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, buffer, nargs);
-
-done:
-    if (buffer != buffer_stack) {
-        PyMem_Free(buffer);
-    }
+    Py_DECREF(left_value);
+    Py_DECREF(right_value);
     return result;
 }
 
 
-// The intrinsic table - py_func members are populated once at module exec
-static IntrinsicDef g_intrinsics[] = {
-    {"mathSqrt", intrinsic_math_sqrt, NULL},
-    {"mathAbs", intrinsic_math_abs, NULL},
-    {"mathCeil", intrinsic_math_ceil, NULL},
-    {"mathFloor", intrinsic_math_floor, NULL},
-    {"mathSign", intrinsic_math_sign, NULL},
-    {"arrayNew", intrinsic_array_new, NULL},
-    {"arrayGet", intrinsic_array_get, NULL},
-    {"arraySet", intrinsic_array_set, NULL},
-    {"arrayLength", intrinsic_array_length, NULL},
-    {"arrayPush", intrinsic_array_push, NULL},
-    {"arrayPop", intrinsic_array_pop, NULL},
-    {"arrayCopy", intrinsic_array_copy, NULL},
-    {"arrayExtend", intrinsic_array_extend, NULL},
-    {"objectGet", intrinsic_object_get, NULL},
-    {"objectSet", intrinsic_object_set, NULL},
-    {"objectHas", intrinsic_object_has, NULL},
-    {"objectKeys", intrinsic_object_keys, NULL},
-    {"objectDelete", intrinsic_object_delete, NULL},
-    {"objectCopy", intrinsic_object_copy, NULL},
-    {"stringLength", intrinsic_string_length, NULL},
-    {"stringUpper", intrinsic_string_upper, NULL},
-    {"stringLower", intrinsic_string_lower, NULL},
-    {"stringTrim", intrinsic_string_trim, NULL},
-    {"stringCharCodeAt", intrinsic_string_char_code_at, NULL},
-    {"stringFromCharCode", intrinsic_string_from_char_code, NULL},
-};
-
-#define INTRINSIC_COUNT ((int)(sizeof(g_intrinsics) / sizeof(g_intrinsics[0])))
-
-
-// Find the intrinsic index for a function name at compile time (-1 if none)
-static int intrinsic_lookup(PyObject *name)
+// Unary -
+static PyObject *op_neg(PyObject *value)
 {
-    if (PyUnicode_Check(name)) {
-        for (int ix = 0; ix < INTRINSIC_COUNT; ix++) {
-            if (PyUnicode_CompareWithASCIIString(name, g_intrinsics[ix].name) == 0) {
-                return ix;
-            }
-        }
+    if (PyFloat_CheckExact(value)) {
+        return PyFloat_FromDouble(-PyFloat_AS_DOUBLE(value));
     }
+    return PyLong_CheckExact(value) ? PyNumber_Negative(value) : Py_NewRef(Py_None);
+}
+
+
+// Unary ~
+static PyObject *op_bnot(PyObject *value)
+{
+    PyObject *int_value = bitwise_int(value);
+    if (int_value == NULL) {
+        return PyErr_Occurred() ? NULL : Py_NewRef(Py_None);
+    }
+    PyObject *result = PyNumber_Invert(int_value);
+    Py_DECREF(int_value);
+    return result;
+}
+
+
+//
+// Bytecode
+//
+
+
+// The instructions - a is the destination register (or an index), b and c are operand registers (or indexes),
+// w (overlaying b and c) is a jump target or a statement index
+#define BS_OPS(X) \
+    X(STMT)     /* statement w begins - count it against the limit, and record its coverage */ \
+    X(MOVE)     /* a = b */ \
+    X(LOADG)    /* a = the global named b */ \
+    X(LOADS)    /* a = slot b, or the global of its name if the slot is unassigned */ \
+    X(LOADN)    /* a = the local (evaluate_expression's locals) or global named b */ \
+    X(STOREG)   /* the global named a = b */ \
+    X(JMP)      /* jump to w - a label jump when x is set */ \
+    X(JF)       /* jump to w if a is false */ \
+    X(JT)       /* jump to w if a is true - a label jump when x is set */ \
+    X(JUNDEF)   /* the unknown jump label error for the label named a */ \
+    X(RET)      /* return a */ \
+    X(RETNONE)  /* return None */ \
+    X(ADD) X(SUB) X(MUL) X(DIV) X(MOD) X(POW) X(EQ) X(NE) X(LT) X(LE) X(GT) X(GE) \
+    X(BAND) X(BOR) X(BXOR) X(SHL) X(SHR)   /* a = b op c */ \
+    X(NOT) X(NEG) X(BNOT)                  /* a = op b */ \
+    X(CALLG)    /* a = the global function named b called with the c (ARGS_NONE for none) arguments in the DATA words that follow; x is the name's intrinsic */ \
+    X(CALLS)    /* the same, calling the function in slot b, or the global of its name if the slot is unassigned */ \
+    X(CALLN)    /* the same, calling the local, global, or built-in function named b */ \
+    X(FUNC)     /* define the script function model b as the global named a */ \
+    X(JEQ) X(JNE) X(JLT) X(JLE) X(JGT) X(JGE)   /* jump to the JTARGET word's w if a op b (if not, when x has JUMP_NOT) - EQ's order */ \
+    X(JTARGET)  /* a compare-and-jump's target - never dispatched */ \
+    X(INCLUDE)  /* run statement w's includes */ \
+    X(DATA)     /* call argument registers a, b, and c - never dispatched */
+
+#define BS_OP_ENUM(name) OP_##name,
+enum { BS_OPS(BS_OP_ENUM) OP_COUNT };
+
+typedef struct {
+    uint8_t op;
+    uint8_t x;
+    uint16_t a;
+    union {
+        struct {
+            uint16_t b;
+            uint16_t c;
+        };
+        uint32_t w;
+    };
+} Inst;
+
+// The register operand fields of each instruction
+enum { RA = 1, RB = 2, RC = 4 };
+
+static int op_registers(int op)
+{
+    switch (op) {
+    case OP_MOVE: case OP_LOADS: case OP_NOT: case OP_NEG: case OP_BNOT: case OP_CALLS:
+    case OP_JEQ: case OP_JNE: case OP_JLT: case OP_JLE: case OP_JGT: case OP_JGE:
+        return RA | RB;
+    case OP_LOADG: case OP_LOADN: case OP_JF: case OP_JT: case OP_RET: case OP_CALLG: case OP_CALLN:
+        return RA;
+    case OP_STOREG: case OP_FUNC:
+        return RB;
+    case OP_STMT: case OP_JMP: case OP_JUNDEF: case OP_RETNONE: case OP_INCLUDE: case OP_JTARGET:
+        return 0;
+    default:
+        return RA | RB | RC;
+    }
+}
+
+// Jump instruction flags - a label jump (recording the label's coverage), and a compare-and-jump on false
+#define JUMP_LABEL 1
+#define JUMP_NOT 2
+
+// The call argument count of a call without arguments (the model's "args" absent or null)
+#define ARGS_NONE 0xFFFF
+
+// The number of DATA words following a call instruction
+#define CALL_DATA(count) ((count) == ARGS_NONE ? 0 : ((count) + 2) / 3)
+
+
+// A compiled statement list or expression. Its registers are the slots (a function's local variables), then the
+// temporaries, then the constants.
+typedef struct {
+    Inst *code;
+    uint32_t *pcstmt;           // each instruction's statement index
+    PyObject **consts;
+    PyObject **names;           // interned global names
+    PyObject **slot_names;      // interned local variable names
+    uint16_t *arg_slots;        // each declared argument's slot
+    PyObject **arg_items;       // the function model's "args" items when compiled
+    PyObject *args;             // the function model's "args" list when compiled, or NULL
+    PyObject *statements;       // the statements list (NULL for an expression)
+    PyObject *script;           // the script model (NULL for an expression)
+    Py_ssize_t nstatements;
+    int nconsts;
+    int nnames;
+    int nslots;
+    int nowned;                 // the slots and temporaries - the registers a frame owns
+    int nargs;
+    int last_arg_array;
+    int last_arg_array_plain;   // the model's lastArgArray is absent, None, or a bool - its truth can't change
+    int irregular;              // the model is not compiled - run it on runtime.py
+    int model_watched;          // the function model dict is watched (model_epoch is valid)
+    BS_ATOMIC_U64 model_epoch;  // the model epoch when the function model dict was last known current
+    BS_ATOMIC_PTR(PyObject *) resident; // a function's resident registers, from its second call
+    BS_ATOMIC_INT resident_busy;        // a call is using the resident registers
+    BS_ATOMIC_INT called;       // the function has been called
+} Chunk;
+
+
+// Release an array of references (some possibly NULL) and free it
+static void references_free(PyObject **items, int count)
+{
+    for (int ix = 0; ix < count; ix++) {
+        Py_XDECREF(items[ix]);
+    }
+    PyMem_Free(items);
+}
+
+
+static void chunk_free(Chunk *chunk)
+{
+    if (chunk == NULL) {
+        return;
+    }
+    references_free(chunk->consts, chunk->nconsts);
+    references_free(chunk->names, chunk->nnames);
+    references_free(chunk->slot_names, chunk->nslots);
+    references_free(chunk->arg_items, chunk->nargs);
+    Py_XDECREF(chunk->args);
+    Py_XDECREF(chunk->statements);
+    Py_XDECREF(chunk->script);
+    PyMem_Free(bs_atomic_load(&chunk->resident));
+    PyMem_Free(chunk->code);
+    PyMem_Free(chunk->pcstmt);
+    PyMem_Free(chunk->arg_slots);
+    PyMem_Free(chunk);
+}
+
+
+//
+// The compiler
+//
+
+
+enum { MODE_TOP, MODE_FUNC, MODE_EXPR };
+
+// Register operand tags while compiling - the temporaries and constants are numbered once all are counted
+#define REG_TEMP 0x4000
+#define REG_CONST 0x8000
+#define REG_MAX 0x3FFF
+
+// The maximum expression nesting compiled - deeper expressions run on runtime.py
+#define DEPTH_MAX 200
+
+
+typedef struct {
+    int mode;
+    Inst *code;
+    uint32_t *pcstmt;
+    int ncode;
+    int capcode;
+    PyObject *consts;           // list
+    PyObject *names;            // list
+    PyObject *name_index;       // dict of name to index in names
+    PyObject *slots;            // dict of local variable name to slot (MODE_FUNC)
+    PyObject *slot_names;       // list
+    int nargslots;              // the leading slots that are arguments - always assigned
+    uint64_t *definite;         // the slots definitely assigned when the statement being compiled begins
+    PyObject *labels;           // dict of label name to statement index
+    PyObject *keep;             // list of the model objects read, kept alive while compiling
+    int *fixups;                // label jump fixups - (pc, label statement index) pairs
+    int nfixups;
+    int capfixups;
+    int tmp;
+    int tmpmax;
+    uint32_t stmt;
+    int depth;
+    int result_pc;              // the instruction computing the last expression's result, or -1
+    int reg_none;
+    int reg_false;
+    int reg_true;
+} Compiler;
+
+
+static int c_irregular(Compiler *c)
+{
+    (void)c;
     return -1;
 }
 
 
-//
-// Forward declarations
-//
-
-static PyObject *evaluate_expression_c(
-    PyObject *expr, ExecCtx *ctx, PyObject *locals, int builtins, PyObject *script, PyObject *statement
-);
-typedef struct CompiledBody CompiledBody;
-typedef struct Scope Scope;
-static PyObject *execute_script_helper(
-    PyObject *script, PyObject *statements, ExecCtx *ctx, Scope *scope, CompiledBody *body
-);
-
-
-//
-// Model dict dispatch
-//
-// Valid statement and expression models are single-key dicts, so the kind is determined from the
-// dict's first key with no hash lookups. Keys are matched by interned-pointer identity first with
-// a content-comparison fallback for non-interned keys. Inner model fields (e.g. a binary
-// expression's op/left/right) are prefetched in a single dict walk; any field not found falls back
-// to a hashed subscript at its exact point of use, preserving the reference implementation's
-// KeyError and short-circuit edge behavior.
-//
-
-
-// Content comparison of a key against an interned key constant (both unicode means no error)
-static int key_eq_content(PyObject *key, PyObject *interned)
+// Get a model dict's value (kept alive by the compiler) - 1 found, 0 absent, -1 error
+static int c_get(Compiler *c, PyObject *dict, PyObject *key, PyObject **value)
 {
-    return PyUnicode_Check(key) && PyUnicode_Compare(key, interned) == 0;
-}
-
-
-// Compare a key against an interned key constant: identity first, content fallback
-static inline int key_eq(PyObject *key, PyObject *interned)
-{
-    return key == interned || key_eq_content(key, interned);
-}
-
-
-// Prefetch up to three model dict fields in a single dict walk. Each found value is returned as a
-// strong reference; missing fields are left NULL.
-static void dict_prefetch3(
-    PyObject *dict, PyObject *key1, PyObject **value1, PyObject *key2, PyObject **value2, PyObject *key3,
-    PyObject **value3
-)
-{
-    Py_ssize_t pos = 0;
-    PyObject *key;
-    PyObject *value;
-    while (PyDict_Next(dict, &pos, &key, &value)) {
-        // Interned-pointer identity (the parser's model keys are interned)
-        if (key == key1) {
-            Py_XSETREF(*value1, Py_NewRef(value));
-        } else if (key2 != NULL && key == key2) {
-            Py_XSETREF(*value2, Py_NewRef(value));
-        } else if (key3 != NULL && key == key3) {
-            Py_XSETREF(*value3, Py_NewRef(value));
-        } else if (key_eq_content(key, key1)) {
-            // Content fallback for non-interned keys
-            Py_XSETREF(*value1, Py_NewRef(value));
-        } else if (key2 != NULL && key_eq_content(key, key2)) {
-            Py_XSETREF(*value2, Py_NewRef(value));
-        } else if (key3 != NULL && key_eq_content(key, key3)) {
-            Py_XSETREF(*value3, Py_NewRef(value));
-        }
-    }
-}
-
-
-// Expression model kinds, dispatched on the model dict's first key
-typedef enum {
-    EXPR_NUMBER,
-    EXPR_STRING,
-    EXPR_VARIABLE,
-    EXPR_FUNCTION,
-    EXPR_BINARY,
-    EXPR_UNARY,
-    EXPR_GROUP,
-    EXPR_UNKNOWN
-} ExprKind;
-
-
-static ExprKind expr_kind(PyObject *key)
-{
-    // Interned-pointer identity (the parser's model keys are interned)
-    if (key == g.str_number) {
-        return EXPR_NUMBER;
-    }
-    if (key == g.str_string) {
-        return EXPR_STRING;
-    }
-    if (key == g.str_variable) {
-        return EXPR_VARIABLE;
-    }
-    if (key == g.str_function) {
-        return EXPR_FUNCTION;
-    }
-    if (key == g.str_binary) {
-        return EXPR_BINARY;
-    }
-    if (key == g.str_unary) {
-        return EXPR_UNARY;
-    }
-    if (key == g.str_group) {
-        return EXPR_GROUP;
-    }
-
-    // Content fallback for non-interned keys
-    if (key_eq_content(key, g.str_number)) {
-        return EXPR_NUMBER;
-    }
-    if (key_eq_content(key, g.str_string)) {
-        return EXPR_STRING;
-    }
-    if (key_eq_content(key, g.str_variable)) {
-        return EXPR_VARIABLE;
-    }
-    if (key_eq_content(key, g.str_function)) {
-        return EXPR_FUNCTION;
-    }
-    if (key_eq_content(key, g.str_binary)) {
-        return EXPR_BINARY;
-    }
-    if (key_eq_content(key, g.str_unary)) {
-        return EXPR_UNARY;
-    }
-    if (key_eq_content(key, g.str_group)) {
-        return EXPR_GROUP;
-    }
-    return EXPR_UNKNOWN;
-}
-
-
-//
-// Compiled model
-//
-// Statement and expression models are immutable data produced by the parser, but the dict-based
-// evaluator re-walks the model dicts on every execution. The compiler translates a statements list
-// into a C node tree once - literals, operator enums, keyword variables, and jump label indexes
-// are resolved at compile time, and variable/assignment names are interned so locals/globals dict
-// probes hit on pointer equality. Anything irregular (non-dict parts, missing fields, generic
-// sequences) compiles to a fallback node that defers to the dict-based evaluator, which remains
-// the semantic reference for edge cases. Compilation itself never raises for model shape problems,
-// only for memory errors - shape errors must surface at execution time, exactly where the
-// reference implementation raises them.
-//
-
-
-typedef enum {
-    CEXPR_LITERAL,
-    CEXPR_NULL,
-    CEXPR_TRUE,
-    CEXPR_FALSE,
-    CEXPR_VARIABLE,
-    CEXPR_IF,
-    CEXPR_CALL,
-    CEXPR_BINARY,
-    CEXPR_UNARY,
-    CEXPR_FALLBACK
-} CompiledExprKind;
-
-
-typedef struct CompiledExpr {
-    CompiledExprKind kind;
-    BinaryOp binary_op;
-    UnaryOp unary_op;
-    PyObject *value;            // strong or NULL - literal / variable name / function name / fallback expr
-    struct CompiledExpr *left;  // owned - binary left / unary operand
-    struct CompiledExpr *right; // owned - binary right
-    struct CompiledExpr **args; // owned - call arguments / if() value-true-false slots (entries may be NULL)
-    Py_ssize_t nargs;           // call argument count, or -1 when the call has no args field
-    Py_ssize_t slot;            // variable/call name local slot index, or -1 (not a local)
-    int intrinsic;              // call intrinsic table index, or -1
-} CompiledExpr;
-
-
-// Compiled statement kinds. CSTMT_NONE means "execute via the dict-based statement path".
-typedef enum {
-    CSTMT_NONE,
-    CSTMT_NOP,
-    CSTMT_EXPR,
-    CSTMT_JUMP,
-    CSTMT_RETURN,
-    CSTMT_FUNCTION
-} CompiledStmtKind;
-
-
-typedef struct {
-    CompiledStmtKind kind;
-    PyObject *statement;        // strong - the statement dict (identity guard, coverage, errors)
-    PyObject *part;             // strong or NULL - the function definition dict (CSTMT_FUNCTION)
-    PyObject *name;             // strong or NULL - assignment target / function name / jump label
-    CompiledExpr *expr;         // owned or NULL - statement / condition / return expression
-    Py_ssize_t jump_index;      // CSTMT_JUMP - the resolved label index, or -1 if unknown
-    Py_ssize_t name_slot;       // CSTMT_EXPR - the assignment target local slot index, or -1
-} CompiledStmt;
-
-
-struct CompiledBody {
-    PyObject *statements;       // strong - the statements list this body was compiled from
-    Py_ssize_t count;
-    CompiledStmt *stmts;
-
-    // Slot-based locals model (function bodies whose statements all compiled cleanly).
-    // slot_names is NULL when slot-based locals are disabled for this body.
-    PyObject *slot_names;       // strong tuple of interned local names, indexed by slot
-    Py_ssize_t nslots;
-    PyObject *arg_names;        // strong tuple snapshot of the declared argument names, or NULL
-    Py_ssize_t *arg_slots;      // owned - declared argument position -> slot index
-    Py_ssize_t nargs_decl;
-};
-
-
-// Local variable scope - dict-based (the reference implementation's model) or slot-based (compiled
-// function bodies). When slots is non-NULL, entries are strong references; a NULL entry means the
-// name is not in the locals (reads fall through to globals, mirroring a dict miss).
-struct Scope {
-    PyObject *dict;             // dict locals, or Py_None when there are none
-    PyObject **slots;           // slot locals, or NULL for dict-based scopes
-    PyObject *names;            // borrowed - the body's slot_names tuple (for materialization)
-    Py_ssize_t nslots;
-};
-
-
-// Convert a slot-based scope to a dict-based one (used if execution leaves the compiled fast path,
-// e.g. after mid-execution mutation of the statements list). The dict is owned by the scope's
-// creator, which releases it after execution.
-static int scope_materialize(Scope *scope)
-{
-    PyObject *locals_dict = PyDict_New();
-    if (locals_dict == NULL) {
-        return -1;
-    }
-    for (Py_ssize_t ix = 0; ix < scope->nslots; ix++) {
-        PyObject *value = scope->slots[ix];
-        if (value != NULL && PyDict_SetItem(locals_dict, PyTuple_GET_ITEM(scope->names, ix), value) < 0) {
-            Py_DECREF(locals_dict);
+    int found = bs_dict_get(dict, key, value);
+    if (found > 0) {
+        int rc = PyList_Append(c->keep, *value);
+        Py_DECREF(*value);
+        if (rc < 0) {
             return -1;
         }
     }
-    scope->dict = locals_dict;
-    scope->slots = NULL;
-    return 0;
+    return found;
 }
 
 
-static void compiled_expr_free(CompiledExpr *expr)
+// Get a model list's item (kept alive by the compiler)
+static PyObject *c_item(Compiler *c, PyObject *list, Py_ssize_t index)
 {
-    if (expr == NULL) {
-        return;
-    }
-    Py_XDECREF(expr->value);
-    compiled_expr_free(expr->left);
-    compiled_expr_free(expr->right);
-    if (expr->args != NULL) {
-        Py_ssize_t nargs = (expr->kind == CEXPR_IF) ? 3 : expr->nargs;
-        for (Py_ssize_t ix = 0; ix < nargs; ix++) {
-            compiled_expr_free(expr->args[ix]);
+    PyObject *item = bs_list_get(list, index);
+    if (item != NULL) {
+        int rc = PyList_Append(c->keep, item);
+        Py_DECREF(item);
+        if (rc < 0) {
+            return NULL;
         }
-        PyMem_Free(expr->args);
     }
-    PyMem_Free(expr);
+    return item;
 }
 
 
-static void compiled_body_free(CompiledBody *body)
+static int c_emit(Compiler *c, int op, int a, int b, int cc)
 {
-    if (body == NULL) {
-        return;
-    }
-    if (body->stmts != NULL) {
-        for (Py_ssize_t ix = 0; ix < body->count; ix++) {
-            CompiledStmt *stmt = &body->stmts[ix];
-            Py_XDECREF(stmt->statement);
-            Py_XDECREF(stmt->part);
-            Py_XDECREF(stmt->name);
-            compiled_expr_free(stmt->expr);
+    if (c->ncode == c->capcode) {
+        int capcode = c->capcode ? c->capcode * 2 : 64;
+        Inst *code = PyMem_Realloc(c->code, capcode * sizeof(Inst));
+        if (code != NULL) {
+            c->code = code;
         }
-        PyMem_Free(body->stmts);
+        uint32_t *pcstmt = code != NULL ? PyMem_Realloc(c->pcstmt, capcode * sizeof(uint32_t)) : NULL;
+        if (pcstmt == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+        c->pcstmt = pcstmt;
+        c->capcode = capcode;
     }
-    Py_XDECREF(body->slot_names);
-    Py_XDECREF(body->arg_names);
-    PyMem_Free(body->arg_slots);
-    Py_XDECREF(body->statements);
-    PyMem_Free(body);
+    Inst *inst = &c->code[c->ncode];
+    inst->op = (uint8_t)op;
+    inst->x = 0;
+    inst->a = (uint16_t)a;
+    inst->b = (uint16_t)b;
+    inst->c = (uint16_t)cc;
+    c->pcstmt[c->ncode] = c->stmt;
+    return c->ncode++;
 }
 
 
-static int compiled_expr_traverse(CompiledExpr *expr, visitproc visit, void *arg)
+static int c_temp(Compiler *c)
 {
-    if (expr == NULL) {
-        return 0;
+    if (c->tmp > REG_MAX) {
+        return c_irregular(c);
     }
-    Py_VISIT(expr->value);
-    int result = compiled_expr_traverse(expr->left, visit, arg);
-    if (result != 0) {
-        return result;
+    int reg = REG_TEMP | c->tmp++;
+    if (c->tmp > c->tmpmax) {
+        c->tmpmax = c->tmp;
     }
-    result = compiled_expr_traverse(expr->right, visit, arg);
-    if (result != 0) {
-        return result;
+    return reg;
+}
+
+
+// Emit an instruction computing a new temporary, the temporaries first reset to a mark - the temporary, or -1
+static int c_emit_temp(Compiler *c, int mark, int op, int b, int cc)
+{
+    c->tmp = mark;
+    int reg = c_temp(c);
+    int pc = reg >= 0 ? c_emit(c, op, reg, b, cc) : -1;
+    if (pc < 0) {
+        return -1;
     }
-    if (expr->args != NULL) {
-        Py_ssize_t nargs = (expr->kind == CEXPR_IF) ? 3 : expr->nargs;
-        for (Py_ssize_t ix = 0; ix < nargs; ix++) {
-            result = compiled_expr_traverse(expr->args[ix], visit, arg);
-            if (result != 0) {
-                return result;
+    c->result_pc = pc;
+    return reg;
+}
+
+
+// Reset the temporaries to those below a register (if it's a temporary) and itself
+static void c_temp_reset(Compiler *c, int reg)
+{
+    c->tmp = (reg & REG_TEMP) ? (reg & REG_MAX) + 1 : 0;
+}
+
+
+static int c_const(Compiler *c, PyObject *value)
+{
+    Py_ssize_t index = PyList_GET_SIZE(c->consts);
+    if (index > REG_MAX) {
+        return c_irregular(c);
+    }
+    if (PyList_Append(c->consts, value) < 0) {
+        return -1;
+    }
+    return REG_CONST | (int)index;
+}
+
+
+static int c_keyword(Compiler *c, PyObject *value)
+{
+    int *reg = value == Py_None ? &c->reg_none : (value == Py_False ? &c->reg_false : &c->reg_true);
+    if (*reg < 0) {
+        *reg = c_const(c, value);
+    }
+    return *reg;
+}
+
+
+// Get a name's index in a name table - a list and its dict of name to index - adding it (interned) if necessary
+static int c_table_index(Compiler *c, PyObject *names, PyObject *indexes, PyObject *name, Py_ssize_t max)
+{
+    PyObject *index = PyDict_GetItemWithError(indexes, name);
+    if (index != NULL) {
+        return (int)PyLong_AsLong(index);
+    }
+    if (PyErr_Occurred()) {
+        return -1;
+    }
+    Py_ssize_t count = PyList_GET_SIZE(names);
+    if (count > max) {
+        return c_irregular(c);
+    }
+    PyObject *interned = Py_NewRef(name);
+    PyUnicode_InternInPlace(&interned);
+    PyObject *index_obj = PyLong_FromSsize_t(count);
+    int rc = index_obj != NULL && PyList_Append(names, interned) == 0 &&
+        PyDict_SetItem(indexes, interned, index_obj) == 0 ? 0 : -1;
+    Py_DECREF(interned);
+    Py_XDECREF(index_obj);
+    return rc < 0 ? -1 : (int)count;
+}
+
+
+// Get a global name's index in the names table, adding it if necessary
+static int c_name(Compiler *c, PyObject *name)
+{
+    return c_table_index(c, c->names, c->name_index, name, 0xFFFF);
+}
+
+
+// Get a local variable's slot - -1 if not a local variable
+static int c_slot(Compiler *c, PyObject *name)
+{
+    if (c->mode != MODE_FUNC) {
+        return -1;
+    }
+    PyObject *slot = PyDict_GetItemWithError(c->slots, name);
+    return slot != NULL ? (int)PyLong_AsLong(slot) : -1;
+}
+
+
+// Get a local variable's slot, adding it if necessary
+static int c_slot_add(Compiler *c, PyObject *name)
+{
+    return c_table_index(c, c->slot_names, c->slots, name, REG_MAX);
+}
+
+
+// Get a name's intrinsic
+static int c_intrinsic(PyObject *name)
+{
+    for (int id = 1; id < IN_COUNT; id++) {
+        if (PyUnicode_Compare(name, g_intrinsic_names[id]) == 0) {
+            return id;
+        }
+    }
+    return IN_NONE;
+}
+
+
+static int c_expr(Compiler *c, PyObject *expr);
+
+
+static int c_variable(Compiler *c, PyObject *name)
+{
+    if (!PyUnicode_CheckExact(name)) {
+        return c_irregular(c);
+    }
+    if (PyUnicode_CompareWithASCIIString(name, "null") == 0) {
+        return c_keyword(c, Py_None);
+    }
+    if (PyUnicode_CompareWithASCIIString(name, "false") == 0) {
+        return c_keyword(c, Py_False);
+    }
+    if (PyUnicode_CompareWithASCIIString(name, "true") == 0) {
+        return c_keyword(c, Py_True);
+    }
+    int slot = c_slot(c, name);
+    if (slot >= 0 && (slot < c->nargslots || (c->definite != NULL && ((c->definite[slot / 64] >> (slot % 64)) & 1)))) {
+        return slot;
+    }
+    int index = slot >= 0 ? slot : (PyErr_Occurred() ? -1 : c_name(c, name));
+    int op = slot >= 0 ? OP_LOADS : (c->mode == MODE_EXPR ? OP_LOADN : OP_LOADG);
+    return index < 0 ? -1 : c_emit_temp(c, c->tmp, op, index, 0);
+}
+
+
+// The "if" built-in function - value, true, and false expressions, evaluated as conditional jumps
+static int c_if(Compiler *c, PyObject *func)
+{
+    PyObject *args;
+    int found = c_get(c, func, S_args, &args);
+    if (found < 0) {
+        return -1;
+    }
+    Py_ssize_t count = 0;
+    if (found) {
+        if (!PyList_CheckExact(args)) {
+            return c_irregular(c);
+        }
+        count = PyList_GET_SIZE(args);
+    }
+    if (count == 0) {
+        return c_keyword(c, Py_None);
+    }
+
+    int mark = c->tmp;
+    PyObject *value_expr = c_item(c, args, 0);
+    int value_reg = value_expr != NULL ? c_expr(c, value_expr) : -1;
+    if (value_reg < 0) {
+        return -1;
+    }
+    c->tmp = mark;
+    int reg = c_temp(c);
+    int jump_false = reg >= 0 ? c_emit(c, OP_JF, value_reg, 0, 0) : -1;
+    if (jump_false < 0) {
+        return -1;
+    }
+
+    // The true and false expressions
+    int jump_done = -1;
+    for (int ix = 1; ix <= 2; ix++) {
+        int result_reg;
+        if (count > ix) {
+            PyObject *result_expr = c_item(c, args, ix);
+            result_reg = result_expr != NULL ? c_expr(c, result_expr) : -1;
+        } else {
+            result_reg = c_keyword(c, Py_None);
+        }
+        if (result_reg < 0 || (result_reg != reg && c_emit(c, OP_MOVE, reg, result_reg, 0) < 0)) {
+            return -1;
+        }
+        c_temp_reset(c, reg);
+        if (ix == 1) {
+            jump_done = c_emit(c, OP_JMP, 0, 0, 0);
+            if (jump_done < 0) {
+                return -1;
             }
+            c->code[jump_false].w = (uint32_t)c->ncode;
         }
     }
-    return 0;
+    c->code[jump_done].w = (uint32_t)c->ncode;
+    c->result_pc = -1;
+    return reg;
 }
 
 
-static int compiled_body_traverse(CompiledBody *body, visitproc visit, void *arg)
+static int c_call(Compiler *c, PyObject *func)
 {
-    if (body == NULL) {
-        return 0;
+    if (!PyDict_CheckExact(func)) {
+        return c_irregular(c);
     }
-    Py_VISIT(body->statements);
-    Py_VISIT(body->slot_names);
-    Py_VISIT(body->arg_names);
-    for (Py_ssize_t ix = 0; ix < body->count; ix++) {
-        CompiledStmt *stmt = &body->stmts[ix];
-        Py_VISIT(stmt->statement);
-        Py_VISIT(stmt->part);
-        Py_VISIT(stmt->name);
-        int result = compiled_expr_traverse(stmt->expr, visit, arg);
-        if (result != 0) {
-            return result;
-        }
+    PyObject *name, *args;
+    int found = c_get(c, func, S_name, &name);
+    if (found <= 0 || !PyUnicode_CheckExact(name)) {
+        return found < 0 ? -1 : c_irregular(c);
     }
-    return 0;
-}
+    if (PyUnicode_CompareWithASCIIString(name, "if") == 0) {
+        return c_if(c, func);
+    }
 
-
-static CompiledExpr *compiled_expr_new(CompiledExprKind kind)
-{
-    CompiledExpr *expr = PyMem_Calloc(1, sizeof(CompiledExpr));
-    if (expr == NULL) {
+    // Compile the arguments
+    found = c_get(c, func, S_args, &args);
+    if (found < 0) {
+        return -1;
+    }
+    int args_none = !found || args == Py_None;
+    if (!args_none && !PyList_CheckExact(args)) {
+        return c_irregular(c);
+    }
+    Py_ssize_t argc = args_none ? 0 : PyList_GET_SIZE(args);
+    if (argc > REG_MAX) {
+        return c_irregular(c);
+    }
+    int regs_small[16];
+    int *regs = argc <= 16 ? regs_small : PyMem_Malloc(argc * sizeof(int));
+    if (regs == NULL) {
         PyErr_NoMemory();
-        return NULL;
-    }
-    expr->kind = kind;
-    expr->slot = -1;
-    expr->intrinsic = -1;
-    return expr;
-}
-
-
-// Compile to a fallback node that defers to the dict-based evaluator
-static CompiledExpr *compile_expr_fallback(PyObject *expr)
-{
-    CompiledExpr *fallback = compiled_expr_new(CEXPR_FALLBACK);
-    if (fallback != NULL) {
-        fallback->value = Py_NewRef(expr);
-    }
-    return fallback;
-}
-
-
-// Intern an exact string in place (a no-op for other objects). Interned names make locals/globals
-// dict probes hit on pointer equality. Interning the model's string is semantically invisible.
-static void intern_name(PyObject **name)
-{
-    if (PyUnicode_CheckExact(*name)) {
-        PyUnicode_InternInPlace(name);
-    }
-}
-
-
-// Look up a name's local slot index in the compile-time local map (-1 if not a local)
-static Py_ssize_t local_map_slot(PyObject *local_map, PyObject *name)
-{
-    if (local_map == NULL || !PyUnicode_CheckExact(name)) {
         return -1;
     }
-    PyObject *slot_obj = PyDict_GetItemWithError(local_map, name);
-    if (slot_obj == NULL) {
-        PyErr_Clear();
-        return -1;
+    int mark = c->tmp, result = -1;
+    for (Py_ssize_t ix = 0; ix < argc; ix++) {
+        PyObject *arg = c_item(c, args, ix);
+        regs[ix] = arg != NULL ? c_expr(c, arg) : -1;
+        if (regs[ix] < 0) {
+            goto done;
+        }
     }
-    return PyLong_AsSsize_t(slot_obj);
-}
-
-
-// Compile an expression model into a node tree. Returns NULL only on memory error - model shape
-// problems compile to fallback nodes so they surface at execution time. local_map maps local
-// variable names to slot indexes for slot-based function bodies (NULL otherwise).
-static CompiledExpr *compile_expr(PyObject *expr, PyObject *local_map)
-{
-    CompiledExpr *result = NULL;
-
-    if (!PyDict_CheckExact(expr)) {
-        return compile_expr_fallback(expr);
-    }
-
-    // Guard compile-time recursion - on overflow, fall back to the (also guarded) dict evaluator
-    if (Py_EnterRecursiveCall(" while compiling a BareScript expression")) {
-        PyErr_Clear();
-        return compile_expr_fallback(expr);
-    }
-
-    Py_ssize_t pos = 0;
-    PyObject *key;
-    PyObject *value;
-    if (!PyDict_Next(expr, &pos, &key, &value)) {
-        result = compile_expr_fallback(expr);
+    c->tmp = mark;
+    int reg = c_temp(c);
+    if (reg < 0) {
         goto done;
     }
 
-    switch (expr_kind(key)) {
-    case EXPR_NUMBER:
-    case EXPR_STRING:
-        result = compiled_expr_new(CEXPR_LITERAL);
-        if (result != NULL) {
-            result->value = Py_NewRef(value);
-        }
-        break;
-
-    case EXPR_VARIABLE: {
-        // Keywords
-        if (PyUnicode_Check(value)) {
-            Py_ssize_t length = PyUnicode_GetLength(value);
-            if (length == 4 && unicode_eq_ascii(value, "null", 4)) {
-                result = compiled_expr_new(CEXPR_NULL);
-                break;
-            }
-            if (length == 4 && unicode_eq_ascii(value, "true", 4)) {
-                result = compiled_expr_new(CEXPR_TRUE);
-                break;
-            }
-            if (length == 5 && unicode_eq_ascii(value, "false", 5)) {
-                result = compiled_expr_new(CEXPR_FALSE);
-                break;
-            }
-        }
-        result = compiled_expr_new(CEXPR_VARIABLE);
-        if (result != NULL) {
-            result->value = Py_NewRef(value);
-            intern_name(&result->value);
-            result->slot = local_map_slot(local_map, result->value);
-        }
-        break;
+    // Emit the call and its argument DATA words
+    int slot = c_slot(c, name);
+    int op = slot >= 0 ? OP_CALLS : (c->mode == MODE_EXPR ? OP_CALLN : OP_CALLG);
+    int index = slot >= 0 ? slot : (PyErr_Occurred() ? -1 : c_name(c, name));
+    int pc = index >= 0 ? c_emit(c, op, reg, index, args_none ? ARGS_NONE : (int)argc) : -1;
+    if (pc < 0) {
+        goto done;
     }
-
-    case EXPR_FUNCTION: {
-        if (!PyDict_CheckExact(value)) {
-            result = compile_expr_fallback(expr);
-            break;
+    c->code[pc].x = (uint8_t)c_intrinsic(name);
+    for (Py_ssize_t ix = 0; ix < argc; ix += 3) {
+        if (c_emit(c, OP_DATA, regs[ix], ix + 1 < argc ? regs[ix + 1] : 0, ix + 2 < argc ? regs[ix + 2] : 0) < 0) {
+            goto done;
         }
-        PyObject *func_name = NULL;
-        PyObject *args_expr = NULL;
-        dict_prefetch3(value, g.str_name, &func_name, g.str_args, &args_expr, NULL, NULL);
-        if (func_name == NULL || (args_expr != NULL && args_expr != Py_None && !PyList_CheckExact(args_expr))) {
-            // Missing name (KeyError at evaluation) or a generic args sequence
-            Py_XDECREF(func_name);
-            Py_XDECREF(args_expr);
-            result = compile_expr_fallback(expr);
-            break;
-        }
-
-        // "if" built-in function?
-        if (PyUnicode_Check(func_name) && unicode_eq_ascii(func_name, "if", 2)) {
-            Py_DECREF(func_name);
-            if (args_expr == Py_None) {
-                // len(None) raises at evaluation - defer to the dict evaluator
-                Py_DECREF(args_expr);
-                result = compile_expr_fallback(expr);
-                break;
-            }
-            result = compiled_expr_new(CEXPR_IF);
-            if (result == NULL) {
-                Py_XDECREF(args_expr);
-                break;
-            }
-            result->args = PyMem_Calloc(3, sizeof(CompiledExpr *));
-            if (result->args == NULL) {
-                Py_XDECREF(args_expr);
-                PyErr_NoMemory();
-                compiled_expr_free(result);
-                result = NULL;
-                break;
-            }
-            result->nargs = 3;
-            Py_ssize_t args_length = (args_expr != NULL) ? PyList_GET_SIZE(args_expr) : 0;
-            for (Py_ssize_t ix_arg = 0; ix_arg < 3 && ix_arg < args_length; ix_arg++) {
-                PyObject *arg_expr;
-                if (list_get_ref(args_expr, ix_arg, &arg_expr) < 0) {
-                    Py_DECREF(args_expr);
-                    compiled_expr_free(result);
-                    result = NULL;
-                    goto done;
-                }
-                // A None argument is treated as not-provided
-                if (arg_expr != Py_None) {
-                    result->args[ix_arg] = compile_expr(arg_expr, local_map);
-                    if (result->args[ix_arg] == NULL) {
-                        Py_DECREF(arg_expr);
-                        Py_DECREF(args_expr);
-                        compiled_expr_free(result);
-                        result = NULL;
-                        goto done;
-                    }
-                }
-                Py_DECREF(arg_expr);
-            }
-            Py_XDECREF(args_expr);
-            break;
-        }
-
-        // Function call
-        result = compiled_expr_new(CEXPR_CALL);
-        if (result == NULL) {
-            Py_DECREF(func_name);
-            Py_XDECREF(args_expr);
-            break;
-        }
-        result->value = func_name;
-        intern_name(&result->value);
-        result->slot = local_map_slot(local_map, result->value);
-        result->intrinsic = intrinsic_lookup(result->value);
-        if (args_expr == NULL || args_expr == Py_None) {
-            result->nargs = -1;
-            Py_XDECREF(args_expr);
-        } else {
-            Py_ssize_t args_length = PyList_GET_SIZE(args_expr);
-            result->nargs = args_length;
-            if (args_length > 0) {
-                result->args = PyMem_Calloc((size_t)args_length, sizeof(CompiledExpr *));
-                if (result->args == NULL) {
-                    Py_DECREF(args_expr);
-                    PyErr_NoMemory();
-                    compiled_expr_free(result);
-                    result = NULL;
-                    break;
-                }
-                for (Py_ssize_t ix_arg = 0; ix_arg < args_length; ix_arg++) {
-                    PyObject *arg_expr;
-                    if (list_get_ref(args_expr, ix_arg, &arg_expr) < 0) {
-                        Py_DECREF(args_expr);
-                        compiled_expr_free(result);
-                        result = NULL;
-                        goto done;
-                    }
-                    result->args[ix_arg] = compile_expr(arg_expr, local_map);
-                    Py_DECREF(arg_expr);
-                    if (result->args[ix_arg] == NULL) {
-                        Py_DECREF(args_expr);
-                        compiled_expr_free(result);
-                        result = NULL;
-                        goto done;
-                    }
-                }
-            }
-            Py_DECREF(args_expr);
-        }
-        break;
     }
-
-    case EXPR_BINARY: {
-        if (!PyDict_CheckExact(value)) {
-            result = compile_expr_fallback(expr);
-            break;
-        }
-        PyObject *op_obj = NULL;
-        PyObject *left_expr = NULL;
-        PyObject *right_expr = NULL;
-        dict_prefetch3(value, g.str_op, &op_obj, g.str_left, &left_expr, g.str_right, &right_expr);
-        if (op_obj == NULL || left_expr == NULL || right_expr == NULL) {
-            // Missing fields raise (or short-circuit) at evaluation - defer to the dict evaluator
-            Py_XDECREF(op_obj);
-            Py_XDECREF(left_expr);
-            Py_XDECREF(right_expr);
-            result = compile_expr_fallback(expr);
-            break;
-        }
-        result = compiled_expr_new(CEXPR_BINARY);
-        if (result == NULL) {
-            Py_DECREF(op_obj);
-            Py_DECREF(left_expr);
-            Py_DECREF(right_expr);
-            break;
-        }
-        result->binary_op = parse_binary_op(op_obj);
-        Py_DECREF(op_obj);
-        result->left = compile_expr(left_expr, local_map);
-        Py_DECREF(left_expr);
-        if (result->left == NULL) {
-            Py_DECREF(right_expr);
-            compiled_expr_free(result);
-            result = NULL;
-            break;
-        }
-        result->right = compile_expr(right_expr, local_map);
-        Py_DECREF(right_expr);
-        if (result->right == NULL) {
-            compiled_expr_free(result);
-            result = NULL;
-        }
-        break;
-    }
-
-    case EXPR_UNARY: {
-        if (!PyDict_CheckExact(value)) {
-            result = compile_expr_fallback(expr);
-            break;
-        }
-        PyObject *op_obj = NULL;
-        PyObject *sub_expr = NULL;
-        dict_prefetch3(value, g.str_op, &op_obj, g.str_expr, &sub_expr, NULL, NULL);
-        if (op_obj == NULL || sub_expr == NULL) {
-            Py_XDECREF(op_obj);
-            Py_XDECREF(sub_expr);
-            result = compile_expr_fallback(expr);
-            break;
-        }
-        result = compiled_expr_new(CEXPR_UNARY);
-        if (result == NULL) {
-            Py_DECREF(op_obj);
-            Py_DECREF(sub_expr);
-            break;
-        }
-        result->unary_op = parse_unary_op(op_obj);
-        Py_DECREF(op_obj);
-        result->left = compile_expr(sub_expr, local_map);
-        Py_DECREF(sub_expr);
-        if (result->left == NULL) {
-            compiled_expr_free(result);
-            result = NULL;
-        }
-        break;
-    }
-
-    case EXPR_GROUP:
-        // Fold the group - evaluating a group evaluates its inner expression
-        result = compile_expr(value, local_map);
-        break;
-
-    default: // EXPR_UNKNOWN
-        result = compile_expr_fallback(expr);
-        break;
-    }
+    c->result_pc = pc;
+    result = reg;
 
 done:
-    Py_LeaveRecursiveCall();
+    if (regs != regs_small) {
+        PyMem_Free(regs);
+    }
     return result;
 }
 
 
-// Does a compiled expression tree contain any fallback nodes (which require dict-based locals)?
-static int compiled_expr_has_fallback(CompiledExpr *expr)
+// Map a binary operator string to its instruction - runtime.py treats any other operator as ">>"
+#define OP_AND (OP_COUNT + 1)
+#define OP_OR (OP_COUNT + 2)
+
+static int c_binary_op(Compiler *c, PyObject *op)
 {
-    if (expr == NULL) {
-        return 0;
-    }
-    if (expr->kind == CEXPR_FALLBACK) {
-        return 1;
-    }
-    if (compiled_expr_has_fallback(expr->left) || compiled_expr_has_fallback(expr->right)) {
-        return 1;
-    }
-    if (expr->args != NULL) {
-        Py_ssize_t nargs = (expr->kind == CEXPR_IF) ? 3 : expr->nargs;
-        for (Py_ssize_t ix = 0; ix < nargs; ix++) {
-            if (compiled_expr_has_fallback(expr->args[ix])) {
-                return 1;
+    static const struct {
+        const char *name;
+        int op;
+    } ops[] = {
+        {"&&", OP_AND}, {"||", OP_OR}, {"+", OP_ADD}, {"-", OP_SUB}, {"*", OP_MUL}, {"/", OP_DIV},
+        {"<", OP_LT}, {"<=", OP_LE}, {">", OP_GT}, {">=", OP_GE}, {"==", OP_EQ}, {"!=", OP_NE}, {"%", OP_MOD},
+        {"**", OP_POW}, {"&", OP_BAND}, {"|", OP_BOR}, {"^", OP_BXOR}, {"<<", OP_SHL}
+    };
+    if (PyUnicode_CheckExact(op)) {
+        for (size_t ix = 0; ix < sizeof(ops) / sizeof(ops[0]); ix++) {
+            if (PyUnicode_CompareWithASCIIString(op, ops[ix].name) == 0) {
+                return ops[ix].op;
             }
         }
+    } else if (PyUnicode_Check(op)) {
+        return c_irregular(c);
     }
-    return 0;
+    return OP_SHR;
 }
 
 
-// Maximum compiled expression tree depth - deeper trees compile to fallback nodes so that
-// guard-free compiled evaluation has statically bounded C recursion
-#define COMPILED_EXPR_MAX_DEPTH 64
-
-static Py_ssize_t compiled_expr_depth(CompiledExpr *expr)
+static int c_binary(Compiler *c, PyObject *binary)
 {
-    if (expr == NULL) {
-        return 0;
+    PyObject *op_obj, *left, *right;
+    int found = PyDict_CheckExact(binary) ? c_get(c, binary, S_op, &op_obj) : 0;
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
     }
-    Py_ssize_t depth = compiled_expr_depth(expr->left);
-    Py_ssize_t right_depth = compiled_expr_depth(expr->right);
-    if (right_depth > depth) {
-        depth = right_depth;
+    int op = c_binary_op(c, op_obj);
+    found = op >= 0 ? c_get(c, binary, S_left, &left) : -1;
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
     }
-    if (expr->args != NULL) {
-        Py_ssize_t nargs = (expr->kind == CEXPR_IF) ? 3 : expr->nargs;
-        for (Py_ssize_t ix = 0; ix < nargs; ix++) {
-            Py_ssize_t arg_depth = compiled_expr_depth(expr->args[ix]);
-            if (arg_depth > depth) {
-                depth = arg_depth;
-            }
+
+    // Short-circuiting "and" and "or" - the left value is the result unless it decides otherwise
+    int mark = c->tmp;
+    if (op == OP_AND || op == OP_OR) {
+        int left_reg = c_expr(c, left);
+        if (left_reg < 0) {
+            return -1;
         }
+        c->tmp = mark;
+        int reg = c_temp(c);
+        if (reg < 0 || (left_reg != reg && c_emit(c, OP_MOVE, reg, left_reg, 0) < 0)) {
+            return -1;
+        }
+        int jump = c_emit(c, op == OP_AND ? OP_JF : OP_JT, reg, 0, 0);
+        found = jump >= 0 ? c_get(c, binary, S_right, &right) : -1;
+        if (found <= 0) {
+            return found < 0 ? -1 : c_irregular(c);
+        }
+        int right_reg = c_expr(c, right);
+        if (right_reg < 0 || (right_reg != reg && c_emit(c, OP_MOVE, reg, right_reg, 0) < 0)) {
+            return -1;
+        }
+        c->code[jump].w = (uint32_t)c->ncode;
+        c_temp_reset(c, reg);
+        c->result_pc = -1;
+        return reg;
     }
-    return depth + 1;
+
+    found = c_get(c, binary, S_right, &right);
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
+    }
+    int left_reg = c_expr(c, left);
+    int right_reg = left_reg >= 0 ? c_expr(c, right) : -1;
+    return right_reg < 0 ? -1 : c_emit_temp(c, mark, op, left_reg, right_reg);
 }
 
 
-// Compile a statement's expression, replacing trees deeper than the depth cap with a fallback
-// node (evaluated by the guarded dict-based evaluator). Returns NULL only on memory error.
-static CompiledExpr *compile_stmt_expr(PyObject *expr, PyObject *local_map)
+static int c_unary(Compiler *c, PyObject *unary)
 {
-    CompiledExpr *compiled = compile_expr(expr, local_map);
-    if (compiled != NULL && compiled_expr_depth(compiled) > COMPILED_EXPR_MAX_DEPTH) {
-        compiled_expr_free(compiled);
-        compiled = compile_expr_fallback(expr);
+    PyObject *op_obj, *expr;
+    int found = PyDict_CheckExact(unary) ? c_get(c, unary, S_op, &op_obj) : 0;
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
     }
-    return compiled;
+    int op = OP_BNOT;
+    if (PyUnicode_CheckExact(op_obj)) {
+        if (PyUnicode_CompareWithASCIIString(op_obj, "!") == 0) {
+            op = OP_NOT;
+        } else if (PyUnicode_CompareWithASCIIString(op_obj, "-") == 0) {
+            op = OP_NEG;
+        }
+    } else if (PyUnicode_Check(op_obj)) {
+        return c_irregular(c);
+    }
+    found = c_get(c, unary, S_expr, &expr);
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
+    }
+    int mark = c->tmp;
+    int value_reg = c_expr(c, expr);
+    return value_reg < 0 ? -1 : c_emit_temp(c, mark, op, value_reg, 0);
 }
 
 
-// Resolve a jump label to its statement index at compile time, mirroring the reference
-// implementation's scan. Returns the index, -1 if not found (the unknown-label error is raised at
-// execution), or -2 if the scan itself would raise at execution (defer to the dict path).
-static Py_ssize_t compile_jump_index(PyObject *statements, Py_ssize_t count, PyObject *jump_label)
+// The expression key runtime.py dispatches an expression model on (borrowed), or NULL with its value unset if
+// none (an error is set if the lookup failed)
+static PyObject *c_expr_key(Compiler *c, PyObject *expr, PyObject **value)
 {
-    for (Py_ssize_t ix = 0; ix < count; ix++) {
-        PyObject *scan_statement = PySequence_Fast_GET_ITEM(statements, ix);
-        if (!PyDict_CheckExact(scan_statement)) {
-            // The runtime scan would raise here - defer to the dict path
-            return -2;
-        }
-        PyObject *label_part = NULL;
-        int found = obj_get(scan_statement, g.str_label, &label_part);
-        if (found < 0) {
-            PyErr_Clear();
-            return -2;
-        }
-        if (found) {
-            PyObject *label_name;
-            if (obj_subscript(label_part, g.str_name, &label_name) < 0) {
-                PyErr_Clear();
-                Py_DECREF(label_part);
-                return -2;
-            }
-            Py_DECREF(label_part);
-            int label_eq = PyObject_RichCompareBool(label_name, jump_label, Py_EQ);
-            Py_DECREF(label_name);
-            if (label_eq < 0) {
-                PyErr_Clear();
-                return -2;
-            }
-            if (label_eq) {
-                return ix;
-            }
+    PyObject *keys[] = {S_number, S_string, S_variable, S_function, S_binary, S_unary, S_group};
+    for (size_t ix = 0; ix < sizeof(keys) / sizeof(keys[0]); ix++) {
+        int found = c_get(c, expr, keys[ix], value);
+        if (found != 0) {
+            return found > 0 ? keys[ix] : NULL;
         }
     }
-    return -1;
-}
-
-
-// Add a local name to the compile-time local map (first occurrence wins). Returns the slot
-// index, or -1 on memory error.
-static Py_ssize_t local_map_add(PyObject *local_map, PyObject *names_list, PyObject *name)
-{
-    PyObject *interned = Py_NewRef(name);
-    PyUnicode_InternInPlace(&interned);
-    PyObject *existing = PyDict_GetItemWithError(local_map, interned);
-    if (existing != NULL) {
-        Py_ssize_t slot = PyLong_AsSsize_t(existing);
-        Py_DECREF(interned);
-        return slot;
-    }
-    if (PyErr_Occurred()) {
-        Py_DECREF(interned);
-        return -1;
-    }
-    Py_ssize_t slot = PyList_GET_SIZE(names_list);
-    PyObject *slot_obj = PyLong_FromSsize_t(slot);
-    if (slot_obj == NULL || PyDict_SetItem(local_map, interned, slot_obj) < 0 ||
-        PyList_Append(names_list, interned) < 0) {
-        Py_XDECREF(slot_obj);
-        Py_DECREF(interned);
-        return -1;
-    }
-    Py_DECREF(slot_obj);
-    Py_DECREF(interned);
-    return slot;
-}
-
-
-// Compile a statements list (or tuple) into a compiled body. Returns NULL only on memory error.
-// arg_names is the function's declared argument names (exact list) or NULL; enable_slots requests
-// slot-based locals, granted only when every statement compiles cleanly with no fallback nodes
-// and all local names are exact strings.
-static CompiledBody *compile_body(PyObject *statements, PyObject *arg_names, int enable_slots)
-{
-    CompiledBody *body = PyMem_Calloc(1, sizeof(CompiledBody));
-    if (body == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    body->statements = Py_NewRef(statements);
-    body->count = PySequence_Fast_GET_SIZE(statements);
-    if (body->count > 0) {
-        body->stmts = PyMem_Calloc((size_t)body->count, sizeof(CompiledStmt));
-        if (body->stmts == NULL) {
-            PyErr_NoMemory();
-            compiled_body_free(body);
-            return NULL;
-        }
-    }
-
-    // Collect the local names (declared arguments and assignment targets) for slot-based locals.
-    // The set of possible locals keys is static: the reference implementation only inserts
-    // argument names at invocation and assignment targets at execution.
-    PyObject *local_map = NULL;
-    PyObject *names_list = NULL;
-    int slots_ok = 0;
-    Py_ssize_t nargs_decl = (arg_names != NULL) ? PyList_GET_SIZE(arg_names) : 0;
-    if (enable_slots) {
-        slots_ok = 1;
-        local_map = PyDict_New();
-        names_list = PyList_New(0);
-        if (local_map == NULL || names_list == NULL) {
-            goto memory_error;
-        }
-        for (Py_ssize_t ix_arg = 0; slots_ok && ix_arg < nargs_decl; ix_arg++) {
-            PyObject *arg_name;
-            if (list_get_ref(arg_names, ix_arg, &arg_name) < 0) {
-                goto memory_error;
-            }
-            if (!PyUnicode_CheckExact(arg_name)) {
-                slots_ok = 0;
-            } else if (local_map_add(local_map, names_list, arg_name) < 0) {
-                Py_DECREF(arg_name);
-                goto memory_error;
-            }
-            Py_DECREF(arg_name);
-        }
-        for (Py_ssize_t ix = 0; slots_ok && ix < body->count; ix++) {
-            PyObject *statement = PySequence_Fast_GET_ITEM(statements, ix);
-            if (!PyDict_CheckExact(statement)) {
-                continue;
-            }
-            Py_ssize_t pos = 0;
-            PyObject *stmt_key;
-            PyObject *part;
-            if (!PyDict_Next(statement, &pos, &stmt_key, &part) || !key_eq(stmt_key, g.str_expr) ||
-                !PyDict_CheckExact(part)) {
-                continue;
-            }
-            PyObject *expr_name = NULL;
-            dict_prefetch3(part, g.str_name, &expr_name, NULL, NULL, NULL, NULL);
-            if (expr_name != NULL && expr_name != Py_None) {
-                if (!PyUnicode_CheckExact(expr_name)) {
-                    slots_ok = 0;
-                } else if (local_map_add(local_map, names_list, expr_name) < 0) {
-                    Py_DECREF(expr_name);
-                    goto memory_error;
-                }
-            }
-            Py_XDECREF(expr_name);
-        }
-    }
-    PyObject *compile_map = slots_ok ? local_map : NULL;
-
-    for (Py_ssize_t ix = 0; ix < body->count; ix++) {
-        CompiledStmt *stmt = &body->stmts[ix];
-        PyObject *statement = PySequence_Fast_GET_ITEM(statements, ix);
-        stmt->kind = CSTMT_NONE;
-        stmt->jump_index = -1;
-        stmt->name_slot = -1;
-        stmt->statement = Py_NewRef(statement);
-
-        // Non-dict statements raise at execution - defer to the dict path
-        if (!PyDict_CheckExact(statement)) {
-            continue;
-        }
-
-        // Empty statement dict - no-op
-        Py_ssize_t pos = 0;
-        PyObject *stmt_key;
-        PyObject *part;
-        if (!PyDict_Next(statement, &pos, &stmt_key, &part)) {
-            stmt->kind = CSTMT_NOP;
-            continue;
-        }
-
-        // Expression?
-        if (key_eq(stmt_key, g.str_expr)) {
-            if (!PyDict_CheckExact(part)) {
-                continue;
-            }
-            PyObject *expr_inner = NULL;
-            PyObject *expr_name = NULL;
-            dict_prefetch3(part, g.str_expr, &expr_inner, g.str_name, &expr_name, NULL, NULL);
-            if (expr_inner == NULL) {
-                // KeyError at execution - defer to the dict path
-                Py_XDECREF(expr_name);
-                continue;
-            }
-            stmt->expr = compile_stmt_expr(expr_inner, compile_map);
-            Py_DECREF(expr_inner);
-            if (stmt->expr == NULL) {
-                Py_XDECREF(expr_name);
-                goto memory_error;
-            }
-            if (expr_name != NULL && expr_name != Py_None) {
-                stmt->name = expr_name;
-                intern_name(&stmt->name);
-                stmt->name_slot = local_map_slot(compile_map, stmt->name);
-            } else {
-                Py_XDECREF(expr_name);
-            }
-            stmt->kind = CSTMT_EXPR;
-            continue;
-        }
-
-        // Jump?
-        if (key_eq(stmt_key, g.str_jump)) {
-            if (!PyDict_CheckExact(part)) {
-                continue;
-            }
-            PyObject *jump_expr = NULL;
-            PyObject *jump_label = NULL;
-            dict_prefetch3(part, g.str_expr, &jump_expr, g.str_label, &jump_label, NULL, NULL);
-            if (jump_label == NULL) {
-                // KeyError at execution - defer to the dict path
-                Py_XDECREF(jump_expr);
-                continue;
-            }
-            Py_ssize_t jump_index = compile_jump_index(statements, body->count, jump_label);
-            if (jump_index == -2) {
-                Py_XDECREF(jump_expr);
-                Py_DECREF(jump_label);
-                continue;
-            }
-            if (jump_expr != NULL) {
-                stmt->expr = compile_stmt_expr(jump_expr, compile_map);
-                Py_DECREF(jump_expr);
-                if (stmt->expr == NULL) {
-                    Py_DECREF(jump_label);
-                    goto memory_error;
-                }
-            }
-            stmt->name = jump_label;
-            stmt->jump_index = jump_index;
-            stmt->kind = CSTMT_JUMP;
-            continue;
-        }
-
-        // Return?
-        if (key_eq(stmt_key, g.str_return)) {
-            if (!PyDict_CheckExact(part)) {
-                continue;
-            }
-            PyObject *return_expr = NULL;
-            dict_prefetch3(part, g.str_expr, &return_expr, NULL, NULL, NULL, NULL);
-            if (return_expr != NULL) {
-                stmt->expr = compile_stmt_expr(return_expr, compile_map);
-                Py_DECREF(return_expr);
-                if (stmt->expr == NULL) {
-                    goto memory_error;
-                }
-            }
-            stmt->kind = CSTMT_RETURN;
-            continue;
-        }
-
-        // Function?
-        if (key_eq(stmt_key, g.str_function)) {
-            if (!PyDict_CheckExact(part)) {
-                continue;
-            }
-            PyObject *function_name = NULL;
-            dict_prefetch3(part, g.str_name, &function_name, NULL, NULL, NULL, NULL);
-            if (function_name == NULL) {
-                // KeyError at execution - defer to the dict path
-                continue;
-            }
-            stmt->name = function_name;
-            intern_name(&stmt->name);
-            stmt->part = Py_NewRef(part);
-            stmt->kind = CSTMT_FUNCTION;
-            continue;
-        }
-
-        // Include - cold path, execute via the dict path
-        if (key_eq(stmt_key, g.str_include)) {
-            continue;
-        }
-
-        // Label statement (or unrecognized) - no-op
-        stmt->kind = CSTMT_NOP;
-    }
-
-    // Grant slot-based locals only when every statement compiled with no fallback nodes
-    if (slots_ok) {
-        for (Py_ssize_t ix = 0; ix < body->count; ix++) {
-            if (body->stmts[ix].kind == CSTMT_NONE || compiled_expr_has_fallback(body->stmts[ix].expr)) {
-                slots_ok = 0;
-                break;
-            }
-        }
-    }
-    if (slots_ok) {
-        body->slot_names = PyList_AsTuple(names_list);
-        if (body->slot_names == NULL) {
-            goto memory_error;
-        }
-        body->nslots = PyTuple_GET_SIZE(body->slot_names);
-        body->nargs_decl = nargs_decl;
-        if (nargs_decl > 0) {
-            body->arg_slots = PyMem_Calloc((size_t)nargs_decl, sizeof(Py_ssize_t));
-            if (body->arg_slots == NULL) {
-                PyErr_NoMemory();
-                goto memory_error;
-            }
-            for (Py_ssize_t ix_arg = 0; ix_arg < nargs_decl; ix_arg++) {
-                body->arg_slots[ix_arg] = local_map_slot(local_map, PyList_GET_ITEM(arg_names, ix_arg));
-            }
-        }
-        if (arg_names != NULL) {
-            body->arg_names = PyList_AsTuple(arg_names);
-            if (body->arg_names == NULL) {
-                goto memory_error;
-            }
-        }
-    }
-    Py_XDECREF(local_map);
-    Py_XDECREF(names_list);
-    return body;
-
-memory_error:
-    Py_XDECREF(local_map);
-    Py_XDECREF(names_list);
-    compiled_body_free(body);
     return NULL;
 }
 
 
-//
-// Script function callable type
-//
-// Replaces functools.partial(_script_function, script, function) from the reference
-// implementation. Instances are called as fn(args, options). The compiled body is built lazily on
-// first invocation and published write-once; if the function dict's statements list is later
-// replaced, execution falls back to the dict-based path rather than recompiling.
-//
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *script;
-    PyObject *function;
-    CompiledBody *compiled;
-} ScriptFunctionObject;
-
-
-// The _script_function locals setup - build the function locals dict from the call arguments
-static PyObject *script_function_locals(PyObject *function, PyObject *args)
+// Compile an expression - returns its operand register, or -1 (a Python error, or the irregular flag)
+static int c_expr(Compiler *c, PyObject *expr)
 {
-    PyObject *func_locals = NULL;
-    PyObject *func_args = NULL;
-    PyObject *func_args_fast = NULL;
-    PyObject *result = NULL;
-
-    func_locals = PyDict_New();
-    if (func_locals == NULL) {
-        goto done;
+    PyObject *value;
+    PyObject *key = PyDict_CheckExact(expr) && c->depth < DEPTH_MAX ? c_expr_key(c, expr, &value) : NULL;
+    if (key == NULL) {
+        return PyErr_Occurred() ? -1 : c_irregular(c);
     }
-
-    // func_args = function.get('args')
-    int found = obj_get(function, g.str_args, &func_args);
-    if (found < 0) {
-        goto done;
-    }
-    if (found && func_args != Py_None) {
-        // args_length = len(args) - raises like the reference implementation if args is not a sequence
-        Py_ssize_t args_length = PyObject_Length(args);
-        if (args_length < 0) {
-            goto done;
-        }
-
-        func_args_fast = PySequence_Fast(func_args, "function arguments must be a sequence");
-        if (func_args_fast == NULL) {
-            goto done;
-        }
-        Py_ssize_t func_args_length = PySequence_Fast_GET_SIZE(func_args_fast);
-
-        // lastArgArray?
-        PyObject *last_arg_array_obj = NULL;
-        found = obj_get(function, g.str_lastArgArray, &last_arg_array_obj);
-        if (found < 0) {
-            goto done;
-        }
-        int last_arg_array = 0;
-        if (found) {
-            last_arg_array = PyObject_IsTrue(last_arg_array_obj);
-            Py_DECREF(last_arg_array_obj);
-            if (last_arg_array < 0) {
-                goto done;
-            }
-        }
-
-        int func_args_is_list = PyList_CheckExact(func_args_fast);
-        Py_ssize_t ix_arg_last = func_args_length - 1;
-        for (Py_ssize_t ix_arg = 0; ix_arg < func_args_length; ix_arg++) {
-            PyObject *arg_name;
-            if (func_args_is_list) {
-                if (list_get_ref(func_args_fast, ix_arg, &arg_name) < 0) {
-                    goto done;
-                }
-            } else {
-                arg_name = PyTuple_GetItem(func_args_fast, ix_arg);
-                if (arg_name == NULL) {
-                    goto done;
-                }
-                Py_INCREF(arg_name);
-            }
-            PyObject *arg_value;
-            if (ix_arg < args_length) {
-                if (last_arg_array && ix_arg == ix_arg_last) {
-                    arg_value = PySequence_GetSlice(args, ix_arg, args_length);
-                } else {
-                    arg_value = PySequence_GetItem(args, ix_arg);
-                }
-            } else {
-                if (last_arg_array && ix_arg == ix_arg_last) {
-                    arg_value = PyList_New(0);
-                } else {
-                    arg_value = Py_NewRef(Py_None);
-                }
-            }
-            if (arg_value == NULL) {
-                Py_DECREF(arg_name);
-                goto done;
-            }
-            int set_result = PyDict_SetItem(func_locals, arg_name, arg_value);
-            Py_DECREF(arg_name);
-            Py_DECREF(arg_value);
-            if (set_result < 0) {
-                goto done;
-            }
-        }
-    }
-
-    // Success - return the locals dict
-    result = func_locals;
-    func_locals = NULL;
-
-done:
-    Py_XDECREF(func_args_fast);
-    Py_XDECREF(func_args);
-    Py_XDECREF(func_locals);
-    return result;
+    c->depth++;
+    c->result_pc = -1;
+    int reg = key == S_number || key == S_string ? c_const(c, value) :
+        (key == S_variable ? c_variable(c, value) :
+         (key == S_function ? c_call(c, value) :
+          (key == S_binary ? c_binary(c, value) : (key == S_unary ? c_unary(c, value) : c_expr(c, value)))));
+    c->depth--;
+    return reg;
 }
 
 
-// Get (or lazily build and publish) the compiled body for the function's statements list.
-// Returns 0 with *body_out set (NULL when not compilable or stale) or -1 on memory error. The
-// body is published write-once - concurrent builders race benignly and the loser is freed.
-static int script_function_get_body(ScriptFunctionObject *script_function, PyObject *statements, CompiledBody **body_out)
+// Compute a statements list's label indexes (checking it is compilable) - 0 success, -1 failure
+static int c_labels(Compiler *c, PyObject *statements, PyObject *labels)
 {
-#ifdef Py_GIL_DISABLED
-    CompiledBody *body = atomic_load_explicit((_Atomic(CompiledBody *) *)&script_function->compiled, memory_order_acquire);
-#else
-    CompiledBody *body = script_function->compiled;
-#endif
-    if (body != NULL) {
-        *body_out = (body->statements == statements) ? body : NULL;
-        return 0;
-    }
     if (!PyList_CheckExact(statements)) {
-        *body_out = NULL;
-        return 0;
+        return c_irregular(c);
     }
-
-    // Get the declared argument names for slot-based locals (an exact list of names, possibly
-    // absent; any other shape disables slots and uses dict-based locals)
-    PyObject *args_decl = NULL;
-    int enable_slots = 1;
-    int found = obj_get(script_function->function, g.str_args, &args_decl);
-    if (found < 0) {
-        return -1;
+    Py_ssize_t count = PyList_GET_SIZE(statements);
+    for (Py_ssize_t ix = 0; ix < count; ix++) {
+        PyObject *statement = c_item(c, statements, ix), *label, *name;
+        if (statement == NULL) {
+            return -1;
+        }
+        if (!PyDict_CheckExact(statement)) {
+            return c_irregular(c);
+        }
+        int found = c_get(c, statement, S_label, &label);
+        if (found < 0) {
+            return -1;
+        }
+        if (found) {
+            found = PyDict_CheckExact(label) ? c_get(c, label, S_name, &name) : 0;
+            if (found <= 0 || !PyUnicode_CheckExact(name)) {
+                return found < 0 ? -1 : c_irregular(c);
+            }
+            PyObject *index = PyLong_FromSsize_t(ix);
+            int rc = labels != NULL && index != NULL ? PyDict_SetItem(labels, name, index) : 0;
+            Py_XDECREF(index);
+            if (index == NULL || rc < 0) {
+                return -1;
+            }
+        }
     }
-    if (args_decl == Py_None) {
-        Py_CLEAR(args_decl);
-    }
-    if (args_decl != NULL && !PyList_CheckExact(args_decl)) {
-        enable_slots = 0;
-        Py_CLEAR(args_decl);
-    }
-    CompiledBody *new_body = compile_body(statements, args_decl, enable_slots);
-    Py_XDECREF(args_decl);
-    if (new_body == NULL) {
-        return -1;
-    }
-#ifdef Py_GIL_DISABLED
-    CompiledBody *expected = NULL;
-    if (!atomic_compare_exchange_strong_explicit(
-            (_Atomic(CompiledBody *) *)&script_function->compiled, &expected, new_body,
-            memory_order_acq_rel, memory_order_acquire
-        )) {
-        compiled_body_free(new_body);
-        new_body = expected;
-    }
-#else
-    if (script_function->compiled == NULL) {
-        script_function->compiled = new_body;
-    } else {
-        // A re-entrant build (e.g. via GC during compilation) won - use it
-        compiled_body_free(new_body);
-        new_body = script_function->compiled;
-    }
-#endif
-    *body_out = (new_body->statements == statements) ? new_body : NULL;
     return 0;
 }
 
 
-// Execute a function body with slot-based locals - bind the arguments into the slot array and
-// run the compiled body. Mirrors script_function_locals' argument binding semantics exactly
-// (missing arguments bind None, the last-argument array binds a slice or fresh list).
-static PyObject *script_function_execute_slots(
-    ScriptFunctionObject *script_function, PyObject *statements, CompiledBody *body, PyObject *args, ExecCtx *ctx
-)
+static int c_statement_expr(Compiler *c, PyObject *statement)
 {
-    // args_length = len(args) - raises like the reference implementation if args is not a
-    // sequence (only when the function declares arguments)
-    Py_ssize_t args_length = 0;
-    int last_arg_array = 0;
-    if (body->arg_names != NULL) {
-        args_length = PyObject_Length(args);
-        if (args_length < 0) {
-            return NULL;
+    PyObject *expr, *name;
+    int found = PyDict_CheckExact(statement) ? c_get(c, statement, S_expr, &expr) : 0;
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
+    }
+    int reg = c_expr(c, expr);
+    found = reg >= 0 ? c_get(c, statement, S_name, &name) : -1;
+    if (found <= 0 || name == Py_None) {
+        return found < 0 ? -1 : 0;
+    }
+    if (!PyUnicode_CheckExact(name)) {
+        return c_irregular(c);
+    }
+    if (c->mode == MODE_FUNC) {
+        // Retarget a single instruction computing the value into a temporary to the local variable slot
+        int slot = c_slot(c, name);
+        if (slot < 0) {
+            return -1;
         }
+        if (c->result_pc >= 0 && c->code[c->result_pc].a == reg && (reg & REG_TEMP)) {
+            c->code[c->result_pc].a = (uint16_t)slot;
+            return 0;
+        }
+        return c_emit(c, OP_MOVE, slot, reg, 0) < 0 ? -1 : 0;
+    }
+    int index = c_name(c, name);
+    return index < 0 || c_emit(c, OP_STOREG, index, reg, 0) < 0 ? -1 : 0;
+}
 
-        // lastArgArray - read per call like the reference implementation
-        PyObject *last_arg_array_obj = NULL;
-        int found = obj_get(script_function->function, g.str_lastArgArray, &last_arg_array_obj);
+
+// Compile a label jump on a condition - a leading "!" inverts the jump, and a comparison compiles to a
+// compare-and-jump. Returns the pc of the instruction holding the jump target, or -1.
+static int c_jump_condition(Compiler *c, PyObject *expr)
+{
+    int on_true = 1;
+    for (;;) {
+        PyObject *value, *op, *operand, *right;
+        PyObject *key = PyDict_CheckExact(expr) ? c_expr_key(c, expr, &value) : NULL;
+        if (PyErr_Occurred()) {
+            return -1;
+        }
+        if (key == S_group) {
+            expr = value;
+            continue;
+        }
+        if ((key != S_unary && key != S_binary) || !PyDict_CheckExact(value)) {
+            break;
+        }
+        int found = c_get(c, value, S_op, &op);
+        if (found > 0) {
+            found = c_get(c, value, key == S_unary ? S_expr : S_left, &operand);
+        }
         if (found < 0) {
-            return NULL;
+            return -1;
         }
-        if (found) {
-            last_arg_array = PyObject_IsTrue(last_arg_array_obj);
-            Py_DECREF(last_arg_array_obj);
-            if (last_arg_array < 0) {
-                return NULL;
+        if (found == 0 || !PyUnicode_CheckExact(op)) {
+            break;
+        }
+
+        // "!" - jump on the operand's falsity
+        if (key == S_unary) {
+            if (PyUnicode_CompareWithASCIIString(op, "!") != 0) {
+                break;
+            }
+            on_true = !on_true;
+            expr = operand;
+            continue;
+        }
+
+        // A comparison - a compare-and-jump
+        int compare = c_binary_op(c, op);
+        if (compare < OP_EQ || compare > OP_GE) {
+            break;
+        }
+        found = c_get(c, value, S_right, &right);
+        if (found <= 0) {
+            return found < 0 ? -1 : c_irregular(c);
+        }
+        int mark = c->tmp;
+        int left_reg = c_expr(c, operand);
+        int right_reg = left_reg >= 0 ? c_expr(c, right) : -1;
+        int pc = right_reg >= 0 ? c_emit(c, OP_JEQ + (compare - OP_EQ), left_reg, right_reg, 0) : -1;
+        if (pc < 0 || c_emit(c, OP_JTARGET, 0, 0, 0) < 0) {
+            return -1;
+        }
+        c->tmp = mark;
+        c->code[pc].x = JUMP_LABEL | (on_true ? 0 : JUMP_NOT);
+        return pc + 1;
+    }
+    int reg = c_expr(c, expr);
+    int pc = reg >= 0 ? c_emit(c, on_true ? OP_JT : OP_JF, reg, 0, 0) : -1;
+    if (pc >= 0) {
+        c->code[pc].x = JUMP_LABEL;
+    }
+    return pc;
+}
+
+
+static int c_statement_jump(Compiler *c, PyObject *statement)
+{
+    PyObject *expr, *label;
+    int has_expr = PyDict_CheckExact(statement) ? c_get(c, statement, S_expr, &expr) : -2;
+    int found = has_expr >= 0 ? c_get(c, statement, S_label, &label) : has_expr;
+    if (found <= 0 || !PyUnicode_CheckExact(label)) {
+        return found == -1 ? -1 : c_irregular(c);
+    }
+
+    // Known label?
+    PyObject *label_index = PyDict_GetItemWithError(c->labels, label);
+    if (label_index != NULL) {
+        int pc;
+        if (has_expr) {
+            pc = c_jump_condition(c, expr);
+        } else if ((pc = c_emit(c, OP_JMP, 0, 0, 0)) >= 0) {
+            c->code[pc].x = JUMP_LABEL;
+        }
+        if (pc < 0) {
+            return -1;
+        }
+        if (c->nfixups == c->capfixups) {
+            int capfixups = c->capfixups ? c->capfixups * 2 : 32;
+            int *fixups = PyMem_Realloc(c->fixups, capfixups * 2 * sizeof(int));
+            if (fixups == NULL) {
+                PyErr_NoMemory();
+                return -1;
+            }
+            c->fixups = fixups;
+            c->capfixups = capfixups;
+        }
+        c->fixups[c->nfixups * 2] = pc;
+        c->fixups[c->nfixups * 2 + 1] = (int)PyLong_AsLong(label_index);
+        c->nfixups++;
+        return 0;
+    }
+    if (PyErr_Occurred()) {
+        return -1;
+    }
+
+    // Unknown label - an error when the jump is taken
+    int reg = has_expr ? c_expr(c, expr) : 0;
+    int index = reg >= 0 ? c_name(c, label) : -1;
+    int jump = has_expr && index >= 0 ? c_emit(c, OP_JF, reg, 0, 0) : 0;
+    if (index < 0 || jump < 0 || c_emit(c, OP_JUNDEF, index, 0, 0) < 0) {
+        return -1;
+    }
+    if (has_expr) {
+        c->code[jump].w = (uint32_t)c->ncode;
+    }
+    return 0;
+}
+
+
+static int c_statement_return(Compiler *c, PyObject *statement)
+{
+    PyObject *expr;
+    int found = PyDict_CheckExact(statement) ? c_get(c, statement, S_expr, &expr) : -2;
+    if (found < 0) {
+        return found == -1 ? -1 : c_irregular(c);
+    }
+    if (!found) {
+        return c_emit(c, OP_RETNONE, 0, 0, 0) < 0 ? -1 : 0;
+    }
+    int reg = c_expr(c, expr);
+    return reg < 0 || c_emit(c, OP_RET, reg, 0, 0) < 0 ? -1 : 0;
+}
+
+
+static int c_statement_function(Compiler *c, PyObject *statement)
+{
+    PyObject *name, *statements;
+    int found = PyDict_CheckExact(statement) ? c_get(c, statement, S_name, &name) : 0;
+    if (found <= 0 || !PyUnicode_CheckExact(name)) {
+        return found < 0 ? -1 : c_irregular(c);
+    }
+    found = c_get(c, statement, S_statements, &statements);
+    if (found <= 0) {
+        return found < 0 ? -1 : c_irregular(c);
+    }
+
+    // The function's label indexes are computed when it's defined - check they can be
+    if (c_labels(c, statements, NULL) < 0) {
+        return -1;
+    }
+    int index = c_name(c, name);
+    int reg = index >= 0 ? c_const(c, statement) : -1;
+    return reg < 0 || c_emit(c, OP_FUNC, index, reg, 0) < 0 ? -1 : 0;
+}
+
+
+static int c_statement(Compiler *c, PyObject *statement)
+{
+    c->tmp = 0;
+    int pc = c_emit(c, OP_STMT, 0, 0, 0);
+    if (pc < 0) {
+        return -1;
+    }
+    c->code[pc].w = c->stmt;
+    PyObject *value;
+    int found;
+    if ((found = c_get(c, statement, S_expr, &value)) != 0) {
+        return found < 0 ? -1 : c_statement_expr(c, value);
+    }
+    if ((found = c_get(c, statement, S_jump, &value)) != 0) {
+        return found < 0 ? -1 : c_statement_jump(c, value);
+    }
+    if ((found = c_get(c, statement, S_return, &value)) != 0) {
+        return found < 0 ? -1 : c_statement_return(c, value);
+    }
+    if ((found = c_get(c, statement, S_function, &value)) != 0) {
+        return found < 0 ? -1 : c_statement_function(c, value);
+    }
+    if ((found = c_get(c, statement, S_include, &value)) != 0) {
+        if (found < 0 || (pc = c_emit(c, OP_INCLUDE, 0, 0, 0)) < 0) {
+            return -1;
+        }
+        c->code[pc].w = c->stmt;
+    }
+    return 0;
+}
+
+
+// A statement's control flow, for the definite assignment analysis
+typedef struct {
+    int assign;     // the slot the statement assigns, or -1
+    int target;     // the statement a label jump continues with, or -1
+    int next;       // the statement can continue with the next statement
+} Flow;
+
+
+// Definite assignment - the slots assigned on every path to each statement, a forward must-analysis over the
+// statements' fall-through and label jump edges. A local variable read where its slot is definitely assigned
+// reads the slot directly; elsewhere it reads the global of its name if the slot is unassigned. Returns each
+// statement's slot bit set (words per statement); an unreached statement's set is every slot.
+static uint64_t *c_definite(Compiler *c, Flow *flow, Py_ssize_t count, int words)
+{
+    uint64_t *sets = PyMem_Malloc((count * words + 1) * sizeof(uint64_t));
+    Py_ssize_t *work = PyMem_Malloc((count + 1) * sizeof(Py_ssize_t));
+    char *queued = PyMem_Calloc(count + 1, 1), *reached = PyMem_Calloc(count + 1, 1);
+    if (sets == NULL || work == NULL || queued == NULL || reached == NULL) {
+        PyMem_Free(sets);
+        PyMem_Free(work);
+        PyMem_Free(queued);
+        PyMem_Free(reached);
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(sets, 0xFF, count * words * sizeof(uint64_t));
+
+    // The arguments are assigned on entry
+    Py_ssize_t nwork = 0;
+    if (count > 0) {
+        memset(sets, 0, words * sizeof(uint64_t));
+        for (int slot = 0; slot < c->nargslots; slot++) {
+            sets[slot / 64] |= (uint64_t)1 << (slot % 64);
+        }
+        reached[0] = queued[0] = 1;
+        work[nwork++] = 0;
+    }
+    while (nwork > 0) {
+        Py_ssize_t ix = work[--nwork];
+        queued[ix] = 0;
+        Py_ssize_t succs[2] = {flow[ix].next ? ix + 1 : -1, flow[ix].target};
+        for (int ix_succ = 0; ix_succ < 2; ix_succ++) {
+            Py_ssize_t succ = succs[ix_succ];
+            if (succ < 0 || succ >= count) {
+                continue;
+            }
+            uint64_t *in = sets + ix * words, *succ_in = sets + succ * words;
+            int changed = !reached[succ];
+            for (int word = 0; word < words; word++) {
+                uint64_t out = in[word];
+                if (flow[ix].assign >= 0 && flow[ix].assign / 64 == word) {
+                    out |= (uint64_t)1 << (flow[ix].assign % 64);
+                }
+                uint64_t value = reached[succ] ? succ_in[word] & out : out;
+                changed = changed || value != succ_in[word];
+                succ_in[word] = value;
+            }
+            reached[succ] = 1;
+            if (changed && !queued[succ]) {
+                queued[succ] = 1;
+                work[nwork++] = succ;
             }
         }
     }
+    PyMem_Free(work);
+    PyMem_Free(queued);
+    PyMem_Free(reached);
+    return sets;
+}
 
-    // Allocate the locals slots
-    Py_ssize_t nslots = body->nslots;
-    PyObject *slots_stack[16];
-    PyObject **slots = slots_stack;
-    if (nslots > 16) {
-        slots = PyMem_Calloc((size_t)nslots, sizeof(PyObject *));
-        if (slots == NULL) {
+
+// Compile a statements list
+static int c_statements(Compiler *c, PyObject *statements)
+{
+    if (c_labels(c, statements, c->labels) < 0) {
+        return -1;
+    }
+    Py_ssize_t count = PyList_GET_SIZE(statements);
+
+    // A function's local variables are its arguments (already added) and its assignment targets
+    Flow *flow = NULL;
+    uint64_t *definite = NULL;
+    int words = 0;
+    if (c->mode == MODE_FUNC) {
+        flow = PyMem_Calloc(count + 1, sizeof(Flow));
+        if (flow == NULL) {
             PyErr_NoMemory();
-            return NULL;
+            return -1;
         }
-    } else {
-        memset(slots_stack, 0, sizeof(slots_stack));
+        for (Py_ssize_t ix = 0; ix < count; ix++) {
+            PyObject *statement = c_item(c, statements, ix), *value, *name;
+            int found = statement != NULL ? c_get(c, statement, S_expr, &value) : -1;
+            flow[ix].assign = -1;
+            flow[ix].target = -1;
+            flow[ix].next = 1;
+            if (found > 0) {
+                if (PyDict_CheckExact(value)) {
+                    found = c_get(c, value, S_name, &name);
+                    if (found > 0 && PyUnicode_CheckExact(name)) {
+                        found = flow[ix].assign = c_slot_add(c, name);
+                    }
+                }
+            } else if (found == 0 && (found = c_get(c, statement, S_jump, &value)) > 0) {
+                if (PyDict_CheckExact(value)) {
+                    PyObject *label, *label_index;
+                    found = c_get(c, value, S_label, &label);
+                    if (found > 0 && PyUnicode_CheckExact(label) &&
+                        (label_index = PyDict_GetItemWithError(c->labels, label)) != NULL) {
+                        flow[ix].target = (int)PyLong_AsLong(label_index) + 1;
+                    }
+                    found = found < 0 || PyErr_Occurred() ? -1 : PyDict_Contains(value, S_expr);
+                    flow[ix].next = found > 0;
+                }
+            } else if (found == 0 && (found = c_get(c, statement, S_return, &value)) > 0) {
+                flow[ix].next = 0;
+            }
+            if (found < 0) {
+                PyMem_Free(flow);
+                return -1;
+            }
+        }
+        words = ((int)PyList_GET_SIZE(c->slot_names) + 63) / 64;
+        definite = c_definite(c, flow, count, words);
+        PyMem_Free(flow);
+        if (definite == NULL) {
+            return -1;
+        }
     }
 
-    // Bind the arguments
-    PyObject *result = NULL;
-    Py_ssize_t ix_arg_last = body->nargs_decl - 1;
-    for (Py_ssize_t ix_arg = 0; ix_arg < body->nargs_decl; ix_arg++) {
-        PyObject *arg_value;
-        if (ix_arg < args_length) {
-            if (last_arg_array && ix_arg == ix_arg_last) {
-                arg_value = PySequence_GetSlice(args, ix_arg, args_length);
-            } else {
-                arg_value = PySequence_GetItem(args, ix_arg);
-            }
-        } else {
-            arg_value = (last_arg_array && ix_arg == ix_arg_last) ? PyList_New(0) : Py_NewRef(Py_None);
-        }
-        if (arg_value == NULL) {
+    // Compile the statements, noting where each begins for the label jumps
+    int *starts = PyMem_Malloc((count + 1) * sizeof(int));
+    if (starts == NULL) {
+        PyMem_Free(definite);
+        PyErr_NoMemory();
+        return -1;
+    }
+    int rc = -1;
+    for (Py_ssize_t ix = 0; ix < count; ix++) {
+        PyObject *statement = c_item(c, statements, ix);
+        c->stmt = (uint32_t)ix;
+        c->definite = definite != NULL ? definite + ix * words : NULL;
+        starts[ix] = c->ncode;
+        if (statement == NULL || c_statement(c, statement) < 0) {
             goto done;
         }
-        Py_XSETREF(slots[body->arg_slots[ix_arg]], arg_value);
+    }
+    c->stmt = (uint32_t)count;
+    starts[count] = c_emit(c, OP_RETNONE, 0, 0, 0);
+    if (starts[count] < 0) {
+        goto done;
     }
 
-    // Execute the function statements
-    {
-        Scope scope = {Py_None, slots, body->slot_names, nslots};
-        result = execute_script_helper(script_function->script, statements, ctx, &scope, body);
-        if (scope.dict != Py_None) {
-            // The scope was materialized to a dict after leaving the compiled fast path
-            Py_DECREF(scope.dict);
+    // A jump to a label continues with the statement after it
+    for (int ix = 0; ix < c->nfixups; ix++) {
+        c->code[c->fixups[ix * 2]].w = (uint32_t)starts[c->fixups[ix * 2 + 1] + 1];
+    }
+    rc = 0;
+
+done:
+    c->definite = NULL;
+    PyMem_Free(definite);
+    PyMem_Free(starts);
+    return rc;
+}
+
+
+// Finish a compile - number the registers and build the chunk
+static Chunk *c_finish(Compiler *c, Chunk *chunk)
+{
+    int nslots = (int)PyList_GET_SIZE(c->slot_names);
+    int ntemps = c->tmpmax;
+    for (int pc = 0; pc < c->ncode; pc++) {
+        Inst *inst = &c->code[pc];
+        int regs = op_registers(inst->op);
+        uint16_t *fields[3] = {&inst->a, &inst->b, &inst->c};
+        for (int ix = 0; ix < 3; ix++) {
+            if (regs & (1 << ix)) {
+                uint16_t reg = *fields[ix];
+                *fields[ix] = (reg & REG_CONST) ? (uint16_t)(nslots + ntemps + (reg & REG_MAX)) :
+                    ((reg & REG_TEMP) ? (uint16_t)(nslots + (reg & REG_MAX)) : reg);
+            }
         }
+    }
+
+    chunk->code = c->code;
+    chunk->pcstmt = c->pcstmt;
+    c->code = NULL;
+    c->pcstmt = NULL;
+    chunk->nslots = nslots;
+    chunk->nowned = nslots + ntemps;
+    chunk->nconsts = (int)PyList_GET_SIZE(c->consts);
+    chunk->nnames = (int)PyList_GET_SIZE(c->names);
+    chunk->consts = PyMem_Calloc(chunk->nconsts + 1, sizeof(PyObject *));
+    chunk->names = PyMem_Calloc(chunk->nnames + 1, sizeof(PyObject *));
+    chunk->slot_names = PyMem_Calloc(nslots + 1, sizeof(PyObject *));
+    if (chunk->consts == NULL || chunk->names == NULL || chunk->slot_names == NULL) {
+        chunk->nconsts = chunk->nnames = chunk->nslots = 0;
+        chunk_free(chunk);
+        PyErr_NoMemory();
+        return NULL;
+    }
+    for (int ix = 0; ix < chunk->nconsts; ix++) {
+        chunk->consts[ix] = Py_NewRef(PyList_GET_ITEM(c->consts, ix));
+    }
+    for (int ix = 0; ix < chunk->nnames; ix++) {
+        chunk->names[ix] = Py_NewRef(PyList_GET_ITEM(c->names, ix));
+    }
+    for (int ix = 0; ix < nslots; ix++) {
+        chunk->slot_names[ix] = Py_NewRef(PyList_GET_ITEM(c->slot_names, ix));
+    }
+    return chunk;
+}
+
+
+// Compile a statements list or expression. Returns NULL on error; the chunk's irregular flag is set for a
+// model that is not compiled.
+static Chunk *compile(int mode, PyObject *script, PyObject *model, PyObject *function)
+{
+    Chunk *chunk = PyMem_Calloc(1, sizeof(Chunk));
+    if (chunk == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    Compiler compiler = {0}, *c = &compiler;
+    c->mode = mode;
+    c->result_pc = -1;
+    c->reg_none = c->reg_false = c->reg_true = -1;
+    c->consts = PyList_New(0);
+    c->names = PyList_New(0);
+    c->name_index = PyDict_New();
+    c->slots = PyDict_New();
+    c->slot_names = PyList_New(0);
+    c->labels = PyDict_New();
+    c->keep = PyList_New(0);
+    int rc = -1;
+    if (c->consts == NULL || c->names == NULL || c->name_index == NULL || c->slots == NULL ||
+        c->slot_names == NULL || c->labels == NULL || c->keep == NULL) {
+        goto done;
+    }
+
+    if (mode == MODE_EXPR) {
+        int reg = c_expr(c, model);
+        rc = reg < 0 || c_emit(c, OP_RET, reg, 0, 0) < 0 ? -1 : 0;
+    } else {
+        chunk->script = Py_NewRef(script);
+        chunk->statements = Py_NewRef(model);
+        chunk->nstatements = PyList_Check(model) ? PyList_GET_SIZE(model) : 0;
+
+        // A function's arguments are its leading local variable slots
+        if (mode == MODE_FUNC) {
+            PyObject *args, *last_arg_array;
+            int found = c_get(c, function, S_args, &args);
+            if (found > 0 && args != Py_None) {
+                if (!PyList_CheckExact(args)) {
+                    rc = c_irregular(c);
+                    goto done;
+                }
+                chunk->args = Py_NewRef(args);
+                chunk->nargs = (int)PyList_GET_SIZE(args);
+                chunk->arg_slots = PyMem_Calloc(chunk->nargs + 1, sizeof(uint16_t));
+                chunk->arg_items = PyMem_Calloc(chunk->nargs + 1, sizeof(PyObject *));
+                if (chunk->arg_slots == NULL || chunk->arg_items == NULL) {
+                    chunk->nargs = 0;
+                    PyErr_NoMemory();
+                    goto done;
+                }
+                for (int ix = 0; ix < chunk->nargs; ix++) {
+                    PyObject *arg = bs_list_get(args, ix);
+                    chunk->arg_items[ix] = arg;
+                    if (arg == NULL) {
+                        goto done;
+                    }
+                    if (!PyUnicode_CheckExact(arg)) {
+                        rc = c_irregular(c);
+                        goto done;
+                    }
+                    int slot = c_slot_add(c, arg);
+                    if (slot < 0) {
+                        goto done;
+                    }
+                    chunk->arg_slots[ix] = (uint16_t)slot;
+                }
+                c->nargslots = (int)PyList_GET_SIZE(c->slot_names);
+                found = c_get(c, function, S_lastArgArray, &last_arg_array);
+                chunk->last_arg_array = found > 0 ? PyObject_IsTrue(last_arg_array) : found;
+                chunk->last_arg_array_plain = found == 0 || last_arg_array == Py_None || PyBool_Check(last_arg_array);
+                if (chunk->last_arg_array < 0) {
+                    goto done;
+                }
+            } else if (found < 0) {
+                goto done;
+            }
+        }
+        rc = c_statements(c, model);
     }
 
 done:
-    for (Py_ssize_t ix = 0; ix < nslots; ix++) {
-        Py_XDECREF(slots[ix]);
+    if (rc < 0 && !PyErr_Occurred()) {
+        chunk->irregular = 1;
     }
-    if (slots != slots_stack) {
-        PyMem_Free(slots);
+    Chunk *result = NULL;
+    if (rc == 0) {
+        result = c_finish(c, chunk);
+    } else if (chunk->irregular) {
+        result = chunk;
+    } else {
+        chunk_free(chunk);
     }
+    PyMem_Free(c->code);
+    PyMem_Free(c->pcstmt);
+    PyMem_Free(c->fixups);
+    Py_XDECREF(c->consts);
+    Py_XDECREF(c->names);
+    Py_XDECREF(c->name_index);
+    Py_XDECREF(c->slots);
+    Py_XDECREF(c->slot_names);
+    Py_XDECREF(c->labels);
+    Py_XDECREF(c->keep);
     return result;
 }
 
 
-// Execute a function body on the given execution context, using slot-based locals when the
-// compiled body supports them and the declared arguments are unchanged
-static PyObject *script_function_execute(
-    ScriptFunctionObject *script_function, PyObject *statements, CompiledBody *body, PyObject *args, ExecCtx *ctx
-)
+//
+// The execution context and frames
+//
+
+
+// A global call resolution (GIL builds) - a call name's value in the globals, valid while the globals epoch stands
+// still. The epoch advances whenever a globals dict might change: Python code running, an include, a global
+// assignment or function definition, or a library function setting a key of the globals. A context's frames all
+// share its globals, which change only when Python code runs. The free-threaded build resolves every call - another
+// thread's Python code could change the globals without advancing the epoch.
+#define CALL_CACHE_SIZE 128
+#ifndef Py_GIL_DISABLED
+#define BS_CALL_CACHE 1
+static uint64_t g_globals_epoch = 1;
+#define globals_changed() (g_globals_epoch++)
+#else
+#define globals_changed() ((void)0)
+#endif
+
+typedef struct CallCache {
+    PyObject *name;             // the interned call name (a reference)
+    PyObject *func;             // its value in the globals (a reference)
+    PyObject *globals;          // the globals (a reference)
+    uint64_t epoch;
+} CallCache;
+
+
+// An execution context - one per entry from Python, shared by the script function calls it makes directly.
+// The statement count is kept here and synchronized with options['statementCount'] whenever Python code might
+// read or write it. runtime.py's per-call setup reads - the globals, the statement limit, and the coverage
+// global - are cached here too, and dropped whenever anything could have changed them: Python code running, or
+// this runtime assigning the coverage global or setting a key of the coverage, globals, or options dict.
+// The statement count while options['statementCount'] is runtime.py's - above every frame's limit, so that each
+// statement counts with count_python
+#define COUNT_PYTHON (LLONG_MAX - 1)
+
+typedef struct {
+    PyObject *options;          // borrowed - the caller holds it
+    long long count;
+    long long synced;           // the count when last synchronized
+    PyObject *synced_obj;       // options['statementCount'] when last synchronized - NULL until the count is loaded
+    int count_python;           // options['statementCount'] isn't an int this runtime can count (see count_python)
+    PyObject *setup_globals;    // options['globals'] - NULL until the setup reads are cached
+    PyObject *setup_max;        // options.get('maxStatements', DEFAULT_MAX_STATEMENTS)
+    long long setup_limit;      // a statement count above this exceeds maxStatements
+    PyObject *setup_coverage;   // globals['__barescriptCoverage'] if it's a dict, or NULL
+    int setup_enabled;          // its "enabled" truth, or -1 to read it on each call
+    struct CallCache *call_cache; // global call resolutions (GIL builds), allocated on first use
+} Ctx;
+
+
+// Drop the cached setup reads
+static void ctx_invalidate(Ctx *ctx)
 {
-    // Slot-based locals fast path - the declared argument names must match the compiled
-    // binding plan (compared per item, so in-place model mutation falls back to dict locals)
-    if (body != NULL && body->slot_names != NULL) {
-        PyObject *args_decl = NULL;
-        int found = obj_get(script_function->function, g.str_args, &args_decl);
+    Py_CLEAR(ctx->setup_globals);
+    Py_CLEAR(ctx->setup_max);
+    Py_CLEAR(ctx->setup_coverage);
+}
+
+
+// A dict this runtime changed - drop the cached setup reads if it's the options, globals, or coverage dict
+static void ctx_dict_changed(Ctx *ctx, PyObject *dict)
+{
+    if (dict == ctx->setup_coverage || dict == ctx->setup_globals || dict == ctx->options) {
+        ctx_invalidate(ctx);
+    }
+}
+
+
+// Write the statement count to the options
+static int ctx_sync_out(Ctx *ctx)
+{
+    if (ctx->synced_obj == NULL || ctx->count_python || ctx->count == ctx->synced) {
+        return 0;
+    }
+    PyObject *count = PyLong_FromLongLong(ctx->count);
+    if (count == NULL || PyDict_SetItem(ctx->options, S_statementCount, count) < 0) {
+        Py_XDECREF(count);
+        return -1;
+    }
+    Py_XSETREF(ctx->synced_obj, count);
+    ctx->synced = ctx->count;
+    return 0;
+}
+
+
+// Read the statement count back from the options, after Python code may have changed it
+static void ctx_sync_in(Ctx *ctx)
+{
+    ctx_invalidate(ctx);
+    globals_changed();
+    if (ctx->synced_obj == NULL) {
+        return;
+    }
+    PyObject *count;
+    int found = bs_dict_get(ctx->options, S_statementCount, &count);
+    if (found < 0) {
+        PyErr_Clear();
+    }
+    long long value;
+    if (found > 0 && count == ctx->synced_obj) {
+        Py_DECREF(count);
+    } else if (found > 0 && PyLong_CheckExact(count) && small_int(count, &value)) {
+        ctx->count = ctx->synced = value;
+        ctx->count_python = 0;
+        Py_XSETREF(ctx->synced_obj, count);
+    } else {
+        // A count this runtime can't keep - each statement updates options['statementCount'] as runtime.py does
+        ctx->count = COUNT_PYTHON;
+        ctx->count_python = 1;
+        Py_XDECREF(count);
+    }
+}
+
+
+// Exit the context - write the statement count to the options, preserving any raised exception
+static void ctx_exit(Ctx *ctx)
+{
+    PyObject *exc = PyErr_Occurred() ? bs_err_fetch() : NULL;
+    if (ctx_sync_out(ctx) < 0) {
+        PyErr_Clear();
+    }
+    if (exc != NULL) {
+        bs_err_restore(exc);
+    }
+    Py_CLEAR(ctx->synced_obj);
+    ctx_invalidate(ctx);
+    if (ctx->call_cache != NULL) {
+        for (int ix = 0; ix < CALL_CACHE_SIZE; ix++) {
+            Py_XDECREF(ctx->call_cache[ix].name);
+            Py_XDECREF(ctx->call_cache[ix].func);
+            Py_XDECREF(ctx->call_cache[ix].globals);
+        }
+        PyMem_Free(ctx->call_cache);
+    }
+}
+
+
+// A running chunk
+typedef struct {
+    Ctx *ctx;
+    Chunk *chunk;
+    PyObject **regs;
+    PyObject *globals;          // a new reference, or NULL (evaluate_expression without globals)
+    PyObject *locals;           // evaluate_expression's locals dict (borrowed), or NULL
+    PyObject *coverage;         // a new reference to the coverage global when recording coverage, or NULL
+    PyObject *max_statements;   // a new reference to the maxStatements option
+    long long limit;            // a statement count above this takes the STMT slow path
+    long long max_limit;        // a statement count above this exceeds maxStatements
+    PyObject *script;           // the script for error messages (borrowed)
+    PyObject *statement;        // evaluate_expression's statement for error messages (borrowed)
+    int builtins;
+} Frame;
+
+
+// Read and cache runtime.py's per-call setup - returns 1, 0 if the options are not supported here (run
+// runtime.py), or -1 on error
+static int ctx_setup(Ctx *ctx)
+{
+    PyObject *options = ctx->options, *globals, *max = NULL, *coverage = NULL;
+    int found = bs_dict_get(options, S_globals, &globals);
+    if (found <= 0 || !PyDict_CheckExact(globals)) {
+        Py_XDECREF(globals);
+        return found < 0 ? -1 : 0;
+    }
+
+    // The statement limit - a count greater than a positive maxStatements
+    int rc = 0;
+    long long limit = COUNT_PYTHON - 1, max_int;
+    found = bs_dict_get(options, S_maxStatements, &max);
+    if (found == 0) {
+        max = Py_NewRef(g_default_max_statements);
+    }
+    if (found < 0) {
+        rc = -1;
+    } else if (PyFloat_CheckExact(max)) {
+        double max_float = PyFloat_AS_DOUBLE(max);
+        if (max_float > 0 && max_float < 9e18) {
+            limit = (long long)max_float;
+        }
+        rc = 1;
+    } else if (PyLong_CheckExact(max) || PyBool_Check(max)) {
+        if (small_int(max, &max_int) && max_int > 0) {
+            limit = max_int < COUNT_PYTHON ? max_int : COUNT_PYTHON - 1;
+        }
+        rc = 1;
+    }
+
+    // The coverage global - its "enabled" value is read on each call unless it's a bool or None
+    int enabled = 0;
+    if (rc > 0 && (found = bs_dict_get(globals, S_coverage, &coverage)) != 0) {
         if (found < 0) {
+            rc = -1;
+        } else if (!PyDict_Check(coverage)) {
+            Py_CLEAR(coverage);
+        } else if (!PyDict_CheckExact(coverage)) {
+            enabled = -1;
+        } else {
+            PyObject *value;
+            found = bs_dict_get(coverage, S_enabled, &value);
+            if (found < 0) {
+                rc = -1;
+            } else {
+                enabled = found && value != Py_None && !PyBool_Check(value) ? -1 : value == Py_True;
+                Py_XDECREF(value);
+            }
+        }
+    }
+    if (rc <= 0) {
+        Py_DECREF(globals);
+        Py_XDECREF(max);
+        Py_XDECREF(coverage);
+        return rc;
+    }
+    ctx->setup_globals = globals;
+    ctx->setup_max = max;
+    ctx->setup_limit = limit;
+    ctx->setup_coverage = coverage;
+    ctx->setup_enabled = enabled;
+    return 1;
+}
+
+
+// Begin a statements frame - runtime.py's _execute_script_helper preamble. Returns 1, 0 if the options are
+// not supported here (run runtime.py), or -1 on error.
+static int frame_begin(Frame *f, Ctx *ctx, Chunk *chunk, PyObject *script)
+{
+    f->ctx = ctx;
+    f->chunk = chunk;
+    f->script = script;
+    if (ctx->setup_globals == NULL) {
+        int rc = ctx_setup(ctx);
+        if (rc <= 0) {
+            return rc;
+        }
+    }
+    f->globals = Py_NewRef(ctx->setup_globals);
+    f->max_statements = Py_NewRef(ctx->setup_max);
+    f->max_limit = ctx->setup_limit;
+
+    // options.setdefault('statementCount', 0)
+    if (ctx->synced_obj == NULL) {
+        PyObject *count;
+        int found = bs_dict_get(ctx->options, S_statementCount, &count);
+        if (found < 0) {
+            return -1;
+        }
+        if (!found) {
+            count = Py_NewRef(g_zero);
+            if (PyDict_SetItem(ctx->options, S_statementCount, count) < 0) {
+                Py_DECREF(count);
+                return -1;
+            }
+        }
+        if (!PyLong_CheckExact(count) || !small_int(count, &ctx->count)) {
+            Py_DECREF(count);
+            return 0;
+        }
+        ctx->synced = ctx->count;
+        ctx->synced_obj = count;
+    }
+
+    // Recording coverage?
+    int truth = ctx->setup_enabled;
+    if (truth < 0) {
+        PyObject *enabled = object_get(ctx->setup_coverage, S_enabled);
+        truth = enabled != NULL ? PyObject_IsTrue(enabled) : -1;
+        Py_XDECREF(enabled);
+    }
+    if (truth > 0) {
+        PyObject *system = object_get(script, S_system);
+        truth = system != NULL ? PyObject_IsTrue(system) : -1;
+        Py_XDECREF(system);
+        if (truth == 0) {
+            f->coverage = Py_NewRef(ctx->setup_coverage);
+        }
+    }
+    f->limit = f->coverage != NULL ? LLONG_MIN : f->max_limit;
+    return truth < 0 ? -1 : 1;
+}
+
+
+static void frame_end(Frame *f)
+{
+    Py_CLEAR(f->globals);
+    Py_CLEAR(f->coverage);
+    Py_CLEAR(f->max_statements);
+}
+
+
+// The registers a frame gets on the C stack before it needs the heap
+#define REGS_SMALL 32
+
+
+static PyObject **regs_alloc(Chunk *chunk, PyObject **small)
+{
+    int nowned = chunk->nowned, count = nowned + chunk->nconsts;
+    PyObject **regs = count <= REGS_SMALL ? small : PyMem_Malloc(count * sizeof(PyObject *));
+    if (regs == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(regs, 0, nowned * sizeof(PyObject *));
+    memcpy(regs + nowned, chunk->consts, chunk->nconsts * sizeof(PyObject *));
+    return regs;
+}
+
+
+static void regs_free(Chunk *chunk, PyObject **regs, PyObject **small)
+{
+    int nowned = chunk->nowned;
+    for (int ix = 0; ix < nowned; ix++) {
+        Py_XDECREF(regs[ix]);
+    }
+    if (regs != small) {
+        PyMem_Free(regs);
+    }
+}
+
+
+// Claim a function's resident registers - its owned registers are null (they're released when a call finishes)
+// and its constants in place. A function gets resident registers on its second call; a call finding them in use
+// (recursion, or another thread) uses registers of its own. Returns NULL if not claimed.
+static PyObject **regs_claim(Chunk *chunk)
+{
+    PyObject **regs = bs_atomic_load(&chunk->resident);
+    if (regs == NULL) {
+        if (bs_atomic_claim(&chunk->called)) {
             return NULL;
         }
-        if (args_decl == Py_None) {
-            Py_CLEAR(args_decl);
+        int nowned = chunk->nowned;
+        regs = PyMem_Calloc(nowned + chunk->nconsts + 1, sizeof(PyObject *));
+        if (regs == NULL) {
+            return NULL;
         }
-        int args_match;
-        if (body->arg_names == NULL) {
-            args_match = (args_decl == NULL);
-        } else if (args_decl != NULL && PyList_CheckExact(args_decl) &&
-                   PyList_GET_SIZE(args_decl) == PyTuple_GET_SIZE(body->arg_names)) {
-            args_match = 1;
-            for (Py_ssize_t ix_arg = 0; ix_arg < PyTuple_GET_SIZE(body->arg_names); ix_arg++) {
-                if (PyList_GET_ITEM(args_decl, ix_arg) != PyTuple_GET_ITEM(body->arg_names, ix_arg)) {
-                    args_match = 0;
-                    break;
-                }
-            }
-        } else {
-            args_match = 0;
-        }
-        Py_XDECREF(args_decl);
-        if (args_match) {
-            return script_function_execute_slots(script_function, statements, body, args, ctx);
+        memcpy(regs + nowned, chunk->consts, chunk->nconsts * sizeof(PyObject *));
+        PyObject **expected = NULL;
+        if (!bs_atomic_publish(&chunk->resident, &expected, regs)) {
+            PyMem_Free(regs);
+            regs = expected;
         }
     }
-
-    // Dict-based locals
-    PyObject *func_locals = script_function_locals(script_function->function, args);
-    if (func_locals == NULL) {
-        return NULL;
-    }
-    Scope scope = {func_locals, NULL, NULL, 0};
-    PyObject *result = execute_script_helper(script_function->script, statements, ctx, &scope, body);
-    Py_DECREF(func_locals);
-    return result;
+    return bs_atomic_claim(&chunk->resident_busy) ? regs : NULL;
 }
 
 
-// Invoke a BareScript function on an existing execution context (the runtime's internal call path)
-static PyObject *script_function_invoke_ctx(ScriptFunctionObject *script_function, PyObject *args, ExecCtx *ctx)
+// Release a function's resident registers
+static void regs_release(Chunk *chunk, PyObject **regs)
 {
-    PyObject *statements;
-    if (obj_subscript(script_function->function, g.str_statements, &statements) < 0) {
-        return NULL;
+    int nowned = chunk->nowned;
+    for (int ix = 0; ix < nowned; ix++) {
+        PyObject *value = regs[ix];
+        regs[ix] = NULL;
+        Py_XDECREF(value);
     }
-    CompiledBody *body = NULL;
-    if (script_function_get_body(script_function, statements, &body) < 0) {
-        Py_DECREF(statements);
-        return NULL;
-    }
-    PyObject *result = script_function_execute(script_function, statements, body, args, ctx);
-    Py_DECREF(statements);
-    return result;
+    bs_atomic_store(&chunk->resident_busy, 0);
 }
 
 
-// The _script_function logic - execute the function statements on a fresh execution context
-// (the Python-visible call path)
-static PyObject *script_function_invoke(ScriptFunctionObject *script_function, PyObject *args, PyObject *options)
+// The statement at a statement index (a new reference) - None past the end
+static PyObject *chunk_statement(Chunk *chunk, uint32_t index)
 {
-    PyObject *statements = NULL;
-    PyObject *result = NULL;
-    if (obj_subscript(script_function->function, g.str_statements, &statements) < 0) {
-        return NULL;
+    PyObject *statement = chunk->statements != NULL ? bs_list_get(chunk->statements, index) : NULL;
+    if (statement == NULL) {
+        PyErr_Clear();
+        statement = Py_NewRef(Py_None);
     }
-    CompiledBody *body = NULL;
-    if (script_function_get_body(script_function, statements, &body) < 0) {
-        Py_DECREF(statements);
-        return NULL;
-    }
-    ExecCtx ctx;
-    if (exec_ctx_init_exec(&ctx, options) == 0) {
-        result = script_function_execute(script_function, statements, body, args, &ctx);
-        exec_ctx_sync_out_final(&ctx);
-    }
-    exec_ctx_fini(&ctx);
-    Py_DECREF(statements);
-    return result;
+    return statement;
 }
 
 
-static PyObject *script_function_call(PyObject *self, PyObject *args, PyObject *kwargs)
+// The error-message statement of an instruction (a new reference)
+static PyObject *frame_statement(Frame *f, const Inst *inst)
 {
-    ScriptFunctionObject *script_function = (ScriptFunctionObject *)self;
-    PyObject *fn_args;
-    PyObject *fn_options;
-    if (kwargs != NULL && PyDict_GET_SIZE(kwargs) != 0) {
-        PyErr_SetString(PyExc_TypeError, "script function takes no keyword arguments");
+    if (f->chunk->statements == NULL) {
+        return Py_NewRef(f->statement != NULL ? f->statement : Py_None);
+    }
+    return chunk_statement(f->chunk, f->chunk->pcstmt[inst - f->chunk->code]);
+}
+
+
+//
+// Coverage
+//
+
+
+// runtime.py's _record_statement_coverage
+static int coverage_record(PyObject *script, PyObject *statement, PyObject *coverage)
+{
+    // The statement's first key
+    PyObject *keys = PyDict_Keys(statement);
+    if (keys == NULL) {
+        return -1;
+    }
+    if (PyList_GET_SIZE(keys) == 0) {
+        Py_DECREF(keys);
+        PyErr_SetNone(PyExc_StopIteration);
+        return -1;
+    }
+    PyObject *key = Py_NewRef(PyList_GET_ITEM(keys, 0));
+    Py_DECREF(keys);
+
+    // Exact dicts are recorded here, anything else by runtime.py
+    int rc = -1;
+    PyObject *script_name = NULL, *statement_value = NULL, *lineno = NULL, *scripts = NULL, *script_coverage = NULL,
+        *lineno_str = NULL, *covered = NULL, *covered_statement = NULL, *count = NULL;
+    script_name = object_get(script, S_scriptName);
+    if (script_name == NULL || bs_dict_get(statement, key, &statement_value) < 0) {
+        goto done;
+    }
+    if (statement_value == NULL || !PyDict_CheckExact(statement_value) || !PyDict_CheckExact(coverage)) {
+        goto python;
+    }
+    lineno = object_get(statement_value, S_lineNumber);
+    if (lineno == NULL) {
+        goto done;
+    }
+    if (script_name == Py_None || lineno == Py_None) {
+        rc = 0;
+        goto done;
+    }
+    if ((scripts = object_get(coverage, S_scripts)) == NULL) {
+        goto done;
+    }
+    if (scripts == Py_None) {
+        Py_SETREF(scripts, PyDict_New());
+        if (scripts == NULL || PyDict_SetItem(coverage, S_scripts, scripts) < 0) {
+            goto done;
+        }
+    }
+    if (!PyDict_CheckExact(scripts)) {
+        goto python;
+    }
+    if ((script_coverage = object_get(scripts, script_name)) == NULL) {
+        goto done;
+    }
+    if (script_coverage == Py_None) {
+        PyObject *covered_new = PyDict_New();
+        Py_SETREF(script_coverage, covered_new != NULL ? Py_BuildValue("{sOsO}", "script", script, "covered", covered_new) : NULL);
+        Py_XDECREF(covered_new);
+        if (script_coverage == NULL || PyDict_SetItem(scripts, script_name, script_coverage) < 0) {
+            goto done;
+        }
+    }
+    if (!PyDict_CheckExact(script_coverage)) {
+        goto python;
+    }
+    if ((lineno_str = PyObject_Str(lineno)) == NULL) {
+        goto done;
+    }
+    covered = PyObject_GetItem(script_coverage, S_covered);
+    if (covered == NULL) {
+        goto done;
+    }
+    if (!PyDict_CheckExact(covered)) {
+        goto python;
+    }
+    if ((covered_statement = object_get(covered, lineno_str)) == NULL) {
+        goto done;
+    }
+    if (covered_statement == Py_None) {
+        Py_SETREF(covered_statement, Py_BuildValue("{sOsO}", "statement", statement, "count", g_zero));
+        if (covered_statement == NULL || PyDict_SetItem(covered, lineno_str, covered_statement) < 0) {
+            goto done;
+        }
+    }
+    if (!PyDict_CheckExact(covered_statement)) {
+        goto python;
+    }
+    count = PyObject_GetItem(covered_statement, S_count);
+    if (count == NULL) {
+        goto done;
+    }
+    Py_SETREF(count, PyNumber_Add(count, g_one));
+    rc = count != NULL ? PyDict_SetItem(covered_statement, S_count, count) : -1;
+    goto done;
+
+python:
+    {
+        PyObject *result = runtime_call("_record_statement_coverage", script, statement, key, coverage, NULL);
+        rc = result != NULL ? 0 : -1;
+        Py_XDECREF(result);
+    }
+
+done:
+    Py_DECREF(key);
+    Py_XDECREF(script_name);
+    Py_XDECREF(statement_value);
+    Py_XDECREF(lineno);
+    Py_XDECREF(scripts);
+    Py_XDECREF(script_coverage);
+    Py_XDECREF(lineno_str);
+    Py_XDECREF(covered);
+    Py_XDECREF(covered_statement);
+    Py_XDECREF(count);
+    return rc;
+}
+
+
+// Record the coverage of the statement at an index
+static int frame_coverage(Frame *f, uint32_t index)
+{
+    PyObject *statement = chunk_statement(f->chunk, index);
+    int rc = coverage_record(f->script, statement, f->coverage);
+    Py_DECREF(statement);
+    return rc;
+}
+
+
+//
+// Script functions
+//
+
+
+// The function model dict watcher (Python 3.12+) - runtime.py reads a function model's statements and arguments
+// on each call, so a compiled body is checked against its model on each call. A watched model dict's changes
+// advance the model epoch; while it stands still, only the model's lists can have changed.
+#if PY_VERSION_HEX >= 0x030C0000
+#define BS_MODEL_WATCH 1
+static int g_model_watcher = -1;
+static BS_ATOMIC_U64 g_model_epoch;
+
+
+static int model_watch_callback(PyDict_WatchEvent event, PyObject *dict, PyObject *key, PyObject *new_value)
+{
+    (void)dict;
+    (void)key;
+    (void)new_value;
+    if (event != PyDict_EVENT_DEALLOCATED) {
+        bs_atomic_add(&g_model_epoch);
+    }
+    return 0;
+}
+#endif
+
+
+// A script function - a function statement's model and its script, called as a Python function (args, options)
+typedef struct {
+    PyObject_HEAD
+    vectorcallfunc vectorcall;
+    PyObject *script;
+    PyObject *function;
+    BS_ATOMIC_PTR(Chunk) chunk;   // compiled on first call
+} ScriptFunction;
+
+static PyTypeObject ScriptFunction_Type;
+
+
+static PyObject *script_function_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames);
+
+
+static PyObject *script_function_new(PyObject *script, PyObject *function)
+{
+    ScriptFunction *fn = PyObject_GC_New(ScriptFunction, &ScriptFunction_Type);
+    if (fn == NULL) {
         return NULL;
     }
-    if (!PyArg_UnpackTuple(args, "script function", 2, 2, &fn_args, &fn_options)) {
-        return NULL;
-    }
-    return script_function_invoke(script_function, fn_args, fn_options);
+    fn->vectorcall = script_function_vectorcall;
+    fn->script = Py_NewRef(script);
+    fn->function = Py_NewRef(function);
+    fn->chunk = NULL;
+    PyObject_GC_Track((PyObject *)fn);
+    return (PyObject *)fn;
 }
 
 
 static int script_function_traverse(PyObject *self, visitproc visit, void *arg)
 {
-    ScriptFunctionObject *script_function = (ScriptFunctionObject *)self;
-    Py_VISIT(script_function->script);
-    Py_VISIT(script_function->function);
-    int result = compiled_body_traverse(script_function->compiled, visit, arg);
-    if (result != 0) {
-        return result;
+    ScriptFunction *fn = (ScriptFunction *)self;
+    Py_VISIT(fn->script);
+    Py_VISIT(fn->function);
+    Chunk *chunk = bs_atomic_load(&fn->chunk);
+    if (chunk != NULL) {
+        for (int ix = 0; ix < chunk->nconsts; ix++) {
+            Py_VISIT(chunk->consts[ix]);
+        }
+        Py_VISIT(chunk->statements);
+        Py_VISIT(chunk->script);
+        Py_VISIT(chunk->args);
     }
     return 0;
 }
@@ -2923,12 +2789,12 @@ static int script_function_traverse(PyObject *self, visitproc visit, void *arg)
 
 static int script_function_clear(PyObject *self)
 {
-    ScriptFunctionObject *script_function = (ScriptFunctionObject *)self;
-    Py_CLEAR(script_function->script);
-    Py_CLEAR(script_function->function);
-    CompiledBody *body = script_function->compiled;
-    script_function->compiled = NULL;
-    compiled_body_free(body);
+    ScriptFunction *fn = (ScriptFunction *)self;
+    Py_CLEAR(fn->script);
+    Py_CLEAR(fn->function);
+    Chunk *chunk = bs_atomic_load(&fn->chunk);
+    fn->chunk = NULL;
+    chunk_free(chunk);
     return 0;
 }
 
@@ -2937,2241 +2803,2039 @@ static void script_function_dealloc(PyObject *self)
 {
     PyObject_GC_UnTrack(self);
     script_function_clear(self);
-    Py_TYPE(self)->tp_free(self);
+    PyObject_GC_Del(self);
 }
 
 
-static PyTypeObject ScriptFunctionType = {
+static PyTypeObject ScriptFunction_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "bare_script.runtime_c.ScriptFunction",
-    .tp_basicsize = sizeof(ScriptFunctionObject),
+    .tp_basicsize = sizeof(ScriptFunction),
     .tp_dealloc = script_function_dealloc,
-    .tp_call = script_function_call,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_vectorcall_offset = offsetof(ScriptFunction, vectorcall),
+    .tp_call = PyVectorcall_Call,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_HAVE_VECTORCALL,
     .tp_traverse = script_function_traverse,
-    .tp_clear = script_function_clear
+    .tp_clear = script_function_clear,
 };
 
 
-static PyObject *script_function_new(PyObject *script, PyObject *function)
+// Get a script function's compiled body, compiling it on first call
+static Chunk *script_function_chunk(ScriptFunction *fn)
 {
-    ScriptFunctionObject *script_function = PyObject_GC_New(ScriptFunctionObject, &ScriptFunctionType);
-    if (script_function == NULL) {
-        return NULL;
+    Chunk *chunk = bs_atomic_load(&fn->chunk);
+    if (chunk != NULL) {
+        return chunk;
     }
-    script_function->script = Py_NewRef(script);
-    script_function->function = Py_NewRef(function);
-    script_function->compiled = NULL;
-    PyObject_GC_Track((PyObject *)script_function);
-    return (PyObject *)script_function;
-}
-
-
-//
-// Statement coverage recording (debug-only path)
-//
-
-
-static int record_statement_coverage(PyObject *script, PyObject *statement, PyObject *coverage_global)
-{
-    PyObject *script_name = NULL;
-    PyObject *lineno = NULL;
-    PyObject *scripts = NULL;
-    PyObject *script_coverage = NULL;
-    PyObject *lineno_str = NULL;
-    PyObject *covered = NULL;
-    PyObject *covered_statement = NULL;
-    PyObject *count = NULL;
-    PyObject *new_count = NULL;
-    int result = -1;
-
-    // Get the statement's first key's value (the statement model)
-    Py_ssize_t pos = 0;
-    PyObject *stmt_key_borrowed;
-    PyObject *stmt_value_borrowed;
-    if (!PyDict_Next(statement, &pos, &stmt_key_borrowed, &stmt_value_borrowed)) {
-        return 0;
-    }
-    PyObject *stmt_value = Py_NewRef(stmt_value_borrowed);
-
-    // Get the script name and statement line number
-    int found = obj_get(script, g.str_scriptName, &script_name);
-    if (found < 0) {
-        goto done;
-    }
-    if (!found || script_name == Py_None) {
-        result = 0;
-        goto done;
-    }
-    found = obj_get(stmt_value, g.str_lineNumber, &lineno);
-    if (found < 0) {
-        goto done;
-    }
-    if (!found || lineno == Py_None) {
-        result = 0;
-        goto done;
-    }
-
-    // Get/create the scripts coverage object
-    found = obj_get(coverage_global, g.str_scripts, &scripts);
-    if (found < 0) {
-        goto done;
-    }
-    if (!found || scripts == Py_None) {
-        Py_XDECREF(scripts);
-        scripts = PyDict_New();
-        if (scripts == NULL || obj_setitem(coverage_global, g.str_scripts, scripts) < 0) {
-            goto done;
-        }
-    }
-
-    // Get/create the script coverage object
-    found = obj_get(scripts, script_name, &script_coverage);
-    if (found < 0) {
-        goto done;
-    }
-    if (!found || script_coverage == Py_None) {
-        Py_XDECREF(script_coverage);
-        script_coverage = PyDict_New();
-        if (script_coverage == NULL) {
-            goto done;
-        }
-        PyObject *covered_new = PyDict_New();
-        if (covered_new == NULL) {
-            goto done;
-        }
-        if (PyDict_SetItem(script_coverage, g.str_script, script) < 0 ||
-            PyDict_SetItem(script_coverage, g.str_covered, covered_new) < 0) {
-            Py_DECREF(covered_new);
-            goto done;
-        }
-        Py_DECREF(covered_new);
-        if (obj_setitem(scripts, script_name, script_coverage) < 0) {
-            goto done;
-        }
-    }
-
-    // Get/create the covered statement object
-    lineno_str = PyObject_Str(lineno);
-    if (lineno_str == NULL) {
-        goto done;
-    }
-    if (obj_subscript(script_coverage, g.str_covered, &covered) < 0) {
-        goto done;
-    }
-    found = obj_get(covered, lineno_str, &covered_statement);
-    if (found < 0) {
-        goto done;
-    }
-    if (!found || covered_statement == Py_None) {
-        Py_XDECREF(covered_statement);
-        covered_statement = PyDict_New();
-        if (covered_statement == NULL) {
-            goto done;
-        }
-        if (PyDict_SetItem(covered_statement, g.str_statement, statement) < 0 ||
-            PyDict_SetItem(covered_statement, g.str_count, g.zero) < 0 ||
-            obj_setitem(covered, lineno_str, covered_statement) < 0) {
-            goto done;
-        }
-    }
-
-    // Increment the statement coverage count
-    if (obj_subscript(covered_statement, g.str_count, &count) < 0) {
-        goto done;
-    }
-    new_count = PyNumber_Add(count, g.one);
-    if (new_count == NULL || obj_setitem(covered_statement, g.str_count, new_count) < 0) {
-        goto done;
-    }
-    result = 0;
-
-done:
-    Py_XDECREF(new_count);
-    Py_XDECREF(count);
-    Py_XDECREF(covered_statement);
-    Py_XDECREF(covered);
-    Py_XDECREF(lineno_str);
-    Py_XDECREF(script_coverage);
-    Py_XDECREF(scripts);
-    Py_XDECREF(lineno);
-    Py_XDECREF(script_name);
-    Py_DECREF(stmt_value);
-    return result;
-}
-
-
-//
-// Expression evaluation
-//
-
-
-// Evaluate a variable expression
-static PyObject *eval_variable(PyObject *variable, PyObject *locals, PyObject *globals)
-{
-    // Keywords
-    if (PyUnicode_Check(variable)) {
-        Py_ssize_t length = PyUnicode_GetLength(variable);
-        if (length == 4) {
-            if (unicode_eq_ascii(variable, "null", 4)) {
-                Py_RETURN_NONE;
-            }
-            if (unicode_eq_ascii(variable, "true", 4)) {
-                Py_RETURN_TRUE;
-            }
-        } else if (length == 5 && unicode_eq_ascii(variable, "false", 5)) {
-            Py_RETURN_FALSE;
-        }
-    }
-
-    // Get the local variable value, if any
-    if (locals != Py_None) {
-        PyObject *value;
-        int found = obj_get(locals, variable, &value);
-        if (found < 0) {
+    // Watch the model dict before reading it
+    int watched = 0;
+    uint64_t epoch = 0;
+#ifdef BS_MODEL_WATCH
+    if (g_model_watcher >= 0) {
+        if (PyDict_Watch(g_model_watcher, fn->function) < 0) {
             return NULL;
         }
-        if (found) {
-            return value;
-        }
+        watched = 1;
+        epoch = bs_atomic_load(&g_model_epoch);
     }
-
-    // Get the global variable value or None if undefined
-    if (globals != NULL) {
-        PyObject *value;
-        int found = obj_get(globals, variable, &value);
-        if (found < 0) {
-            return NULL;
-        }
-        if (found) {
-            return value;
-        }
+#endif
+    PyObject *statements;
+    int found = bs_dict_get(fn->function, S_statements, &statements);
+    if (found < 0) {
+        return NULL;
     }
-    Py_RETURN_NONE;
+    chunk = compile(MODE_FUNC, fn->script, found ? statements : Py_None, fn->function);
+    Py_XDECREF(statements);
+    if (chunk == NULL) {
+        return NULL;
+    }
+    chunk->model_watched = watched && (chunk->args == NULL || chunk->last_arg_array_plain);
+    bs_atomic_store(&chunk->model_epoch, epoch);
+    Chunk *expected = NULL;
+    if (!bs_atomic_publish(&fn->chunk, &expected, chunk)) {
+        chunk_free(chunk);
+        return expected;
+    }
+    return chunk;
 }
 
 
-// Call a resolved function value with evaluated arguments, applying the reference
-// implementation's call error handling: BareScriptRuntimeError and BaseException propagate, other
-// exceptions are optionally logged and produce None (or the ValueArgsError return value). Returns
-// a new reference or NULL with an exception set.
-static PyObject *call_function_value(
-    PyObject *func_value, PyObject *func_args, PyObject *func_name, ExecCtx *ctx, PyObject *script,
-    PyObject *statement, int intrinsic
-)
+// Are a compiled function body's model lists unchanged in place?
+static int script_function_lists_current(Chunk *chunk)
 {
-    PyObject *result;
-    int counter_synced = 0;
-
-    if (intrinsic >= 0 && func_value == g_intrinsics[intrinsic].py_func && PyList_CheckExact(func_args)) {
-        // Library intrinsic - the call resolves to the original library function, whose C
-        // implementation is observably identical and cannot observe options (no counter sync)
-        result = g_intrinsics[intrinsic].handler(func_args);
-    } else if (Py_IS_TYPE(func_value, &ScriptFunctionType) && ctx->is_exec) {
-        // BareScript function - execute directly on this execution context, skipping the generic
-        // call machinery and the per-call context rebuild. Expression-evaluation contexts take
-        // the generic path below, which performs the reference implementation's per-call setup
-        // (globals subscript, statement counter default) and its error handling.
-        ScriptFunctionObject *script_function = (ScriptFunctionObject *)func_value;
-        result = script_function_invoke_ctx(script_function, func_args, ctx);
-    } else {
-        // Call the function - sync the statement counter around the call since the callable can
-        // observe and update options['statementCount']
-        if (exec_ctx_sync_out(ctx) < 0) {
-            return NULL;
+    int current = PyList_GET_SIZE(chunk->statements) == chunk->nstatements;
+    if (current && chunk->args != NULL) {
+        Py_BEGIN_CRITICAL_SECTION(chunk->args);
+        current = PyList_GET_SIZE(chunk->args) == chunk->nargs;
+        for (int ix = 0; current && ix < chunk->nargs; ix++) {
+            current = PyList_GET_ITEM(chunk->args, ix) == chunk->arg_items[ix];
         }
-        counter_synced = 1;
-        PyObject *call_args[2] = {func_args, ctx->options};
-        result = PyObject_Vectorcall(func_value, call_args, 2, NULL);
-        if (result != NULL && exec_ctx_sync_in(ctx) < 0) {
-            Py_CLEAR(result);
-        }
+        Py_END_CRITICAL_SECTION();
     }
-    if (result != NULL) {
-        return result;
-    }
-
-    // BareScriptRuntimeError and BaseException propagate
-    if (PyErr_ExceptionMatches(g.runtime_error) || !PyErr_ExceptionMatches(PyExc_Exception)) {
-        return NULL;
-    }
-
-    // Get the error
-    PyObject *error = get_raised_exception();
-    if (error == NULL) {
-        return NULL;
-    }
-
-    // Log and return null
-    if (ctx->options != Py_None) {
-        PyObject *log_fn = NULL;
-        int has_log = obj_get(ctx->options, g.str_logFn, &log_fn);
-        if (has_log < 0) {
-            Py_DECREF(error);
-            return NULL;
-        }
-        if (has_log) {
-            PyObject *debug = NULL;
-            int has_debug = obj_get(ctx->options, g.str_debug, &debug);
-            if (has_debug < 0) {
-                Py_DECREF(log_fn);
-                Py_DECREF(error);
-                return NULL;
-            }
-            int is_debug = 0;
-            if (has_debug) {
-                is_debug = PyObject_IsTrue(debug);
-                Py_DECREF(debug);
-                if (is_debug < 0) {
-                    Py_DECREF(log_fn);
-                    Py_DECREF(error);
-                    return NULL;
-                }
-            }
-            if (is_debug) {
-                PyObject *message = PyUnicode_FromFormat(
-                    "BareScript: Function \"%S\" failed with error: %S", func_name, error
-                );
-                PyObject *error_message = NULL;
-                PyObject *error_str = NULL;
-                PyObject *log_result = NULL;
-                if (message != NULL) {
-                    error_message = PyObject_CallFunctionObjArgs(g.runtime_error, script, statement, message, NULL);
-                    Py_DECREF(message);
-                }
-                if (error_message != NULL) {
-                    error_str = PyObject_Str(error_message);
-                    Py_DECREF(error_message);
-                }
-                if (error_str != NULL) {
-                    log_result = PyObject_CallOneArg(log_fn, error_str);
-                    Py_DECREF(error_str);
-                }
-                if (log_result == NULL) {
-                    Py_DECREF(log_fn);
-                    Py_DECREF(error);
-                    return NULL;
-                }
-                Py_DECREF(log_result);
-            }
-            Py_DECREF(log_fn);
-        }
-    }
-
-    // Function argument error - return the error return value
-    int is_args_error = PyObject_IsInstance(error, g.value_args_error);
-    if (is_args_error < 0) {
-        Py_DECREF(error);
-        return NULL;
-    }
-    if (is_args_error) {
-        result = PyObject_GetAttr(error, g.str_return_value);
-    } else {
-        result = Py_NewRef(Py_None);
-    }
-    Py_DECREF(error);
-    // Reload the counter only when it was synced out before the call - the intrinsic and direct
-    // ScriptFunction branches keep the authoritative count in C (the dict may be stale)
-    if (counter_synced && result != NULL && exec_ctx_sync_in(ctx) < 0) {
-        Py_CLEAR(result);
-    }
-    return result;
+    return current;
 }
 
 
-// Evaluate a function expression
-static PyObject *eval_function(
-    PyObject *func, ExecCtx *ctx, PyObject *locals, int builtins, PyObject *script, PyObject *statement
-)
+// Is a function's compiled body still its model? runtime.py reads the function's statements and arguments on
+// each call. Returns 1 current, 0 changed, -1 error.
+static int script_function_current(ScriptFunction *fn, Chunk *chunk)
 {
-    PyObject *globals = ctx->globals;
-    PyObject *func_name = NULL;
-    PyObject *args_expr = NULL;
-    PyObject *func_args = NULL;
-    PyObject *func_value = NULL;
-    PyObject *result = NULL;
-
-    // Prefetch the function expression fields in a single dict walk (args_expr NULL = absent)
-    int args_known = 0;
-    if (PyDict_CheckExact(func)) {
-        dict_prefetch3(func, g.str_name, &func_name, g.str_args, &args_expr, NULL, NULL);
-        args_known = 1;
+#ifdef BS_MODEL_WATCH
+    uint64_t epoch = bs_atomic_load(&g_model_epoch);
+    if (chunk->model_watched && bs_atomic_load(&chunk->model_epoch) == epoch) {
+        return script_function_lists_current(chunk);
     }
-    if (func_name == NULL && obj_subscript(func, g.str_name, &func_name) < 0) {
-        Py_XDECREF(args_expr);
-        return NULL;
+#endif
+    PyObject *statements, *args;
+    int found = bs_dict_get(fn->function, S_statements, &statements);
+    if (found <= 0) {
+        return found;
     }
-
-    // "if" built-in function?
-    if (PyUnicode_Check(func_name) && unicode_eq_ascii(func_name, "if", 2)) {
-        if (!args_known) {
-            int found = obj_get(func, g.str_args, &args_expr);
-            if (found < 0) {
-                goto done;
-            }
-        }
-        Py_ssize_t args_expr_length = 0;
-        if (args_expr != NULL) {
-            args_expr_length = PyObject_Length(args_expr);
-            if (args_expr_length < 0) {
-                goto done;
-            }
-        }
-
-        // Evaluate the value expression (a None expression is treated as not-provided)
-        PyObject *cond_value = NULL;
-        if (args_expr_length >= 1) {
-            PyObject *value_expr = PySequence_GetItem(args_expr, 0);
-            if (value_expr == NULL) {
-                goto done;
-            }
-            if (value_expr != Py_None) {
-                cond_value = evaluate_expression_c(value_expr, ctx, locals, builtins, script, statement);
-                Py_DECREF(value_expr);
-                if (cond_value == NULL) {
-                    goto done;
-                }
-            } else {
-                Py_DECREF(value_expr);
-            }
-        }
-        if (cond_value == NULL) {
-            cond_value = Py_NewRef(Py_False);
-        }
-        int cond = value_boolean_c(cond_value);
-        Py_DECREF(cond_value);
-
-        // Evaluate the true/false expression (a None expression is treated as not-provided)
-        Py_ssize_t ix_result = cond ? 1 : 2;
-        PyObject *result_expr = NULL;
-        if (args_expr_length >= ix_result + 1) {
-            result_expr = PySequence_GetItem(args_expr, ix_result);
-            if (result_expr == NULL) {
-                goto done;
-            }
-            if (result_expr == Py_None) {
-                Py_CLEAR(result_expr);
-            }
-        }
-        if (result_expr != NULL) {
-            result = evaluate_expression_c(result_expr, ctx, locals, builtins, script, statement);
-            Py_DECREF(result_expr);
-        } else {
-            result = Py_NewRef(Py_None);
-        }
-        goto done;
-    }
-
-    // Compute the function arguments
-    if (!args_known) {
-        int found = obj_get(func, g.str_args, &args_expr);
-        if (found < 0) {
-            goto done;
-        }
-    }
-    if (args_expr == NULL || args_expr == Py_None) {
-        func_args = Py_NewRef(Py_None);
-    } else if (PyList_CheckExact(args_expr)) {
-        Py_ssize_t args_length = PyList_GET_SIZE(args_expr);
-        func_args = PyList_New(args_length);
-        if (func_args == NULL) {
-            goto done;
-        }
-        for (Py_ssize_t ix_arg = 0; ix_arg < args_length; ix_arg++) {
-            PyObject *arg_expr;
-            if (list_get_ref(args_expr, ix_arg, &arg_expr) < 0) {
-                goto done;
-            }
-            PyObject *arg_value = evaluate_expression_c(arg_expr, ctx, locals, builtins, script, statement);
-            Py_DECREF(arg_expr);
-            if (arg_value == NULL) {
-                goto done;
-            }
-            PyList_SET_ITEM(func_args, ix_arg, arg_value);
-        }
-    } else {
-        // Generic sequence of argument expressions
-        PyObject *args_fast = PySequence_Fast(args_expr, "function arguments must be a sequence");
-        if (args_fast == NULL) {
-            goto done;
-        }
-        Py_ssize_t args_length = PySequence_Fast_GET_SIZE(args_fast);
-        func_args = PyList_New(args_length);
-        if (func_args == NULL) {
-            Py_DECREF(args_fast);
-            goto done;
-        }
-        for (Py_ssize_t ix_arg = 0; ix_arg < args_length; ix_arg++) {
-            PyObject *arg_expr = PySequence_Fast_GET_ITEM(args_fast, ix_arg);
-            Py_INCREF(arg_expr);
-            PyObject *arg_value = evaluate_expression_c(arg_expr, ctx, locals, builtins, script, statement);
-            Py_DECREF(arg_expr);
-            if (arg_value == NULL) {
-                Py_DECREF(args_fast);
-                goto done;
-            }
-            PyList_SET_ITEM(func_args, ix_arg, arg_value);
-        }
-        Py_DECREF(args_fast);
-    }
-
-    // Global/local function?
-    int found_value = 0;
-    if (locals != Py_None) {
-        found_value = obj_get(locals, func_name, &func_value);
-        if (found_value < 0) {
-            goto done;
-        }
-    }
-    if (!found_value && globals != NULL) {
-        found_value = obj_get(globals, func_name, &func_value);
-        if (found_value < 0) {
-            goto done;
-        }
-    }
-    if (!found_value && builtins) {
-        found_value = obj_get(g.expression_functions, func_name, &func_value);
-        if (found_value < 0) {
-            goto done;
-        }
-    }
-
-    // A found None value is treated the same as not-found
-    if (found_value && func_value == Py_None) {
-        Py_CLEAR(func_value);
-        found_value = 0;
-    }
-
-    if (found_value) {
-        result = call_function_value(func_value, func_args, func_name, ctx, script, statement, -1);
-        goto done;
-    }
-
-    // Undefined function
-    set_runtime_error(script, statement, PyUnicode_FromFormat("Undefined function \"%S\"", func_name));
-
-done:
-    Py_XDECREF(func_value);
-    Py_XDECREF(func_args);
-    Py_XDECREF(args_expr);
-    Py_XDECREF(func_name);
-    return result;
-}
-
-
-// Map a binary comparison operator to a rich comparison opid
-static inline int binary_op_to_opid(BinaryOp op)
-{
-    switch (op) {
-    case BINARY_LT:
-        return Py_LT;
-    case BINARY_LTE:
-        return Py_LE;
-    case BINARY_GT:
-        return Py_GT;
-    case BINARY_GTE:
-        return Py_GE;
-    case BINARY_EQ:
-        return Py_EQ;
-    default: // BINARY_NEQ
-        return Py_NE;
-    }
-}
-
-
-// Apply a binary operator to evaluated left and right values (borrowed references). Returns a
-// new reference, or NULL with an exception set.
-// Normalize an arithmetic result - non-finite numbers (including out-of-double-range integers and
-// complex results) and arithmetic errors (ZeroDivisionError, OverflowError) are invalid operation
-// values (None)
-static PyObject *arithmetic_result(PyObject *result)
-{
-    if (result == NULL) {
-        if (PyErr_ExceptionMatches(PyExc_ZeroDivisionError) || PyErr_ExceptionMatches(PyExc_OverflowError)) {
-            PyErr_Clear();
-            return Py_NewRef(Py_None);
-        }
-        return NULL;
-    }
-    if (PyFloat_CheckExact(result)) {
-        if (!isfinite(PyFloat_AS_DOUBLE(result))) {
-            Py_DECREF(result);
-            return Py_NewRef(Py_None);
-        }
-    } else if (PyLong_CheckExact(result)) {
-        double result_double = PyLong_AsDouble(result);
-        if (result_double == -1. && PyErr_Occurred()) {
-            PyErr_Clear();
-            Py_DECREF(result);
-            return Py_NewRef(Py_None);
-        }
-    } else if (PyComplex_CheckExact(result)) {
-        Py_DECREF(result);
-        return Py_NewRef(Py_None);
-    }
-    return result;
-}
-
-
-static PyObject *apply_binary_op(BinaryOp op, PyObject *left, PyObject *right)
-{
-    PyObject *result = NULL;
-
-    // Float fast path
-    if (PyFloat_CheckExact(left) && PyFloat_CheckExact(right)) {
-        double left_number = PyFloat_AS_DOUBLE(left);
-        double right_number = PyFloat_AS_DOUBLE(right);
-        switch (op) {
-        case BINARY_ADD:
-            result = PyFloat_FromDouble(left_number + right_number);
-            goto apply_done;
-        case BINARY_SUB:
-            result = PyFloat_FromDouble(left_number - right_number);
-            goto apply_done;
-        case BINARY_MUL:
-            result = PyFloat_FromDouble(left_number * right_number);
-            goto apply_done;
-        case BINARY_DIV:
-            if (right_number != 0.) {
-                result = PyFloat_FromDouble(left_number / right_number);
-                goto apply_done;
-            }
-            break;
-        case BINARY_LT:
-            result = Py_NewRef((left_number < right_number) ? Py_True : Py_False);
-            goto apply_done;
-        case BINARY_LTE:
-            result = Py_NewRef((left_number <= right_number) ? Py_True : Py_False);
-            goto apply_done;
-        case BINARY_GT:
-            result = Py_NewRef((left_number > right_number) ? Py_True : Py_False);
-            goto apply_done;
-        case BINARY_GTE:
-            result = Py_NewRef((left_number >= right_number) ? Py_True : Py_False);
-            goto apply_done;
-        case BINARY_EQ:
-            result = Py_NewRef((left_number == right_number) ? Py_True : Py_False);
-            goto apply_done;
-        case BINARY_NEQ:
-            result = Py_NewRef((left_number != right_number) ? Py_True : Py_False);
-            goto apply_done;
-        default:
-            break;
-        }
-    }
-
-    // Generic operator implementations
-    switch (op) {
-    case BINARY_ADD: {
-        if (is_number(left) && is_number(right)) {
-            // number + number
-            result = PyNumber_Add(left, right);
-        } else if (PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {
-            // string + string
-            result = PyNumber_Add(left, right);
-        } else if (PyUnicode_CheckExact(left)) {
-            // string + <any>
-            PyObject *right_str = PyObject_CallOneArg(g.value_string, right);
-            if (right_str != NULL) {
-                result = PyNumber_Add(left, right_str);
-                Py_DECREF(right_str);
-            }
-        } else if (PyUnicode_CheckExact(right)) {
-            // <any> + string
-            PyObject *left_str = PyObject_CallOneArg(g.value_string, left);
-            if (left_str != NULL) {
-                result = PyNumber_Add(left_str, right);
-                Py_DECREF(left_str);
-            }
-        } else if (PyDate_Check(left) && is_number(right)) {
-            // datetime + number
-            PyObject *left_dt = PyObject_CallOneArg(g.value_normalize_datetime, left);
-            if (left_dt != NULL) {
-                PyObject *delta = PyObject_CallFunction((PyObject *)PyDateTimeAPI->DeltaType, "iiiO", 0, 0, 0, right);
-                if (delta != NULL) {
-                    result = PyNumber_Add(left_dt, delta);
-                    Py_DECREF(delta);
-                }
-                Py_DECREF(left_dt);
-            }
-        } else if (is_number(left) && PyDate_Check(right)) {
-            // number + datetime
-            PyObject *right_dt = PyObject_CallOneArg(g.value_normalize_datetime, right);
-            if (right_dt != NULL) {
-                PyObject *delta = PyObject_CallFunction((PyObject *)PyDateTimeAPI->DeltaType, "iiiO", 0, 0, 0, left);
-                if (delta != NULL) {
-                    result = PyNumber_Add(right_dt, delta);
-                    Py_DECREF(delta);
-                }
-                Py_DECREF(right_dt);
-            }
-        } else {
-            // Invalid operation values
-            result = Py_NewRef(Py_None);
-        }
-        break;
-    }
-
-    case BINARY_SUB: {
-        if (is_number(left) && is_number(right)) {
-            // number - number
-            result = PyNumber_Subtract(left, right);
-        } else if (PyDate_Check(left) && PyDate_Check(right)) {
-            // datetime - datetime
-            PyObject *left_dt = PyObject_CallOneArg(g.value_normalize_datetime, left);
-            PyObject *right_dt = (left_dt != NULL) ? PyObject_CallOneArg(g.value_normalize_datetime, right) : NULL;
-            PyObject *delta = (right_dt != NULL) ? PyNumber_Subtract(left_dt, right_dt) : NULL;
-            PyObject *seconds = (delta != NULL) ? PyObject_CallMethodNoArgs(delta, g.str_total_seconds) : NULL;
-            if (seconds != NULL) {
-                double milliseconds = PyFloat_AsDouble(seconds) * 1000.;
-                if (milliseconds == -1000. && PyErr_Occurred()) {
-                    Py_DECREF(seconds);
-                    seconds = NULL;
-                } else {
-                    PyObject *milliseconds_obj = PyFloat_FromDouble(milliseconds);
-                    if (milliseconds_obj != NULL) {
-                        PyObject *round_args[2] = {milliseconds_obj, g.zero};
-                        result = PyObject_Vectorcall(g.value_round_number, round_args, 2, NULL);
-                        Py_DECREF(milliseconds_obj);
-                    }
-                }
-            }
-            Py_XDECREF(seconds);
-            Py_XDECREF(delta);
-            Py_XDECREF(right_dt);
-            Py_XDECREF(left_dt);
-        } else {
-            // Invalid operation values
-            result = Py_NewRef(Py_None);
-        }
-        break;
-    }
-
-    case BINARY_MUL:
-        result = (is_number(left) && is_number(right)) ? PyNumber_Multiply(left, right) : Py_NewRef(Py_None);
-        break;
-
-    case BINARY_DIV:
-        result = (is_number(left) && is_number(right)) ? PyNumber_TrueDivide(left, right) : Py_NewRef(Py_None);
-        break;
-
-    case BINARY_LT:
-    case BINARY_LTE:
-    case BINARY_GT:
-    case BINARY_GTE:
-    case BINARY_EQ:
-    case BINARY_NEQ: {
-        int opid = binary_op_to_opid(op);
-        if (is_number(left) && is_number(right)) {
-            result = PyObject_RichCompare(left, right, opid);
-        } else {
-            // Mirror value.value_compare for the common types; call the Python implementation
-            // for everything else (datetimes, arrays, objects, mixed types)
-            long compare_value;
-            int compare_known = 1;
-            if (left == Py_None) {
-                compare_value = (right == Py_None) ? 0 : -1;
-            } else if (right == Py_None) {
-                compare_value = 1;
-            } else if (PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {
-                compare_value = PyUnicode_Compare(left, right);
-            } else if (PyBool_Check(left) && PyBool_Check(right)) {
-                int left_bool = (left == Py_True);
-                int right_bool = (right == Py_True);
-                compare_value = (left_bool < right_bool) ? -1 : ((left_bool == right_bool) ? 0 : 1);
-            } else {
-                compare_known = 0;
-                PyObject *compare_args[2] = {left, right};
-                PyObject *compare = PyObject_Vectorcall(g.value_compare, compare_args, 2, NULL);
-                if (compare != NULL) {
-                    compare_value = PyLong_AsLong(compare);
-                    Py_DECREF(compare);
-                    compare_known = !(compare_value == -1 && PyErr_Occurred());
-                }
-            }
-            if (compare_known) {
-                int compare_result;
-                switch (opid) {
-                case Py_LT:
-                    compare_result = compare_value < 0;
-                    break;
-                case Py_LE:
-                    compare_result = compare_value <= 0;
-                    break;
-                case Py_GT:
-                    compare_result = compare_value > 0;
-                    break;
-                case Py_GE:
-                    compare_result = compare_value >= 0;
-                    break;
-                case Py_EQ:
-                    compare_result = compare_value == 0;
-                    break;
-                default: // Py_NE
-                    compare_result = compare_value != 0;
-                    break;
-                }
-                result = Py_NewRef(compare_result ? Py_True : Py_False);
-            }
-        }
-        break;
-    }
-
-    case BINARY_MOD:
-        // number % number - the remainder has the dividend's sign, as in JavaScript
-        if (is_number(left) && is_number(right)) {
-            double left_double = PyFloat_AsDouble(left);
-            double right_double = PyFloat_AsDouble(right);
-            if (PyErr_Occurred()) {
-                // An int too large for a double
-                PyErr_Clear();
-                result = Py_NewRef(Py_None);
-            } else {
-                // Adding zero turns fmod's negative zero (a negative dividend's zero remainder) into zero
-                double remainder = fmod(left_double, right_double) + 0.;
-                result = (isfinite(remainder) && PyLong_CheckExact(left) && PyLong_CheckExact(right)) ?
-                    PyLong_FromDouble(remainder) : PyFloat_FromDouble(remainder);
-            }
-        } else {
-            result = Py_NewRef(Py_None);
-        }
-        break;
-
-    case BINARY_POW:
-        result = (is_number(left) && is_number(right)) ? PyNumber_Power(left, right, Py_None) : Py_NewRef(Py_None);
-        break;
-
-    case BINARY_BIT_AND:
-    case BINARY_BIT_OR:
-    case BINARY_BIT_XOR:
-    case BINARY_SHL:
-    case BINARY_SHR: {
-        // int <op> int (floats with integral values are converted)
-        PyObject *left_int = integral_long(left);
-        PyObject *right_int = (left_int != NULL) ? integral_long(right) : NULL;
-        if (left_int != NULL && right_int != NULL) {
-            switch (op) {
-            case BINARY_BIT_AND:
-                result = PyNumber_And(left_int, right_int);
-                break;
-            case BINARY_BIT_OR:
-                result = PyNumber_Or(left_int, right_int);
-                break;
-            case BINARY_BIT_XOR:
-                result = PyNumber_Xor(left_int, right_int);
-                break;
-            case BINARY_SHL:
-                result = PyNumber_Lshift(left_int, right_int);
-                break;
-            default: // BINARY_SHR
-                result = PyNumber_Rshift(left_int, right_int);
-                break;
-            }
-        } else if (!PyErr_Occurred()) {
-            // Invalid operation values
-            result = Py_NewRef(Py_None);
-        }
-        Py_XDECREF(right_int);
-        Py_XDECREF(left_int);
-        break;
-    }
-
-    default:
-        // Unreachable - AND/OR handled above
-        result = Py_NewRef(Py_None);
-        break;
-    }
-
-apply_done:
-    switch (op) {
-    case BINARY_ADD:
-    case BINARY_SUB:
-    case BINARY_MUL:
-    case BINARY_DIV:
-    case BINARY_MOD:
-    case BINARY_POW:
-        return arithmetic_result(result);
-    default:
-        return result;
-    }
-}
-
-
-// Evaluate a binary expression
-static PyObject *eval_binary(
-    PyObject *binary, ExecCtx *ctx, PyObject *locals, int builtins, PyObject *script, PyObject *statement
-)
-{
-    PyObject *op_obj = NULL;
-    PyObject *left_expr = NULL;
-    PyObject *right_expr = NULL;
-    PyObject *left = NULL;
-    PyObject *right = NULL;
-    PyObject *result = NULL;
-
-    // Prefetch the binary expression fields in a single dict walk. A missing field falls back to
-    // a subscript at its point of use, preserving the reference implementation's error behavior.
-    if (PyDict_CheckExact(binary)) {
-        dict_prefetch3(binary, g.str_op, &op_obj, g.str_left, &left_expr, g.str_right, &right_expr);
-    }
-
-    // Parse the operator
-    if (op_obj == NULL && obj_subscript(binary, g.str_op, &op_obj) < 0) {
-        goto fail_exprs;
-    }
-    BinaryOp op = parse_binary_op(op_obj);
-    Py_CLEAR(op_obj);
-
-    // Evaluate the left expression
-    if (left_expr == NULL && obj_subscript(binary, g.str_left, &left_expr) < 0) {
-        goto fail_exprs;
-    }
-    left = evaluate_expression_c(left_expr, ctx, locals, builtins, script, statement);
-    Py_CLEAR(left_expr);
-    if (left == NULL) {
-        goto fail_exprs;
-    }
-
-    // Short-circuiting "and" and "or" binary operators
-    if (op == BINARY_AND || op == BINARY_OR) {
-        int left_bool = value_boolean_c(left);
-        if ((op == BINARY_AND && !left_bool) || (op == BINARY_OR && left_bool)) {
-            Py_XDECREF(right_expr);
-            return left;
-        }
-        Py_DECREF(left);
-        if (right_expr == NULL && obj_subscript(binary, g.str_right, &right_expr) < 0) {
-            return NULL;
-        }
-        result = evaluate_expression_c(right_expr, ctx, locals, builtins, script, statement);
-        Py_DECREF(right_expr);
-        return result;
-    }
-
-    // Evaluate the right expression
-    if (right_expr == NULL && obj_subscript(binary, g.str_right, &right_expr) < 0) {
-        Py_DECREF(left);
-        return NULL;
-    }
-    right = evaluate_expression_c(right_expr, ctx, locals, builtins, script, statement);
-    Py_CLEAR(right_expr);
-    if (right == NULL) {
-        Py_DECREF(left);
-        return NULL;
-    }
-
-    result = apply_binary_op(op, left, right);
-    Py_DECREF(left);
-    Py_DECREF(right);
-    return result;
-
-fail_exprs:
-    Py_XDECREF(op_obj);
-    Py_XDECREF(left_expr);
-    Py_XDECREF(right_expr);
-    return NULL;
-}
-
-
-// Apply a unary operator to an evaluated value (borrowed reference). Returns a new reference, or
-// NULL with an exception set.
-static PyObject *apply_unary_op(UnaryOp op, PyObject *value)
-{
-    PyObject *result = NULL;
-    if (op == UNARY_NOT) {
-        result = Py_NewRef(value_boolean_c(value) ? Py_False : Py_True);
-    } else if (op == UNARY_NEG) {
-        if (PyFloat_CheckExact(value)) {
-            result = PyFloat_FromDouble(-PyFloat_AS_DOUBLE(value));
-        } else if (PyLong_CheckExact(value)) {
-            result = PyNumber_Negative(value);
-        } else {
-            // Invalid operation value
-            result = Py_NewRef(Py_None);
-        }
-    } else { // UNARY_INVERT
-        PyObject *value_int = integral_long(value);
-        if (value_int != NULL) {
-            result = PyNumber_Invert(value_int);
-            Py_DECREF(value_int);
-        } else if (!PyErr_Occurred()) {
-            // Invalid operation value
-            result = Py_NewRef(Py_None);
-        }
-    }
-    return result;
-}
-
-
-// Evaluate a unary expression
-static PyObject *eval_unary(
-    PyObject *unary, ExecCtx *ctx, PyObject *locals, int builtins, PyObject *script, PyObject *statement
-)
-{
-    PyObject *op_obj = NULL;
-    PyObject *sub_expr = NULL;
-    PyObject *value = NULL;
-    PyObject *result = NULL;
-
-    // Prefetch the unary expression fields in a single dict walk
-    if (PyDict_CheckExact(unary)) {
-        dict_prefetch3(unary, g.str_op, &op_obj, g.str_expr, &sub_expr, NULL, NULL);
-    }
-
-    // Parse the operator
-    if (op_obj == NULL && obj_subscript(unary, g.str_op, &op_obj) < 0) {
-        Py_XDECREF(sub_expr);
-        return NULL;
-    }
-    UnaryOp op = parse_unary_op(op_obj);
-    Py_CLEAR(op_obj);
-
-    // Evaluate the expression
-    if (sub_expr == NULL && obj_subscript(unary, g.str_expr, &sub_expr) < 0) {
-        return NULL;
-    }
-    value = evaluate_expression_c(sub_expr, ctx, locals, builtins, script, statement);
-    Py_CLEAR(sub_expr);
-    if (value == NULL) {
-        return NULL;
-    }
-
-    result = apply_unary_op(op, value);
-    Py_DECREF(value);
-    return result;
-}
-
-
-// Evaluate an expression model. locals, script, and statement are never NULL - Py_None indicates
-// "not provided", matching the reference implementation's None defaults. The globals are cached in
-// the execution context.
-static PyObject *evaluate_expression_c(
-    PyObject *expr, ExecCtx *ctx, PyObject *locals, int builtins, PyObject *script, PyObject *statement
-)
-{
-    PyObject *result = NULL;
-
-    if (!PyDict_CheckExact(expr)) {
-        PyErr_SetString(PyExc_TypeError, "expression model must be a dict");
-        return NULL;
-    }
-
-    if (Py_EnterRecursiveCall(" while evaluating a BareScript expression")) {
-        return NULL;
-    }
-
-    // Dispatch on the expression dict's first (and only, for valid models) key
-    Py_ssize_t pos = 0;
-    PyObject *key;
-    PyObject *value_borrowed;
-    if (PyDict_Next(expr, &pos, &key, &value_borrowed)) {
-        PyObject *value = Py_NewRef(value_borrowed);
-        switch (expr_kind(key)) {
-        case EXPR_NUMBER:
-        case EXPR_STRING:
-            result = value;
-            goto done;
-        case EXPR_VARIABLE:
-            result = eval_variable(value, locals, ctx->globals);
-            break;
-        case EXPR_FUNCTION:
-            result = eval_function(value, ctx, locals, builtins, script, statement);
-            break;
-        case EXPR_BINARY:
-            result = eval_binary(value, ctx, locals, builtins, script, statement);
-            break;
-        case EXPR_UNARY:
-            result = eval_unary(value, ctx, locals, builtins, script, statement);
-            break;
-        case EXPR_GROUP:
-            result = evaluate_expression_c(value, ctx, locals, builtins, script, statement);
-            break;
-        default: { // EXPR_UNKNOWN
-            // Mirror the reference implementation - an unrecognized expression is subscripted as a
-            // group (raising KeyError unless a 'group' key exists)
-            PyObject *group;
-            if (obj_subscript(expr, g.str_group, &group) == 0) {
-                result = evaluate_expression_c(group, ctx, locals, builtins, script, statement);
-                Py_DECREF(group);
-            }
-            break;
-        }
-        }
-        Py_DECREF(value);
-    } else {
-        // Empty expression dict - mirror the reference implementation's expr['group'] KeyError
-        PyObject *group;
-        if (obj_subscript(expr, g.str_group, &group) == 0) {
-            result = evaluate_expression_c(group, ctx, locals, builtins, script, statement);
-            Py_DECREF(group);
-        }
-    }
-
-done:
-    Py_LeaveRecursiveCall();
-    return result;
-}
-
-
-//
-// Script execution
-//
-
-
-// Execute the include statement (cold path)
-static int execute_include_statement(PyObject *script, PyObject *statement, PyObject *stmt_include, ExecCtx *ctx)
-{
-    PyObject *options = ctx->options;
-    PyObject *globals = ctx->globals;
-    PyObject *fetch_fn = NULL;
-    PyObject *log_fn = NULL;
-    PyObject *url_fn = NULL;
-    PyObject *includes = NULL;
-    PyObject *includes_fast = NULL;
-    int result = -1;
-
-    // Sync the statement counter - the fetch/url/log callables and the options copy below can
-    // observe options['statementCount']
-    if (exec_ctx_sync_out(ctx) < 0) {
+    int current = statements == chunk->statements;
+    Py_DECREF(statements);
+    found = current ? bs_dict_get(fn->function, S_args, &args) : 0;
+    if (found < 0) {
         return -1;
     }
-
-    // Get the include options
-    if (obj_get(options, g.str_fetchFn, &fetch_fn) < 0 ||
-        obj_get(options, g.str_logFn, &log_fn) < 0 ||
-        obj_get(options, g.str_urlFn, &url_fn) < 0) {
-        goto done;
+    if (current) {
+        current = (!found || args == Py_None) ? chunk->args == NULL : args == chunk->args;
+        Py_XDECREF(args);
     }
-    if (fetch_fn == Py_None) {
-        Py_CLEAR(fetch_fn);
+    if (current && chunk->args != NULL) {
+        PyObject *last_arg_array = NULL;
+        found = bs_dict_get(fn->function, S_lastArgArray, &last_arg_array);
+        int truth = found > 0 ? PyObject_IsTrue(last_arg_array) : found;
+        Py_XDECREF(last_arg_array);
+        current = truth < 0 ? -1 : truth == chunk->last_arg_array;
     }
-    if (log_fn == Py_None) {
-        Py_CLEAR(log_fn);
-    }
-    if (url_fn == Py_None) {
-        Py_CLEAR(url_fn);
-    }
-
-    // Iterate the includes
-    if (obj_subscript(stmt_include, g.str_includes, &includes) < 0) {
-        goto done;
-    }
-    includes_fast = PySequence_Fast(includes, "includes must be a sequence");
-    if (includes_fast == NULL) {
-        goto done;
-    }
-    Py_ssize_t includes_length = PySequence_Fast_GET_SIZE(includes_fast);
-    for (Py_ssize_t ix_include = 0; ix_include < includes_length; ix_include++) {
-        PyObject *include = PySequence_Fast_GET_ITEM(includes_fast, ix_include);
-        Py_INCREF(include);
-
-        PyObject *include_url = NULL;
-        PyObject *include_key = NULL;
-        PyObject *system_obj = NULL;
-        PyObject *global_includes = NULL;
-        PyObject *include_text = NULL;
-        PyObject *include_script = NULL;
-        PyObject *include_options = NULL;
-        int include_ok = 0;
-
-        // Get the include URL
-        if (obj_subscript(include, g.str_url, &include_url) < 0) {
-            goto include_done;
+    if (current > 0) {
+        current = script_function_lists_current(chunk);
+#ifdef BS_MODEL_WATCH
+        if (current && chunk->model_watched) {
+            bs_atomic_store(&chunk->model_epoch, epoch);
         }
+#endif
+    }
+    return current;
+}
 
-        // Fixup the non-system include URL
-        int system_include = 0;
-        int found = obj_get(include, g.str_system, &system_obj);
+
+static PyObject *vm_run(Frame *f);
+
+
+// Call a script function on runtime.py (its _script_function), for what the compiled body does not support
+static PyObject *script_function_python(Ctx *ctx, ScriptFunction *fn, PyObject *args)
+{
+    PyObject *statements = PyObject_GetItem(fn->function, S_statements);
+    PyObject *labels = statements != NULL ? runtime_call("_compute_label_indexes", statements, NULL) : NULL;
+    Py_XDECREF(statements);
+    if (labels == NULL || ctx_sync_out(ctx) < 0) {
+        Py_XDECREF(labels);
+        return NULL;
+    }
+    PyObject *result = runtime_call("_script_function", fn->script, fn->function, labels, args, ctx->options, NULL);
+    Py_DECREF(labels);
+    ctx_sync_in(ctx);
+    return result;
+}
+
+
+// Call a script function - runtime.py's _script_function
+static PyObject *script_function_call(Ctx *ctx, ScriptFunction *fn, PyObject *const *argv, Py_ssize_t argc,
+                                      int args_none)
+{
+    Chunk *chunk = script_function_chunk(fn);
+    if (chunk == NULL) {
+        return NULL;
+    }
+    int current = !chunk->irregular && PyDict_CheckExact(ctx->options) ? script_function_current(fn, chunk) : 0;
+    if (current < 0) {
+        return NULL;
+    }
+    Frame frame = {0}, *f = &frame;
+    int begin = current && !(args_none && chunk->args != NULL) ? frame_begin(f, ctx, chunk, fn->script) : 0;
+    if (begin <= 0) {
+        frame_end(f);
+        if (begin < 0) {
+            return NULL;
+        }
+        PyObject *args = args_none ? Py_NewRef(Py_None) : list_new(argv, argc);
+        PyObject *result = args != NULL ? script_function_python(ctx, fn, args) : NULL;
+        Py_XDECREF(args);
+        return result;
+    }
+
+    // Bind the arguments - runtime.py's _script_function_locals
+    PyObject *small[REGS_SMALL];
+    PyObject **resident = regs_claim(chunk);
+    PyObject **regs = resident != NULL ? resident : regs_alloc(chunk, small);
+    PyObject *result = NULL;
+    if (regs == NULL) {
+        frame_end(f);
+        return NULL;
+    }
+    int last = chunk->last_arg_array ? chunk->nargs - 1 : -1;
+    for (int ix = 0; ix < chunk->nargs; ix++) {
+        PyObject *value;
+        if (ix == last) {
+            value = list_new(argv + ix, ix < argc ? argc - ix : 0);
+            if (value == NULL) {
+                goto done;
+            }
+        } else {
+            value = Py_NewRef(ix < argc ? argv[ix] : Py_None);
+        }
+        Py_XSETREF(regs[chunk->arg_slots[ix]], value);
+    }
+
+    f->regs = regs;
+    if (Py_EnterRecursiveCall(" while calling a BareScript function") == 0) {
+        result = vm_run(f);
+        Py_LeaveRecursiveCall();
+    }
+
+done:
+    if (resident != NULL) {
+        regs_release(chunk, regs);
+    } else {
+        regs_free(chunk, regs, small);
+    }
+    frame_end(f);
+    return result;
+}
+
+
+// Execute a script's statements on runtime.py (its _execute_script_helper)
+static PyObject *execute_script_python(Ctx *ctx, PyObject *script)
+{
+    if (ctx_sync_out(ctx) < 0) {
+        return NULL;
+    }
+    PyObject *statements = PyObject_GetItem(script, S_statements);
+    PyObject *statements_labels = statements != NULL ? PyObject_GetItem(script, S_statements) : NULL;
+    PyObject *labels = statements_labels != NULL ? runtime_call("_compute_label_indexes", statements_labels, NULL) : NULL;
+    PyObject *result = labels != NULL ?
+        runtime_call("_execute_script_helper", script, statements, ctx->options, Py_None, labels, NULL) : NULL;
+    Py_XDECREF(statements);
+    Py_XDECREF(statements_labels);
+    Py_XDECREF(labels);
+    ctx_sync_in(ctx);
+    return result;
+}
+
+
+// Execute a script's top-level statements - runtime.py's _execute_script_helper without locals
+static PyObject *execute_script_statements(Ctx *ctx, PyObject *script)
+{
+    Chunk *chunk = NULL;
+    if (PyDict_CheckExact(script) && PyDict_CheckExact(ctx->options)) {
+        PyObject *statements;
+        int found = bs_dict_get(script, S_statements, &statements);
         if (found < 0) {
-            goto include_done;
+            return NULL;
         }
         if (found) {
-            system_include = PyObject_IsTrue(system_obj);
-            if (system_include < 0) {
-                goto include_done;
+            chunk = compile(MODE_TOP, script, statements, NULL);
+            Py_DECREF(statements);
+            if (chunk == NULL) {
+                return NULL;
             }
         }
-        if (!system_include && url_fn != NULL) {
-            PyObject *fixed_url = PyObject_CallOneArg(url_fn, include_url);
-            if (fixed_url == NULL) {
-                goto include_done;
+    }
+    Frame frame = {0}, *f = &frame;
+    int begin = chunk != NULL && !chunk->irregular ? frame_begin(f, ctx, chunk, script) : 0;
+    PyObject *result = NULL;
+    if (begin == 0) {
+        result = execute_script_python(ctx, script);
+    } else if (begin > 0) {
+        PyObject *small[REGS_SMALL];
+        PyObject **regs = regs_alloc(chunk, small);
+        if (regs != NULL) {
+            f->regs = regs;
+            if (Py_EnterRecursiveCall(" while executing a BareScript script") == 0) {
+                result = vm_run(f);
+                Py_LeaveRecursiveCall();
             }
-            Py_SETREF(include_url, fixed_url);
+            regs_free(chunk, regs, small);
+        }
+    }
+    frame_end(f);
+    chunk_free(chunk);
+    return result;
+}
+
+
+// Call a Python function object as a script function would be, from Python - (args, options)
+static PyObject *script_function_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)
+{
+    ScriptFunction *fn = (ScriptFunction *)self;
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    PyObject *result;
+    if (kwnames != NULL || nargs != 2 || (args[0] != Py_None && !PyList_CheckExact(args[0]))) {
+        // Anything else is runtime.py's function - functools.partial(_script_function, script, function, labels)
+        PyObject *statements = PyObject_GetItem(fn->function, S_statements);
+        PyObject *labels = statements != NULL ? runtime_call("_compute_label_indexes", statements, NULL) : NULL;
+        PyObject *script_function = labels != NULL ? runtime_attr("_script_function") : NULL;
+        PyObject *partial = script_function != NULL ?
+            PyObject_CallFunctionObjArgs(g_partial, script_function, fn->script, fn->function, labels, NULL) : NULL;
+        result = partial != NULL ? PyObject_Vectorcall(partial, args, nargsf, kwnames) : NULL;
+        Py_XDECREF(statements);
+        Py_XDECREF(labels);
+        Py_XDECREF(script_function);
+        Py_XDECREF(partial);
+        return result;
+    }
+
+    Ctx ctx = {.options = args[1]};
+    if (args[0] == Py_None) {
+        result = script_function_call(&ctx, fn, NULL, 0, 1);
+    } else {
+#ifdef Py_GIL_DISABLED
+        // Another thread could change the list - bind a snapshot
+        PyObject *items = PyList_AsTuple(args[0]);
+        result = items != NULL ?
+            script_function_call(&ctx, fn, &PyTuple_GET_ITEM(items, 0), PyTuple_GET_SIZE(items), 0) : NULL;
+        Py_XDECREF(items);
+#else
+        result = script_function_call(&ctx, fn, PySequence_Fast_ITEMS(args[0]), PyList_GET_SIZE(args[0]), 0);
+#endif
+    }
+    ctx_exit(&ctx);
+    return result;
+}
+
+
+//
+// Function calls
+//
+
+
+// Handle a function call's exception - runtime.py's except clause: log it and return null, or the argument
+// error's return value. Steals the exception reference.
+static PyObject *call_error(Frame *f, const Inst *inst, PyObject *name, PyObject *exc)
+{
+    PyObject *options = f->ctx->options, *result = NULL;
+    int log = 0;
+    if (options != Py_None) {
+        log = PyDict_CheckExact(options) ? PyDict_Contains(options, S_logFn) : PySequence_Contains(options, S_logFn);
+        if (log > 0) {
+            PyObject *debug = object_get(options, S_debug);
+            log = debug != NULL ? PyObject_IsTrue(debug) : -1;
+            Py_XDECREF(debug);
+        }
+    }
+    if (log > 0) {
+        PyObject *message = PyUnicode_FromFormat("BareScript: Function \"%U\" failed with error: %S", name, exc);
+        PyObject *statement = message != NULL ? frame_statement(f, inst) : NULL;
+        PyObject *error = statement != NULL ? PyObject_CallFunctionObjArgs(
+            g_BareScriptRuntimeError, f->script != NULL ? f->script : Py_None, statement, message, NULL) : NULL;
+        PyObject *error_str = error != NULL ? PyObject_Str(error) : NULL;
+        PyObject *log_fn = error_str != NULL ? PyObject_GetItem(options, S_logFn) : NULL;
+        PyObject *log_result = NULL;
+        if (log_fn != NULL && ctx_sync_out(f->ctx) == 0) {
+            log_result = PyObject_CallOneArg(log_fn, error_str);
+            ctx_sync_in(f->ctx);
+        }
+        log = log_result != NULL ? 0 : -1;
+        Py_XDECREF(message);
+        Py_XDECREF(statement);
+        Py_XDECREF(error);
+        Py_XDECREF(error_str);
+        Py_XDECREF(log_fn);
+        Py_XDECREF(log_result);
+    }
+    if (log == 0) {
+        int is_args_error = PyObject_IsInstance(exc, g_ValueArgsError);
+        result = is_args_error > 0 ? PyObject_GetAttr(exc, S_return_value) :
+            (is_args_error == 0 ? Py_NewRef(Py_None) : NULL);
+    }
+    Py_DECREF(exc);
+    return result;
+}
+
+
+// Handle a function call's raised exception - BareScriptRuntimeError and non-Exception exceptions propagate
+static PyObject *call_failed(Frame *f, const Inst *inst, PyObject *name)
+{
+    if (!PyErr_ExceptionMatches(PyExc_Exception) || PyErr_ExceptionMatches(g_BareScriptRuntimeError)) {
+        return NULL;
+    }
+    return call_error(f, inst, name, bs_err_fetch());
+}
+
+
+// A library function replica's result when it does not handle the arguments - the library function is called
+static PyObject call_deferred;
+#define DEFER (&call_deferred)
+
+
+// A string index argument on a replica's happy path - an exact int or integral float, 0 to a limit. Returns 1 and
+// the index, or 0.
+static int replica_index(PyObject *value, Py_ssize_t limit, Py_ssize_t *index)
+{
+    if (PyLong_CheckExact(value)) {
+        long long number;
+        if (!small_int(value, &number) || number < 0 || number > limit) {
+            return 0;
+        }
+        *index = (Py_ssize_t)number;
+        return 1;
+    }
+    if (PyFloat_CheckExact(value)) {
+        double number = PyFloat_AS_DOUBLE(value);
+        if (!(number >= 0 && number <= (double)limit && number < 9223372036854775808.0) || floor(number) != number) {
+            return 0;
+        }
+        *index = (Py_ssize_t)number;
+        return 1;
+    }
+    return 0;
+}
+
+
+// Run a library intrinsic inline - runtime.py's intrinsic fast path, for exact-type arguments of a valid shape. Other
+// arguments return DEFER, for the intrinsic's library function, whose results and errors match the fast path's.
+static PyObject *call_intrinsic(Frame *f, const Inst *inst, PyObject *name, PyObject *const *argv, Py_ssize_t argc,
+                                int args_none)
+{
+    if (inst->x == IN_ARRAY_NEW) {
+        return args_none ? Py_NewRef(Py_None) : list_new(argv, argc);
+    }
+    if (args_none) {
+        // len(None)
+        PyObject_Length(Py_None);
+        return call_failed(f, inst, name);
+    }
+
+    PyObject *arg0 = argc >= 1 ? argv[0] : NULL, *arg1 = argc >= 2 ? argv[1] : NULL, *result = DEFER;
+    Py_ssize_t index;
+    long long number;
+
+    switch (inst->x) {
+    case IN_OBJECT_GET:
+        if (argc >= 2 && argc <= 3 && PyDict_CheckExact(arg0) && PyUnicode_CheckExact(arg1)) {
+            int found = bs_dict_get(arg0, arg1, &result);
+            result = found == 0 ? Py_NewRef(argc == 3 ? argv[2] : Py_None) : result;
+        }
+        break;
+    case IN_OBJECT_HAS:
+        if (argc == 2 && PyDict_CheckExact(arg0) && PyUnicode_CheckExact(arg1)) {
+            int has = PyDict_Contains(arg0, arg1);
+            result = has < 0 ? NULL : PyBool_FromLong(has);
+        }
+        break;
+    case IN_ARRAY_GET:
+        if (argc == 2 && PyList_CheckExact(arg0) && replica_index(arg1, PyList_GET_SIZE(arg0) - 1, &index)) {
+            result = bs_list_get(arg0, index);
+        }
+        break;
+    case IN_ARRAY_SET:
+        if (argc >= 2 && argc <= 3 && PyList_CheckExact(arg0) && replica_index(arg1, PyList_GET_SIZE(arg0) - 1, &index)) {
+            PyObject *value = argc == 3 ? argv[2] : Py_None;
+            result = PyList_SetItem(arg0, index, Py_NewRef(value)) < 0 ? NULL : Py_NewRef(value);
+        }
+        break;
+    case IN_ARRAY_LENGTH:
+        if (argc == 1 && PyList_CheckExact(arg0)) {
+            result = PyLong_FromSsize_t(PyList_GET_SIZE(arg0));
+        }
+        break;
+    case IN_ARRAY_PUSH:
+        if (argc == 2 && PyList_CheckExact(arg0)) {
+            result = PyList_Append(arg0, arg1) < 0 ? NULL : Py_NewRef(arg0);
+        } else if (argc >= 1 && PyList_CheckExact(arg0)) {
+            PyObject *items = list_new(argv + 1, argc - 1);
+            int rc = items != NULL ? PyList_SetSlice(arg0, PY_SSIZE_T_MAX, PY_SSIZE_T_MAX, items) : -1;
+            Py_XDECREF(items);
+            result = rc < 0 ? NULL : Py_NewRef(arg0);
+        }
+        break;
+    case IN_OBJECT_SET:
+        if (argc >= 2 && argc <= 3 && PyDict_CheckExact(arg0) && PyUnicode_CheckExact(arg1)) {
+            PyObject *value = argc == 3 ? argv[2] : Py_None;
+            result = PyDict_SetItem(arg0, arg1, value) < 0 ? NULL : Py_NewRef(value);
+            ctx_dict_changed(f->ctx, arg0);
+            if (arg0 == f->globals) {
+                globals_changed();
+            }
+        }
+        break;
+    case IN_STRING_LENGTH:
+        if (argc == 1 && PyUnicode_CheckExact(arg0)) {
+            result = PyLong_FromSsize_t(PyUnicode_GET_LENGTH(arg0));
+        }
+        break;
+    case IN_SYSTEM_TYPE:
+        if (argc <= 1) {
+            result = Py_NewRef(value_type(argc == 1 ? arg0 : Py_None));
+        }
+        break;
+    case IN_OBJECT_KEYS:
+        if (argc == 1 && PyDict_CheckExact(arg0)) {
+            result = PyDict_Keys(arg0);
+        }
+        break;
+    default: // IN_MATH_SQRT
+        if (argc == 1 && PyFloat_CheckExact(arg0) && PyFloat_AS_DOUBLE(arg0) >= 0) {
+            result = PyFloat_FromDouble(sqrt(PyFloat_AS_DOUBLE(arg0)));
+        } else if (argc == 1 && PyLong_CheckExact(arg0) && small_int(arg0, &number) && number >= 0) {
+            result = PyFloat_FromDouble(sqrt((double)number));
+        }
+        break;
+    }
+    return result != NULL ? result : call_failed(f, inst, name);
+}
+
+
+// The library's _regex_match_groups - a regex match object's model
+static PyObject *regex_match_groups(PyObject *match)
+{
+    PyObject *groups = PyDict_New(), *match_text = NULL, *group_texts = NULL, *group_dict = NULL, *index = NULL,
+        *input = NULL, *result = NULL;
+    if (groups == NULL || (match_text = PyObject_GetItem(match, g_zero)) == NULL ||
+        PyDict_SetItem(groups, g_group_keys[0], match_text) < 0 ||
+        (group_texts = PyObject_CallMethodNoArgs(match, S_groups)) == NULL) {
+        goto done;
+    }
+    for (Py_ssize_t ix = 0; ix < PyTuple_GET_SIZE(group_texts); ix++) {
+        PyObject *key = ix < 9 ? Py_NewRef(g_group_keys[ix + 1]) : digits_string((unsigned long long)ix + 1, 0, 10);
+        int rc = key != NULL ? PyDict_SetItem(groups, key, PyTuple_GET_ITEM(group_texts, ix)) : -1;
+        Py_XDECREF(key);
+        if (rc < 0) {
+            goto done;
+        }
+    }
+    if ((group_dict = PyObject_CallMethodNoArgs(match, S_groupdict)) == NULL || PyDict_Update(groups, group_dict) < 0 ||
+        (index = PyObject_CallMethodNoArgs(match, S_start)) == NULL ||
+        (input = PyObject_GetAttr(match, S_string)) == NULL) {
+        goto done;
+    }
+    if ((result = PyDict_New()) == NULL || PyDict_SetItem(result, S_index, index) < 0 ||
+        PyDict_SetItem(result, S_input, input) < 0 || PyDict_SetItem(result, S_groups, groups) < 0) {
+        Py_CLEAR(result);
+    }
+
+done:
+    Py_XDECREF(groups);
+    Py_XDECREF(match_text);
+    Py_XDECREF(group_texts);
+    Py_XDECREF(group_dict);
+    Py_XDECREF(index);
+    Py_XDECREF(input);
+    return result;
+}
+
+
+// Match a number string - value.py's R_NUMBER (radix 0) or a VALUE_PARSE_INTEGER_REGEX_MAP integer regex
+static int number_text_match(PyObject *text, int radix)
+{
+    int kind = PyUnicode_KIND(text);
+    const void *data = PyUnicode_DATA(text);
+    Py_ssize_t length = PyUnicode_GET_LENGTH(text), ix = 0, digits = 0;
+#define TEXT_CHAR() (ix < length ? PyUnicode_READ(kind, data, ix) : 0)
+#define TEXT_DIGITS() \
+    for (; ix < length && TEXT_CHAR() >= '0' && TEXT_CHAR() <= '9'; ix++) { \
+        digits++; \
+    }
+    while (ix < length && Py_UNICODE_ISSPACE(TEXT_CHAR())) {
+        ix++;
+    }
+    if (TEXT_CHAR() == '-' || TEXT_CHAR() == '+') {
+        ix++;
+    }
+    if (radix == 0) {
+        TEXT_DIGITS()
+        if (TEXT_CHAR() == '.') {
+            ix++;
+            Py_ssize_t int_digits = digits;
+            TEXT_DIGITS()
+            if (int_digits == 0 && digits == 0) {
+                return 0;
+            }
+        }
+        if (digits == 0) {
+            return 0;
+        }
+        if (TEXT_CHAR() == 'e' || TEXT_CHAR() == 'E') {
+            ix++;
+            if (TEXT_CHAR() == '-' || TEXT_CHAR() == '+') {
+                ix++;
+            }
+            digits = 0;
+            TEXT_DIGITS()
+            if (digits == 0) {
+                return 0;
+            }
+        }
+    } else {
+        for (; ix < length; ix++, digits++) {
+            Py_UCS4 ch = TEXT_CHAR();
+            int digit = ch >= '0' && ch <= '9' ? (int)(ch - '0') : (ch >= 'A' && ch <= 'Z' ? (int)(ch - 'A' + 10) :
+                (ch >= 'a' && ch <= 'z' ? (int)(ch - 'a' + 10) : 99));
+            if (digit >= radix) {
+                break;
+            }
+        }
+        if (digits == 0) {
+            return 0;
+        }
+    }
+    while (ix < length && Py_UNICODE_ISSPACE(TEXT_CHAR())) {
+        ix++;
+    }
+    return ix == length;
+#undef TEXT_CHAR
+#undef TEXT_DIGITS
+}
+
+
+// Run a library function replica - the library function's result for the exact types and valid arguments of its
+// happy path; DEFER for anything else, which calls the library function itself
+// A value as library jsonStringify normalizes it for encoding - an integral float is an integer and a non-finite
+// float null - or DEFER for a small float (which it formats separately), a non-JSON value, or nesting past 64
+static PyObject *json_normalize(PyObject *value, int depth)
+{
+    if (PyFloat_CheckExact(value)) {
+        double number = PyFloat_AS_DOUBLE(value);
+        if (!isfinite(number)) {
+            return Py_NewRef(Py_None);
+        }
+        if (floor(number) == number && fabs(number) < 1e21) {
+            return PyLong_FromDouble(number);
+        }
+        return fabs(number) < 1e-4 ? DEFER : Py_NewRef(value);
+    }
+    if (PyUnicode_CheckExact(value) || PyLong_CheckExact(value) || PyBool_Check(value) || value == Py_None) {
+        return Py_NewRef(value);
+    }
+    if (depth >= 64 || !(PyList_CheckExact(value) || PyDict_CheckExact(value))) {
+        return DEFER;
+    }
+    PyObject *result;
+    Py_BEGIN_CRITICAL_SECTION(value);
+    if (PyList_CheckExact(value)) {
+        result = PyList_New(PyList_GET_SIZE(value));
+        for (Py_ssize_t ix = 0; result != NULL && result != DEFER && ix < PyList_GET_SIZE(value); ix++) {
+            PyObject *item = json_normalize(PyList_GET_ITEM(value, ix), depth + 1);
+            if (item == NULL || item == DEFER) {
+                Py_DECREF(result);
+                result = item;
+            } else {
+                PyList_SET_ITEM(result, ix, item);
+            }
+        }
+    } else {
+        result = PyDict_New();
+        Py_ssize_t pos = 0;
+        PyObject *key, *item;
+        while (result != NULL && result != DEFER && PyDict_Next(value, &pos, &key, &item)) {
+            PyObject *normal = json_normalize(item, depth + 1);
+            if (normal == NULL || normal == DEFER || PyDict_SetItem(result, key, normal) < 0) {
+                Py_DECREF(result);
+                result = normal == DEFER ? DEFER : NULL;
+            }
+            if (normal != DEFER) {
+                Py_XDECREF(normal);
+            }
+        }
+    }
+    Py_END_CRITICAL_SECTION();
+    return result;
+}
+
+
+// Does a string have a run of 309 or more digits - an integer past the double range, which library jsonParse nulls?
+static int json_long_digits(PyObject *text)
+{
+    int kind = PyUnicode_KIND(text);
+    const void *data = PyUnicode_DATA(text);
+    Py_ssize_t length = PyUnicode_GET_LENGTH(text), run = 0;
+    for (Py_ssize_t ix = 0; ix < length; ix++) {
+        Py_UCS4 ch = PyUnicode_READ(kind, data, ix);
+        run = ch >= '0' && ch <= '9' ? run + 1 : 0;
+        if (run >= 309) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+static PyObject *call_library(Ctx *ctx, int id, PyObject *const *argv, Py_ssize_t argc, int args_none)
+{
+    if (args_none) {
+        return DEFER;
+    }
+    PyObject *arg0 = argc >= 1 ? argv[0] : NULL, *arg1 = argc >= 2 ? argv[1] : NULL;
+    Py_ssize_t start, end;
+    switch (id) {
+    case IN_JSON_PARSE:
+    case IN_JSON_STRINGIFY: {
+        // The library's own JSON coders - jsonParse without its per-integer hook, which only nulls integers past the
+        // double range, and jsonStringify of the library's normalized value. An error defers, so the library raises it.
+        PyObject *value;
+        if (id == IN_JSON_PARSE) {
+            value = argc == 1 && PyUnicode_CheckExact(arg0) && !json_long_digits(arg0) ? Py_NewRef(arg0) : DEFER;
+        } else {
+            value = argc >= 1 && argc <= 2 && (argc == 1 || arg1 == Py_None) ? json_normalize(arg0, 0) : DEFER;
+        }
+        if (value == NULL || value == DEFER) {
+            return value;
+        }
+        PyObject *result = PyObject_CallOneArg(id == IN_JSON_PARSE ? g_json_decode : g_json_encode, value);
+        Py_DECREF(value);
+        if (result == NULL) {
+            PyErr_Clear();
+            return DEFER;
+        }
+        return result;
+    }
+    case IN_OBJECT_NEW: {
+        for (Py_ssize_t ix = 0; ix < argc; ix += 2) {
+            if (!PyUnicode_CheckExact(argv[ix])) {
+                return DEFER;
+            }
+        }
+        PyObject *object = PyDict_New();
+        for (Py_ssize_t ix = 0; object != NULL && ix < argc; ix += 2) {
+            if (PyDict_SetItem(object, argv[ix], ix + 1 < argc ? argv[ix + 1] : Py_None) < 0) {
+                Py_CLEAR(object);
+            }
+        }
+        return object;
+    }
+    case IN_STRING_SLICE:
+    case IN_ARRAY_SLICE: {
+        // A string's or list's slice - a start index and an optional end index, each 0 to its length
+        int is_string = id == IN_STRING_SLICE;
+        if (argc < 2 || argc > 3 || !(is_string ? PyUnicode_CheckExact(arg0) : PyList_CheckExact(arg0))) {
+            return DEFER;
+        }
+        Py_ssize_t length = is_string ? PyUnicode_GET_LENGTH(arg0) : PyList_GET_SIZE(arg0);
+        end = length;
+        if (!replica_index(arg1, length, &start) ||
+            (argc == 3 && argv[2] != Py_None && !replica_index(argv[2], length, &end))) {
+            return DEFER;
+        }
+        return is_string ? PyUnicode_Substring(arg0, start, end) : PyList_GetSlice(arg0, start, end);
+    }
+    case IN_STRING_INDEX_OF:
+        if (argc < 2 || argc > 3 || !PyUnicode_CheckExact(arg0) || !PyUnicode_CheckExact(arg1)) {
+            return DEFER;
+        }
+        start = 0;
+        if (argc == 3 && !replica_index(argv[2], PyUnicode_GET_LENGTH(arg0), &start)) {
+            return DEFER;
+        }
+        end = PyUnicode_Find(arg0, arg1, start, PY_SSIZE_T_MAX, 1);
+        return end < -1 ? NULL : PyLong_FromSsize_t(end);
+    case IN_STRING_STARTS_WITH:
+    case IN_STRING_ENDS_WITH: {
+        if (argc != 2 || !PyUnicode_CheckExact(arg0) || !PyUnicode_CheckExact(arg1)) {
+            return DEFER;
+        }
+        Py_ssize_t match = PyUnicode_Tailmatch(arg0, arg1, 0, PY_SSIZE_T_MAX, id == IN_STRING_STARTS_WITH ? -1 : 1);
+        return match < 0 ? NULL : PyBool_FromLong(match);
+    }
+    case IN_STRING_TRIM: {
+        if (argc != 1 || !PyUnicode_CheckExact(arg0)) {
+            return DEFER;
+        }
+        int kind = PyUnicode_KIND(arg0);
+        const void *data = PyUnicode_DATA(arg0);
+        start = 0;
+        end = PyUnicode_GET_LENGTH(arg0);
+        while (start < end && Py_UNICODE_ISSPACE(PyUnicode_READ(kind, data, start))) {
+            start++;
+        }
+        while (end > start && Py_UNICODE_ISSPACE(PyUnicode_READ(kind, data, end - 1))) {
+            end--;
+        }
+        return PyUnicode_Substring(arg0, start, end);
+    }
+    case IN_STRING_CHAR_AT:
+    case IN_STRING_CHAR_CODE_AT:
+        if (argc != 2 || !PyUnicode_CheckExact(arg0) || PyUnicode_GET_LENGTH(arg0) == 0 ||
+            !replica_index(arg1, PyUnicode_GET_LENGTH(arg0) - 1, &start)) {
+            return DEFER;
+        }
+        return id == IN_STRING_CHAR_AT ? PySequence_GetItem(arg0, start) :
+            PyLong_FromLong((long)PyUnicode_READ_CHAR(arg0, start));
+    case IN_MATH_MIN:
+    case IN_MATH_MAX: {
+        // The first value, replaced by each value comparing less (greater) - value_compare of numbers
+        PyObject *result = Py_None;
+        for (Py_ssize_t ix = 0; ix < argc; ix++) {
+            if (!IS_NUMBER(argv[ix])) {
+                return DEFER;
+            }
+            if (ix == 0) {
+                result = argv[ix];
+                continue;
+            }
+            int less = number_compare(argv[ix], result, Py_LT);
+            int equal = less == 0 ? number_compare(argv[ix], result, Py_EQ) : 0;
+            if (less < 0 || equal < 0) {
+                return NULL;
+            }
+            if (id == IN_MATH_MIN ? less : !less && !equal) {
+                result = argv[ix];
+            }
+        }
+        return Py_NewRef(result);
+    }
+    case IN_ARRAY_JOIN: {
+        // separator.join(value_string(value) for value in array)
+        if (argc != 2 || !PyList_CheckExact(arg0) || !PyUnicode_CheckExact(arg1)) {
+            return DEFER;
+        }
+        PyObject *strings = PySequence_List(arg0);
+        for (Py_ssize_t ix = 0; strings != NULL && ix < PyList_GET_SIZE(strings); ix++) {
+            PyObject *string = value_string(PyList_GET_ITEM(strings, ix));
+            if (string == NULL) {
+                Py_CLEAR(strings);
+            } else {
+                Py_SETREF(PyList_GET_ITEM(strings, ix), string);
+            }
+        }
+        PyObject *result = strings != NULL ? PyUnicode_Join(arg1, strings) : NULL;
+        Py_XDECREF(strings);
+        return result;
+    }
+    case IN_ARRAY_EXTEND:
+        if (argc != 2 || !PyList_CheckExact(arg0) || !PyList_CheckExact(arg1)) {
+            return DEFER;
+        }
+        return PyList_SetSlice(arg0, PY_SSIZE_T_MAX, PY_SSIZE_T_MAX, arg1) < 0 ? NULL : Py_NewRef(arg0);
+    case IN_REGEX_MATCH:
+    case IN_REGEX_MATCH_ALL: {
+        if (argc != 2 || !Py_IS_TYPE(arg0, (PyTypeObject *)g_REGEX_TYPE) || !PyUnicode_CheckExact(arg1)) {
+            return DEFER;
+        }
+        if (id == IN_REGEX_MATCH) {
+            PyObject *match = PyObject_CallMethodOneArg(arg0, S_search, arg1);
+            PyObject *result = match != NULL && match != Py_None ? regex_match_groups(match) : Py_XNewRef(match);
+            Py_XDECREF(match);
+            return result;
+        }
+        PyObject *matches = PyObject_CallMethodOneArg(arg0, S_finditer, arg1), *match;
+        PyObject *result = matches != NULL ? PyList_New(0) : NULL;
+        while (result != NULL && (match = PyIter_Next(matches)) != NULL) {
+            PyObject *groups = regex_match_groups(match);
+            if (groups == NULL || PyList_Append(result, groups) < 0) {
+                Py_CLEAR(result);
+            }
+            Py_XDECREF(groups);
+            Py_DECREF(match);
+        }
+        if (PyErr_Occurred()) {
+            Py_CLEAR(result);
+        }
+        Py_XDECREF(matches);
+        return result;
+    }
+    case IN_NUMBER_PARSE_INT:
+    case IN_NUMBER_PARSE_FLOAT: {
+        // value.py's value_parse_integer and value_parse_number
+        Py_ssize_t radix = 10;
+        if (argc < 1 || argc > (id == IN_NUMBER_PARSE_INT ? 2 : 1) || !PyUnicode_CheckExact(arg0) ||
+            (argc == 2 && (!replica_index(arg1, 36, &radix) || radix < 2))) {
+            return DEFER;
+        }
+        if (!number_text_match(arg0, id == IN_NUMBER_PARSE_INT ? (int)radix : 0)) {
+            return Py_NewRef(Py_None);
+        }
+        if (id == IN_NUMBER_PARSE_FLOAT) {
+            PyObject *value = PyFloat_FromString(arg0);
+            return value == NULL || isfinite(PyFloat_AS_DOUBLE(value)) ? value : (Py_DECREF(value), Py_NewRef(Py_None));
+        }
+        return arithmetic_result(PyLong_FromUnicodeObject(arg0, (int)radix));
+    }
+    case IN_STRING_SPLIT:
+        if (argc != 2 || !PyUnicode_CheckExact(arg0) || !PyUnicode_CheckExact(arg1)) {
+            return DEFER;
+        }
+        return PyUnicode_GET_LENGTH(arg1) == 0 ? PySequence_List(arg0) : PyUnicode_Split(arg0, arg1, -1);
+    case IN_STRING_ENCODE: {
+        if (argc != 1 || !PyUnicode_CheckExact(arg0)) {
+            return DEFER;
+        }
+        PyObject *encoded = PyUnicode_AsUTF8String(arg0);
+        PyObject *result = encoded != NULL ? PyList_New(PyBytes_GET_SIZE(encoded)) : NULL;
+        for (Py_ssize_t ix = 0; result != NULL && ix < PyBytes_GET_SIZE(encoded); ix++) {
+            PyObject *byte = PyLong_FromLong((unsigned char)PyBytes_AS_STRING(encoded)[ix]);
+            if (byte == NULL) {
+                Py_CLEAR(result);
+            } else {
+                PyList_SET_ITEM(result, ix, byte);
+            }
+        }
+        Py_XDECREF(encoded);
+        return result;
+    }
+    case IN_STRING_DECODE: {
+        if (argc != 1 || !PyList_CheckExact(arg0)) {
+            return DEFER;
+        }
+        PyObject *items = PySequence_Tuple(arg0);
+        if (items == NULL) {
+            return NULL;
+        }
+        Py_ssize_t count = PyTuple_GET_SIZE(items);
+        char *bytes = PyMem_Malloc(count + 1);
+        int bytes_ok = bytes != NULL;
+        for (Py_ssize_t ix = 0; bytes_ok && ix < count; ix++) {
+            long byte;
+            PyObject *item = PyTuple_GET_ITEM(items, ix);
+            bytes_ok = PyLong_CheckExact(item) && (byte = PyLong_AsLong(item)) >= 0 && byte <= 255;
+            if (bytes_ok) {
+                bytes[ix] = (char)byte;
+            }
+        }
+        PyObject *result = DEFER;
+        if (bytes == NULL) {
+            result = PyErr_NoMemory();
+        } else if (bytes_ok) {
+            result = PyUnicode_DecodeUTF8(bytes, count, NULL);
+            if (result == NULL && PyErr_ExceptionMatches(PyExc_ValueError)) {
+                PyErr_Clear();
+                result = Py_NewRef(Py_None);
+            }
+        } else {
+            // An int too large for a long
+            PyErr_Clear();
+        }
+        PyMem_Free(bytes);
+        Py_DECREF(items);
+        return result;
+    }
+    case IN_STRING_REPLACE:
+        if (argc != 3 || !PyUnicode_CheckExact(arg0) || !PyUnicode_CheckExact(arg1) || !PyUnicode_CheckExact(argv[2])) {
+            return DEFER;
+        }
+        return PyUnicode_Replace(arg0, arg1, argv[2], -1);
+    case IN_STRING_LOWER:
+    case IN_STRING_UPPER:
+        if (argc != 1 || !PyUnicode_CheckExact(arg0)) {
+            return DEFER;
+        }
+        return PyObject_CallMethodNoArgs(arg0, id == IN_STRING_LOWER ? S_lower : S_upper);
+    case IN_STRING_NEW:
+        return argc <= 1 ? value_string(argc == 1 ? arg0 : Py_None) : DEFER;
+    case IN_ARRAY_REVERSE:
+        if (argc != 1 || !PyList_CheckExact(arg0)) {
+            return DEFER;
+        }
+        return PyList_Reverse(arg0) < 0 ? NULL : Py_NewRef(arg0);
+    case IN_ARRAY_COPY:
+        return argc == 1 && PyList_CheckExact(arg0) ? PyList_GetSlice(arg0, 0, PY_SSIZE_T_MAX) : DEFER;
+    case IN_OBJECT_DELETE: {
+        if (argc != 2 || !PyDict_CheckExact(arg0) || !PyUnicode_CheckExact(arg1)) {
+            return DEFER;
+        }
+        int has = PyDict_Contains(arg0, arg1);
+        globals_changed();
+        ctx_dict_changed(ctx, arg0);
+        return has < 0 || (has && PyDict_DelItem(arg0, arg1) < 0) ? NULL : Py_NewRef(Py_None);
+    }
+    case IN_OBJECT_ASSIGN:
+        if (argc != 2 || !PyDict_CheckExact(arg0) || !PyDict_CheckExact(arg1)) {
+            return DEFER;
+        }
+        globals_changed();
+        ctx_dict_changed(ctx, arg0);
+        return PyDict_Update(arg0, arg1) < 0 ? NULL : Py_NewRef(arg0);
+    case IN_OBJECT_COPY:
+        return argc == 1 && PyDict_CheckExact(arg0) ? PyDict_Copy(arg0) : DEFER;
+    case IN_SYSTEM_BOOLEAN: {
+        if (argc > 1) {
+            return DEFER;
+        }
+        int truth = value_boolean(argc == 1 ? arg0 : Py_None);
+        return truth < 0 ? NULL : PyBool_FromLong(truth);
+    }
+    case IN_MATH_ABS:
+    case IN_MATH_CEIL:
+    case IN_MATH_FLOOR: {
+        if (argc != 1 || !IS_NUMBER(arg0)) {
+            return DEFER;
+        }
+        if (PyLong_CheckExact(arg0)) {
+            return id == IN_MATH_ABS ? PyNumber_Absolute(arg0) : Py_NewRef(arg0);
+        }
+        if (id == IN_MATH_ABS) {
+            return PyFloat_FromDouble(fabs(PyFloat_AS_DOUBLE(arg0)));
+        }
+        double number = PyFloat_AS_DOUBLE(arg0);
+        return isfinite(number) ? PyLong_FromDouble(id == IN_MATH_CEIL ? ceil(number) : floor(number)) : DEFER;
+    }
+    case IN_REGEX_REPLACE: {
+        // The library's JavaScript-to-Python replacement translation, for a replacement without "\\" whose every "$"
+        // starts a group number ("$1") - each "$" becomes "\\"
+        if (argc != 3 || !Py_IS_TYPE(arg0, (PyTypeObject *)g_REGEX_TYPE) || !PyUnicode_CheckExact(arg1) ||
+            !PyUnicode_CheckExact(argv[2])) {
+            return DEFER;
+        }
+        PyObject *replacement = argv[2];
+        int kind = PyUnicode_KIND(replacement), dollars = 0;
+        const void *data = PyUnicode_DATA(replacement);
+        Py_ssize_t length = PyUnicode_GET_LENGTH(replacement);
+        for (Py_ssize_t ix = 0; ix < length; ix++) {
+            Py_UCS4 ch = PyUnicode_READ(kind, data, ix);
+            if (ch == '\\') {
+                return DEFER;
+            }
+            if (ch == '$') {
+                Py_UCS4 next = ix + 1 < length ? PyUnicode_READ(kind, data, ix + 1) : 0;
+                if (next < '0' || next > '9') {
+                    return DEFER;
+                }
+                dollars = 1;
+            }
+        }
+        replacement = dollars ? PyUnicode_Replace(replacement, S_dollar, S_backslash, -1) : Py_NewRef(replacement);
+        PyObject *result = replacement != NULL ? PyObject_CallMethodObjArgs(arg0, S_sub, replacement, arg1, NULL) : NULL;
+        Py_XDECREF(replacement);
+        return result;
+    }
+    case IN_REGEX_ESCAPE:
+        return argc == 1 && PyUnicode_CheckExact(arg0) ? PyObject_CallOneArg(g_re_escape, arg0) : DEFER;
+    case IN_ARRAY_NEW_SIZE: {
+        Py_ssize_t size = 0;
+        if (argc > 2 || (argc >= 1 && !replica_index(arg0, PY_SSIZE_T_MAX / 16, &size))) {
+            return DEFER;
+        }
+        PyObject *value = argc == 2 ? arg1 : g_zero, *result = PyList_New(size);
+        for (Py_ssize_t ix = 0; result != NULL && ix < size; ix++) {
+            PyList_SET_ITEM(result, ix, Py_NewRef(value));
+        }
+        return result;
+    }
+    case IN_NUMBER_TO_STRING: {
+        // The digits of a non-negative integer in a radix
+        Py_ssize_t value, radix = 10;
+        if (argc < 1 || argc > 2 || !replica_index(arg0, PY_SSIZE_T_MAX, &value) ||
+            (argc == 2 && (!replica_index(arg1, 36, &radix) || radix < 2))) {
+            return DEFER;
+        }
+        return digits_string((unsigned long long)value, 0, (int)radix);
+    }
+    default: { // IN_SYSTEM_GLOBAL_GET, IN_SYSTEM_GLOBAL_SET
+        // The globals - options.get('globals')
+        PyObject *globals = NULL, *result = DEFER;
+        if (argc < 1 || argc > 2 || !PyUnicode_CheckExact(arg0) || !PyDict_CheckExact(ctx->options)) {
+            return DEFER;
+        }
+        if (bs_dict_get(ctx->options, S_globals, &globals) < 0) {
+            return NULL;
+        }
+        PyObject *value = argc == 2 ? arg1 : Py_None;
+        if (globals == NULL || globals == Py_None) {
+            result = Py_NewRef(value);
+        } else if (PyDict_CheckExact(globals)) {
+            if (id == IN_SYSTEM_GLOBAL_GET) {
+                int found = bs_dict_get(globals, arg0, &result);
+                if (found == 0) {
+                    result = Py_NewRef(value);
+                }
+            } else {
+                result = PyDict_SetItem(globals, arg0, value) < 0 ? NULL : Py_NewRef(value);
+                ctx_invalidate(ctx);
+                globals_changed();
+            }
+        }
+        Py_XDECREF(globals);
+        return result;
+    }
+    }
+}
+
+
+// Call a function value
+static BS_INLINE PyObject *call_function(Frame *f, const Inst *inst, PyObject *name, PyObject *func, PyObject *const *argv,
+                               Py_ssize_t argc, int args_none)
+{
+    // An intrinsic call site - runtime.py's intrinsic by the call's name, or a library function replica
+    if (inst->x != IN_NONE) {
+        if (inst->x < IN_LIBRARY) {
+            if (func == g_intrinsic_fns[inst->x] || is_intrinsic_fn(func)) {
+                PyObject *result = call_intrinsic(f, inst, name, argv, argc, args_none);
+                if (result != DEFER) {
+                    return result;
+                }
+                func = g_intrinsic_fns[inst->x];
+            }
+        } else if (func == g_intrinsic_fns[inst->x]) {
+            PyObject *result = call_library(f->ctx, inst->x, argv, argc, args_none);
+            if (result != DEFER) {
+                return result != NULL ? result : call_failed(f, inst, name);
+            }
+        }
+    }
+    if (Py_IS_TYPE(func, &ScriptFunction_Type)) {
+        PyObject *result = script_function_call(f->ctx, (ScriptFunction *)func, argv, argc, args_none);
+        return result != NULL ? result : call_failed(f, inst, name);
+    }
+    if (is_intrinsic_fn(func)) {
+        // runtime.py's intrinsic fast path takes the argument count (len(None)) whatever the call's name
+        if (args_none) {
+            return call_intrinsic(f, inst, name, argv, argc, args_none);
+        }
+    } else if (PySet_Contains(g_INTRINSICS, func) < 0) {
+        // runtime.py's intrinsic set membership test raises for an unhashable value
+        return call_failed(f, inst, name);
+    }
+
+    // Call the function with the argument list and the options
+    PyObject *args = args_none ? Py_NewRef(Py_None) : list_new(argv, argc);
+    if (args == NULL || ctx_sync_out(f->ctx) < 0) {
+        Py_XDECREF(args);
+        return NULL;
+    }
+    PyObject *call_args[2] = {args, f->ctx->options};
+    PyObject *result = PyObject_Vectorcall(func, call_args, 2, NULL);
+    Py_DECREF(args);
+    ctx_sync_in(f->ctx);
+    return result != NULL ? result : call_failed(f, inst, name);
+}
+
+
+// The number of call arguments gathered on the C stack before the heap
+#define ARGV_SMALL 16
+
+
+#ifdef BS_CALL_CACHE
+// A call name's entry in a context's call cache
+static inline CallCache *call_cache_entry(Ctx *ctx, PyObject *name)
+{
+    uintptr_t hash = (uintptr_t)name >> 4;
+    return &ctx->call_cache[(hash ^ (hash >> 7)) & (CALL_CACHE_SIZE - 1)];
+}
+#endif
+
+
+// Gather a call instruction's arguments - argv is argv_small, or a new array, or NULL on error
+static PyObject **vm_call_args(Frame *f, const Inst *inst, PyObject **argv_small)
+{
+    Py_ssize_t argc = inst->c == ARGS_NONE ? 0 : inst->c;
+    PyObject **argv = argc > ARGV_SMALL ? PyMem_Malloc(argc * sizeof(PyObject *)) : argv_small;
+    if (argv == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    const Inst *data = inst + 1;
+    for (Py_ssize_t ix = 0; ix < argc; ix += 3, data++) {
+        argv[ix] = f->regs[data->a];
+        if (ix + 1 < argc) {
+            argv[ix + 1] = f->regs[data->b];
+        }
+        if (ix + 2 < argc) {
+            argv[ix + 2] = f->regs[data->c];
+        }
+    }
+    return argv;
+}
+
+
+// The intrinsic call fast path - an intrinsic call site whose function the context's call cache resolves runs its
+// common argument shapes on exact types here, and anything else as the intrinsic. Returns DEFER for the general
+// call.
+static BS_NOINLINE PyObject *vm_call_intrinsic(Frame *f, const Inst *inst)
+{
+#ifdef BS_CALL_CACHE
+    Ctx *ctx = f->ctx;
+    if (ctx->call_cache == NULL) {
+        return DEFER;
+    }
+    PyObject *name = f->chunk->names[inst->b];
+    CallCache *cache = call_cache_entry(ctx, name);
+    PyObject *func = cache->func;
+    if (cache->name != name || cache->globals != f->globals || cache->epoch != g_globals_epoch ||
+        (inst->x < IN_LIBRARY ? func != g_intrinsic_fns[inst->x] && !is_intrinsic_fn(func) :
+         func != g_intrinsic_fns[inst->x])) {
+        return DEFER;
+    }
+    PyObject **regs = f->regs;
+    const Inst *data = inst + 1;
+    PyObject *arg0 = regs[data->a], *arg1 = regs[data->b], *value;
+    Py_ssize_t index;
+    switch (inst->x * 4 + (inst->c == ARGS_NONE ? 3 : (inst->c > 3 ? 3 : inst->c))) {
+    case IN_OBJECT_GET * 4 + 2:
+        if (PyDict_CheckExact(arg0) && PyUnicode_CheckExact(arg1)) {
+            int found = bs_dict_get(arg0, arg1, &value);
+            return found < 0 ? NULL : (found ? value : Py_NewRef(Py_None));
+        }
+        break;
+    case IN_OBJECT_HAS * 4 + 2:
+        if (PyDict_CheckExact(arg0) && PyUnicode_CheckExact(arg1)) {
+            int has = PyDict_Contains(arg0, arg1);
+            return has < 0 ? NULL : PyBool_FromLong(has);
+        }
+        break;
+    case IN_ARRAY_GET * 4 + 2:
+        if (PyList_CheckExact(arg0) && replica_index(arg1, PyList_GET_SIZE(arg0) - 1, &index)) {
+            return bs_list_get(arg0, index);
+        }
+        break;
+    case IN_ARRAY_SET * 4 + 3:
+        if (PyList_CheckExact(arg0) && replica_index(arg1, PyList_GET_SIZE(arg0) - 1, &index)) {
+            value = regs[data->c];
+            return PyList_SetItem(arg0, index, Py_NewRef(value)) < 0 ? NULL : Py_NewRef(value);
+        }
+        break;
+    case IN_ARRAY_LENGTH * 4 + 1:
+        if (PyList_CheckExact(arg0)) {
+            return PyLong_FromSsize_t(PyList_GET_SIZE(arg0));
+        }
+        break;
+    case IN_STRING_LENGTH * 4 + 1:
+        if (PyUnicode_CheckExact(arg0)) {
+            return PyLong_FromSsize_t(PyUnicode_GET_LENGTH(arg0));
+        }
+        break;
+    case IN_SYSTEM_TYPE * 4 + 1:
+        return Py_NewRef(value_type(arg0));
+    case IN_ARRAY_PUSH * 4 + 2:
+        if (PyList_CheckExact(arg0)) {
+            return PyList_Append(arg0, arg1) < 0 ? NULL : Py_NewRef(arg0);
+        }
+        break;
+    case IN_MATH_SQRT * 4 + 1:
+        if (PyFloat_CheckExact(arg0) && PyFloat_AS_DOUBLE(arg0) >= 0) {
+            return PyFloat_FromDouble(sqrt(PyFloat_AS_DOUBLE(arg0)));
+        }
+        break;
+    case IN_OBJECT_KEYS * 4 + 1:
+        if (PyDict_CheckExact(arg0)) {
+            return PyDict_Keys(arg0);
+        }
+        break;
+    case IN_ARRAY_NEW * 4 + 0:
+        return PyList_New(0);
+    case IN_OBJECT_NEW * 4 + 0:
+        return PyDict_New();
+    default:
+        break;
+    }
+
+    // Any other shape - runtime.py's intrinsic, or the library replica (which may defer to the general call)
+    int args_none = inst->c == ARGS_NONE;
+    Py_ssize_t argc = args_none ? 0 : inst->c;
+    PyObject *argv_small[ARGV_SMALL], **argv = vm_call_args(f, inst, argv_small);
+    if (argv == NULL) {
+        return NULL;
+    }
+    if (inst->x < IN_LIBRARY) {
+        value = call_intrinsic(f, inst, name, argv, argc, args_none);
+    } else if ((value = call_library(ctx, inst->x, argv, argc, args_none)) == NULL) {
+        value = call_failed(f, inst, name);
+    }
+    if (argv != argv_small) {
+        PyMem_Free(argv);
+    }
+    return value;
+#else
+    (void)f;
+    (void)inst;
+    return DEFER;
+#endif
+}
+
+
+// Execute a call instruction
+static BS_INLINE PyObject *vm_call(Frame *f, const Inst *inst)
+{
+    Chunk *chunk = f->chunk;
+    PyObject **regs = f->regs;
+    int args_none = inst->c == ARGS_NONE;
+    Py_ssize_t argc = args_none ? 0 : inst->c;
+    PyObject *argv_small[ARGV_SMALL], **argv = vm_call_args(f, inst, argv_small);
+    if (argv == NULL) {
+        return NULL;
+    }
+
+    // Resolve the function - a local, a global, or a built-in expression function
+    PyObject *name, *func = NULL, *result = NULL;
+    int found = 0;
+    if (inst->op == OP_CALLS) {
+        name = chunk->slot_names[inst->b];
+        func = Py_XNewRef(regs[inst->b]);
+        found = func != NULL;
+    } else {
+        name = chunk->names[inst->b];
+        if (f->locals != NULL) {
+            found = bs_dict_get(f->locals, name, &func);
+        }
+    }
+#ifdef BS_CALL_CACHE
+    if (inst->op == OP_CALLG && f->ctx->call_cache == NULL) {
+        f->ctx->call_cache = PyMem_Calloc(CALL_CACHE_SIZE, sizeof(CallCache));
+    }
+    if (inst->op == OP_CALLG && f->ctx->call_cache != NULL) {
+        CallCache *cache = call_cache_entry(f->ctx, name);
+        if (cache->name == name && cache->globals == f->globals && cache->epoch == g_globals_epoch) {
+            func = Py_NewRef(cache->func);
+            found = 1;
+        } else if ((found = bs_dict_get(f->globals, name, &func)) > 0) {
+            Py_XSETREF(cache->name, Py_NewRef(name));
+            Py_XSETREF(cache->func, Py_NewRef(func));
+            Py_XSETREF(cache->globals, Py_NewRef(f->globals));
+            cache->epoch = g_globals_epoch;
+        }
+    }
+#endif
+    if (found == 0 && f->globals != NULL) {
+        found = bs_dict_get(f->globals, name, &func);
+    }
+    if (found == 0 && f->builtins) {
+        found = bs_dict_get(g_EXPRESSION_FUNCTIONS, name, &func);
+    }
+    if (found >= 0) {
+        if (func == NULL || func == Py_None) {
+            PyObject *statement = frame_statement(f, inst);
+            raise_runtime_error(f->script, statement, PyUnicode_FromFormat("Undefined function \"%U\"", name));
+            Py_DECREF(statement);
+        } else {
+            result = call_function(f, inst, name, func, argv, argc, args_none);
+        }
+    }
+    Py_XDECREF(func);
+    if (argv != argv_small) {
+        PyMem_Free(argv);
+    }
+    return result;
+}
+
+
+//
+// Includes
+//
+
+
+// Execute an include statement's includes
+static int vm_include(Frame *f, uint32_t index)
+{
+    Ctx *ctx = f->ctx;
+    PyObject *options = ctx->options;
+    PyObject *statement = chunk_statement(f->chunk, index);
+    PyObject *fetch_fn = NULL, *url_fn = NULL, *include_statement = NULL, *includes = NULL, *iter = NULL,
+        *include = NULL, *url = NULL, *system = NULL, *key = NULL, *global_includes = NULL, *text = NULL,
+        *include_script = NULL, *include_options = NULL, *result = NULL;
+    int rc = -1;
+    if ((fetch_fn = object_get(options, S_fetchFn)) == NULL || (url_fn = object_get(options, S_urlFn)) == NULL ||
+        (include_statement = PyObject_GetItem(statement, S_include)) == NULL ||
+        (includes = PyObject_GetItem(include_statement, S_includes)) == NULL ||
+        (iter = PyObject_GetIter(includes)) == NULL) {
+        goto done;
+    }
+    while ((include = PyIter_Next(iter)) != NULL) {
+        // Fixup the non-system include URL
+        if ((url = PyObject_GetItem(include, S_url)) == NULL || (system = object_get(include, S_system)) == NULL) {
+            goto done;
+        }
+        int is_system = PyObject_IsTrue(system);
+        if (is_system < 0) {
+            goto done;
+        }
+        if (!is_system && url_fn != Py_None) {
+            if (ctx_sync_out(ctx) < 0) {
+                goto done;
+            }
+            Py_SETREF(url, PyObject_CallOneArg(url_fn, url));
+            ctx_sync_in(ctx);
+            if (url == NULL) {
+                goto done;
+            }
         }
 
         // Already included? System include keys are bracketed so they can't collide with local include URLs.
-        include_key = system_include ? PyUnicode_FromFormat("<%S>", include_url) : Py_NewRef(include_url);
-        if (include_key == NULL) {
-            goto include_done;
-        }
-        found = obj_get(globals, g.str_includes_name, &global_includes);
-        if (found < 0) {
-            goto include_done;
-        }
-        if (!found || !PyDict_Check(global_includes)) {
-            Py_XDECREF(global_includes);
-            global_includes = PyDict_New();
-            if (global_includes == NULL || obj_setitem(globals, g.str_includes_name, global_includes) < 0) {
-                goto include_done;
-            }
-        }
-        PyObject *already_included = NULL;
-        found = obj_get(global_includes, include_key, &already_included);
-        if (found < 0) {
-            goto include_done;
-        }
-        if (found) {
-            int is_included = PyObject_IsTrue(already_included);
-            Py_DECREF(already_included);
-            if (is_included < 0) {
-                goto include_done;
-            }
-            if (is_included) {
-                include_ok = 1;
-                goto include_done;
-            }
-        }
-        if (PyDict_SetItem(global_includes, include_key, Py_True) < 0) {
-            goto include_done;
-        }
-
-        // Get the include script text - system includes from the system include map, otherwise fetch
-        if (system_include) {
-            if (dict_get_ref(g.system_includes, include_url, &include_text) < 0) {
-                goto include_done;
-            }
-        } else if (fetch_fn != NULL) {
-            PyObject *request = PyDict_New();
-            if (request == NULL) {
-                goto include_done;
-            }
-            if (PyDict_SetItem(request, g.str_url, include_url) < 0) {
-                Py_DECREF(request);
-                goto include_done;
-            }
-            include_text = PyObject_CallOneArg(fetch_fn, request);
-            Py_DECREF(request);
-            if (include_text == NULL) {
-                // Bare except in the reference implementation - clear any error
-                PyErr_Clear();
-            }
-        }
-        if (include_text == NULL || include_text == Py_None) {
-            set_runtime_error(script, statement, PyUnicode_FromFormat("Include of \"%S\" failed", include_url));
-            goto include_done;
-        }
-
-        // Parse the include script. A system include starting with "{" is the
-        // parser-compiled JSON script model (all system includes are embedded pre-compiled).
-        if (system_include && PyUnicode_GET_LENGTH(include_text) > 0 && PyUnicode_READ_CHAR(include_text, 0) == '{') {
-            include_script = PyObject_CallOneArg(g.json_loads, include_text);
+        if (is_system) {
+            PyObject *url_format = PyObject_Format(url, S_empty);
+            key = url_format != NULL ? PyUnicode_FromFormat("<%U>", url_format) : NULL;
+            Py_XDECREF(url_format);
         } else {
-            include_script = PyObject_CallFunction(g.barescript_parse_script, "OiO", include_text, 1, include_url);
+            key = Py_NewRef(url);
         }
-        if (include_script == NULL) {
-            goto include_done;
-        }
-        if (system_include) {
-            if (obj_setitem(include_script, g.str_system, Py_True) < 0) {
-                goto include_done;
-            }
-        }
-
-        // Execute the include script
-        if (PyDict_CheckExact(options)) {
-            include_options = PyDict_Copy(options);
-        } else {
-            include_options = PyObject_CallMethodNoArgs(options, g.str_copy);
-        }
-        if (include_options == NULL) {
-            goto include_done;
-        }
-        PyObject *partial_args[2] = {g.url_file_relative, include_url};
-        PyObject *include_url_fn = PyObject_Vectorcall(g.partial, partial_args, 2, NULL);
-        if (include_url_fn == NULL) {
-            goto include_done;
-        }
-        int set_result = obj_setitem(include_options, g.str_urlFn, include_url_fn);
-        Py_DECREF(include_url_fn);
-        if (set_result < 0) {
-            goto include_done;
-        }
-        PyObject *include_statements;
-        if (obj_subscript(include_script, g.str_statements, &include_statements) < 0) {
-            goto include_done;
-        }
-        CompiledBody *include_body = NULL;
-        if (PyList_CheckExact(include_statements)) {
-            include_body = compile_body(include_statements, NULL, 0);
-            if (include_body == NULL) {
-                Py_DECREF(include_statements);
-                goto include_done;
-            }
-        }
-        ExecCtx include_ctx;
-        if (exec_ctx_init_exec(&include_ctx, include_options) < 0) {
-            exec_ctx_fini(&include_ctx);
-            compiled_body_free(include_body);
-            Py_DECREF(include_statements);
-            goto include_done;
-        }
-        Scope include_scope = {Py_None, NULL, NULL, 0};
-        PyObject *include_result =
-            execute_script_helper(include_script, include_statements, &include_ctx, &include_scope, include_body);
-        exec_ctx_sync_out_final(&include_ctx);
-        exec_ctx_fini(&include_ctx);
-        compiled_body_free(include_body);
-        Py_DECREF(include_statements);
-        if (include_result == NULL) {
-            goto include_done;
-        }
-        Py_DECREF(include_result);
-
-        // Run the bare-script linter?
-        if (log_fn != NULL) {
-            PyObject *debug = NULL;
-            found = obj_get(options, g.str_debug, &debug);
-            if (found < 0) {
-                goto include_done;
-            }
-            int is_debug = 0;
-            if (found) {
-                is_debug = PyObject_IsTrue(debug);
-                Py_DECREF(debug);
-                if (is_debug < 0) {
-                    goto include_done;
-                }
-            }
-            if (is_debug) {
-                PyObject *lint_args[2] = {include_script, globals};
-                PyObject *warnings = PyObject_Vectorcall(g.barescript_lint_script, lint_args, 2, NULL);
-                if (warnings == NULL) {
-                    goto include_done;
-                }
-                int has_warnings = PyObject_IsTrue(warnings);
-                if (has_warnings < 0) {
-                    Py_DECREF(warnings);
-                    goto include_done;
-                }
-                if (has_warnings) {
-                    Py_ssize_t warnings_length = PyObject_Length(warnings);
-                    PyObject *prefix_message = (warnings_length >= 0) ? PyUnicode_FromFormat(
-                        "BareScript: Include \"%S\" static analysis... %zd warning%s:",
-                        include_url, warnings_length, (warnings_length > 1) ? "s" : ""
-                    ) : NULL;
-                    if (prefix_message == NULL) {
-                        Py_DECREF(warnings);
-                        goto include_done;
-                    }
-                    PyObject *log_result = PyObject_CallOneArg(log_fn, prefix_message);
-                    Py_DECREF(prefix_message);
-                    if (log_result == NULL) {
-                        Py_DECREF(warnings);
-                        goto include_done;
-                    }
-                    Py_DECREF(log_result);
-
-                    PyObject *warnings_fast = PySequence_Fast(warnings, "lint warnings must be a sequence");
-                    Py_DECREF(warnings);
-                    if (warnings_fast == NULL) {
-                        goto include_done;
-                    }
-                    Py_ssize_t warnings_count = PySequence_Fast_GET_SIZE(warnings_fast);
-                    for (Py_ssize_t ix_warning = 0; ix_warning < warnings_count; ix_warning++) {
-                        PyObject *warning = PySequence_Fast_GET_ITEM(warnings_fast, ix_warning);
-                        PyObject *warning_message = PyUnicode_FromFormat("BareScript: %S", warning);
-                        if (warning_message == NULL) {
-                            Py_DECREF(warnings_fast);
-                            goto include_done;
-                        }
-                        log_result = PyObject_CallOneArg(log_fn, warning_message);
-                        Py_DECREF(warning_message);
-                        if (log_result == NULL) {
-                            Py_DECREF(warnings_fast);
-                            goto include_done;
-                        }
-                        Py_DECREF(log_result);
-                    }
-                    Py_DECREF(warnings_fast);
-                } else {
-                    Py_DECREF(warnings);
-                }
-            }
-        }
-        include_ok = 1;
-
-    include_done:
-        Py_XDECREF(include_options);
-        Py_XDECREF(include_script);
-        Py_XDECREF(include_text);
-        Py_XDECREF(global_includes);
-        Py_XDECREF(system_obj);
-        Py_XDECREF(include_key);
-        Py_XDECREF(include_url);
-        Py_DECREF(include);
-        if (!include_ok) {
+        if (key == NULL || (global_includes = runtime_call("_system_global_includes", f->globals, NULL)) == NULL) {
             goto done;
         }
+        PyObject *included = object_get(global_includes, key);
+        int is_included = included != NULL ? PyObject_IsTrue(included) : -1;
+        Py_XDECREF(included);
+        if (is_included < 0) {
+            goto done;
+        }
+        if (!is_included) {
+            if (PyObject_SetItem(global_includes, key, Py_True) < 0) {
+                goto done;
+            }
+
+            // Get the include script text - system includes from the system include map, otherwise fetch
+            if (is_system) {
+                PyObject *system_includes = runtime_attr("SYSTEM_INCLUDES");
+                text = system_includes != NULL ? object_get(system_includes, url) : NULL;
+                Py_XDECREF(system_includes);
+                if (text == NULL) {
+                    goto done;
+                }
+            } else if (fetch_fn != Py_None) {
+                if (ctx_sync_out(ctx) < 0) {
+                    goto done;
+                }
+                PyObject *request = Py_BuildValue("{OO}", S_url, url);
+                text = request != NULL ? PyObject_CallOneArg(fetch_fn, request) : NULL;
+                Py_XDECREF(request);
+                ctx_sync_in(ctx);
+                if (text == NULL) {
+                    PyErr_Clear();
+                    text = Py_NewRef(Py_None);
+                }
+            } else {
+                text = Py_NewRef(Py_None);
+            }
+            if (text == Py_None) {
+                PyObject *url_format = PyObject_Format(url, S_empty);
+                raise_runtime_error(f->script, statement, url_format != NULL ?
+                                    PyUnicode_FromFormat("Include of \"%U\" failed", url_format) : NULL);
+                Py_XDECREF(url_format);
+                goto done;
+            }
+
+            // Parse the include script. A system include starting with "{" is the parser-compiled JSON script model.
+            int is_json = 0;
+            if (is_system) {
+                if (PyUnicode_CheckExact(text)) {
+                    is_json = PyUnicode_GET_LENGTH(text) > 0 && PyUnicode_READ_CHAR(text, 0) == '{';
+                } else {
+                    PyObject *starts = PyObject_CallMethodObjArgs(text, S_startswith, S_brace, NULL);
+                    is_json = starts != NULL ? PyObject_IsTrue(starts) : -1;
+                    Py_XDECREF(starts);
+                    if (is_json < 0) {
+                        goto done;
+                    }
+                }
+            }
+            if (is_json) {
+                include_script = PyObject_CallOneArg(g_json_loads, text);
+            } else {
+                include_script = runtime_call("barescript_parse_script", text, g_one, url, NULL);
+            }
+            if (include_script == NULL || (is_system && PyObject_SetItem(include_script, S_system, Py_True) < 0)) {
+                goto done;
+            }
+
+            // Execute the include script
+            if (ctx_sync_out(ctx) < 0 || (include_options = PyDict_Copy(options)) == NULL) {
+                goto done;
+            }
+            PyObject *include_url_fn = PyObject_CallFunctionObjArgs(g_partial, g_url_file_relative, url, NULL);
+            int set = include_url_fn != NULL ? PyDict_SetItem(include_options, S_urlFn, include_url_fn) : -1;
+            Py_XDECREF(include_url_fn);
+            if (set < 0) {
+                goto done;
+            }
+            Ctx include_ctx = {.options = include_options};
+            result = execute_script_statements(&include_ctx, include_script);
+            ctx_exit(&include_ctx);
+            if (result == NULL) {
+                goto done;
+            }
+            Py_CLEAR(result);
+
+            // Run the bare-script linter?
+            if ((result = runtime_call("_lint_include", options, include_script, url, NULL)) == NULL) {
+                goto done;
+            }
+            Py_CLEAR(result);
+        }
+        Py_CLEAR(include);
+        Py_CLEAR(url);
+        Py_CLEAR(system);
+        Py_CLEAR(key);
+        Py_CLEAR(global_includes);
+        Py_CLEAR(text);
+        Py_CLEAR(include_script);
+        Py_CLEAR(include_options);
     }
-    result = 0;
+    rc = PyErr_Occurred() ? -1 : 0;
 
 done:
-    Py_XDECREF(includes_fast);
-    Py_XDECREF(includes);
-    Py_XDECREF(url_fn);
-    Py_XDECREF(log_fn);
+    Py_DECREF(statement);
     Py_XDECREF(fetch_fn);
-
-    // Reload the statement counter - the external callables may have changed it
-    if (result == 0 && exec_ctx_sync_in(ctx) < 0) {
-        result = -1;
-    }
-    return result;
+    Py_XDECREF(url_fn);
+    Py_XDECREF(include_statement);
+    Py_XDECREF(includes);
+    Py_XDECREF(iter);
+    Py_XDECREF(include);
+    Py_XDECREF(url);
+    Py_XDECREF(system);
+    Py_XDECREF(key);
+    Py_XDECREF(global_includes);
+    Py_XDECREF(text);
+    Py_XDECREF(include_script);
+    Py_XDECREF(include_options);
+    Py_XDECREF(result);
+    return rc;
 }
 
 
-// Evaluate a compiled expression node. Mirrors evaluate_expression_c over the compiled tree.
-static PyObject *eval_compiled(
-    CompiledExpr *expr, ExecCtx *ctx, Scope *scope, PyObject *script, PyObject *statement
-)
+//
+// The interpreter
+//
+
+
+// The STMT slow path - the statement limit exceeded, or coverage recording
+// runtime.py's statement count, for a count this runtime can't keep: options['statementCount'] + 1, stored and
+// compared with maxStatements. A count that's an int this runtime can keep goes back to its own count. Returns 1 if
+// the count exceeds maxStatements, 0 if not, or -1 on error.
+static int count_python(Frame *f)
 {
-    PyObject *result = NULL;
-
-    switch (expr->kind) {
-    case CEXPR_LITERAL:
-        return Py_NewRef(expr->value);
-    case CEXPR_NULL:
-        Py_RETURN_NONE;
-    case CEXPR_TRUE:
-        Py_RETURN_TRUE;
-    case CEXPR_FALSE:
-        Py_RETURN_FALSE;
-
-    case CEXPR_VARIABLE: {
-        // Get the local variable value, if any (a NULL slot mirrors a locals dict miss)
-        if (scope->slots != NULL) {
-            if (expr->slot >= 0) {
-                PyObject *value = scope->slots[expr->slot];
-                if (value != NULL) {
-                    return Py_NewRef(value);
-                }
-            }
-        } else if (scope->dict != Py_None) {
-            PyObject *value;
-            int found = obj_get(scope->dict, expr->value, &value);
-            if (found != 0) {
-                return (found < 0) ? NULL : value;
-            }
-        }
-
-        // Get the global variable value or None if undefined
-        if (ctx->globals != NULL) {
-            PyObject *value;
-            int found = obj_get(ctx->globals, expr->value, &value);
-            if (found != 0) {
-                return (found < 0) ? NULL : value;
-            }
-        }
-        Py_RETURN_NONE;
-    }
-    default:
-        break;
+    Ctx *ctx = f->ctx;
+    ctx->count = COUNT_PYTHON;
+    PyObject *count = PyObject_GetItem(ctx->options, S_statementCount);
+    PyObject *next = count != NULL ? PyNumber_Add(count, g_one) : NULL;
+    Py_XDECREF(count);
+    if (next == NULL || PyDict_SetItem(ctx->options, S_statementCount, next) < 0) {
+        Py_XDECREF(next);
+        return -1;
     }
 
-    // No recursion guard - compiled tree depth is bounded at compile time
-    // (COMPILED_EXPR_MAX_DEPTH); function-call nesting is guarded in execute_script_helper
-    switch (expr->kind) {
-    case CEXPR_BINARY: {
-        PyObject *left = eval_compiled(expr->left, ctx, scope, script, statement);
-        if (left == NULL) {
-            break;
-        }
-
-        // Short-circuiting "and" and "or" binary operators
-        BinaryOp op = expr->binary_op;
-        if (op == BINARY_AND || op == BINARY_OR) {
-            int left_bool = value_boolean_c(left);
-            if ((op == BINARY_AND && !left_bool) || (op == BINARY_OR && left_bool)) {
-                result = left;
-                break;
-            }
-            Py_DECREF(left);
-            result = eval_compiled(expr->right, ctx, scope, script, statement);
-            break;
-        }
-
-        PyObject *right = eval_compiled(expr->right, ctx, scope, script, statement);
-        if (right == NULL) {
-            Py_DECREF(left);
-            break;
-        }
-        result = apply_binary_op(op, left, right);
-        Py_DECREF(left);
-        Py_DECREF(right);
-        break;
+    // statement_count > max_statements > 0
+    int exceeded = PyObject_RichCompareBool(next, f->max_statements, Py_GT);
+    if (exceeded > 0) {
+        exceeded = PyObject_RichCompareBool(f->max_statements, g_zero, Py_GT);
     }
-
-    case CEXPR_UNARY: {
-        PyObject *value = eval_compiled(expr->left, ctx, scope, script, statement);
-        if (value == NULL) {
-            break;
-        }
-        result = apply_unary_op(expr->unary_op, value);
-        Py_DECREF(value);
-        break;
+    long long value;
+    if (exceeded == 0 && PyLong_CheckExact(next) && small_int(next, &value)) {
+        ctx->count = ctx->synced = value;
+        ctx->count_python = 0;
+        Py_XSETREF(ctx->synced_obj, next);
+    } else {
+        Py_DECREF(next);
     }
-
-    case CEXPR_IF: {
-        // Evaluate the value expression
-        int cond = 0;
-        if (expr->args[0] != NULL) {
-            PyObject *cond_value = eval_compiled(expr->args[0], ctx, scope, script, statement);
-            if (cond_value == NULL) {
-                break;
-            }
-            cond = value_boolean_c(cond_value);
-            Py_DECREF(cond_value);
-        }
-
-        // Evaluate the true/false expression
-        CompiledExpr *result_expr = cond ? expr->args[1] : expr->args[2];
-        result = (result_expr != NULL)
-            ? eval_compiled(result_expr, ctx, scope, script, statement)
-            : Py_NewRef(Py_None);
-        break;
-    }
-
-    case CEXPR_CALL: {
-        // Compute the function arguments
-        PyObject *func_args;
-        if (expr->nargs < 0) {
-            func_args = Py_NewRef(Py_None);
-        } else {
-            func_args = PyList_New(expr->nargs);
-            if (func_args == NULL) {
-                break;
-            }
-            for (Py_ssize_t ix_arg = 0; ix_arg < expr->nargs; ix_arg++) {
-                PyObject *arg_value = eval_compiled(expr->args[ix_arg], ctx, scope, script, statement);
-                if (arg_value == NULL) {
-                    Py_CLEAR(func_args);
-                    break;
-                }
-                PyList_SET_ITEM(func_args, ix_arg, arg_value);
-            }
-            if (func_args == NULL) {
-                break;
-            }
-        }
-
-        // Global/local function? (builtins are never included in script execution)
-        PyObject *func_value = NULL;
-        int found_value = 0;
-        if (scope->slots != NULL) {
-            if (expr->slot >= 0 && scope->slots[expr->slot] != NULL) {
-                func_value = Py_NewRef(scope->slots[expr->slot]);
-                found_value = 1;
-            }
-        } else if (scope->dict != Py_None) {
-            found_value = obj_get(scope->dict, expr->value, &func_value);
-            if (found_value < 0) {
-                Py_DECREF(func_args);
-                break;
-            }
-        }
-        if (!found_value && ctx->globals != NULL) {
-            found_value = obj_get(ctx->globals, expr->value, &func_value);
-            if (found_value < 0) {
-                Py_DECREF(func_args);
-                break;
-            }
-        }
-        if (found_value && func_value == Py_None) {
-            Py_CLEAR(func_value);
-            found_value = 0;
-        }
-
-        if (found_value) {
-            result = call_function_value(func_value, func_args, expr->value, ctx, script, statement, expr->intrinsic);
-            Py_DECREF(func_value);
-        } else {
-            // Undefined function
-            set_runtime_error(script, statement, PyUnicode_FromFormat("Undefined function \"%S\"", expr->value));
-        }
-        Py_DECREF(func_args);
-        break;
-    }
-
-    default: // CEXPR_FALLBACK - defer to the dict-based evaluator
-        if (scope->slots != NULL && scope_materialize(scope) < 0) {
-            break;
-        }
-        result = evaluate_expression_c(expr->value, ctx, scope->dict, 0, script, statement);
-        break;
-    }
-
-    return result;
+    return exceeded;
 }
 
 
-// Execute a script's statements. Returns a new reference (the script return value) or NULL on
-// error. locals is Py_None or a dict. The execution context (globals, maximum statements, and the
-// statement counter) is initialized by the caller. body is the compiled form of statements (or
-// NULL); compiled statement slots are used when their statement identity matches, with the
-// dict-based statement path as the fallback.
-static PyObject *execute_script_helper(
-    PyObject *script, PyObject *statements, ExecCtx *ctx, Scope *scope, CompiledBody *body
-)
+static int vm_statement(Frame *f, uint32_t index)
 {
-    PyObject *globals = ctx->globals;
-    PyObject *coverage_global = NULL;
-    PyObject *label_indexes = NULL;
-    PyObject *statements_fast = NULL;
-    PyObject *result = NULL;
-    int has_coverage = 0;
-    int found;
-
-    if (Py_EnterRecursiveCall(" while executing a BareScript script")) {
-        return NULL;
+    int exceeded = f->ctx->count_python ? count_python(f) : f->ctx->count > f->max_limit;
+    if (exceeded < 0) {
+        return -1;
     }
-
-    // Coverage configuration is invariant across this helper invocation
-    found = obj_get(globals, g.str_coverage_name, &coverage_global);
-    if (found < 0) {
-        goto done;
-    }
-    if (found && coverage_global != Py_None && PyDict_Check(coverage_global)) {
-        PyObject *enabled = NULL;
-        found = obj_get(coverage_global, g.str_enabled, &enabled);
-        if (found < 0) {
-            goto done;
-        }
-        int is_enabled = 0;
-        if (found) {
-            is_enabled = PyObject_IsTrue(enabled);
-            Py_DECREF(enabled);
-            if (is_enabled < 0) {
-                goto done;
-            }
-        }
-        if (is_enabled) {
-            PyObject *system_obj = NULL;
-            found = obj_get(script, g.str_system, &system_obj);
-            if (found < 0) {
-                goto done;
-            }
-            int is_system = 0;
-            if (found) {
-                is_system = PyObject_IsTrue(system_obj);
-                Py_DECREF(system_obj);
-                if (is_system < 0) {
-                    goto done;
-                }
-            }
-            has_coverage = !is_system;
-        }
-    }
-
-    // Get the statements sequence
-    statements_fast = PySequence_Fast(statements, "statements must be a sequence");
-    if (statements_fast == NULL) {
-        goto done;
-    }
-    int statements_is_list = PyList_CheckExact(statements_fast);
-    Py_ssize_t statements_length = PySequence_Fast_GET_SIZE(statements_fast);
-
-    // Iterate each script statement
-    Py_ssize_t ix_statement = 0;
-    while (ix_statement < statements_length) {
-        // Fetch the statement. When the compiled slot's identity matches, the slot's strong
-        // reference (kept alive by the body) is used with no refcount traffic - the borrowed
-        // peek is only ever compared by pointer. Otherwise take a strong reference.
-        CompiledStmt *cstmt = NULL;
-        PyObject *statement;
-        int statement_owned;
-        PyObject *statement_peek = PySequence_Fast_GET_ITEM(statements_fast, ix_statement);
-        if (body != NULL && ix_statement < body->count && body->stmts[ix_statement].statement == statement_peek &&
-            body->stmts[ix_statement].kind != CSTMT_NONE) {
-            cstmt = &body->stmts[ix_statement];
-            statement = cstmt->statement;
-            statement_owned = 0;
-        } else if (statements_is_list) {
-            if (list_get_ref(statements_fast, ix_statement, &statement) < 0) {
-                goto done;
-            }
-            statement_owned = 1;
-        } else {
-            statement = PyTuple_GetItem(statements_fast, ix_statement);
-            if (statement == NULL) {
-                goto done;
-            }
-            Py_INCREF(statement);
-            statement_owned = 1;
-        }
-
-        // Increment the statement counter
-        if (exec_ctx_count_statement(ctx, script, statement) < 0) {
-            if (statement_owned) {
-                Py_DECREF(statement);
-            }
-            goto done;
-        }
-
-        // Record the statement coverage
-        if (has_coverage && PyDict_CheckExact(statement)) {
-            if (record_statement_coverage(script, statement, coverage_global) < 0) {
-                if (statement_owned) {
-                    Py_DECREF(statement);
-                }
-                goto done;
-            }
-        }
-
-        // Compiled statement fast path (statement is the slot's reference - not owned here)
-        if (cstmt != NULL) {
-            {
-                switch (cstmt->kind) {
-                case CSTMT_EXPR: {
-                    PyObject *expr_value = eval_compiled(cstmt->expr, ctx, scope, script, statement);
-                    if (expr_value == NULL) {
-                        goto done;
-                    }
-                    if (cstmt->name != NULL) {
-                        if (cstmt->name_slot >= 0 && scope->slots != NULL) {
-                            // Transfer the value into the local slot
-                            Py_XSETREF(scope->slots[cstmt->name_slot], expr_value);
-                            break;
-                        }
-                        PyObject *target = (scope->dict != Py_None) ? scope->dict : globals;
-                        if (obj_setitem(target, cstmt->name, expr_value) < 0) {
-                            Py_DECREF(expr_value);
-                                goto done;
-                        }
-                    }
-                    Py_DECREF(expr_value);
-                    break;
-                }
-
-                case CSTMT_JUMP: {
-                    // Evaluate the expression (if any)
-                    int do_jump = 1;
-                    if (cstmt->expr != NULL) {
-                        PyObject *jump_value = eval_compiled(cstmt->expr, ctx, scope, script, statement);
-                        if (jump_value == NULL) {
-                                goto done;
-                        }
-                        do_jump = value_boolean_c(jump_value);
-                        Py_DECREF(jump_value);
-                    }
-                    if (do_jump) {
-                        if (cstmt->jump_index < 0) {
-                            set_runtime_error(
-                                script, statement, PyUnicode_FromFormat("Unknown jump label \"%S\"", cstmt->name)
-                            );
-                                goto done;
-                        }
-                        ix_statement = cstmt->jump_index;
-
-                        // Record the label statement coverage
-                        if (has_coverage && ix_statement < statements_length) {
-                            PyObject *label_statement = PySequence_Fast_GET_ITEM(statements_fast, ix_statement);
-                            Py_INCREF(label_statement);
-                            if (PyDict_CheckExact(label_statement) &&
-                                record_statement_coverage(script, label_statement, coverage_global) < 0) {
-                                Py_DECREF(label_statement);
-                                        goto done;
-                            }
-                            Py_DECREF(label_statement);
-                        }
-                    }
-                    break;
-                }
-
-                case CSTMT_RETURN:
-                    result = (cstmt->expr != NULL)
-                        ? eval_compiled(cstmt->expr, ctx, scope, script, statement)
-                        : Py_NewRef(Py_None);
-                    goto done;
-
-                case CSTMT_FUNCTION: {
-                    PyObject *function_value = script_function_new(script, cstmt->part);
-                    if (function_value == NULL) {
-                        goto done;
-                    }
-                    int set_result = obj_setitem(globals, cstmt->name, function_value);
-                    Py_DECREF(function_value);
-                    if (set_result < 0) {
-                        goto done;
-                    }
-                    break;
-                }
-
-                default: // CSTMT_NOP
-                    break;
-                }
-                ix_statement++;
-                continue;
-            }
-        }
-
-        // Dict-based statement path - convert a slot scope to a dict scope first (only
-        // reachable when the statements list was mutated after compilation)
-        if (scope->slots != NULL && scope_materialize(scope) < 0) {
-            Py_DECREF(statement);
-            goto done;
-        }
-
-        // Dispatch on the statement dict's first (and only, for valid models) key
-        if (!PyDict_CheckExact(statement)) {
-            PyErr_SetString(PyExc_TypeError, "statement model must be a dict");
-            Py_DECREF(statement);
-            goto done;
-        }
-        Py_ssize_t stmt_pos = 0;
-        PyObject *stmt_key;
-        PyObject *stmt_value_borrowed;
-        if (!PyDict_Next(statement, &stmt_pos, &stmt_key, &stmt_value_borrowed)) {
-            // Empty statement dict - no-op
-            Py_DECREF(statement);
-            ix_statement++;
-            continue;
-        }
-        PyObject *part = Py_NewRef(stmt_value_borrowed);
-
-        // Expression?
-        if (key_eq(stmt_key, g.str_expr)) {
-            PyObject *stmt_expr = part;
-
-            // Prefetch the expression statement fields in a single dict walk
-            PyObject *expr_inner = NULL;
-            PyObject *expr_name = NULL;
-            int name_known = 0;
-            if (PyDict_CheckExact(stmt_expr)) {
-                dict_prefetch3(stmt_expr, g.str_expr, &expr_inner, g.str_name, &expr_name, NULL, NULL);
-                name_known = 1;
-            }
-            if (expr_inner == NULL && obj_subscript(stmt_expr, g.str_expr, &expr_inner) < 0) {
-                Py_XDECREF(expr_name);
-                Py_DECREF(stmt_expr);
-                Py_DECREF(statement);
-                goto done;
-            }
-            PyObject *expr_value = evaluate_expression_c(expr_inner, ctx, scope->dict, 0, script, statement);
-            Py_DECREF(expr_inner);
-            if (expr_value == NULL) {
-                Py_XDECREF(expr_name);
-                Py_DECREF(stmt_expr);
-                Py_DECREF(statement);
-                goto done;
-            }
-            if (!name_known) {
-                found = obj_get(stmt_expr, g.str_name, &expr_name);
-                if (found < 0) {
-                    Py_DECREF(expr_value);
-                    Py_DECREF(stmt_expr);
-                    Py_DECREF(statement);
-                    goto done;
-                }
-            }
-            Py_DECREF(stmt_expr);
-            if (expr_name != NULL && expr_name != Py_None) {
-                PyObject *target = (scope->dict != Py_None) ? scope->dict : globals;
-                int set_result = obj_setitem(target, expr_name, expr_value);
-                if (set_result < 0) {
-                    Py_DECREF(expr_name);
-                    Py_DECREF(expr_value);
-                    Py_DECREF(statement);
-                    goto done;
-                }
-            }
-            Py_XDECREF(expr_name);
-            Py_DECREF(expr_value);
-            Py_DECREF(statement);
-            ix_statement++;
-            continue;
-        }
-
-        // Jump?
-        if (key_eq(stmt_key, g.str_jump)) {
-            PyObject *stmt_jump = part;
-
-            // Prefetch the jump statement fields in a single dict walk (jump_expr NULL = absent)
-            PyObject *jump_expr = NULL;
-            PyObject *jump_label_pf = NULL;
-            if (PyDict_CheckExact(stmt_jump)) {
-                dict_prefetch3(stmt_jump, g.str_expr, &jump_expr, g.str_label, &jump_label_pf, NULL, NULL);
-            } else {
-                found = obj_get(stmt_jump, g.str_expr, &jump_expr);
-                if (found < 0) {
-                    Py_DECREF(stmt_jump);
-                    Py_DECREF(statement);
-                    goto done;
-                }
-            }
-
-            // Evaluate the expression (if any)
-            int do_jump = 1;
-            if (jump_expr != NULL) {
-                PyObject *jump_value = evaluate_expression_c(jump_expr, ctx, scope->dict, 0, script, statement);
-                Py_DECREF(jump_expr);
-                if (jump_value == NULL) {
-                    Py_XDECREF(jump_label_pf);
-                    Py_DECREF(stmt_jump);
-                    Py_DECREF(statement);
-                    goto done;
-                }
-                do_jump = value_boolean_c(jump_value);
-                Py_DECREF(jump_value);
-            }
-
-            if (do_jump) {
-                // Find the label
-                PyObject *jump_label = jump_label_pf;
-                jump_label_pf = NULL;
-                if (jump_label == NULL && obj_subscript(stmt_jump, g.str_label, &jump_label) < 0) {
-                    Py_DECREF(stmt_jump);
-                    Py_DECREF(statement);
-                    goto done;
-                }
-                PyObject *cached_index = NULL;
-                if (label_indexes != NULL) {
-                    if (dict_get_ref(label_indexes, jump_label, &cached_index) < 0) {
-                        Py_DECREF(jump_label);
-                        Py_DECREF(stmt_jump);
-                        Py_DECREF(statement);
-                        goto done;
-                    }
-                }
-                if (cached_index != NULL) {
-                    Py_ssize_t ix_label = PyLong_AsSsize_t(cached_index);
-                    Py_DECREF(cached_index);
-                    Py_DECREF(jump_label);
-                    if (ix_label == -1 && PyErr_Occurred()) {
-                        Py_DECREF(stmt_jump);
-                        Py_DECREF(statement);
-                        goto done;
-                    }
-                    ix_statement = ix_label;
-                } else {
-                    // Scan the statements for the label
-                    Py_ssize_t ix_label = -1;
-                    for (Py_ssize_t ix_scan = 0; ix_scan < statements_length; ix_scan++) {
-                        PyObject *scan_statement = PySequence_Fast_GET_ITEM(statements_fast, ix_scan);
-                        Py_INCREF(scan_statement);
-                        PyObject *label_part = NULL;
-                        int scan_found = obj_get(scan_statement, g.str_label, &label_part);
-                        Py_DECREF(scan_statement);
-                        if (scan_found < 0) {
-                            Py_DECREF(jump_label);
-                            Py_DECREF(stmt_jump);
-                            Py_DECREF(statement);
-                            goto done;
-                        }
-                        if (scan_found) {
-                            PyObject *label_name;
-                            int sub_result = obj_subscript(label_part, g.str_name, &label_name);
-                            Py_DECREF(label_part);
-                            if (sub_result < 0) {
-                                Py_DECREF(jump_label);
-                                Py_DECREF(stmt_jump);
-                                Py_DECREF(statement);
-                                goto done;
-                            }
-                            int label_eq = PyObject_RichCompareBool(label_name, jump_label, Py_EQ);
-                            Py_DECREF(label_name);
-                            if (label_eq < 0) {
-                                Py_DECREF(jump_label);
-                                Py_DECREF(stmt_jump);
-                                Py_DECREF(statement);
-                                goto done;
-                            }
-                            if (label_eq) {
-                                ix_label = ix_scan;
-                                break;
-                            }
-                        }
-                    }
-                    if (ix_label == -1) {
-                        set_runtime_error(
-                            script, statement, PyUnicode_FromFormat("Unknown jump label \"%S\"", jump_label)
-                        );
-                        Py_DECREF(jump_label);
-                        Py_DECREF(stmt_jump);
-                        Py_DECREF(statement);
-                        goto done;
-                    }
-                    if (label_indexes == NULL) {
-                        label_indexes = PyDict_New();
-                        if (label_indexes == NULL) {
-                            Py_DECREF(jump_label);
-                            Py_DECREF(stmt_jump);
-                            Py_DECREF(statement);
-                            goto done;
-                        }
-                    }
-                    PyObject *index_obj = PyLong_FromSsize_t(ix_label);
-                    if (index_obj == NULL || PyDict_SetItem(label_indexes, jump_label, index_obj) < 0) {
-                        Py_XDECREF(index_obj);
-                        Py_DECREF(jump_label);
-                        Py_DECREF(stmt_jump);
-                        Py_DECREF(statement);
-                        goto done;
-                    }
-                    Py_DECREF(index_obj);
-                    Py_DECREF(jump_label);
-                    ix_statement = ix_label;
-                }
-
-                // Record the label statement coverage
-                if (has_coverage) {
-                    PyObject *label_statement = PySequence_Fast_GET_ITEM(statements_fast, ix_statement);
-                    Py_INCREF(label_statement);
-                    if (PyDict_CheckExact(label_statement) &&
-                        record_statement_coverage(script, label_statement, coverage_global) < 0) {
-                        Py_DECREF(label_statement);
-                        Py_DECREF(stmt_jump);
-                        Py_DECREF(statement);
-                        goto done;
-                    }
-                    Py_DECREF(label_statement);
-                }
-            }
-            Py_XDECREF(jump_label_pf);
-            Py_DECREF(stmt_jump);
-            Py_DECREF(statement);
-            ix_statement++;
-            continue;
-        }
-
-        // Return?
-        if (key_eq(stmt_key, g.str_return)) {
-            PyObject *stmt_return = part;
-            PyObject *return_expr = NULL;
-            if (PyDict_CheckExact(stmt_return)) {
-                dict_prefetch3(stmt_return, g.str_expr, &return_expr, NULL, NULL, NULL, NULL);
-            } else {
-                found = obj_get(stmt_return, g.str_expr, &return_expr);
-                if (found < 0) {
-                    Py_DECREF(stmt_return);
-                    Py_DECREF(statement);
-                    goto done;
-                }
-            }
-            Py_DECREF(stmt_return);
-            if (return_expr != NULL) {
-                result = evaluate_expression_c(return_expr, ctx, scope->dict, 0, script, statement);
-                Py_DECREF(return_expr);
-            } else {
-                result = Py_NewRef(Py_None);
-            }
-            Py_DECREF(statement);
-            goto done;
-        }
-
-        // Function?
-        if (key_eq(stmt_key, g.str_function)) {
-            PyObject *stmt_function = part;
-            PyObject *function_name;
-            if (obj_subscript(stmt_function, g.str_name, &function_name) < 0) {
-                Py_DECREF(stmt_function);
-                Py_DECREF(statement);
-                goto done;
-            }
-            PyObject *function_value = script_function_new(script, stmt_function);
-            Py_DECREF(stmt_function);
-            if (function_value == NULL) {
-                Py_DECREF(function_name);
-                Py_DECREF(statement);
-                goto done;
-            }
-            int set_result = obj_setitem(globals, function_name, function_value);
-            Py_DECREF(function_value);
-            Py_DECREF(function_name);
-            if (set_result < 0) {
-                Py_DECREF(statement);
-                goto done;
-            }
-            Py_DECREF(statement);
-            ix_statement++;
-            continue;
-        }
-
-        // Include?
-        if (key_eq(stmt_key, g.str_include)) {
-            int include_result = execute_include_statement(script, statement, part, ctx);
-            Py_DECREF(part);
-            Py_DECREF(statement);
-            if (include_result < 0) {
-                goto done;
-            }
-            ix_statement++;
-            continue;
-        }
-
-        // Label statement (or unrecognized) - no-op
-        Py_DECREF(part);
+    if (exceeded) {
+        PyObject *statement = chunk_statement(f->chunk, index);
+        raise_runtime_error(f->script, statement,
+                            PyUnicode_FromFormat("Exceeded maximum script statements (%S)", f->max_statements));
         Py_DECREF(statement);
-        ix_statement++;
+        return -1;
+    }
+    return f->coverage != NULL ? frame_coverage(f, index) : 0;
+}
+
+
+// Load a local (evaluate_expression's locals) or global variable - a new reference
+static PyObject *vm_load_name(Frame *f, PyObject *name)
+{
+    PyObject *value = NULL;
+    int found = f->locals != NULL ? bs_dict_get(f->locals, name, &value) : 0;
+    if (found == 0 && f->globals != NULL) {
+        found = bs_dict_get(f->globals, name, &value);
+    }
+    return found < 0 ? NULL : (found ? value : Py_NewRef(Py_None));
+}
+
+
+// Raise the unknown jump label error
+static void vm_jump_undefined(Frame *f, const Inst *inst)
+{
+    PyObject *statement = frame_statement(f, inst);
+    raise_runtime_error(f->script, statement,
+                        PyUnicode_FromFormat("Unknown jump label \"%U\"", f->chunk->names[inst->a]));
+    Py_DECREF(statement);
+}
+
+
+// Record a label jump's label statement coverage - the label statement precedes the jump target's statement
+static int vm_jump_coverage(Frame *f, uint32_t target)
+{
+    return frame_coverage(f, f->chunk->pcstmt[target] - 1);
+}
+
+
+static inline int vm_truth(PyObject *value)
+{
+    return value == Py_True ? 1 : (value == Py_False ? 0 : value_boolean(value));
+}
+
+
+// Is an object referenced only by the caller, so its value can be replaced in place?
+static inline int is_unique(PyObject *object)
+{
+#ifdef Py_GIL_DISABLED
+#if PY_VERSION_HEX >= 0x030E0000
+    return PyUnstable_Object_IsUniquelyReferenced(object);
+#else
+    return 0;
+#endif
+#else
+    return Py_REFCNT(object) == 1;
+#endif
+}
+
+
+// Store an arithmetic result in a register - None if it's not finite. A float only the register holds is
+// reused in place rather than replaced by a new float.
+static inline int vm_store_float(PyObject **reg, double value)
+{
+    PyObject *old = *reg;
+    if (!isfinite(value)) {
+        *reg = Py_NewRef(Py_None);
+    } else if (old != NULL && PyFloat_CheckExact(old) && is_unique(old)) {
+        ((PyFloatObject *)old)->ob_fval = value;
+        return 0;
+    } else {
+        *reg = PyFloat_FromDouble(value);
+        if (*reg == NULL) {
+            *reg = old;
+            return -1;
+        }
+    }
+    Py_XDECREF(old);
+    return 0;
+}
+
+
+#if defined(__GNUC__) || defined(__clang__)
+#define BS_THREADED_DISPATCH 1
+#endif
+
+
+// Run a frame's chunk. Returns a new reference, or NULL on error.
+static PyObject *vm_run(Frame *f)
+{
+    Ctx *ctx = f->ctx;
+    Chunk *chunk = f->chunk;
+    PyObject **regs = f->regs;
+    const Inst *code = chunk->code, *inst = code;
+    PyObject *result = NULL;
+
+#define SETREG(reg, value) \
+    do { \
+        PyObject *old_ = regs[reg]; \
+        regs[reg] = (value); \
+        Py_XDECREF(old_); \
+    } while (0)
+
+#ifdef BS_THREADED_DISPATCH
+#define BS_OP_LABEL(name) &&L_##name,
+    static const void *const dispatch[] = { BS_OPS(BS_OP_LABEL) };
+#define CASE(name) L_##name:
+#define DISPATCH() goto *dispatch[inst->op]
+#else
+#define CASE(name) case OP_##name:
+#define DISPATCH() goto dispatch
+#endif
+#define NEXT() \
+    do { \
+        inst++; \
+        DISPATCH(); \
+    } while (0)
+
+#define BINARY(name, fast, slow) \
+    CASE(name) { \
+        PyObject *left = regs[inst->b], *right = regs[inst->c], *value; \
+        if (PyFloat_CheckExact(left) && PyFloat_CheckExact(right)) { \
+            double x = PyFloat_AS_DOUBLE(left), y = PyFloat_AS_DOUBLE(right); \
+            value = (fast); \
+        } else { \
+            value = (slow); \
+        } \
+        if (value == NULL) { \
+            goto error; \
+        } \
+        SETREG(inst->a, value); \
+        NEXT(); \
     }
 
-    // Script complete
-    result = Py_NewRef(Py_None);
+#define ARITHMETIC(name, fast, slow) \
+    CASE(name) { \
+        PyObject *left = regs[inst->b], *right = regs[inst->c]; \
+        if (PyFloat_CheckExact(left) && PyFloat_CheckExact(right)) { \
+            double x = PyFloat_AS_DOUBLE(left), y = PyFloat_AS_DOUBLE(right); \
+            if (vm_store_float(&regs[inst->a], (fast)) < 0) { \
+                goto error; \
+            } \
+        } else { \
+            PyObject *value = (slow); \
+            if (value == NULL) { \
+                goto error; \
+            } \
+            SETREG(inst->a, value); \
+        } \
+        NEXT(); \
+    }
 
+// Jump to an instruction, recording a label's coverage
+#define JUMP(target) \
+    do { \
+        uint32_t target_ = (target); \
+        if ((inst->x & JUMP_LABEL) && f->coverage != NULL && vm_jump_coverage(f, target_) < 0) { \
+            goto error; \
+        } \
+        inst = code + target_; \
+        DISPATCH(); \
+    } while (0)
+
+#define JUMP_TRUTH(name, on_true) \
+    CASE(name) { \
+        int truth = vm_truth(regs[inst->a]); \
+        if (truth < 0) { \
+            goto error; \
+        } \
+        if (truth == (on_true)) { \
+            JUMP(inst->w); \
+        } \
+        NEXT(); \
+    }
+
+#define JUMP_COMPARE(name, op, fast) \
+    CASE(name) { \
+        PyObject *left = regs[inst->a], *right = regs[inst->b]; \
+        int truth; \
+        if (PyFloat_CheckExact(left) && PyFloat_CheckExact(right)) { \
+            double x = PyFloat_AS_DOUBLE(left), y = PyFloat_AS_DOUBLE(right); \
+            truth = (fast); \
+        } else if ((truth = compare_truth(op, left, right)) < 0) { \
+            goto error; \
+        } \
+        if (truth != ((inst->x & JUMP_NOT) != 0)) { \
+            JUMP(inst[1].w); \
+        } \
+        inst += 2; \
+        DISPATCH(); \
+    }
+
+#define BINARY_SLOW(name, slow) \
+    CASE(name) { \
+        PyObject *value = (slow); \
+        if (value == NULL) { \
+            goto error; \
+        } \
+        SETREG(inst->a, value); \
+        NEXT(); \
+    }
+
+#ifdef BS_THREADED_DISPATCH
+    DISPATCH();
+#else
+dispatch:
+    switch (inst->op) {
+#endif
+
+    CASE(STMT)
+        if (++ctx->count > f->limit && vm_statement(f, inst->w) < 0) {
+            goto error;
+        }
+        NEXT();
+
+    CASE(MOVE) {
+        // A float copies into a float only the register holds - float identity isn't observable
+        PyObject *value = regs[inst->b], *old = regs[inst->a];
+        if (PyFloat_CheckExact(value) && old != NULL && PyFloat_CheckExact(old) && is_unique(old)) {
+            ((PyFloatObject *)old)->ob_fval = PyFloat_AS_DOUBLE(value);
+            NEXT();
+        }
+        SETREG(inst->a, Py_NewRef(value));
+        NEXT();
+    }
+
+    CASE(LOADG) {
+        PyObject *value;
+        int found = bs_dict_get(f->globals, chunk->names[inst->b], &value);
+        if (found < 0) {
+            goto error;
+        }
+        SETREG(inst->a, found ? value : Py_NewRef(Py_None));
+        NEXT();
+    }
+
+    CASE(LOADS) {
+        PyObject *value = regs[inst->b];
+        if (value != NULL) {
+            Py_INCREF(value);
+        } else {
+            int found = bs_dict_get(f->globals, chunk->slot_names[inst->b], &value);
+            if (found < 0) {
+                goto error;
+            }
+            if (!found) {
+                value = Py_NewRef(Py_None);
+            }
+        }
+        SETREG(inst->a, value);
+        NEXT();
+    }
+
+    CASE(LOADN) {
+        PyObject *value = vm_load_name(f, chunk->names[inst->b]);
+        if (value == NULL) {
+            goto error;
+        }
+        SETREG(inst->a, value);
+        NEXT();
+    }
+
+    CASE(STOREG)
+        if (PyDict_SetItem(f->globals, chunk->names[inst->a], regs[inst->b]) < 0) {
+            goto error;
+        }
+        globals_changed();
+        if (chunk->names[inst->a] == S_coverage) {
+            ctx_invalidate(ctx);
+        }
+        NEXT();
+
+    CASE(JMP)
+        JUMP(inst->w);
+
+    JUMP_TRUTH(JF, 0)
+    JUMP_TRUTH(JT, 1)
+
+    JUMP_COMPARE(JLT, Py_LT, x < y)
+    JUMP_COMPARE(JLE, Py_LE, x <= y)
+    JUMP_COMPARE(JGT, Py_GT, x > y)
+    JUMP_COMPARE(JGE, Py_GE, x >= y)
+    JUMP_COMPARE(JEQ, Py_EQ, x == y)
+    JUMP_COMPARE(JNE, Py_NE, x != y)
+
+    CASE(JUNDEF)
+        vm_jump_undefined(f, inst);
+        goto error;
+
+    CASE(RET)
+        result = Py_NewRef(regs[inst->a]);
+        goto done;
+
+    CASE(RETNONE)
+        result = Py_NewRef(Py_None);
+        goto done;
+
+    ARITHMETIC(ADD, x + y, op_add(left, right))
+    ARITHMETIC(SUB, x - y, op_sub(left, right))
+    ARITHMETIC(MUL, x * y, op_mul(left, right))
+    ARITHMETIC(DIV, y != 0.0 ? x / y : NAN, op_div(left, right))
+    BINARY_SLOW(MOD, op_mod(regs[inst->b], regs[inst->c]))
+    BINARY_SLOW(POW, op_pow(regs[inst->b], regs[inst->c]))
+    BINARY(EQ, PyBool_FromLong(x == y), op_compare(Py_EQ, left, right))
+    BINARY(NE, PyBool_FromLong(x != y), op_compare(Py_NE, left, right))
+    BINARY(LT, PyBool_FromLong(x < y), op_compare(Py_LT, left, right))
+    BINARY(LE, PyBool_FromLong(x <= y), op_compare(Py_LE, left, right))
+    BINARY(GT, PyBool_FromLong(x > y), op_compare(Py_GT, left, right))
+    BINARY(GE, PyBool_FromLong(x >= y), op_compare(Py_GE, left, right))
+    BINARY_SLOW(BAND, op_bitwise('&', regs[inst->b], regs[inst->c]))
+    BINARY_SLOW(BOR, op_bitwise('|', regs[inst->b], regs[inst->c]))
+    BINARY_SLOW(BXOR, op_bitwise('^', regs[inst->b], regs[inst->c]))
+    BINARY_SLOW(SHL, op_bitwise('<', regs[inst->b], regs[inst->c]))
+    BINARY_SLOW(SHR, op_bitwise('>', regs[inst->b], regs[inst->c]))
+
+    CASE(NOT) {
+        int truth = vm_truth(regs[inst->b]);
+        if (truth < 0) {
+            goto error;
+        }
+        SETREG(inst->a, PyBool_FromLong(!truth));
+        NEXT();
+    }
+
+    BINARY_SLOW(NEG, op_neg(regs[inst->b]))
+    BINARY_SLOW(BNOT, op_bnot(regs[inst->b]))
+
+    CASE(CALLG) {
+        PyObject *value = inst->x != IN_NONE ? vm_call_intrinsic(f, inst) : DEFER;
+        if (value == DEFER) {
+            value = vm_call(f, inst);
+        }
+        if (value == NULL) {
+            goto error;
+        }
+        SETREG(inst->a, value);
+        inst += 1 + CALL_DATA(inst->c);
+        DISPATCH();
+    }
+
+    CASE(CALLS)
+    CASE(CALLN) {
+        PyObject *value = vm_call(f, inst);
+        if (value == NULL) {
+            goto error;
+        }
+        SETREG(inst->a, value);
+        inst += 1 + CALL_DATA(inst->c);
+        DISPATCH();
+    }
+
+    CASE(FUNC) {
+        PyObject *fn = script_function_new(chunk->script, regs[inst->b]);
+        int rc = fn != NULL ? PyDict_SetItem(f->globals, chunk->names[inst->a], fn) : -1;
+        Py_XDECREF(fn);
+        globals_changed();
+        if (rc < 0) {
+            goto error;
+        }
+        if (chunk->names[inst->a] == S_coverage) {
+            ctx_invalidate(ctx);
+        }
+        NEXT();
+    }
+
+    CASE(INCLUDE) {
+        int rc = vm_include(f, inst->w);
+        ctx_invalidate(ctx);
+        globals_changed();
+        if (rc < 0) {
+            goto error;
+        }
+        NEXT();
+    }
+
+    CASE(DATA)
+    CASE(JTARGET)
+        Py_UNREACHABLE();
+
+#ifndef BS_THREADED_DISPATCH
+    }
+#endif
+
+error:
+    result = NULL;
 done:
-    Py_XDECREF(statements_fast);
-    Py_XDECREF(label_indexes);
-    Py_XDECREF(coverage_global);
-    Py_LeaveRecursiveCall();
     return result;
+
+#undef SETREG
+#undef CASE
+#undef DISPATCH
+#undef NEXT
+#undef BINARY
+#undef BINARY_SLOW
+#undef ARITHMETIC
+#undef JUMP
+#undef JUMP_TRUTH
+#undef JUMP_COMPARE
 }
 
 
 //
-// Module functions
+// The module functions
 //
 
 
-PyDoc_STRVAR(
-    execute_script_doc,
-    "execute_script(script, options=None)\n"
-    "\n"
-    "Execute a BareScript model"
-);
-
-static PyObject *runtime_execute_script(PyObject *module, PyObject *args, PyObject *kwargs)
+static PyObject *execute_script(PyObject *module, PyObject *args, PyObject *kwargs)
 {
     static char *kwlist[] = {"script", "options", NULL};
-    PyObject *script;
-    PyObject *options_arg = Py_None;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O:execute_script", kwlist, &script, &options_arg)) {
+    PyObject *script, *options = Py_None;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O:execute_script", kwlist, &script, &options)) {
         return NULL;
     }
-
-    PyObject *options = NULL;
-    PyObject *globals = NULL;
-    PyObject *script_functions = NULL;
-    PyObject *statements = NULL;
-    PyObject *result = NULL;
-
-    // Create the options object, if necessary
-    if (options_arg == Py_None) {
-        options = PyDict_New();
-        if (options == NULL) {
-            return NULL;
-        }
-    } else {
-        options = Py_NewRef(options_arg);
+    options = options == Py_None ? PyDict_New() : Py_NewRef(options);
+    if (options == NULL) {
+        return NULL;
+    }
+    PyObject *result = NULL, *globals = NULL, *init = NULL;
+    if (!PyDict_CheckExact(options)) {
+        goto python;
     }
 
-    // Create the global variable object, if necessary
-    int found = obj_get(options, g.str_globals, &globals);
+    // runtime.py's _execute_script_init - the globals dict, its built-in script functions, and a zero statement count
+    if ((init = runtime_call("_execute_script_init", options, NULL)) == NULL) {
+        goto done;
+    }
+    int found = bs_dict_get(options, S_globals, &globals);
     if (found < 0) {
         goto done;
     }
-    if (!found || globals == Py_None) {
-        Py_XDECREF(globals);
-        globals = PyDict_New();
-        if (globals == NULL || obj_setitem(options, g.str_globals, globals) < 0) {
-            goto done;
-        }
-    }
-
-    // Set the script function globals variables (snapshot the dict so concurrent mutation of
-    // SCRIPT_FUNCTIONS cannot break iteration under the free-threaded build)
-    script_functions = PyDict_Copy(g.script_functions);
-    if (script_functions == NULL) {
-        goto done;
-    }
-    Py_ssize_t pos = 0;
-    PyObject *fn_name;
-    PyObject *fn_value;
-    int globals_is_dict = PyDict_CheckExact(globals);
-    while (PyDict_Next(script_functions, &pos, &fn_name, &fn_value)) {
-        int has_name = globals_is_dict ? PyDict_Contains(globals, fn_name) : PySequence_Contains(globals, fn_name);
-        if (has_name < 0) {
-            goto done;
-        }
-        if (!has_name && obj_setitem(globals, fn_name, fn_value) < 0) {
-            goto done;
-        }
+    if (!found || !PyDict_CheckExact(globals)) {
+        goto python;
     }
 
     // Execute the script
-    if (obj_setitem(options, g.str_statementCount, g.zero) < 0) {
-        goto done;
-    }
-    if (obj_subscript(script, g.str_statements, &statements) < 0) {
-        goto done;
-    }
-    {
-        CompiledBody *body = NULL;
-        if (PyList_CheckExact(statements)) {
-            body = compile_body(statements, NULL, 0);
-            if (body == NULL) {
-                goto done;
-            }
-        }
-        ExecCtx ctx;
-        if (exec_ctx_init_exec(&ctx, options) < 0) {
-            exec_ctx_fini(&ctx);
-            compiled_body_free(body);
-            goto done;
-        }
-        Scope scope = {Py_None, NULL, NULL, 0};
-        result = execute_script_helper(script, statements, &ctx, &scope, body);
-        exec_ctx_sync_out_final(&ctx);
-        exec_ctx_fini(&ctx);
-        compiled_body_free(body);
-    }
+    Ctx ctx = {.options = options, .synced_obj = Py_NewRef(g_zero)};
+    result = execute_script_statements(&ctx, script);
+    ctx_exit(&ctx);
+    goto done;
+
+python:
+    result = runtime_call("execute_script", script, options, NULL);
 
 done:
-    Py_XDECREF(statements);
-    Py_XDECREF(script_functions);
+    Py_DECREF(options);
     Py_XDECREF(globals);
-    Py_XDECREF(options);
+    Py_XDECREF(init);
     return result;
 }
 
 
-PyDoc_STRVAR(
-    evaluate_expression_doc,
-    "evaluate_expression(expr, options=None, locals_=None, builtins=True, script=None, statement=None)\n"
-    "\n"
-    "Evaluate an expression model"
-);
-
-static PyObject *runtime_evaluate_expression(PyObject *module, PyObject *args, PyObject *kwargs)
+static PyObject *evaluate_expression(PyObject *module, PyObject *args, PyObject *kwargs)
 {
     static char *kwlist[] = {"expr", "options", "locals_", "builtins", "script", "statement", NULL};
-    PyObject *expr;
-    PyObject *options = Py_None;
-    PyObject *locals = Py_None;
-    int builtins = 1;
-    PyObject *script = Py_None;
-    PyObject *statement = Py_None;
-    if (!PyArg_ParseTupleAndKeywords(
-            args, kwargs, "O|OOpOO:evaluate_expression", kwlist, &expr, &options, &locals, &builtins, &script, &statement
-        )) {
+    PyObject *expr, *options = Py_None, *locals = Py_None, *builtins = Py_True, *script = Py_None,
+        *statement = Py_None;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOOOO:evaluate_expression", kwlist, &expr, &options, &locals,
+                                     &builtins, &script, &statement)) {
         return NULL;
+    }
+    PyObject *globals = NULL, *result = NULL;
+    Chunk *chunk = NULL;
+    if ((options != Py_None && !PyDict_CheckExact(options)) || (locals != Py_None && !PyDict_CheckExact(locals)) ||
+        !PyBool_Check(builtins)) {
+        goto python;
+    }
+    if (options != Py_None) {
+        if (bs_dict_get(options, S_globals, &globals) < 0) {
+            return NULL;
+        }
+        if (globals == Py_None) {
+            Py_CLEAR(globals);
+        }
+        if (globals != NULL && !PyDict_CheckExact(globals)) {
+            goto python;
+        }
+    }
+    if ((chunk = compile(MODE_EXPR, NULL, expr, NULL)) == NULL) {
+        goto done;
+    }
+    if (chunk->irregular) {
+        goto python;
     }
 
-    ExecCtx ctx;
-    if (exec_ctx_init_eval(&ctx, options) < 0) {
-        exec_ctx_fini(&ctx);
-        return NULL;
+    // Evaluate the expression
+    Ctx ctx = {.options = options};
+    Frame frame = {0}, *f = &frame;
+    f->ctx = &ctx;
+    f->chunk = chunk;
+    f->globals = globals;
+    f->locals = locals != Py_None ? locals : NULL;
+    f->script = script;
+    f->statement = statement;
+    f->builtins = builtins == Py_True;
+    f->limit = f->max_limit = LLONG_MAX;
+    PyObject *small[REGS_SMALL];
+    f->regs = regs_alloc(chunk, small);
+    if (f->regs != NULL) {
+        result = vm_run(f);
+        regs_free(chunk, f->regs, small);
     }
-    PyObject *result = evaluate_expression_c(expr, &ctx, locals, builtins, script, statement);
-    exec_ctx_fini(&ctx);
+    ctx_exit(&ctx);
+    goto done;
+
+python:
+    result = runtime_call("evaluate_expression", expr, options, locals, builtins, script, statement, NULL);
+
+done:
+    Py_XDECREF(globals);
+    chunk_free(chunk);
     return result;
 }
-
-
-static PyMethodDef runtime_c_methods[] = {
-    {"execute_script", (PyCFunction)(void (*)(void))runtime_execute_script, METH_VARARGS | METH_KEYWORDS, execute_script_doc},
-    {"evaluate_expression", (PyCFunction)(void (*)(void))runtime_evaluate_expression, METH_VARARGS | METH_KEYWORDS,
-     evaluate_expression_doc},
-    {NULL, NULL, 0, NULL}
-};
 
 
 //
@@ -5179,37 +4843,55 @@ static PyMethodDef runtime_c_methods[] = {
 //
 
 
-// Intern a string constant into a state member
-static int intern_string(PyObject **member, const char *str)
+static PyObject *import_attr(const char *module_name, const char *name)
 {
-    if (*member == NULL) {
-        *member = PyUnicode_InternFromString(str);
-        if (*member == NULL) {
-            return -1;
-        }
+    PyObject *module = PyImport_ImportModule(module_name);
+    if (module == NULL) {
+        return NULL;
     }
-    return 0;
+    PyObject *attr = PyObject_GetAttrString(module, name);
+    Py_DECREF(module);
+    return attr;
 }
 
 
-// Import a module attribute into a state member
-static int import_member(PyObject **member, PyObject *module, const char *name)
+static int intern(PyObject **str, const char *value)
 {
-    if (*member == NULL) {
-        *member = PyObject_GetAttrString(module, name);
-        if (*member == NULL) {
-            return -1;
-        }
-    }
-    return 0;
+    *str = PyUnicode_InternFromString(value);
+    return *str != NULL ? 0 : -1;
 }
 
 
-static int runtime_c_exec(PyObject *module)
+// Populate the module state, once
+static int module_init(void)
 {
-    // Idempotency guard - state is populated once and immutable afterwards
-    if (g.one != NULL) {
-        return 0;
+    static const struct {
+        PyObject **str;
+        const char *value;
+    } strings[] = {
+        {&S_args, "args"}, {&S_binary, "binary"}, {&S_coverage, "__barescriptCoverage"}, {&S_debug, "debug"},
+        {&S_empty, ""}, {&S_enabled, "enabled"}, {&S_expr, "expr"}, {&S_false, "false"},
+        {&S_fetchFn, "fetchFn"}, {&S_function, "function"}, {&S_get, "get"}, {&S_globals, "globals"},
+        {&S_group, "group"}, {&S_include, "include"}, {&S_includes, "includes"}, {&S_jump, "jump"},
+        {&S_label, "label"}, {&S_lastArgArray, "lastArgArray"}, {&S_left, "left"},
+        {&S_lineNumber, "lineNumber"}, {&S_logFn, "logFn"}, {&S_maxStatements, "maxStatements"},
+        {&S_milliseconds, "milliseconds"}, {&S_name, "name"}, {&S_null, "null"}, {&S_number, "number"},
+        {&S_op, "op"}, {&S_return, "return"}, {&S_return_value, "return_value"}, {&S_right, "right"},
+        {&S_scriptName, "scriptName"}, {&S_scripts, "scripts"}, {&S_covered, "covered"}, {&S_count, "count"},
+ {&S_startswith, "startswith"}, {&S_brace, "{"}, {&S_dollar, "$"}, {&S_backslash, "\\"},
+        {&S_statementCount, "statementCount"}, {&S_statements, "statements"}, {&S_string, "string"},
+        {&S_system, "system"}, {&S_total_seconds, "total_seconds"}, {&S_true, "true"}, {&S_unary, "unary"},
+        {&S_url, "url"}, {&S_urlFn, "urlFn"}, {&S_variable, "variable"}, {&S_search, "search"},
+        {&S_finditer, "finditer"}, {&S_groups, "groups"}, {&S_groupdict, "groupdict"}, {&S_start, "start"},
+        {&S_index, "index"}, {&S_input, "input"}, {&S_lower, "lower"}, {&S_upper, "upper"}, {&S_sub, "sub"}, {&S_unknown, "unknown"},
+        {&S_t_array, "array"}, {&S_t_boolean, "boolean"}, {&S_t_datetime, "datetime"},
+        {&S_t_function, "function"}, {&S_t_null, "null"}, {&S_t_number, "number"}, {&S_t_object, "object"},
+        {&S_t_regex, "regex"}, {&S_t_string, "string"}
+    };
+    for (size_t ix = 0; ix < sizeof(strings) / sizeof(strings[0]); ix++) {
+        if (intern(strings[ix].str, strings[ix].value) < 0) {
+            return -1;
+        }
     }
 
     PyDateTime_IMPORT;
@@ -5217,173 +4899,106 @@ static int runtime_c_exec(PyObject *module)
         return -1;
     }
 
-    // Intern the key strings
-    if (intern_string(&g.str_globals, "globals") < 0 ||
-        intern_string(&g.str_maxStatements, "maxStatements") < 0 ||
-        intern_string(&g.str_statementCount, "statementCount") < 0 ||
-        intern_string(&g.str_fetchFn, "fetchFn") < 0 ||
-        intern_string(&g.str_logFn, "logFn") < 0 ||
-        intern_string(&g.str_urlFn, "urlFn") < 0 ||
-        intern_string(&g.str_debug, "debug") < 0 ||
-        intern_string(&g.str_statements, "statements") < 0 ||
-        intern_string(&g.str_scriptName, "scriptName") < 0 ||
-        intern_string(&g.str_system, "system") < 0 ||
-        intern_string(&g.str_expr, "expr") < 0 ||
-        intern_string(&g.str_jump, "jump") < 0 ||
-        intern_string(&g.str_return, "return") < 0 ||
-        intern_string(&g.str_function, "function") < 0 ||
-        intern_string(&g.str_include, "include") < 0 ||
-        intern_string(&g.str_label, "label") < 0 ||
-        intern_string(&g.str_name, "name") < 0 ||
-        intern_string(&g.str_args, "args") < 0 ||
-        intern_string(&g.str_lastArgArray, "lastArgArray") < 0 ||
-        intern_string(&g.str_includes, "includes") < 0 ||
-        intern_string(&g.str_url, "url") < 0 ||
-        intern_string(&g.str_number, "number") < 0 ||
-        intern_string(&g.str_string, "string") < 0 ||
-        intern_string(&g.str_variable, "variable") < 0 ||
-        intern_string(&g.str_binary, "binary") < 0 ||
-        intern_string(&g.str_unary, "unary") < 0 ||
-        intern_string(&g.str_group, "group") < 0 ||
-        intern_string(&g.str_op, "op") < 0 ||
-        intern_string(&g.str_left, "left") < 0 ||
-        intern_string(&g.str_right, "right") < 0 ||
-        intern_string(&g.str_lineNumber, "lineNumber") < 0 ||
-        intern_string(&g.str_enabled, "enabled") < 0 ||
-        intern_string(&g.str_scripts, "scripts") < 0 ||
-        intern_string(&g.str_script, "script") < 0 ||
-        intern_string(&g.str_covered, "covered") < 0 ||
-        intern_string(&g.str_statement, "statement") < 0 ||
-        intern_string(&g.str_count, "count") < 0 ||
-        intern_string(&g.str_coverage_name, "__barescriptCoverage") < 0 ||
-        intern_string(&g.str_includes_name, "__barescriptIncludes") < 0 ||
-        intern_string(&g.str_return_value, "return_value") < 0 ||
-        intern_string(&g.str_total_seconds, "total_seconds") < 0 ||
-        intern_string(&g.str_copy, "copy") < 0 ||
-        intern_string(&g.str_method_upper, "upper") < 0 ||
-        intern_string(&g.str_method_lower, "lower") < 0 ||
-        intern_string(&g.str_method_strip, "strip") < 0 ||
-        intern_string(&g.str_method_pop, "pop") < 0) {
+    PyObject *runtime = PyImport_ImportModule("bare_script.runtime");
+    if (runtime == NULL ||
+        (g_BareScriptRuntimeError = PyObject_GetAttrString(runtime, "BareScriptRuntimeError")) == NULL ||
+        (g_ValueArgsError = PyObject_GetAttrString(runtime, "ValueArgsError")) == NULL ||
+        (g_SCRIPT_FUNCTIONS = PyObject_GetAttrString(runtime, "SCRIPT_FUNCTIONS")) == NULL ||
+        (g_EXPRESSION_FUNCTIONS = PyObject_GetAttrString(runtime, "EXPRESSION_FUNCTIONS")) == NULL ||
+        (g_INTRINSICS = PyObject_GetAttrString(runtime, "INTRINSICS")) == NULL ||
+        (g_value_string = PyObject_GetAttrString(runtime, "value_string")) == NULL ||
+        (g_value_compare = PyObject_GetAttrString(runtime, "value_compare")) == NULL ||
+        (g_value_normalize_datetime = PyObject_GetAttrString(runtime, "value_normalize_datetime")) == NULL ||
+        (g_value_round_number = PyObject_GetAttrString(runtime, "value_round_number")) == NULL ||
+        (g_url_file_relative = PyObject_GetAttrString(runtime, "url_file_relative")) == NULL ||
+        (g_default_max_statements = PyObject_GetAttrString(runtime, "DEFAULT_MAX_STATEMENTS")) == NULL ||
+        (g_REGEX_TYPE = import_attr("bare_script.value", "REGEX_TYPE")) == NULL ||
+        (g_json_loads = import_attr("json", "loads")) == NULL ||
+        (g_re_escape = import_attr("re", "escape")) == NULL ||
+        (g_partial = import_attr("functools", "partial")) == NULL ||
+        (g_timedelta = import_attr("datetime", "timedelta")) == NULL ||
+        (g_zero = PyLong_FromLong(0)) == NULL ||
+        (g_one = PyLong_FromLong(1)) == NULL ||
+        (g_thousand = PyLong_FromLong(1000)) == NULL ||
+        (g_dbl_max = PyFloat_FromDouble(DBL_MAX)) == NULL ||
+        (g_dbl_max_neg = PyFloat_FromDouble(-DBL_MAX)) == NULL) {
+        Py_XDECREF(runtime);
         return -1;
     }
 
-    // Import the Python implementation modules
-    PyObject *library_module = PyImport_ImportModule("bare_script.library");
-    if (library_module == NULL) {
-        return -1;
-    }
-    int import_ok = import_member(&g.script_functions, library_module, "SCRIPT_FUNCTIONS") == 0 &&
-        import_member(&g.expression_functions, library_module, "EXPRESSION_FUNCTIONS") == 0;
-    Py_DECREF(library_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    // Capture the original library function objects for the intrinsic table (a missing name
-    // leaves the intrinsic disabled)
-    for (int ix_intrinsic = 0; ix_intrinsic < INTRINSIC_COUNT; ix_intrinsic++) {
-        PyObject *intrinsic_name = PyUnicode_FromString(g_intrinsics[ix_intrinsic].name);
-        if (intrinsic_name == NULL) {
-            return -1;
+    // The JSON replicas' coders - the library's, and its decoder's hooks but for the integer hook
+    PyObject *encoder = import_attr("bare_script.value", "_JSON_ENCODER_DEFAULT");
+    PyObject *library_decoder = import_attr("bare_script.library", "_JSON_DECODER");
+    PyObject *decoder_type = import_attr("json", "JSONDecoder"), *decoder = NULL, *kwargs = NULL;
+    if (encoder != NULL && library_decoder != NULL && decoder_type != NULL &&
+        (g_json_encode = PyObject_GetAttrString(encoder, "encode")) != NULL && (kwargs = PyDict_New()) != NULL) {
+        PyObject *parse_float = PyObject_GetAttrString(library_decoder, "parse_float");
+        PyObject *parse_constant = PyObject_GetAttrString(library_decoder, "parse_constant");
+        if (parse_float != NULL && parse_constant != NULL && PyDict_SetItemString(kwargs, "parse_float", parse_float) == 0 &&
+            PyDict_SetItemString(kwargs, "parse_constant", parse_constant) == 0 &&
+            (decoder = PyObject_VectorcallDict(decoder_type, NULL, 0, kwargs)) != NULL) {
+            g_json_decode = PyObject_GetAttrString(decoder, "decode");
         }
-        int found_intrinsic = dict_get_ref(g.script_functions, intrinsic_name, &g_intrinsics[ix_intrinsic].py_func);
-        Py_DECREF(intrinsic_name);
-        if (found_intrinsic < 0) {
+        Py_XDECREF(parse_float);
+        Py_XDECREF(parse_constant);
+    }
+    Py_XDECREF(encoder);
+    Py_XDECREF(library_decoder);
+    Py_XDECREF(decoder_type);
+    Py_XDECREF(decoder);
+    Py_XDECREF(kwargs);
+    if (g_json_decode == NULL) {
+        Py_XDECREF(runtime);
+        return -1;
+    }
+    for (int ix = 0; ix < 10; ix++) {
+        char key[2] = {(char)('0' + ix), 0};
+        if (intern(&g_group_keys[ix], key) < 0) {
+            Py_DECREF(runtime);
             return -1;
         }
     }
-
-    PyObject *runtime_module = PyImport_ImportModule("bare_script.runtime");
-    if (runtime_module == NULL) {
+    for (int id = 1; id < IN_COUNT; id++) {
+        if (intern(&g_intrinsic_names[id], intrinsic_names[id]) < 0 ||
+            (g_intrinsic_fns[id] = PyObject_GetItem(g_SCRIPT_FUNCTIONS, g_intrinsic_names[id])) == NULL) {
+            Py_DECREF(runtime);
+            return -1;
+        }
+    }
+    if (PyType_Ready(&ScriptFunction_Type) < 0) {
+        Py_DECREF(runtime);
         return -1;
     }
-    import_ok = import_member(&g.runtime_error, runtime_module, "BareScriptRuntimeError") == 0 &&
-        import_member(&g.barescript_lint_script, runtime_module, "barescript_lint_script") == 0 &&
-        import_member(&g.barescript_parse_script, runtime_module, "barescript_parse_script") == 0;
-    Py_DECREF(runtime_module);
-    if (!import_ok) {
-        return -1;
+#ifdef BS_MODEL_WATCH
+    // Without a free dict watcher, function models are checked by lookup on each call
+    g_model_watcher = PyDict_AddWatcher(model_watch_callback);
+    if (g_model_watcher < 0) {
+        PyErr_Clear();
     }
-
-    PyObject *include_source_module = PyImport_ImportModule("bare_script.include_source");
-    if (include_source_module == NULL) {
-        return -1;
-    }
-    import_ok = import_member(&g.system_includes, include_source_module, "SYSTEM_INCLUDES") == 0;
-    Py_DECREF(include_source_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    PyObject *value_module = PyImport_ImportModule("bare_script.value");
-    if (value_module == NULL) {
-        return -1;
-    }
-    import_ok = import_member(&g.value_args_error, value_module, "ValueArgsError") == 0 &&
-        import_member(&g.value_string, value_module, "value_string") == 0 &&
-        import_member(&g.value_compare, value_module, "value_compare") == 0 &&
-        import_member(&g.value_round_number, value_module, "value_round_number") == 0 &&
-        import_member(&g.value_normalize_datetime, value_module, "value_normalize_datetime") == 0;
-    Py_DECREF(value_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    PyObject *options_module = PyImport_ImportModule("bare_script.options");
-    if (options_module == NULL) {
-        return -1;
-    }
-    import_ok = import_member(&g.url_file_relative, options_module, "url_file_relative") == 0;
-    Py_DECREF(options_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    PyObject *json_module = PyImport_ImportModule("json");
-    if (json_module == NULL) {
-        return -1;
-    }
-    import_ok = import_member(&g.json_loads, json_module, "loads") == 0;
-    Py_DECREF(json_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    PyObject *functools_module = PyImport_ImportModule("functools");
-    if (functools_module == NULL) {
-        return -1;
-    }
-    import_ok = import_member(&g.partial, functools_module, "partial") == 0;
-    Py_DECREF(functools_module);
-    if (!import_ok) {
-        return -1;
-    }
-
-    // Ready the script function type
-    if (PyType_Ready(&ScriptFunctionType) < 0) {
-        return -1;
-    }
-
-    // Create the constants (g.one last - it is the idempotency guard)
-    g.default_max_statements = PyFloat_FromDouble(1e9);
-    if (g.default_max_statements == NULL) {
-        return -1;
-    }
-    g.zero = PyLong_FromLong(0);
-    if (g.zero == NULL) {
-        return -1;
-    }
-    g.one = PyLong_FromLong(1);
-    if (g.one == NULL) {
-        return -1;
-    }
-
+#endif
+    g_runtime = runtime;
     return 0;
 }
 
 
-static PyModuleDef_Slot runtime_c_slots[] = {
-    {Py_mod_exec, (void *)runtime_c_exec},
+static int module_exec(PyObject *module)
+{
+    (void)module;
+    return g_runtime != NULL || module_init() == 0 ? 0 : -1;
+}
+
+
+static PyMethodDef module_methods[] = {
+    {"execute_script", (PyCFunction)(void (*)(void))execute_script, METH_VARARGS | METH_KEYWORDS,
+     "Execute a BareScript model"},
+    {"evaluate_expression", (PyCFunction)(void (*)(void))evaluate_expression, METH_VARARGS | METH_KEYWORDS,
+     "Evaluate an expression model"},
+    {NULL, NULL, 0, NULL}
+};
+
+
+static PyModuleDef_Slot module_slots[] = {
+    {Py_mod_exec, module_exec},
 #if PY_VERSION_HEX >= 0x030C0000
     {Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_NOT_SUPPORTED},
 #endif
@@ -5394,17 +5009,17 @@ static PyModuleDef_Slot runtime_c_slots[] = {
 };
 
 
-static struct PyModuleDef runtime_c_module = {
+static struct PyModuleDef module_def = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "runtime_c",
-    .m_doc = "The BareScript runtime C extension",
+    .m_name = "bare_script.runtime_c",
+    .m_doc = "The BareScript C runtime",
     .m_size = 0,
-    .m_methods = runtime_c_methods,
-    .m_slots = runtime_c_slots
+    .m_methods = module_methods,
+    .m_slots = module_slots,
 };
 
 
 PyMODINIT_FUNC PyInit_runtime_c(void)
 {
-    return PyModuleDef_Init(&runtime_c_module);
+    return PyModuleDef_Init(&module_def);
 }

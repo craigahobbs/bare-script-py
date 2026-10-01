@@ -15,6 +15,7 @@ from bare_script import BareScriptParserError, BareScriptRuntimeError, barescrip
     barescript_parse_script, evaluate_expression, execute_script
 from bare_script.include import barescript_validate_expression, barescript_validate_script
 from bare_script.include_source import SYSTEM_INCLUDES
+from bare_script.library import SCRIPT_FUNCTIONS
 import bare_script.runtime
 from bare_script.runtime import SYSTEM_GLOBAL_COVERAGE_NAME, SYSTEM_GLOBAL_INCLUDES_NAME
 from bare_script.value import ValueArgsError
@@ -464,6 +465,112 @@ class TestExecuteScript(unittest.TestCase):
         options = {'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: 42}}
         self.assertEqual(execute_script(script, options), 12)
         self.assertEqual(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME], 42)
+
+
+    def test_execute_script_coverage_function_redefined(self):
+        # Defining a function named for the coverage global ends coverage recording
+        script = barescript_parse_script([
+            'a = 5',
+            f'function {SYSTEM_GLOBAL_COVERAGE_NAME}():',
+            'endfunction',
+            'b = 7',
+            'return a + b'
+        ], 1, 'test.bare')
+        coverage = {'enabled': True}
+        options = {'globals': {SYSTEM_GLOBAL_COVERAGE_NAME: coverage}}
+        self.assertEqual(execute_script(script, options), 12)
+        self.assertTrue(callable(options['globals'][SYSTEM_GLOBAL_COVERAGE_NAME]))
+        self.assertListEqual(sorted(coverage['scripts']['test.bare']['covered'].keys()), ['1', '2', '4', '5'])
+
+
+    def test_execute_script_globals_replaced(self):
+        # A function called after the options' globals are replaced reads the new globals
+        globals_new = {'testHelper': lambda unused_args, unused_options: 'new'}
+        def replace_globals(unused_args, options):
+            options['globals'] = globals_new
+        script = barescript_parse_script([
+            'function testHelper():',
+            "    return 'old'",
+            'endfunction',
+            'function testFn():',
+            '    return testHelper()',
+            'endfunction',
+            'replaceGlobals()',
+            'return [testHelper(), testFn()]'
+        ])
+        self.assertListEqual(execute_script(script, {'globals': {'replaceGlobals': replace_globals}}), ['old', 'new'])
+
+
+    def test_execute_script_coverage_object_changed(self):
+        # Changing the coverage global's "enabled" with objectAssign or objectDelete takes effect on the next call
+        for change, enabled, expected in [
+            ("objectAssign(__barescriptCoverage, {'enabled': false})", 'true', {'3': 1}),
+            ("objectDelete(__barescriptCoverage, 'enabled')", 'true', {'3': 1}),
+            ("objectAssign(__barescriptCoverage, {'enabled': true})", 'false', {'3': 2})
+        ]:
+            script = barescript_parse_script([
+                f"__barescriptCoverage = {{'enabled': {enabled}}}",
+                'function testFn():',
+                '    return 1',
+                'endfunction',
+                'testFn()',
+                change,
+                'testFn()',
+                'testFn()'
+            ], 1, 'test.bare')
+            globals_ = {}
+            self.assertIsNone(execute_script(script, {'globals': globals_}))
+            covered = globals_[SYSTEM_GLOBAL_COVERAGE_NAME].get('scripts', {}).get('test.bare', {}).get('covered', {})
+            self.assertDictEqual({lineno: value['count'] for lineno, value in covered.items()}, expected, change)
+
+
+    def test_execute_script_statement_count_float(self):
+        # A non-integer statement count restarts from the script's statements
+        script = barescript_parse_script(['a = 1', 'b = 2', 'return a + b'])
+        options = {'statementCount': 0.5}
+        self.assertEqual(execute_script(script, options), 3)
+        self.assertEqual(options['statementCount'], 3)
+
+
+    def test_execute_script_statement_count_changed(self):
+        # Statements count on from a statement count a Python function changes - to a float, a bool, a large int, or
+        # nothing - as runtime.py counts it
+        def run(count, max_statements=None):
+            def set_count(unused_args, options):
+                if count is None:
+                    del options['statementCount']
+                else:
+                    options['statementCount'] = count
+            script = barescript_parse_script(['i = 0', 'setCount()', 'while i < 3:', '    i = i + 1', 'endwhile', 'return i'])
+            options = {'globals': {'setCount': set_count}}
+            if max_statements is not None:
+                options['maxStatements'] = max_statements
+            try:
+                result = execute_script(script, options)
+            except (BareScriptRuntimeError, KeyError) as exc:
+                result = f'{type(exc).__name__}: {exc}'
+            return result, options.get('statementCount')
+
+        self.assertTupleEqual(run(0.5), (3, 10.5))
+        self.assertTupleEqual(run(True), (3, 11))
+        self.assertTupleEqual(run(2 ** 70), ('BareScriptRuntimeError: :3: Exceeded maximum script statements (1000000000.0)', 2 ** 70 + 1))
+        self.assertTupleEqual(run(0.5, 5), ('BareScriptRuntimeError: :4: Exceeded maximum script statements (5)', 5.5))
+        self.assertTupleEqual(run(None), ("KeyError: 'statementCount'", None))
+
+
+    def test_execute_script_local_unassigned(self):
+        # A function's unassigned local variable reads the global variable of the same name
+        script = barescript_parse_script([
+            'function testFn():',
+            '    if false:',
+            '        x = 1',
+            '    endif',
+            '    return x',
+            'endfunction',
+            'return testFn()'
+        ])
+        self.assertIsNone(execute_script(script, {'globals': {}}))
+        self.assertEqual(execute_script(script, {'globals': {'x': 5}}), 5)
 
 
     def test_execute_script_coverage_no_name(self):
@@ -1461,6 +1568,24 @@ endfunction
         self.assertListEqual(results, [barescript_parse_script('a = 1 + 2')] * 8)
 
 
+    # The parse and lint wrappers' include libraries run on the package-selected runtime
+    def test_barescript_parse_script_package_runtime(self):
+        package_execute_script = bare_script.execute_script
+        includes = []
+        def execute_script_spy(script, options=None):
+            includes.append(script['statements'][0]['include']['includes'][0]['url'])
+            return package_execute_script(script, options)
+        bare_script.runtime._PARSER_GLOBALS = None # pylint: disable=protected-access
+        bare_script.runtime._LINT_GLOBALS = None # pylint: disable=protected-access
+        bare_script.execute_script = execute_script_spy
+        try:
+            script = barescript_parse_script('a = 1')
+            self.assertListEqual(barescript_lint_script(script), [])
+        finally:
+            bare_script.execute_script = package_execute_script
+        self.assertListEqual(includes, ['barescriptParser.bare', 'barescriptLint.bare'])
+
+
     def test_barescript_lint_script_threads(self):
         bare_script.runtime._LINT_GLOBALS = None # pylint: disable=protected-access
         script = barescript_validate_script({'statements': [], 'scriptName': 'test.bare', 'scriptLines': []})
@@ -1587,6 +1712,23 @@ class TestEvaluateExpression(unittest.TestCase):
     def test_variable_unknown(self):
         expr = barescript_validate_expression({'variable': 'varName'})
         self.assertEqual(evaluate_expression(expr), None)
+
+
+    def test_variable_mapping_types(self):
+        # Null globals, and options, globals, and locals that are dict subclasses
+        expr = barescript_validate_expression({'variable': 'varName'})
+        self.assertIsNone(evaluate_expression(expr, {'globals': None}))
+        self.assertEqual(evaluate_expression(expr, collections.OrderedDict(globals={'varName': 1})), 1)
+        self.assertEqual(evaluate_expression(expr, {'globals': collections.OrderedDict(varName=2)}), 2)
+        self.assertEqual(evaluate_expression(expr, None, collections.OrderedDict(varName=3)), 3)
+
+
+    def test_builtins_non_bool(self):
+        expr = barescript_validate_expression({'function': {'name': 'abs', 'args': [{'number': -4}]}})
+        self.assertEqual(evaluate_expression(expr, None, None, 1), 4)
+        with self.assertRaises(BareScriptRuntimeError) as cm_exc:
+            evaluate_expression(expr, None, None, 0)
+        self.assertEqual(str(cm_exc.exception), 'Undefined function "abs"')
 
 
     def test_variable_inherited_property_name(self):
@@ -2017,6 +2159,31 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(execute_script(script, options), 116)
 
 
+    def test_function_intrinsic_alias_no_args(self):
+        # An intrinsic library function called under another name without arguments fails as the intrinsic fast
+        # path's argument count (len(None)) does, whatever its name - logged, and null
+        script = barescript_validate_script({
+            'statements': [
+                {'return': {'expr': {'function': {'name': 'arrayNew', 'args': [
+                    {'function': {'name': 'aliasNew'}},
+                    {'function': {'name': 'aliasLength'}},
+                    {'function': {'name': 'arrayNew'}}
+                ]}}}}
+            ]
+        })
+        logs = []
+        options = {
+            'debug': True,
+            'logFn': logs.append,
+            'globals': {'aliasNew': SCRIPT_FUNCTIONS['arrayNew'], 'aliasLength': SCRIPT_FUNCTIONS['arrayLength']}
+        }
+        self.assertListEqual(execute_script(script, options), [None, None, None])
+        self.assertListEqual(logs, [
+            'BareScript: Function "aliasNew" failed with error: object of type \'NoneType\' has no len()',
+            'BareScript: Function "aliasLength" failed with error: object of type \'NoneType\' has no len()'
+        ])
+
+
     def test_function_script_function_no_globals(self):
         script = barescript_validate_script({
             'statements': [
@@ -2431,6 +2598,25 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertEqual(evaluate_expression(expr), False)
         expr = barescript_validate_expression({'binary': {'op': '>', 'left': {'string': 'a'}, 'right': {'string': 'b'}}})
         self.assertEqual(evaluate_expression(expr), False)
+
+
+    def test_binary_comparison_array(self):
+        # Arrays compare item by item, then by length
+        for left, op, right, expected in [
+            ([1, 2], '<', [1, 3], True),
+            ([1, 3], '<', [1, 2], False),
+            ([1, 2], '==', [1, 2.0], True),
+            ([1.5], '>', [1], True),
+            ([2], '<=', [2], True),
+            ([3], '>=', [10], False),
+            ([1, 2], '<', [1], False)
+        ]:
+            expr = barescript_validate_expression({'binary': {
+                'op': op,
+                'left': {'function': {'name': 'arrayNew', 'args': [{'number': value} for value in left]}},
+                'right': {'function': {'name': 'arrayNew', 'args': [{'number': value} for value in right]}}
+            }})
+            self.assertEqual(evaluate_expression(expr), expected, (left, op, right))
 
 
     def test_binary_modulus(self):
@@ -3077,6 +3263,16 @@ endwhile
         self.assertIsNone(run(fn('arraySet', arr(1, 2), num(0.0), num(9.0), num(9.0))))   # too many arguments
         self.assertIsNone(run(fn('arraySet', arr(1), num(5.0), num(9.0))))                # index out of bounds
 
+    def test_intrinsic_array_index_non_finite(self):
+        # A non-finite index is an invalid index argument
+        for value in (math.nan, math.inf, -math.inf):
+            for name, args in (('arrayGet', []), ('arraySet', [{'number': 1}])):
+                logs = []
+                expr = self._fn(name, self._arr(1, 2), {'variable': 'index'}, *args)
+                options = {'globals': {'index': value}, 'logFn': logs.append, 'debug': True}
+                self.assertIsNone(self._run(expr, options))
+                self.assertListEqual(logs, [f'BareScript: Function "{name}" failed with error: Invalid "index" argument value, null'])
+
     def test_intrinsic_math_sqrt(self):
         run, fn, num, str_ = self._run, self._fn, self._num, self._str
         # valid - a float and an int (from mathFloor)
@@ -3156,6 +3352,56 @@ endwhile
         expr = self._fn('objectGet', self._fn('objectNew', self._str('k'), self._str('v')), self._str('k'))
         self.assertEqual(self._run(expr, {'globals': {'objectGet': my_object_get}}), 'override')
         self.assertEqual(self._run(expr), 'v')
+
+    def test_library_json(self):
+        # Floats normalize as integers where integral, small floats and indents format separately, an integer past
+        # the double range parses as null, and invalid JSON fails
+        logs = []
+        script = barescript_parse_script([
+            "return [ \\",
+            "    jsonStringify([1.0, 2.5, null, true, 'x', {'b': -0.0, 'a': [3.0]}]), \\",
+            "    jsonStringify([1e-5, 1e21]), \\",
+            "    jsonStringify({'a': 1}, 2), \\",
+            "    jsonParse('[1, 2.5, {\"a\": null}]'), \\",
+            "    jsonParse(stringRepeat('9', 309)), \\",
+            "    jsonParse('[1,') \\",
+            "]"
+        ])
+        self.assertListEqual(execute_script(script, {'logFn': logs.append, 'debug': True}), [
+            '[1,2.5,null,true,"x",{"a":[3],"b":0}]',
+            '[0.00001,1e+21]',
+            '{\n  "a": 1\n}',
+            [1, 2.5, {'a': None}],
+            None,
+            None
+        ])
+        self.assertListEqual(logs, [':1: BareScript: Function "jsonParse" failed with error: Expecting value: line 1 column 4 (char 3)'])
+
+    def test_library_regex_replace(self):
+        # JavaScript replacement syntax - group numbers, "$$", group names, a backslash, and a lone "$"
+        logs = []
+        script = barescript_parse_script([
+            "return [ \\",
+            "    regexReplace(regexNew('(a)(b)?'), 'zab abc', '[$1|$2]'), \\",
+            "    regexReplace(regexNew('(a)(b)?'), 'zab abc', '$$1'), \\",
+            "    regexReplace(regexNew('(?<x>a)'), 'zab', '$<x>$<x>'), \\",
+            "    regexReplace(regexNew('b'), 'zab', '\\\\'), \\",
+            "    regexReplace(regexNew('b'), 'zab', 'x$'), \\",
+            "    regexReplace(regexNew('b'), 'zab', '$1') \\",
+            "]"
+        ])
+        self.assertListEqual(execute_script(script, {'logFn': logs.append, 'debug': True}),
+                             ['z[a|b] [a|b]c', 'za ac', 'zaab', 'za\\', 'zax$', None])
+        self.assertListEqual(logs, [':1: BareScript: Function "regexReplace" failed with error: invalid group reference 1 at position 1'])
+
+    def test_library_number_to_string_large(self):
+        # Integral floats at and past 2^63, and the largest below it
+        script = barescript_parse_script([
+            'x = 9223372036854775808',
+            'return [numberToString(x), numberToString(x, 16), numberToString(x * 2), numberToString(9223372036854774784)]'
+        ])
+        self.assertListEqual(execute_script(script),
+                             ['9223372036854775808', '8000000000000000', '18446744073709551616', '9223372036854774784'])
 
 
 # Helper functions to get test values of specific types

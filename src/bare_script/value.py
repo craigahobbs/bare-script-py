@@ -355,7 +355,7 @@ def value_args_validate(fn_args, args, error_return_value=None):
             arg_gt = fn_arg['gt']
             arg_gte = fn_arg['gte']
             arg_integer = fn_arg['integer']
-            if ((arg_integer and int(arg_value) != arg_value) or
+            if ((arg_integer and isinstance(arg_value, float) and not arg_value.is_integer()) or
                 (arg_lt is not None and not (arg_value < arg_lt)) or
                 (arg_lte is not None and not (arg_value <= arg_lte)) or
                 (arg_gt is not None and not (arg_value > arg_gt)) or

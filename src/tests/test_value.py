@@ -675,6 +675,14 @@ class TestValue(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, 2.5')
         self.assertIsNone(cm_exc.exception.return_value)
 
+        # Non-finite integer
+        fn_args_integer = value_args_model([{'name': 'int', 'type': 'number', 'integer': True}])
+        for value in (float('nan'), float('inf'), float('-inf')):
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                value_args_validate(fn_args_integer, [value])
+            self.assertEqual(str(cm_exc.exception), 'Invalid "int" argument value, null')
+            self.assertIsNone(cm_exc.exception.return_value)
+
         # Greater-than error
         with self.assertRaises(ValueArgsError) as cm_exc:
             value_args_validate(fn_args, [0, 3.5])

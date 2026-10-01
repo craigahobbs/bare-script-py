@@ -211,10 +211,12 @@ def _lint_include(options, include_script, include_url):
                 log_fn(f'BareScript: {warning}')
 
 
-# Helper to execute a system include library script into a new globals dict
+# Helper to execute a system include library script into a new globals dict, on the package-selected runtime (the
+# C runtime when it's available) - looked up on use because the package imports this module before selecting one
 def _system_include_globals(url):
+    package_execute_script = sys.modules[__package__].execute_script
     globals_ = {}
-    execute_script({'statements': [{'include': {'includes': [{'url': url, 'system': True}]}}]}, {'globals': globals_})
+    package_execute_script({'statements': [{'include': {'includes': [{'url': url, 'system': True}]}}]}, {'globals': globals_})
     return globals_
 
 
