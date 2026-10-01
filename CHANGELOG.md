@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.15 (2026-10-01)
+
+- [696f7c4](https://github.com/craigahobbs/bare-script-py/commit/696f7c4) - re-port runtime_c.c as a register bytecode VM, 1.3x to 7.9x faster - parse and lint on the C runtime, and reject a non-finite number as an integer argument
+
 ## 5.1.14 (2026-09-30)
 
 - [adfd8d4](https://github.com/craigahobbs/bare-script-py/commit/adfd8d4) - binary data, the base64, gzip, and tar includes, and the BareScript Creator
