@@ -7,11 +7,13 @@ import datetime
 import json
 import platform
 import re
+import time
 import unittest
 import uuid
 
-from bare_script.value import ValueArgsError, value_args_model, value_args_validate, value_boolean, value_compare, value_is, value_json, \
-    value_normalize_datetime, value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, value_string, value_type
+from bare_script.value import ValueArgsError, value_args_model, value_args_validate, value_boolean, value_compare, value_datetime_local, \
+    value_is, value_json, value_normalize_datetime, value_parse_datetime, value_parse_integer, value_parse_number, value_round_number, \
+    value_string, value_type
 
 
 # Python base-type subclasses - treated as their base value type
@@ -883,6 +885,39 @@ class TestValue(unittest.TestCase):
         self.assertIs(value_normalize_datetime(d1), d1)
         self.assertEqual(value_normalize_datetime(d2), d1)
         self.assertEqual(value_normalize_datetime(d3), datetime.datetime(2024, 3, 19))
+
+
+    def test_value_datetime_local(self):
+        d1 = datetime.datetime(2024, 3, 19, 12, 21)
+        d2 = datetime.datetime(2024, 3, 19, 12, 21, tzinfo=datetime.timezone.utc)
+        self.assertEqual(value_datetime_local(d1), d1.astimezone())
+        self.assertEqual(value_datetime_local(d1).utcoffset(), d1.astimezone().utcoffset())
+        self.assertEqual(value_datetime_local(d2), d2)
+        self.assertEqual(value_datetime_local(d2).utcoffset(), d2.astimezone().utcoffset())
+
+
+    def test_value_datetime_local_os_error(self):
+        # Windows' localtime() rejects times before the Unix epoch
+        class WindowsDatetime(datetime.datetime):
+            def astimezone(self, tz=None):
+                if tz is None:
+                    raise OSError(22, 'Invalid argument')
+                return super().astimezone(tz)
+
+        offset_standard = datetime.timedelta(seconds=-time.timezone)
+        d1 = WindowsDatetime(1969, 12, 31, 16)
+        d2 = WindowsDatetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+        self.assertEqual(value_datetime_local(d1), datetime.datetime(1969, 12, 31, 16, tzinfo=datetime.timezone(offset_standard)))
+        self.assertEqual(value_datetime_local(d1).utcoffset(), offset_standard)
+        self.assertEqual(value_datetime_local(d2), d2)
+        self.assertEqual(value_datetime_local(d2).utcoffset(), offset_standard)
+
+        # The datetime still stringifies
+        offset_minutes = int(offset_standard.total_seconds()) // 60
+        offset_sign = '-' if offset_minutes < 0 else '+'
+        offset_text = f'{offset_sign}{abs(offset_minutes) // 60:02d}:{abs(offset_minutes) % 60:02d}'
+        self.assertEqual(value_string(d1), f'1969-12-31T16:00:00{offset_text}')
+        self.assertEqual(value_json({'a': d1}), f'{{"a":"1969-12-31T16:00:00{offset_text}"}}')
 
 
     def test_value_parse_datetime(self):

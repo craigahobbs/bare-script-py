@@ -10,6 +10,7 @@ import json
 import math
 import re
 import sys
+import time
 import uuid
 
 
@@ -69,7 +70,7 @@ def value_string(value):
         return _value_string_float(value)
     elif isinstance(value, datetime.date):
         # ISO format with millisecond precision (omitted when zero) and a "+HH:MM" timezone offset
-        datetime_local = value_normalize_datetime(value).astimezone()
+        datetime_local = value_datetime_local(value_normalize_datetime(value))
         iso = datetime_local.isoformat(timespec='milliseconds' if datetime_local.microsecond else 'seconds')
         return _R_DATETIME_TZ_CLEANUP.sub(r'\1', iso)
     elif isinstance(value, dict):
@@ -561,7 +562,7 @@ def value_parse_datetime(text):
             result = datetime.datetime.fromisoformat(text_zulu)
             if is_hour24:
                 result += datetime.timedelta(days=1)
-            result = result.astimezone().replace(tzinfo=None)
+            result = value_datetime_local(result).replace(tzinfo=None)
             return result.replace(microsecond=(result.microsecond // 1000) * 1000)
     except ValueError:
         return None
@@ -588,9 +589,30 @@ def value_normalize_datetime(value):
 
     if isinstance(value, datetime.datetime):
         if value.tzinfo is not None:
-            return value.astimezone().replace(tzinfo=None)
+            return value_datetime_local(value).replace(tzinfo=None)
         return value
     return datetime.datetime(value.year, value.month, value.day)
+
+
+def value_datetime_local(value):
+    """
+    Convert a datetime value to the local timezone
+
+    :param value: The datetime value - a naive datetime is local time
+    :type value: datetime
+    :return: The timezone-aware local datetime value
+    :rtype: datetime
+    """
+
+    try:
+        return value.astimezone()
+    except OSError:
+        # Windows' localtime() rejects times before the Unix epoch (and after the year 3000) - use the local
+        # standard-time offset
+        timezone_standard = datetime.timezone(datetime.timedelta(seconds=-time.timezone))
+        if value.tzinfo is not None:
+            return value.astimezone(timezone_standard)
+        return value.replace(tzinfo=timezone_standard)
 
 
 #
