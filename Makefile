@@ -239,7 +239,11 @@ with open(library_path, 'r', encoding='utf-8') as fh:
 
 # Create the expression documentation model
 library_map = dict((func['name'], func) for func in library['functions'])
-library_expr = {'functions': [dict(library_map[lib_name], name=expr_name) for expr_name, lib_name in EXPRESSION_FUNCTION_MAP.items()]}
+library_expr = {'functions': []}
+for expr_name, lib_name in EXPRESSION_FUNCTION_MAP.items():
+    lib_func = library_map[lib_name]
+    doc = lib_func['doc'] if expr_name == lib_name else ['Alias of the `' + lib_name + '` builtin function.', '', *lib_func['doc']]
+    library_expr['functions'].append(dict(lib_func, name=expr_name, doc=doc))
 
 # Write the expression documentation model
 with open(expression_path, 'w', encoding='utf-8') as fh:

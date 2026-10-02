@@ -77,7 +77,7 @@ _ARRAY_EXTEND_ARGS = value_args_model([
 # $group: array
 # $doc: Flatten an array hierarchy
 # $arg array: The array to flatten
-# $arg depth: Optional (default is 10). The maximum depth of the array hierarchy.
+# $arg [depth = 10]: The maximum depth of the array hierarchy
 # $return: The flattened array
 def _array_flat(args, unused_options):
     array, depth = value_args_validate(_ARRAY_FLAT_ARGS, args)
@@ -135,7 +135,7 @@ _ARRAY_GET_ARGS = value_args_model([
 # $doc: ```
 # $arg array: The array
 # $arg value: The value to find in the array, or a match function, f(value) -> bool
-# $arg index: Optional (default is 0). The index at which to start the search.
+# $arg [index = 0]: The index at which to start the search
 # $return: The first index of the value in the array; -1 if not found
 def _array_index_of(args, options):
     array, value, index = value_args_validate(_ARRAY_INDEX_OF_ARGS, args, -1)
@@ -184,7 +184,7 @@ _ARRAY_JOIN_ARGS = value_args_model([
 # $doc: Find the last index of a value in an array
 # $arg array: The array
 # $arg value: The value to find in the array, or a match function, f(value) -> bool
-# $arg index: Optional (default is the end of the array). The index at which to start the search.
+# $arg [index]: The index at which to start the search. The default is the end of the array.
 # $return: The last index of the value in the array; -1 if not found
 def _array_last_index_of(args, options):
     array, value, index = value_args_validate(_ARRAY_LAST_INDEX_OF_ARGS, args, -1)
@@ -236,8 +236,8 @@ def _array_new(args, unused_options):
 # $function: arrayNewSize
 # $group: array
 # $doc: Create a new array of a specific size
-# $arg size: Optional (default is 0). The new array's size.
-# $arg value: Optional (default is 0). The value with which to fill the new array.
+# $arg [size = 0]: The new array's size
+# $arg [value = 0]: The value with which to fill the new array
 # $return: The new array
 def _array_new_size(args, unused_options):
     size, value = value_args_validate(_ARRAY_NEW_SIZE_ARGS, args)
@@ -352,8 +352,8 @@ _ARRAY_SHIFT_ARGS = value_args_model([
 # $doc: # rest is [3, 4, 5]
 # $doc: ```
 # $arg array: The array
-# $arg start: Optional (default is 0). The start index of the slice. Negative indexes are invalid.
-# $arg end: Optional (default is the end of the array). The end index of the slice.
+# $arg [start = 0]: The start index of the slice. Negative indexes are invalid.
+# $arg [end]: The end index of the slice. The default is the end of the array.
 # $return: The new array slice
 def _array_slice(args, unused_options):
     array, start, end = value_args_validate(_ARRAY_SLICE_ARGS, args)
@@ -389,8 +389,8 @@ _ARRAY_SLICE_ARGS = value_args_model([
 # $doc: # numbers is [4, 3, 1]
 # $doc: ```
 # $arg array: The array
-# $arg compareFn: Optional (default is null). The comparison function, f(a, b) -> number -
-# $arg compareFn: negative if "a" sorts first, positive if "b" sorts first, zero if equal.
+# $arg [compareFn = null]: The comparison function, f(a, b) -> number -
+# $arg compareFn: negative if "a" sorts first, positive if "b" sorts first, zero if equal
 # $return: The sorted array
 def _array_sort(args, options):
     array, compare_fn = value_args_validate(_ARRAY_SORT_ARGS, args)
@@ -415,8 +415,8 @@ _ARRAY_SORT_ARGS = value_args_model([
 # $group: barescript
 # $doc: Evaluate a [BareScript expression model](../model/#var.vName='Expression')
 # $arg expr: The [BareScript expression model](../model/#var.vName='Expression')
-# $arg locals: Optional (default is null). The local variables object.
-# $arg builtins: Optional (default is true). If true, include the [built-in expression functions](expression.html).
+# $arg [locals = null]: The local variables object
+# $arg [builtins = true]: If true, include the [built-in expression functions](expression.html)
 # $return: The expression result
 def _barescript_evaluate_expression(args, options):
     # pylint: disable-next=global-statement
@@ -481,7 +481,7 @@ _DATETIME_HOUR_ARGS = value_args_model([
 # $doc: # date is '2026-08-06'
 # $doc: ```
 # $arg datetime: The datetime
-# $arg isDate: Optional (default is false). If true, format the datetime as an ISO date.
+# $arg [isDate = false]: If true, format the datetime as an ISO date
 # $return: The formatted datetime string
 def _datetime_iso_format(args, unused_options):
     datetime_arg, is_date = value_args_validate(_DATETIMEISO_FORMAT_ARGS, args)
@@ -565,10 +565,10 @@ _DATETIME_MONTH_ARGS = value_args_model([
 # $arg year: The full year
 # $arg month: The month (1-12)
 # $arg day: The day of the month
-# $arg hour: Optional (default is 0). The hour (0-23).
-# $arg minute: Optional (default is 0). The minute.
-# $arg second: Optional (default is 0). The second.
-# $arg millisecond: Optional (default is 0). The millisecond.
+# $arg [hour = 0]: The hour (0-23)
+# $arg [minute = 0]: The minute
+# $arg [second = 0]: The second
+# $arg [millisecond = 0]: The millisecond
 # $return: The new datetime
 def _datetime_new(args, unused_options):
     year, month, day, hour, minute, second, millisecond = value_args_validate(_DATETIME_NEW_ARGS, args)
@@ -614,7 +614,7 @@ _DATETIME_SECOND_ARGS = value_args_model([
 
 # $function: datetimeToday
 # $group: datetime
-# $doc: Get today's datetime
+# $doc: Get today's date - the current datetime at midnight, local time
 # $return: Today's datetime
 def _datetime_today(unused_args, unused_options):
     today = datetime.date.today()
@@ -684,7 +684,7 @@ _JSON_DECODER = json.JSONDecoder(parse_float=_json_parse_float, parse_int=_json_
 # $doc: # pretty is '{\n    "a": 1\n}'
 # $doc: ```
 # $arg value: The object
-# $arg indent: Optional (default is null). The indentation number.
+# $arg [indent = null]: The indentation number
 # $return: The JSON string
 def _json_stringify(args, unused_options):
     value, indent = value_args_validate(_JSON_STRINGIFY_ARGS, args)
@@ -841,7 +841,7 @@ _MATH_LN_ARGS = value_args_model([
 # $group: math
 # $doc: Compute the logarithm of a number
 # $arg x: The number, greater than 0
-# $arg base: Optional (default is 10). The logarithm base, greater than 0 and not 1.
+# $arg [base = 10]: The logarithm base, greater than 0 and not 1
 # $return: The logarithm of the number
 def _math_log(args, unused_options):
     x, base = value_args_validate(_MATH_LOG_ARGS, args)
@@ -910,7 +910,7 @@ def _math_random(unused_args, unused_options):
 # $group: math
 # $doc: Round a number to a certain number of decimal places
 # $arg x: The number
-# $arg digits: Optional (default is 0). The number of decimal digits to round to.
+# $arg [digits = 0]: The number of decimal digits to round to
 # $return: The rounded number
 def _math_round(args, unused_options):
     x, digits = value_args_validate(_MATH_ROUND_ARGS, args)
@@ -1001,7 +1001,7 @@ _NUMBER_PARSE_FLOAT_ARGS = value_args_model([
 # $group: number
 # $doc: Parse a string as an integer
 # $arg string: The string
-# $arg radix: Optional (default is 10). The number base.
+# $arg [radix = 10]: The number base
 # $return: The integer
 def _number_parse_int(args, unused_options):
     string, radix = value_args_validate(_NUMBER_PARSE_INT_ARGS, args)
@@ -1017,8 +1017,8 @@ _NUMBER_PARSE_INT_ARGS = value_args_model([
 # $group: number
 # $doc: Format a number using fixed-point notation
 # $arg x: The number
-# $arg digits: Optional (default is 2). The number of digits to appear after the decimal point.
-# $arg trim: Optional (default is false). If true, trim trailing zeroes and decimal point.
+# $arg [digits = 2]: The number of digits to appear after the decimal point
+# $arg [trim = false]: If true, trim trailing zeroes and decimal point
 # $return: The fixed-point notation string
 def _number_to_fixed(args, unused_options):
     x, digits, trim = value_args_validate(_NUMBER_TO_FIXED_ARGS, args)
@@ -1041,7 +1041,7 @@ _NUMBER_TO_FIXED_ARGS = value_args_model([
 # $group: number
 # $doc: Convert an integer to a string
 # $arg x: The integer
-# $arg radix: Optional (default is 10). The number base.
+# $arg [radix = 10]: The number base
 # $return: The integer as a string of the given base
 def _number_to_string(args, unused_options):
     x, radix = value_args_validate(_NUMBER_TO_STRING_ARGS, args)
@@ -1125,7 +1125,7 @@ _OBJECT_DELETE_ARGS = value_args_model([
 # $doc: Get an object key's value
 # $arg object: The object
 # $arg key: The key
-# $arg defaultValue: Optional (default is null). The default value.
+# $arg [defaultValue = null]: The default value
 # $return: The value, or the default value if the key does not exist
 def _object_get(args, unused_options):
     default_value_arg = args[2] if len(args) >= 3 else None
@@ -1252,7 +1252,15 @@ _REGEX_MATCH_ARGS = value_args_model([
 
 # $function: regexMatchAll
 # $group: regex
-# $doc: Find all matches of regular expression in a string
+# $doc: Find all matches of regular expression in a string. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: keys = []
+# $doc: for match in regexMatchAll(regexNew('([a-z]+)=([0-9]+)'), 'a=1, b=22'):
+# $doc:     arrayPush(keys, objectGet(objectGet(match, 'groups'), '1'))
+# $doc: endfor
+# $doc: # keys is ['a', 'b']
+# $doc: ```
 # $arg regex: The regular expression
 # $arg string: The string
 # $return: The array of match objects (see the [regexMatch](#var.vGroup='regex'&regexmatch) function)
@@ -1284,7 +1292,7 @@ def _regex_match_groups(match):
 # $doc: Create a regular expression
 # pylint: disable-next=line-too-long
 # $arg pattern: The [regular expression pattern string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#writing_a_regular_expression_pattern)
-# $arg flags: Optional (default is null). The regular expression flags. The string may contain the following characters:
+# $arg [flags = null]: The regular expression flags. The string may contain the following characters:
 # $arg flags: - **i** - case-insensitive search
 # $arg flags: - **m** - multi-line search - "^" and "$" matches next to newline characters
 # $arg flags: - **s** - "." matches newline characters
@@ -1363,7 +1371,12 @@ _R_REGEX_REPLACE_NAMED = re.compile(r'\$<(?P<name>[^>]+)>')
 
 # $function: regexSplit
 # $group: regex
-# $doc: Split a string with a regular expression
+# $doc: Split a string with a regular expression. For example:
+# $doc:
+# $doc: ```bare-script
+# $doc: parts = regexSplit(regexNew('\\s*,\\s*'), 'a, b ,c')
+# $doc: # parts is ['a', 'b', 'c']
+# $doc: ```
 # $arg regex: The regular expression
 # $arg string: The string
 # $return: The array of split parts
@@ -1384,10 +1397,10 @@ _REGEX_SPLIT_ARGS = value_args_model([
 
 # $function: stringCharAt
 # $group: string
-# $doc: Get a string index's character code
+# $doc: Get the character of a string at an index
 # $arg string: The string
-# $arg index: The character index
-# $return: The character code
+# $arg index: The index of the character
+# $return: The character string
 def _string_char_at(args, unused_options):
     string, index = value_args_validate(_STRING_CHAR_AT_ARGS, args)
     if index >= len(string):
@@ -1485,7 +1498,7 @@ def _string_from_char_code(char_codes, unused_options):
 # $doc: Find the first index of a search string in a string
 # $arg string: The string
 # $arg search: The search string
-# $arg index: Optional (default is 0). The index at which to start the search.
+# $arg [index = 0]: The index at which to start the search
 # $return: The first index of the search string; -1 if not found
 def _string_index_of(args, unused_options):
     string, search, index = value_args_validate(_STRING_INDEX_OF_ARGS, args, -1)
@@ -1506,7 +1519,7 @@ _STRING_INDEX_OF_ARGS = value_args_model([
 # $doc: Find the last index of a search string in a string
 # $arg string: The string
 # $arg search: The search string
-# $arg index: Optional (default is the end of the string). The index at which to start the search.
+# $arg [index]: The index at which to start the search. The default is the end of the string.
 # $return: The last index of the search string; -1 if not found
 def _string_last_index_of(args, unused_options):
     string, search, index = value_args_validate(_STRING_LAST_INDEX_OF_ARGS, args, -1)
@@ -1609,7 +1622,7 @@ _STRING_REPLACE_ARGS = value_args_model([
 # $doc: Copy a portion of a string
 # $arg string: The string
 # $arg start: The start index of the slice
-# $arg end: Optional (default is the end of the string). The end index of the slice.
+# $arg [end]: The end index of the slice. The default is the end of the string.
 # $return: The new string slice
 def _string_slice(args, unused_options):
     string, start, end = value_args_validate(_STRING_SLICE_ARGS, args)
@@ -1756,6 +1769,14 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 # $doc:     return arrayLength(objectGet(jsonParse(systemFetch(url)), 'functions'))
 # $doc: endfunction
 # $doc: ```
+# $doc:
+# $doc: To send a request body or headers, pass a request model:
+# $doc:
+# $doc: ```bare-script
+# $doc: async function saveJSON(url, value):
+# $doc:     return systemFetch({'url': url, 'body': jsonStringify(value), 'headers': {'Content-Type': 'application/json'}})
+# $doc: endfunction
+# $doc: ```
 # $arg url: The resource URL, request model, or array of URL and request model.
 # $arg url: The request model is an object with the following members:
 # $arg url: - **url** - the resource URL
@@ -1850,7 +1871,7 @@ def _system_fetch_is_byte(value):
 # $group: system
 # $doc: Get a global variable value
 # $arg name: The global variable name
-# $arg defaultValue: Optional (default is null). The default value.
+# $arg [defaultValue = null]: The default value
 # $return: The global variable's value, or the default value if it does not exist
 def _system_global_get(args, options):
     name, default_value = value_args_validate(_SYSTEM_GLOBAL_GET_ARGS, args)
