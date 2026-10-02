@@ -23,7 +23,7 @@ confident that BareScript will execute the same regardless of the underlying run
 
 - [The BareScript Language](https://craigahobbs.github.io/bare-script-py/language/)
 - [The BareScript Library](https://craigahobbs.github.io/bare-script-py/library/)
-- [BareScript Creator](https://craigahobbs.github.io/bare-script-py/creator/)
+- [The BareScript Creator](https://craigahobbs.github.io/bare-script-py/creator/)
 - [API Documentation](https://craigahobbs.github.io/bare-script-py/)
 - [Source code](https://github.com/craigahobbs/bare-script-py)
 
@@ -260,9 +260,9 @@ To run a MarkdownUp script (`.bare`) from this package, use `bare -m` (Markdown 
 [MarkdownUp web app](https://craigahobbs.github.io/markdown-up/).
 
 
-## BareScript Creator
+## The BareScript Creator
 
-[BareScript Creator](https://craigahobbs.github.io/bare-script-py/creator/) generates a ready-to-build
+[The BareScript Creator](https://craigahobbs.github.io/bare-script-py/creator/) generates a ready-to-build
 BareScript project from a specification you write. Choose a project type (a MarkdownUp frontend
 application, to start), fill in its form, and download the project as a `.tar.gz` archive with a
 Makefile, a unit test suite, and the bare-script skill. In the project directory, `make run` has
