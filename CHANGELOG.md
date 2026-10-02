@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.1.16 (2026-10-02)
+
+- [ab8d97d](https://github.com/craigahobbs/bare-script-py/commit/ab8d97d) - library documentation improvements - function signatures, optional argument syntax, shorter intros, and more examples \(mirror of bare-script\)
+
+- [42c404d](https://github.com/craigahobbs/bare-script-py/commit/42c404d) - rename "BareScript Creator" to "The BareScript Creator" \(mirror of bare-script\)
+
+- [f19aa34](https://github.com/craigahobbs/bare-script-py/commit/f19aa34) - fix datetime stringification on Windows, and fail unittestDeepEqual when JSON serialization fails
+
 ## 5.1.15 (2026-10-01)
 
 - [696f7c4](https://github.com/craigahobbs/bare-script-py/commit/696f7c4) - re-port runtime_c.c as a register bytecode VM, 1.3x to 7.9x faster - parse and lint on the C runtime, and reject a non-finite number as an integer argument
