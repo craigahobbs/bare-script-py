@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.17 (2026-10-04)
+
+- [3fc465a](https://github.com/craigahobbs/bare-script-py/commit/3fc465a) - add barescriptLintUnboundGlobals - compute a script or expression model's unbound global variables \(mirror of bare-script\)
+
 ## 5.1.16 (2026-10-02)
 
 - [ab8d97d](https://github.com/craigahobbs/bare-script-py/commit/ab8d97d) - library documentation improvements - function signatures, optional argument syntax, shorter intros, and more examples \(mirror of bare-script\)
