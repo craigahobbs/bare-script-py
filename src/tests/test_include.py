@@ -7,16 +7,17 @@ import concurrent.futures
 import datetime
 import unittest
 
+from bare_script import barescript_parse_expression, barescript_parse_script
 from bare_script.include import SchemaParserError, SchemaValidationError, \
-    barescript_type_model, barescript_validate_expression, barescript_validate_script, base64_decode, base64_encode, \
-    data_aggregate, data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, data_parse_csv, \
-    data_sort, data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, element_model_to_string, \
-    element_model_validate, gzip_compress, gzip_uncompress, include_set_log_fn, markdown_elements, markdown_escape, markdown_header_id, \
-    markdown_paragraph_text, \
-    markdown_parse, markdown_title, markdown_to_string, markdown_validate, qrcode_elements, qrcode_matrix, schema_doc_markdown, \
-    schema_get_enum_values, \
-    schema_get_referenced_types, schema_get_struct_members, schema_parse, schema_type_model, schema_type_model_validate, schema_validate, \
-    tar_create, tar_extract, url_decode_component, url_decode_query_string, url_encode, url_encode_component, url_encode_query_string
+    barescript_lint_unbound_globals, barescript_type_model, barescript_validate_expression, barescript_validate_script, base64_decode, \
+    base64_encode, data_aggregate, data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, \
+    data_parse_csv, data_sort, data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, \
+    element_model_to_string, element_model_validate, gzip_compress, gzip_uncompress, include_set_log_fn, markdown_elements, \
+    markdown_escape, markdown_header_id, markdown_paragraph_text, markdown_parse, markdown_title, markdown_to_string, markdown_validate, \
+    qrcode_elements, qrcode_matrix, schema_doc_markdown, schema_get_enum_values, schema_get_referenced_types, schema_get_struct_members, \
+    schema_parse, schema_type_model, schema_type_model_validate, schema_validate, tar_create, tar_extract, url_decode_component, \
+    url_decode_query_string, url_encode, url_encode_component, url_encode_query_string
+from bare_script.library import SCRIPT_FUNCTIONS
 
 
 class TestInclude(unittest.TestCase):
@@ -63,6 +64,25 @@ struct TestStruct
             ])
         finally:
             include_set_log_fn(None)
+
+
+    def test_barescript_lint_unbound_globals(self):
+        script = barescript_parse_script('''\
+# Double a number
+function double(n):
+    return n * 2
+endfunction
+
+return N + ' times 2 is ' + double(N)
+''')
+        self.assertListEqual(barescript_lint_unbound_globals(script), ['N'])
+        self.assertListEqual(barescript_lint_unbound_globals(script, {'N': 10}), [])
+
+
+    def test_barescript_lint_unbound_globals_expression(self):
+        expr = barescript_parse_expression('a + mathMax(b, 1)')
+        self.assertListEqual(barescript_lint_unbound_globals(expr), ['a', 'b', 'mathMax'])
+        self.assertListEqual(barescript_lint_unbound_globals(expr, SCRIPT_FUNCTIONS), ['a', 'b'])
 
 
     def test_barescript_type_model(self):

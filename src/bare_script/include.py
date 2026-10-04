@@ -14,6 +14,7 @@ execute_script(
     {
         'statements': [
             {'include': {'includes': [
+                {'url': 'barescriptLint.bare', 'system': True},
                 {'url': 'barescriptModel.bare', 'system': True},
                 {'url': 'base64.bare', 'system': True},
                 {'url': 'data.bare', 'system': True},
@@ -64,6 +65,28 @@ def _include_options():
     if _INCLUDE_LOG_FN is not None:
         return {'globals': _INCLUDE_GLOBALS, 'logFn': _INCLUDE_LOG_FN, 'debug': True}
     return {'globals': _INCLUDE_GLOBALS}
+
+
+#
+# barescriptLint.bare
+#
+
+
+def barescript_lint_unbound_globals(model, globals_=None):
+    """
+    Compute the unbound global variables of a BareScript script or expression model - the global
+    variables and functions it uses that it does not define
+
+    :param model: The `BareScript model <https://craigahobbs.github.io/bare-script/model/#var.vName='BareScript'>`__ or
+        `expression model <https://craigahobbs.github.io/bare-script/model/#var.vName='Expression'>`__
+    :type model: dict
+    :param globals_: The bound global variables dict (name to value), such as the host's built-in functions
+    :type globals_: dict or None
+    :return: The sorted list of unbound global variable names
+    :rtype: list[str]
+    """
+
+    return _INCLUDE_GLOBALS['barescriptLintUnboundGlobals']([model, globals_], _include_options())
 
 
 #
