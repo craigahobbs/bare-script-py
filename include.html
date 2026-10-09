@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Include &#8212; bare-script 5.1.17 documentation</title>
+    <title>Include &#8212; bare-script 5.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
-    <script src="_static/documentation_options.js?v=fea882cc"></script>
+    <script src="_static/documentation_options.js?v=2dde5210"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -69,6 +69,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#datatable-bare">dataTable.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#elementmodel-bare">elementModel.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#gzip-bare">gzip.bare</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hash-bare">hash.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdown-bare">markdown.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdownelements-bare">markdownElements.bare</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#markdownparser-bare">markdownParser.bare</a></li>
@@ -85,6 +86,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="errors.html">Errors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="options.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wsgi.html">WSGI</a></li>
 </ul>
 
 <div class="relations">
@@ -626,6 +628,96 @@
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The uncompressed byte value array, or None if uncompression fails</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a>) or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="hash-bare">
+<h2>hash.bare<a class="headerlink" href="#hash-bare" title="Link to this heading">¶</a></h2>
+<section id="hash-equal">
+<h3>hash_equal<a class="headerlink" href="#hash-equal" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.hash_equal">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">hash_equal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">left</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.hash_equal" title="Link to this definition">¶</a></dt>
+<dd><p>Compare two values (e.g. message authentication codes) in constant time - every byte is compared, so the time
+taken doesn’t reveal how much of a guessed value is right</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>left</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>) or </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The first byte value array or string</p></li>
+<li><p><strong>right</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>) or </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The second byte value array or string</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the values are equal, False if not, or None if an argument is invalid</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)">bool</a> or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="hash-hex">
+<h3>hash_hex<a class="headerlink" href="#hash-hex" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.hash_hex">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">hash_hex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bytes_</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.hash_hex" title="Link to this definition">¶</a></dt>
+<dd><p>Format a byte value array (e.g. a hash) as a lowercase hexadecimal string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bytes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>) or </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The byte value array or string</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The hexadecimal string, or None if the argument is invalid</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a> or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="hash-hmac-sha256">
+<h3>hash_hmac_sha256<a class="headerlink" href="#hash-hmac-sha256" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.hash_hmac_sha256">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">hash_hmac_sha256</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.hash_hmac_sha256" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the HMAC-SHA256 message authentication code of a message (e.g. a JWT HS256 signature)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>) or </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The key byte value array or string</p></li>
+<li><p><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>) or </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The message byte value array or string</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The 32-byte message authentication code byte value array, or None if an argument is invalid</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a>) or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="hash-sha256">
+<h3>hash_sha256<a class="headerlink" href="#hash-sha256" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="bare_script.include.hash_sha256">
+<span class="sig-prename descclassname"><span class="pre">bare_script.include.</span></span><span class="sig-name descname"><span class="pre">hash_sha256</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bytes_</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bare_script.include.hash_sha256" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the SHA-256 hash of a byte value array (or a string, as UTF-8)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bytes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>) or </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The byte value array (integers 0 to 255) or string</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The 32-byte hash byte value array, or None if the argument is invalid</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)">list</a>(<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a>) or None</p>
