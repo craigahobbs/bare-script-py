@@ -1,5 +1,25 @@
 # Changelog
 
+## 5.2.0 (2026-10-09)
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - add wsgi.py - host a BareScript application function as a WSGI application \(wsgi_application, wsgi_load_source, and wsgi_load_statics\)
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - add the wsgi.bare include library - schema-validated JSON API WSGI applications, with static files and API documentation \(wsgiAPIDoc.bare\)
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - add the Full-Stack Application and Backend Application BareScript Creator project types
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - add hash.bare - SHA-256 hashes, HMAC-SHA256 message authentication codes, constant-time comparison, and hexadecimal formatting
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - add the systemFetch request "method" member - the CLI's local file fetch reads with GET, writes with POST or PUT, and deletes with DELETE
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - a Schema Markdown date member also accepts a datetime string at midnight in its own timezone
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - barescript-mode.el 1.0, and make test-emacs \(run by make commit\) tests it
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - regexNew's "$" matches only at the end of input, as in JavaScript - not also before a trailing newline
+
+- [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - fetch_http accepts any 2xx response and rejects a non-URL, and stringEncode encodes an unpaired surrogate as the replacement character
+
 ## 5.1.17 (2026-10-04)
 
 - [3fc465a](https://github.com/craigahobbs/bare-script-py/commit/3fc465a) - add barescriptLintUnboundGlobals - compute a script or expression model's unbound global variables \(mirror of bare-script\)
