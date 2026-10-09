@@ -1306,6 +1306,10 @@ def _regex_new(args, unused_options):
     # Translate JavaScript backreference syntax to Python
     pattern = _R_REGEX_NEW_BACKREF.sub(r'(?P=\1)', pattern)
 
+    # Translate JavaScript's end-of-input "$" to Python's "\Z" - Python's "$" also matches before a trailing newline
+    if flags is None or 'm' not in flags:
+        pattern = _R_REGEX_NEW_END.sub(lambda match: '\\Z' if match.group(0) == '$' else match.group(0), pattern)
+
     # Compute the flags mask
     flags_mask = 0
     if flags is not None:
@@ -1329,6 +1333,7 @@ _REGEX_NEW_ARGS = value_args_model([
 
 _R_REGEX_NEW_NAMED = re.compile(r'\(\?<(\w+)>')
 _R_REGEX_NEW_BACKREF = re.compile(r'\\k<(\w+)>')
+_R_REGEX_NEW_END = re.compile(r'\\.|\[(?:\\.|[^\]\\])*\]|\$', re.S)
 
 
 # $function: regexReplace
@@ -1457,11 +1462,27 @@ _STRING_DECODE_ARGS = value_args_model([
 # $return: The UTF-8 byte array
 def _string_encode(args, unused_options):
     string, = value_args_validate(_STRING_ENCODE_ARGS, args)
-    return list(string.encode('utf-8'))
+    return list(string_encode_utf8(string))
 
 _STRING_ENCODE_ARGS = value_args_model([
     {'name': 'string', 'type': 'string'}
 ])
+
+
+def string_encode_utf8(string):
+    """
+    Encode a string as UTF-8 bytes - unpaired surrogates are encoded as the replacement character, as
+    JavaScript does
+
+    :param str string: The string
+    :returns: The UTF-8 bytes
+    :rtype: bytes
+    """
+
+    try:
+        return string.encode('utf-8')
+    except UnicodeEncodeError:
+        return string.encode('utf-16', 'surrogatepass').decode('utf-16', 'replace').encode('utf-8')
 
 
 # $function: stringEndsWith
@@ -1780,6 +1801,8 @@ _SYSTEM_COMPARE_ARGS = value_args_model([
 # $arg url: The resource URL, request model, or array of URL and request model.
 # $arg url: The request model is an object with the following members:
 # $arg url: - **url** - the resource URL
+# $arg url: - **method** - the optional HTTP request method, case-insensitive (default is GET, or POST if there's a body).
+# $arg url:   GET and HEAD requests can't have a body.
 # $arg url: - **body** - the optional request body string or byte value array
 # $arg url: - **headers** - the optional request headers (an object of string values)
 # $arg url: - **binary** - if true, the response is a byte value array (default is false)
@@ -1815,6 +1838,11 @@ def _system_fetch(args, options):
     for request in requests:
         request_fetch = dict(request)
 
+        # The method is upper case
+        method = request_fetch.get('method')
+        if method is not None:
+            request_fetch['method'] = method.upper()
+
         # Update the URL
         if url_fn is not None:
             request_fetch['url'] = url_fn(request_fetch['url'])
@@ -1849,12 +1877,15 @@ _SYSTEM_FETCH_ARGS = value_args_model([
 # Helper to validate a systemFetch request model
 def _system_fetch_request_validate(request):
     request_url = request.get('url')
+    method = request.get('method')
     body = request.get('body')
     headers = request.get('headers')
     binary = request.get('binary')
     if value_type(request_url) != 'string' or \
+       (method is not None and value_type(method) != 'string') or \
        (body is not None and value_type(body) != 'string' and
         not (value_type(body) == 'array' and all(_system_fetch_is_byte(byte) for byte in body))) or \
+       (body is not None and method is not None and method.upper() in ('GET', 'HEAD')) or \
        (headers is not None and (value_type(headers) != 'object' or
                                  any(value_type(header_value) != 'string' for header_value in headers.values()))) or \
        (binary is not None and value_type(binary) != 'boolean'):

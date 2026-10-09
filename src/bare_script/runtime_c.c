@@ -3660,8 +3660,13 @@ static PyObject *call_library(Ctx *ctx, int id, PyObject *const *argv, Py_ssize_
         if (argc != 1 || !PyUnicode_CheckExact(arg0)) {
             return DEFER;
         }
+        // A string with unpaired surrogates defers to the library function
         PyObject *encoded = PyUnicode_AsUTF8String(arg0);
-        PyObject *result = encoded != NULL ? PyList_New(PyBytes_GET_SIZE(encoded)) : NULL;
+        if (encoded == NULL) {
+            PyErr_Clear();
+            return DEFER;
+        }
+        PyObject *result = PyList_New(PyBytes_GET_SIZE(encoded));
         for (Py_ssize_t ix = 0; result != NULL && ix < PyBytes_GET_SIZE(encoded); ix++) {
             PyObject *byte = PyLong_FromLong((unsigned char)PyBytes_AS_STRING(encoded)[ix]);
             if (byte == NULL) {

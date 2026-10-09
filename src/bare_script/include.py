@@ -22,6 +22,7 @@ execute_script(
                 {'url': 'dataTable.bare', 'system': True},
                 {'url': 'elementModel.bare', 'system': True},
                 {'url': 'gzip.bare', 'system': True},
+                {'url': 'hash.bare', 'system': True},
                 {'url': 'markdown.bare', 'system': True},
                 {'url': 'markdownElements.bare', 'system': True},
                 {'url': 'markdownParser.bare', 'system': True},
@@ -469,6 +470,68 @@ def gzip_uncompress(bytes_):
     """
 
     return _INCLUDE_GLOBALS['gzipUncompress']([bytes_], _include_options())
+
+
+#
+# hash.bare
+#
+
+
+def hash_equal(left, right):
+    """
+    Compare two values (e.g. message authentication codes) in constant time - every byte is compared, so the time
+    taken doesn't reveal how much of a guessed value is right
+
+    :param left: The first byte value array or string
+    :type left: list(int) or str
+    :param right: The second byte value array or string
+    :type right: list(int) or str
+    :return: True if the values are equal, False if not, or None if an argument is invalid
+    :rtype: bool or None
+    """
+
+    return _INCLUDE_GLOBALS['hashEqual']([left, right], _include_options())
+
+
+def hash_hex(bytes_):
+    """
+    Format a byte value array (e.g. a hash) as a lowercase hexadecimal string
+
+    :param bytes_: The byte value array or string
+    :type bytes_: list(int) or str
+    :return: The hexadecimal string, or None if the argument is invalid
+    :rtype: str or None
+    """
+
+    return _INCLUDE_GLOBALS['hashHex']([bytes_], _include_options())
+
+
+def hash_hmac_sha256(key, message):
+    """
+    Compute the HMAC-SHA256 message authentication code of a message (e.g. a JWT HS256 signature)
+
+    :param key: The key byte value array or string
+    :type key: list(int) or str
+    :param message: The message byte value array or string
+    :type message: list(int) or str
+    :return: The 32-byte message authentication code byte value array, or None if an argument is invalid
+    :rtype: list(int) or None
+    """
+
+    return _INCLUDE_GLOBALS['hashHMACSHA256']([key, message], _include_options())
+
+
+def hash_sha256(bytes_):
+    """
+    Compute the SHA-256 hash of a byte value array (or a string, as UTF-8)
+
+    :param bytes_: The byte value array (integers 0 to 255) or string
+    :type bytes_: list(int) or str
+    :return: The 32-byte hash byte value array, or None if the argument is invalid
+    :rtype: list(int) or None
+    """
+
+    return _INCLUDE_GLOBALS['hashSHA256']([bytes_], _include_options())
 
 
 #

@@ -44,6 +44,62 @@ class TestOptions(unittest.TestCase):
             response.close.assert_called_once_with()
 
 
+    def test_fetch_http_request_error(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            mock_pool_manager.request.side_effect = urllib3.exceptions.NewConnectionError(None, 'Connection refused')
+            with self.assertRaises(urllib3.exceptions.NewConnectionError) as cm_exc:
+                fetch_http({'url': 'http://example.com'})
+            self.assertEqual(str(cm_exc.exception), 'None: Connection refused')
+
+
+    def test_fetch_http_not_url(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            with self.assertRaises(ValueError) as cm_exc:
+                fetch_http({'url': 'backend/data/x.json'})
+            self.assertEqual(str(cm_exc.exception), 'Invalid URL "backend/data/x.json"')
+            mock_pool_manager.request.assert_not_called()
+
+
+    def test_fetch_http_method(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            response = unittest.mock.MagicMock(status=201, data=b'{"ok": true}')
+            mock_pool_manager.request.return_value = response
+            result = fetch_http({'url': 'http://example.com/db/doc', 'method': 'PUT', 'body': '{}'})
+            self.assertEqual(result, '{"ok": true}')
+            mock_pool_manager.request.assert_called_once_with('PUT', 'http://example.com/db/doc', body='{}', headers={}, retries=0)
+            response.close.assert_called_once_with()
+
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            response = unittest.mock.MagicMock(status=200, data=b'{"ok": true}')
+            mock_pool_manager.request.return_value = response
+            result = fetch_http({'url': 'http://example.com/db/doc?rev=1-a', 'method': 'DELETE'})
+            self.assertEqual(result, '{"ok": true}')
+            mock_pool_manager.request.assert_called_once_with(
+                'DELETE', 'http://example.com/db/doc?rev=1-a', body=None, headers={}, retries=0
+            )
+            response.close.assert_called_once_with()
+
+
+    def test_fetch_http_status_created(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            response = unittest.mock.MagicMock(status=201, data=b'{"ok": true}')
+            mock_pool_manager.request.return_value = response
+            result = fetch_http({'url': 'http://example.com', 'body': '{}'})
+            self.assertEqual(result, '{"ok": true}')
+            mock_pool_manager.request.assert_called_once_with('POST', 'http://example.com', body='{}', headers={}, retries=0)
+            response.close.assert_called_once_with()
+
+
+    def test_fetch_http_status_redirect(self):
+        with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
+            response = unittest.mock.MagicMock(status=304, data=b'')
+            mock_pool_manager.request.return_value = response
+            with self.assertRaises(urllib3.exceptions.HTTPError) as cm_exc:
+                fetch_http({'url': 'http://example.com'})
+            self.assertEqual(str(cm_exc.exception), 'Fetch "GET" "http://example.com" failed (304)')
+            response.close.assert_called_once_with()
+
+
     def test_fetch_http_post(self):
         with unittest.mock.patch('bare_script.options.FETCH_POOL_MANAGER') as mock_pool_manager:
             response = unittest.mock.MagicMock(status=200, data=b'Hello!')
@@ -187,6 +243,45 @@ class TestOptions(unittest.TestCase):
             self.assertEqual(result, '{}')
             mock_file.assert_called_with('test.bin', 'wb')
             mock_file().write.assert_called_with(b'\x00\x80\xff')
+
+
+    def test_fetch_read_write_relative_method(self):
+        # A GET request reads
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open(read_data='Hello!')) as mock_file:
+            self.assertEqual(fetch_read_write({'url': 'test.txt', 'method': 'GET'}), 'Hello!')
+            mock_file.assert_called_with('test.txt', 'r', encoding='utf-8')
+
+        # A POST or PUT request with a body writes
+        for method in ('POST', 'PUT'):
+            with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file:
+                self.assertEqual(fetch_read_write({'url': 'test.txt', 'method': method, 'body': 'Hello!'}), '{}')
+                mock_file.assert_called_with('test.txt', 'w', encoding='utf-8')
+                mock_file().write.assert_called_with('Hello!')
+
+        # Any other request fails
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open()) as mock_file:
+            self.assertIsNone(fetch_read_write({'url': 'test.txt', 'method': 'HEAD'}))
+            self.assertIsNone(fetch_read_write({'url': 'test.txt', 'method': 'PUT'}))
+            self.assertIsNone(fetch_read_write({'url': 'test.txt', 'method': 'PATCH', 'body': 'Hello!'}))
+            mock_file.assert_not_called()
+
+
+    def test_fetch_read_write_relative_delete(self):
+        with unittest.mock.patch('bare_script.options.os.remove') as mock_remove:
+            self.assertEqual(fetch_read_write({'url': 'test.txt', 'method': 'DELETE'}), '{}')
+            self.assertEqual(fetch_read_write({'url': 'test.bin', 'method': 'DELETE', 'binary': True}), b'{}')
+            self.assertEqual(mock_remove.call_args_list, [unittest.mock.call('test.txt'), unittest.mock.call('test.bin')])
+
+        # A delete with a body fails
+        with unittest.mock.patch('bare_script.options.os.remove') as mock_remove:
+            self.assertIsNone(fetch_read_write({'url': 'test.txt', 'method': 'DELETE', 'body': 'Hello!'}))
+            mock_remove.assert_not_called()
+
+
+    def test_fetch_read_only_relative_delete(self):
+        with unittest.mock.patch('bare_script.options.os.remove') as mock_remove:
+            self.assertIsNone(fetch_read_only({'url': 'test.txt', 'method': 'DELETE'}))
+            mock_remove.assert_not_called()
 
 
     def test_log_stdout(self):

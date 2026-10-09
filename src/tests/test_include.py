@@ -8,15 +8,16 @@ import datetime
 import unittest
 
 from bare_script import barescript_parse_expression, barescript_parse_script
-from bare_script.include import SchemaParserError, SchemaValidationError, \
-    barescript_lint_unbound_globals, barescript_type_model, barescript_validate_expression, barescript_validate_script, base64_decode, \
-    base64_encode, data_aggregate, data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, \
-    data_parse_csv, data_sort, data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, \
-    element_model_to_string, element_model_validate, gzip_compress, gzip_uncompress, include_set_log_fn, markdown_elements, \
-    markdown_escape, markdown_header_id, markdown_paragraph_text, markdown_parse, markdown_title, markdown_to_string, markdown_validate, \
-    qrcode_elements, qrcode_matrix, schema_doc_markdown, schema_get_enum_values, schema_get_referenced_types, schema_get_struct_members, \
-    schema_parse, schema_type_model, schema_type_model_validate, schema_validate, tar_create, tar_extract, url_decode_component, \
-    url_decode_query_string, url_encode, url_encode_component, url_encode_query_string
+from bare_script.include import SchemaParserError, SchemaValidationError, barescript_lint_unbound_globals, barescript_type_model, \
+    barescript_validate_expression, barescript_validate_script, base64_decode, base64_encode, data_aggregate, \
+    data_calculated_field, data_filter, data_join, data_line_chart_elements, data_line_chart_validate, data_parse_csv, data_sort, \
+    data_table_elements, data_table_markdown, data_table_validate, data_top, data_validate, element_model_to_string, \
+    element_model_validate, gzip_compress, gzip_uncompress, hash_equal, hash_hex, hash_hmac_sha256, hash_sha256, include_set_log_fn, \
+    markdown_elements, markdown_escape, markdown_header_id, markdown_paragraph_text, markdown_parse, markdown_title, \
+    markdown_to_string, markdown_validate, qrcode_elements, qrcode_matrix, schema_doc_markdown, schema_get_enum_values, \
+    schema_get_referenced_types, schema_get_struct_members, schema_parse, schema_type_model, schema_type_model_validate, \
+    schema_validate, tar_create, tar_extract, url_decode_component, url_decode_query_string, url_encode, url_encode_component, \
+    url_encode_query_string
 from bare_script.library import SCRIPT_FUNCTIONS
 
 
@@ -352,6 +353,31 @@ return N + ' times 2 is ' + double(N)
     def test_gzip_uncompress(self):
         self.assertListEqual(gzip_uncompress(base64_decode('H4sIAAAAAAAC/8tIzcnJBwCGphA2BQAAAA==')), [104, 101, 108, 108, 111])
         self.assertIsNone(gzip_uncompress([1, 2, 3]))
+
+
+    def test_hash_equal(self):
+        self.assertIs(hash_equal('abc', [97, 98, 99]), True)
+        self.assertIs(hash_equal('abc', 'abd'), False)
+        self.assertIsNone(hash_equal(None, 'abc'))
+
+
+    def test_hash_hex(self):
+        self.assertEqual(hash_hex([0, 15, 16, 255]), '000f10ff')
+        self.assertIsNone(hash_hex([256]))
+
+
+    def test_hash_hmac_sha256(self):
+        self.assertEqual(
+            hash_hex(hash_hmac_sha256('Jefe', 'what do ya want for nothing?')),
+            '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843'
+        )
+        self.assertIsNone(hash_hmac_sha256(None, 'message'))
+
+
+    def test_hash_sha256(self):
+        self.assertEqual(hash_hex(hash_sha256('abc')), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+        self.assertEqual(len(hash_sha256([0, 128, 255])), 32)
+        self.assertIsNone(hash_sha256(None))
 
 
     def test_tar_create(self):

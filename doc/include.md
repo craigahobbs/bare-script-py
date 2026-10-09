@@ -168,6 +168,36 @@
 ~~~
 
 
+## hash.bare
+
+### hash_equal
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.hash_equal
+~~~
+
+
+### hash_hex
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.hash_hex
+~~~
+
+
+### hash_hmac_sha256
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.hash_hmac_sha256
+~~~
+
+
+### hash_sha256
+
+~~~ {eval-rst}
+.. autofunction:: bare_script.include.hash_sha256
+~~~
+
+
 ## markdown.bare
 
 ### markdown_escape

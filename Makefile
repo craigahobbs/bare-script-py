@@ -37,7 +37,7 @@ include Makefile.base
 
 
 help:
-	@echo "            [perf|runtime-c|sync|test-creator|test-include]"
+	@echo "            [perf|runtime-c|sync|test-creator|test-emacs|test-include]"
 
 
 clean:
@@ -154,6 +154,20 @@ test-creator: $(DEFAULT_VENV_BUILD) src/bare_script/include_source.py
 	$(DEFAULT_VENV_BIN)/bare -x -m static/creator/*.bare static/creator/test/test*.bare
 	$(DEFAULT_VENV_BIN)/bare -s -m static/creator/test/runTests.bare
 	$(DEFAULT_VENV_BIN)/bare -d -m static/creator/test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
+
+
+# The Emacs BareScript mode (static/language/barescript-mode.el) unit tests - skipped if Emacs isn't installed
+EMACS ?= emacs
+
+.PHONY: test-emacs
+commit: test-emacs
+test-emacs:
+	if command -v $(EMACS) > /dev/null 2>&1; then \
+		$(EMACS) -Q --batch -L static/language -l static/language/test/barescript-mode-test.el \
+			--eval '(ert-run-tests-batch-and-exit $(if $(TEST),"$(TEST)",t))'; \
+	else \
+		echo "$(EMACS) not found - skipping the Emacs mode tests"; \
+	fi
 
 
 doc:

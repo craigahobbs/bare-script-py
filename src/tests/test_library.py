@@ -1883,6 +1883,7 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(match('\u00e9', 'i', 'x\u00c9'), '\u00c9')
         self.assertEqual(match('[\u00e0-\u00ff]', 'i', '\u00c0'), '\u00c0')
         self.assertEqual(match('\u03c3', 'i', '\u03c2'), '\u03c2')
+        self.assertIsNone(match('a$', None, 'a\n'))
 
         self.assertDictEqual(
             SCRIPT_FUNCTIONS['regexMatch']([re.compile('foo'), 'foo bar'], None),
@@ -1979,6 +1980,27 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(regex.flags, re.U)
         self.assertIsNotNone(regex.match('AabababA'))
         self.assertIsNone(regex.match('AabaB'))
+
+        # End anchor - matches only at the end, as in JavaScript (not before a trailing newline)
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'^[0-9]+$'], None)
+        self.assertEqual(regex.pattern, r'^[0-9]+\Z')
+        self.assertIsNotNone(SCRIPT_FUNCTIONS['regexMatch']([regex, '123'], None))
+        self.assertIsNone(SCRIPT_FUNCTIONS['regexMatch']([regex, '123\n'], None))
+
+        # End anchor - escaped and character class dollar signs are unchanged
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'a\$[$\]]\\$'], None)
+        self.assertEqual(regex.pattern, r'a\$[$\]]\\\Z')
+        self.assertIsNotNone(regex.search('a$$\\'))
+
+        # End anchor - a character class with an escaped newline (as Python's re.escape writes it) is unchanged
+        regex = SCRIPT_FUNCTIONS['regexNew']([re.escape('\n').join(['[', '$]$'])], None)
+        self.assertEqual(regex.pattern, '[\\\n$]\\Z')
+        self.assertIsNotNone(regex.search('$'))
+
+        # End anchor - with the "m" flag, it matches at each line end
+        regex = SCRIPT_FUNCTIONS['regexNew']([r'^[0-9]+$', 'm'], None)
+        self.assertEqual(regex.pattern, r'^[0-9]+$')
+        self.assertIsNotNone(SCRIPT_FUNCTIONS['regexMatch']([regex, '123\nabc'], None))
 
         # Flag - "i"
         regex = SCRIPT_FUNCTIONS['regexNew'](['a*b', 'i'], None)
@@ -2176,6 +2198,11 @@ class TestLibrary(unittest.TestCase):
 
     def test_string_encode(self):
         self.assertListEqual(SCRIPT_FUNCTIONS['stringEncode'](['foo'], None), [102, 111, 111])
+
+        # Unpaired surrogates are encoded as the replacement character
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringEncode'](['a\ud800b'], None), [97, 239, 191, 189, 98])
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringEncode'](['\udc00\ud800'], None), [239, 191, 189, 239, 191, 189])
+        self.assertListEqual(SCRIPT_FUNCTIONS['stringEncode'](['\ud83d\ude00'], None), [240, 159, 152, 128])
 
         # Non-string
         with self.assertRaises(ValueArgsError) as cm_exc:
@@ -2632,7 +2659,7 @@ class TestLibrary(unittest.TestCase):
 
             body = request.get('body')
             headers = request.get('headers')
-            method = 'GET' if body is None else 'POST'
+            method = request.get('method') or ('GET' if body is None else 'POST')
             body_msg = '' if body is None else (f' - bytes {",".join(str(b) for b in body)}' if isinstance(body, bytes) else f' - {body}')
             headers_msg = '' if headers is None else f' - {value_json(headers)}'
             response = f'{method} {url}{body_msg}{headers_msg}'
@@ -2669,6 +2696,20 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(
             SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'headers': {'HEADER': 'VALUE'}}], options),
             'GET test.txt - {"HEADER":"VALUE"}'
+        )
+        self.assertListEqual(logs, [])
+
+        # Method
+        logs = []
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'method': 'PUT', 'body': 'abc'}], options),
+            'PUT test.txt - abc'
+        )
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'method': 'DELETE'}], options), 'DELETE test.txt')
+        self.assertEqual(SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'method': 'patch'}], options), 'PATCH test.txt')
+        self.assertEqual(
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'method': None, 'body': 'abc'}], options),
+            'POST test.txt - abc'
         )
         self.assertListEqual(logs, [])
 
@@ -2793,6 +2834,26 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"binary":1,"url":"test.txt"}')
         self.assertIsNone(cm_exc.exception.return_value)
         self.assertListEqual(logs, [])
+
+        # Invalid request model method
+        logs = []
+        with self.assertRaises(ValueArgsError) as cm_exc:
+            SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'method': 7}], options)
+        self.assertEqual(str(cm_exc.exception), 'Invalid "url" argument value, {"method":7,"url":"test.txt"}')
+        self.assertIsNone(cm_exc.exception.return_value)
+        self.assertListEqual(logs, [])
+
+        # Invalid request model GET or HEAD body
+        for method in ('GET', 'get', 'HEAD'):
+            logs = []
+            with self.assertRaises(ValueArgsError) as cm_exc:
+                SCRIPT_FUNCTIONS['systemFetch']([{'url': 'test.txt', 'method': method, 'body': 'abc'}], options)
+            self.assertEqual(
+                str(cm_exc.exception),
+                f'Invalid "url" argument value, {{"body":"abc","method":"{method}","url":"test.txt"}}'
+            )
+            self.assertIsNone(cm_exc.exception.return_value)
+            self.assertListEqual(logs, [])
 
         # Invalid request model headers
         logs = []

@@ -18,7 +18,8 @@ Local Makefile overrides:
 
 - `SPHINX_DOC` — `doc`
 - `TESTS_REQUIRE` — `schema-markdown`
-- `commit` also depends on `test-creator` and `commit-runtime-c` (re-runs `test` + `test-include` with the C runtime)
+- `commit` also depends on `test-creator`, `test-emacs`, and `commit-runtime-c` (re-runs `test` + `test-include` with the
+  C runtime)
 - `clean` also removes `src/bare_script/*.so`
 
 By default, targets use the pure-Python runtime (`BARESCRIPT_RUNTIME_PY=1`). Set `BARESCRIPT_RUNTIME_C=1` to exercise the compiled C runtime instead; `make commit` runs both.
@@ -47,6 +48,9 @@ Package-specific targets:
   JavaScript repo) via the `bare` CLI; `TEST=<name>` runs one test (an exact name, as with `test-include`). The
   creator is a MarkdownUp app that generates a BareScript project as a `.tar.gz` archive - see the JavaScript
   repo's CLAUDE.md for its layout
+- `make test-emacs` — run the Emacs BareScript mode's unit tests (`static/language/test/barescript-mode-test.el`)
+  in batch mode; `TEST=<regexp>` selects tests by ERT name. Skipped, with a message, when Emacs (`EMACS`, default
+  `emacs`) isn't installed, so `make commit` doesn't require it
 - `make sync` — push `src/bare_script/include/` and `static/` to the JavaScript repo
 
 `make perf` benchmarks the runtime itself. For optimizing an individual include file, write a throwaway `.bare` harness under `perf/` and run with `bare perf/<file>.bare` — `perf/` is outside the shipped package and isn't synced cross-repo, so harnesses can live there until you're done and then be removed (regenerate as needed).
@@ -61,6 +65,7 @@ Package-specific targets:
 - `src/bare_script/runtime_c.c` — CPython extension that mirrors `runtime.py` for performance (see "C extension" below).
 - `src/bare_script/library.py` — the 100 built-in functions registered in `SCRIPT_FUNCTIONS` (and the 48-alias expression-only set in `EXPRESSION_FUNCTIONS`).
 - `src/bare_script/include.py` — executes the include library (barescriptModel, data, markdown, qrcode, schema, url, etc.) from the embedded include source into a single module-private globals at module import, and exports native stub functions for the include libraries' public functions (`barescript_validate_script`, `data_aggregate`, `markdown_parse`, `schema_parse`, `schema_validate`, `url_encode`, etc.), imported from `bare_script.include`. MarkdownUp-render, app-main, and async include functions are not stubbed. Only the doc build (and the tests) depends on it, so `import bare_script` skips the include bootstrap. The adjacent `src/bare_script/include/` `.bare` directory is a plain data directory — it must not contain an `__init__.py`, which would shadow this module.
+- `src/bare_script/wsgi.py` — `wsgi_application` hosts a BareScript application function as a WSGI application: the script executes once against an in-memory source map, and each request calls the function with a JSON-safe copy of the environ (the module docstrings cover the details). `wsgi_load_source` and `wsgi_load_statics` build the source map and the static-file map the host passes to `wsgiStaticRequests`. The `wsgi.bare` include library builds schema-validated JSON API application functions (`wsgiCreateAPIApplication`) on top of it.
 - `src/bare_script/value.py` — type coercion and comparison primitives (`value_type`, `value_compare`, `value_args_validate`, etc.). Argument validation is declarative via `value_args_model`.
 - `src/bare_script/options.py` — fetch implementations: HTTP via urllib3 and local files.
 - `src/bare_script/__init__.py` — public surface (`execute_script`, `barescript_parse_script`, `barescript_parse_expression`, `evaluate_expression`, `barescript_lint_script`, plus fetch/log helpers). Imports from `runtime_c` when the compiled `.so` is present unless `BARESCRIPT_RUNTIME_PY=1` is set. The include module is not imported or re-exported here — import its stubs from `bare_script.include` (e.g. `from bare_script.include import schema_parse`). Otherwise, callers should import from `bare_script`, not submodules.
@@ -97,6 +102,13 @@ When optimizing `runtime_c.c`, do **not** target debug-mode-only paths such as c
 - The `.bare` include library is held to 100% too, by a separate mechanism: the include-test runners pass
   `'coverageMin': 100`, so a change that adds an unreached branch fails `make test-include` — not `make cover`.
   Either cover the new path with a test or drop it; the same dead-defensive-check caution below applies.
+- The include test runners run in debug mode (`bare -d`), which logs every built-in function error (e.g.
+  `Function "objectGet" failed with error: Invalid "object" argument value, null`) even though the call returns
+  null and the tests pass. Check the top of the `make test-include` output after a change: the only lines before
+  each report should be errors a test expects, each announced by a
+  `systemLogDebug('NOTICE: The following "<function>" error is expected:')` line. Any other error line is a bug.
+  Fix the code rather than adding a NOTICE - usually a guard before a nested call such as
+  `objectGet(objectGet(expr, 'function'), 'name')`, whose inner call returns null for some inputs.
 - All `src/bare_script/` code must keep line + branch coverage at 100%. New code without tests will fail `make commit`. Beware: defensive checks that become unreachable after a refactor (e.g. a `continue` guard left in place when the surrounding logic now guarantees its condition is false) will break coverage. Either remove the dead check and rely on the proven invariant, or add a test that exercises the defensive path.
 - `runtime.py` and `runtime_c.c` are kept structurally aligned — when changing one, mirror the change in the other. `runtime.py` is the reference implementation.
 - BareScript literals: write objects as `{}` / `{'key': value}` and arrays as `[]` / `[a, b]` — never `objectNew()`

@@ -3403,6 +3403,16 @@ endwhile
         self.assertListEqual(execute_script(script),
                              ['9223372036854775808', '8000000000000000', '18446744073709551616', '9223372036854774784'])
 
+    def test_library_string_encode_surrogate(self):
+        # Unpaired surrogates are encoded as the replacement character - the C runtime's inlined stringEncode defers
+        # these strings to the library function
+        script = barescript_parse_script([
+            "return [ \\",
+            "    stringEncode('a' + stringFromCharCode(55296) + 'b'), stringEncode(stringFromCharCode(56320, 55296)), stringEncode('é') \\",
+            "]"
+        ])
+        self.assertListEqual(execute_script(script), [[97, 239, 191, 189, 98], [239, 191, 189, 239, 191, 189], [195, 169]])
+
 
 # Helper functions to get test values of specific types
 def _test_date(unused_args, unused_options):
