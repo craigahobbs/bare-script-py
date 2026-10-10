@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.2.1 (2026-10-10)
+
+- [ba3a0d3](https://github.com/craigahobbs/bare-script-py/commit/ba3a0d3) - dataLineChart.bare - assign the color field colors in legend order by default, so the dash patterns go to the lines at the bottom of the legend \(mirror of bare-script\)
+
+- [7a92b9c](https://github.com/craigahobbs/bare-script-py/commit/7a92b9c) - BareScript Creator - say BareScript in the Frontend and Full-Stack Application descriptions \(mirror of bare-script\)
+
+- [5c80918](https://github.com/craigahobbs/bare-script-py/commit/5c80918) - BareScript Creator - show the project types as a table with unbreakable link titles \(mirror of bare-script\)
+
 ## 5.2.0 (2026-10-09)
 
 - [0978488](https://github.com/craigahobbs/bare-script-py/commit/0978488) - add wsgi.py - host a BareScript application function as a WSGI application \(wsgi_application, wsgi_load_source, and wsgi_load_statics\)
