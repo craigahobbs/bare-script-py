@@ -145,6 +145,12 @@ def _array_index_of(args, options):
         for ix in range(index, len(array)):
             if value_boolean(value([array[ix]], options)):
                 return ix
+    elif isinstance(value, str):
+        # A string is equal only to a string, so the native search is the value comparison
+        try:
+            return array.index(value, index)
+        except ValueError:
+            pass
     else:
         for ix in range(index, len(array)):
             if value_compare(array[ix], value) == 0:

@@ -224,6 +224,15 @@ class TestLibrary(unittest.TestCase):
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2], None), 3)
         self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array, 2, 2.], None), 3)
 
+        # String value
+        array_str = ['a', 'b', 1, None, 'b']
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array_str, 'a'], None), 0)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array_str, 'b'], None), 1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array_str, 'b', 2], None), 4)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array_str, 'c'], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array_str, '1'], None), -1)
+        self.assertEqual(SCRIPT_FUNCTIONS['arrayIndexOf']([array_str, 'a', 1], None), -1)
+
         # Match function
         def value_fn(args, value_options):
             self.assertEqual(len(args), 1)
