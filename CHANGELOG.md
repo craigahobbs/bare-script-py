@@ -1,5 +1,17 @@
 # Changelog
 
+## 5.2.3 (2026-11-18)
+
+- [e1c3282](https://github.com/craigahobbs/bare-script-py/commit/e1c3282) - optimize data.bare, dataTable.bare, diff.bare, hash.bare, and markdownString.bare \(mirror of bare-script\)
+
+- [32990c7](https://github.com/craigahobbs/bare-script-py/commit/32990c7) - arrayIndexOf - search for a string value natively
+
+- [15b1b37](https://github.com/craigahobbs/bare-script-py/commit/15b1b37) - language reference - document the CLI exit status, line-based statements, function argument and return rules, include paths, and statement limits; add the BareScript Creator link \(mirror of bare-script\)
+
+- [7803bbd](https://github.com/craigahobbs/bare-script-py/commit/7803bbd) - BareScript Creator - generated Makefiles take OLLAMA="model" to run Claude Code with an Ollama model, or GROK=1 to run Grok Build \(mirror of bare-script\)
+
+- [3e1de8c](https://github.com/craigahobbs/bare-script-py/commit/3e1de8c) - bare-script skill - don't rely on incidental data row or object key order \(mirror of bare-script\)
+
 ## 5.2.1 (2026-10-10)
 
 - [ba3a0d3](https://github.com/craigahobbs/bare-script-py/commit/ba3a0d3) - dataLineChart.bare - assign the color field colors in legend order by default, so the dash patterns go to the lines at the bottom of the legend \(mirror of bare-script\)
