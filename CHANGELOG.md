@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.3.0 (2026-11-25)
+
+- [ec028bd](https://github.com/craigahobbs/bare-script-py/commit/ec028bd) - add markdownUp.bare voice functions - voiceSpeak, voiceSetText, voiceState, voiceClose, voiceSay, voiceLoad, and voiceReady - and their unittestMock.bare mocks \(mirror of bare-script\)
+
 ## 5.2.3 (2026-11-18)
 
 - [e1c3282](https://github.com/craigahobbs/bare-script-py/commit/e1c3282) - optimize data.bare, dataTable.bare, diff.bare, hash.bare, and markdownString.bare \(mirror of bare-script\)
